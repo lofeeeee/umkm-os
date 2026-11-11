@@ -108,18 +108,43 @@ pub async fn get_tenant(pool: &PgPool, actor: &Actor) -> Result<Option<TenantDet
     }))
 }
 
-/// Ubah nama tenant (butuh `tenant.update`; dicek pemanggil). Nama business profile
-/// dikelola terpisah (P2-5).
-pub async fn rename_tenant(pool: &PgPool, actor: &Actor, name: &str) -> Result<bool, sqlx::Error> {
+/// Ubah nama tenant (butuh `tenant.update`; dicek pemanggil) + audit before/after di
+/// transaksi yang sama (P1-8). Nama business profile dikelola terpisah (P2-5).
+pub async fn rename_tenant(
+    pool: &PgPool,
+    actor: &Actor,
+    name: &str,
+    request_id: Option<&str>,
+    ip: Option<&str>,
+) -> Result<bool, sqlx::Error> {
     let mut tx = umkm_database::begin_tenant_tx(pool, actor.tenant_id)
         .await
         .map_err(db_err)?;
-    let n = sqlx::query("UPDATE tenants SET name = $2 WHERE id = $1")
+    let before: Option<String> =
+        sqlx::query_scalar("SELECT name FROM tenants WHERE id = $1 FOR UPDATE")
+            .bind(actor.tenant_id.as_uuid())
+            .fetch_optional(&mut *tx)
+            .await?;
+    let Some(before) = before else {
+        return Ok(false);
+    };
+    sqlx::query("UPDATE tenants SET name = $2 WHERE id = $1")
         .bind(actor.tenant_id.as_uuid())
         .bind(name)
         .execute(&mut *tx)
-        .await?
-        .rows_affected();
+        .await?;
+    crate::audit_repo::record(
+        &mut *tx,
+        &umkm_domain::audit::AuditEvent::new(umkm_domain::audit::actions::TENANT_UPDATED, "tenant")
+            .by_user(actor.user_id)
+            .in_tenant(actor.tenant_id)
+            .resource(actor.tenant_id)
+            .request(request_id, ip)
+            .with_summary(
+                serde_json::json!({ "before": { "name": before }, "after": { "name": name } }),
+            ),
+    )
+    .await?;
     tx.commit().await?;
-    Ok(n == 1)
+    Ok(true)
 }

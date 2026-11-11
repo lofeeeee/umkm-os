@@ -39,6 +39,8 @@ async fn register_user(pool: &PgPool, email: &str) -> Uuid {
         accept_terms: true,
         accept_privacy: true,
         user_agent: None,
+        request_id: None,
+        client_ip: None,
     };
     let legal = LegalVersions {
         privacy_policy: "v0".into(),
@@ -100,6 +102,8 @@ async fn registration_enqueues_event_in_same_transaction_without_secrets(pool: P
         accept_terms: true,
         accept_privacy: true,
         user_agent: None,
+        request_id: None,
+        client_ip: None,
     };
     let legal = LegalVersions {
         privacy_policy: "v0".into(),

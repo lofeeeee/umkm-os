@@ -18,7 +18,8 @@ use umkm_shared::ids::TenantId;
 use uuid::Uuid;
 
 /// Tabel milik tenant yang WAJIB ber-RLS (selain yang di allowlist katalog).
-const TENANT_TABLES: [&str; 7] = [
+const TENANT_TABLES: [&str; 8] = [
+    "audit_logs",
     "tenants",
     "tenant_memberships",
     "tenant_domains",
@@ -57,6 +58,8 @@ async fn register_as_app(app: &PgPool, email: &str, name: &str) -> (Uuid, Tenant
         accept_terms: true,
         accept_privacy: true,
         user_agent: None,
+        request_id: None,
+        client_ip: None,
     };
     let legal = LegalVersions {
         privacy_policy: "v0".into(),

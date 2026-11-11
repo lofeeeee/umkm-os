@@ -16,10 +16,12 @@ use sha2::{Digest, Sha256};
 use sqlx::PgPool;
 use umkm_application::onboarding::{LegalVersions, RegisterCommand, RegisterError, register};
 use umkm_domain::{
+    audit::{AuditEvent, actions},
     auth::{AuthError, AuthPolicy, Email, PasswordHasher, RateRule, rate_rules},
     tenant::TenantError,
 };
 use umkm_infrastructure::{
+    audit_repo,
     auth::{Argon2idHasher, hash_token, new_token},
     auth_repo,
     onboarding_repo::{BlockingArgon2, OsTokenIssuer, PgRegistrationStore},
@@ -314,6 +316,8 @@ pub async fn register_handler(
             accept_terms: req.accept_terms,
             accept_privacy: req.accept_privacy,
             user_agent: user_agent(&headers),
+            request_id: Some(id.to_string()),
+            client_ip: Some(ip.clone()),
         },
         &svc.root_domain,
         &svc.policy,
@@ -405,6 +409,14 @@ pub async fn login_handler(
 
     let (true, Some(record), rehash) = verified else {
         tracing::info!("login failed");
+        audit_repo::record_best_effort(
+            &svc.pool,
+            &AuditEvent::new(actions::AUTH_LOGIN_FAILED, "user")
+                .request(Some(id.as_str()), Some(&ip))
+                // Email di-hash (pseudonim) untuk forensik brute-force tanpa menyimpan alamatnya.
+                .with_summary(serde_json::json!({ "email_sha256": umkm_infrastructure::auth::subject_digest(&email.canonical()) })),
+        )
+        .await;
         return Err(invalid());
     };
     if let Some(Ok(new_hash)) = rehash {
@@ -429,6 +441,14 @@ pub async fn login_handler(
     .await
     .map_err(internal)?;
     tracing::info!(user_id = %record.user_id, "login succeeded");
+    audit_repo::record_best_effort(
+        &svc.pool,
+        &AuditEvent::new(actions::AUTH_LOGIN_SUCCEEDED, "session")
+            .by_user(record.user_id)
+            .resource(session_id)
+            .request(Some(id.as_str()), Some(&ip)),
+    )
+    .await;
     let body = SuccessEnvelope::new(
         SessionResponse {
             user_id: record.user_id,
@@ -496,6 +516,14 @@ pub async fn logout_handler(
     let revoked = auth_repo::revoke_session(&svc.pool, user.user_id, user.session_id)
         .await
         .map_err(|_| ApiError::new(ErrorCode::InternalError))?;
+    audit_repo::record_best_effort(
+        &svc.pool,
+        &AuditEvent::new(actions::AUTH_LOGOUT, "session")
+            .by_user(user.user_id)
+            .resource(user.session_id)
+            .request(Some(id.as_str()), None),
+    )
+    .await;
     Ok((
         [(header::SET_COOKIE, svc.clear_cookie())],
         Json(SuccessEnvelope::new(LogoutResponse { revoked }, &id)),
@@ -543,6 +571,14 @@ pub async fn verify_email_handler(
     match user {
         Some(user_id) => {
             tracing::info!(%user_id, "email verified");
+            audit_repo::record_best_effort(
+                &svc.pool,
+                &AuditEvent::new(actions::AUTH_EMAIL_VERIFIED, "user")
+                    .by_user(user_id)
+                    .resource(user_id)
+                    .request(Some(id.as_str()), Some(&ip)),
+            )
+            .await;
             Ok(Json(SuccessEnvelope::new(
                 VerifyEmailResponse { verified: true },
                 &id,

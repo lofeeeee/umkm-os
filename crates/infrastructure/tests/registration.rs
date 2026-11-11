@@ -31,6 +31,8 @@ fn cmd(email: &str, name: &str, slug: Option<&str>) -> RegisterCommand {
         accept_terms: true,
         accept_privacy: true,
         user_agent: Some("tes".into()),
+        request_id: None,
+        client_ip: None,
     }
 }
 

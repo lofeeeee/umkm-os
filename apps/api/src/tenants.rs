@@ -135,6 +135,7 @@ pub async fn update_tenant(
     State(state): State<AppState>,
     ReqId(id): ReqId,
     Member(actor): Member,
+    crate::auth::ClientIp(ip): crate::auth::ClientIp,
     Json(req): Json<UpdateTenantRequest>,
 ) -> Result<Json<SuccessEnvelope<TenantView>>, ApiError> {
     actor.require("tenant.update")?;
@@ -150,10 +151,9 @@ pub async fn update_tenant(
         .as_ref()
         .ok_or_else(|| ApiError::new(ErrorCode::ServiceUnavailable))?
         .pool;
-    rbac_repo::rename_tenant(pool, &actor, &name)
+    rbac_repo::rename_tenant(pool, &actor, &name, Some(id.as_str()), Some(&ip))
         .await
         .map_err(internal)?;
-    // Audit log tindakan sensitif: P1-8.
     tracing::info!(user_id = %actor.user_id, tenant_id = %actor.tenant_id, "tenant renamed");
     Ok(Json(SuccessEnvelope::new(view(&state, &actor).await?, &id)))
 }

@@ -152,6 +152,22 @@ impl RegistrationStore for PgRegistrationStore {
         .await
         .map_err(other)?;
 
+        // Audit atomik dengan registrasi (P1-8).
+        crate::audit_repo::record(
+            &mut *tx,
+            &umkm_domain::audit::AuditEvent::new(
+                umkm_domain::audit::actions::TENANT_REGISTERED,
+                "tenant",
+            )
+            .by_user(user_id)
+            .in_tenant(reg.tenant_id)
+            .resource(tenant_id)
+            .request(reg.request_id.as_deref(), reg.client_ip.as_deref())
+            .with_summary(serde_json::json!({ "slug": slug.as_str(), "hostname": hostname })),
+        )
+        .await
+        .map_err(other)?;
+
         // Transactional outbox: verifikasi email dikirim worker (P1-6).
         crate::outbox::enqueue(
             &mut *tx,

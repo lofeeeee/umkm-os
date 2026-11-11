@@ -26,6 +26,9 @@ pub struct RegisterCommand {
     pub accept_terms: bool,
     pub accept_privacy: bool,
     pub user_agent: Option<String>,
+    /// Konteks request untuk audit (P1-8).
+    pub request_id: Option<String>,
+    pub client_ip: Option<String>,
 }
 
 /// Versi dokumen legal yang sedang berlaku (D-12; placeholder sampai teks final).
@@ -63,6 +66,8 @@ pub struct NewRegistration {
     pub session_token_hash: TokenHash,
     pub session_ttl: Duration,
     pub user_agent: Option<String>,
+    pub request_id: Option<String>,
+    pub client_ip: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -165,6 +170,8 @@ pub async fn register(
             session_token_hash,
             session_ttl: policy.session_ttl,
             user_agent: cmd.user_agent,
+            request_id: cmd.request_id,
+            client_ip: cmd.client_ip,
         })
         .await
         .map_err(|e| match e {
@@ -223,6 +230,8 @@ mod tests {
             accept_terms: true,
             accept_privacy: true,
             user_agent: None,
+            request_id: None,
+            client_ip: None,
         }
     }
 

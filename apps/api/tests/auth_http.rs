@@ -595,3 +595,60 @@ async fn verify_email_end_to_end_via_outbox_worker(pool: PgPool) {
     .unwrap();
     assert!(verified);
 }
+
+#[sqlx::test(migrator = "MIGRATOR")]
+async fn login_attempts_are_audited_with_request_id_and_hashed_email(pool: PgPool) {
+    let app = app(pool.clone());
+    send(
+        &app,
+        Method::POST,
+        "/api/v1/auth/register",
+        Some(reg_body("budi@x.id", "Toko Budi")),
+        &[],
+    )
+    .await;
+    let bad = send(
+        &app,
+        Method::POST,
+        "/api/v1/auth/login",
+        Some(json!({"email": "budi@x.id", "password": "salah-123"})),
+        &[],
+    )
+    .await;
+    let good = send(
+        &app,
+        Method::POST,
+        "/api/v1/auth/login",
+        Some(json!({"email": "budi@x.id", "password": "rahasia-123"})),
+        &[],
+    )
+    .await;
+    assert_eq!((bad.status, good.status), (401, 200));
+
+    let rows: Vec<(String, Option<String>, String)> =
+        sqlx::query_as("SELECT action, request_id, summary::text FROM audit_logs WHERE action LIKE 'auth.login.%' ORDER BY created_at")
+            .fetch_all(&pool)
+            .await
+            .unwrap();
+    assert_eq!(rows.len(), 2);
+    assert_eq!(rows[0].0, "auth.login.failed");
+    assert_eq!(
+        rows[0].1.as_deref(),
+        bad.headers["x-request-id"].to_str().ok()
+    );
+    assert!(
+        rows[0].2.contains("email_sha256") && !rows[0].2.contains("budi@x.id"),
+        "{}",
+        rows[0].2
+    );
+    assert_eq!(rows[1].0, "auth.login.succeeded");
+    assert_eq!(
+        rows[1].1.as_deref(),
+        good.headers["x-request-id"].to_str().ok()
+    );
+    let leaked: i64 = sqlx::query_scalar("SELECT count(*) FROM audit_logs WHERE summary::text LIKE '%rahasia%' OR summary::text LIKE '%salah-123%'")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(leaked, 0);
+}
