@@ -80,3 +80,4 @@ ADR-0002 dan ADR-0013 `DISETUJUI` 2026-11-11 (Gate A). Sisanya belum `DISETUJUI`
 | ADR-0012 | Retention dan purge policy | D-11 |
 | ADR-0013 | Batas crate workspace | `BUILD_PLAN.md §3.2` — **DISETUJUI 2026-11-11** (5 crate inti), `docs/decisions/0013-batas-crate-workspace.md` |
 | ADR-0014 | Kontrak frontend, Host/domain-registry, Caddy, API | R-01 |
+| ADR-0015 | Transport sesi: cookie HttpOnly host-only + CSRF | P1-3 — **DISETUJUI 2026-11-11**, `docs/decisions/0015-transport-sesi-cookie.md` |
