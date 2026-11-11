@@ -1,0 +1,201 @@
+openapi: 3.1.0
+info:
+  title: UMKM Business OS API
+  description: Kontrak HTTP. Endpoint bisnis memakai prefix `/api/v1` (PRD.md §7.4). Semua error memakai ErrorEnvelope; header `x-request-id` == `meta.request_id`.
+  version: 0.1.0
+servers:
+- url: /
+  description: Origin yang sama; root domain menunggu D-01
+paths:
+  /healthz:
+    get:
+      tags:
+      - ops
+      summary: 'Liveness: proses hidup. Tidak menyentuh dependensi.'
+      operationId: healthz
+      responses:
+        '200':
+          description: Proses hidup
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_Status'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security: []
+  /readyz:
+    get:
+      tags:
+      - ops
+      summary: 'Readiness: semua dependensi terdaftar siap. Gagal -> 503 tanpa detail internal.'
+      operationId: readyz
+      responses:
+        '200':
+          description: Semua dependensi siap
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_Readiness'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: Ada dependensi tidak siap; `details.failing_checks` berisi nama check
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security: []
+components:
+  schemas:
+    CheckResult:
+      type: object
+      required:
+      - name
+      - ok
+      properties:
+        name:
+          type: string
+        ok:
+          type: boolean
+    ErrorBody:
+      type: object
+      description: |-
+        Isi `error`. `message` ditujukan ke klien: jangan isi dengan SQL, stack trace,
+        secret, atau topologi internal (`PRD.md §6.4`).
+      required:
+      - code
+      - message
+      - details
+      properties:
+        code:
+          $ref: '#/components/schemas/ErrorCode'
+        details:
+          type:
+          - object
+          - 'null'
+        message:
+          type: string
+    ErrorCode:
+      type: string
+      enum:
+      - BAD_REQUEST
+      - UNAUTHORIZED
+      - FORBIDDEN
+      - RESOURCE_NOT_FOUND
+      - METHOD_NOT_ALLOWED
+      - REQUEST_TIMEOUT
+      - CONFLICT
+      - PAYLOAD_TOO_LARGE
+      - UNSUPPORTED_MEDIA_TYPE
+      - VALIDATION_FAILED
+      - RATE_LIMITED
+      - INTERNAL_ERROR
+      - SERVICE_UNAVAILABLE
+    ErrorEnvelope:
+      type: object
+      required:
+      - success
+      - error
+      - meta
+      properties:
+        error:
+          $ref: '#/components/schemas/ErrorBody'
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
+    Meta:
+      type: object
+      required:
+      - request_id
+      properties:
+        request_id:
+          type: string
+    SuccessEnvelope_Readiness:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - status
+          - checks
+          properties:
+            checks:
+              type: array
+              items:
+                $ref: '#/components/schemas/CheckResult'
+            status:
+              type: string
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
+    SuccessEnvelope_Status:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - status
+          properties:
+            status:
+              type: string
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
+tags:
+- name: ops
+  description: Liveness/readiness untuk orchestrator

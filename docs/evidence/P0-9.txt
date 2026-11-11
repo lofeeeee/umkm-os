@@ -1,0 +1,140 @@
+# P0-9 — OpenAPI generator + contract scaffold
+date: 2026-11-11T13:44:51Z
+
+Files: apps/api/src/openapi.rs (utoipa 6.0.0), apps/api/examples/print_openapi.rs, apps/api/tests/openapi.rs, docs/api/openapi.yaml, crates/shared (feature 'openapi')
+Sumber kebenaran = kode. docs/api/openapi.yaml = snapshot; drift -> tes gagal. Regenerasi: UPDATE_OPENAPI=1 cargo test -p umkm-api --test openapi
+BUILD_PLAN menyebut crates/*/src/http.rs; anotasi berada di handler apps/api (lapisan HTTP) sesuai PRD.md §7.2.
+Peringatan Redocly 'info-license' disengaja (proyek privat, lisensi belum ditetapkan).
+
+$ cargo fmt --all --check
+exit 0
+
+$ cargo clippy --workspace --all-targets -- -D warnings
+exit 0
+
+$ cargo test --workspace
+      1 test client_supplied_request_id_is_ignored ... ok
+      1 test concurrent_tenants_each_see_only_their_context ... ok
+      1 test config::tests::environment_parse_is_strict ... ok
+      1 test config::tests::missing_or_empty_secret_is_error_without_value ... ok
+      1 test config::tests::parses_valid_config ... ok
+      1 test config::tests::production_rejects_root_domain_placeholder ... ok
+      1 test config::tests::rejects_unknown_field_such_as_inline_secret ... ok
+      1 test config::tests::rejects_zero_values ... ok
+      1 test config::tests::secrets_debug_is_redacted ... ok
+      1 test config::tests::staging_allows_root_domain_placeholder ... ok
+      1 test config_files_contain_no_secrets ... ok
+      1 test context_does_not_leak_on_connection_reuse ... ok
+      1 test development_and_staging_load ... ok
+      1 test every_documented_path_is_routed ... ok
+      1 test healthz_returns_success_envelope_with_request_id ... ok
+      1 test http::tests::error_envelope_matches_prd_shape ... ok
+      1 test http::tests::request_id_format ... ok
+      1 test http::tests::status_mapping_roundtrips_for_every_code ... ok
+      1 test http::tests::success_envelope_matches_prd_shape ... ok
+      1 test http_requests_recorded_by_route_template ... ok
+      1 test metrics::tests::all_16_required_metrics_exposed_after_observation ... ok
+      1 test metrics::tests::http_observation_counts_and_errors ... ok
+      1 test metrics::tests::output_is_valid_openmetrics_terminated ... ok
+      1 test metrics::tests::unlabeled_metrics_exposed_immediately ... ok
+      1 test metrics_not_exposed_on_public_router ... ok
+      1 test migrations_are_reversible ... ok
+      1 test no_context_means_null_tenant ... ok
+      1 test on_scrape_hook_runs_before_encode ... ok
+      1 test oversized_body_is_413_envelope ... ok
+      1 test panic_is_500_envelope_without_panic_message ... ok
+      1 test production_blocked_until_d01_decided ... ok
+      1 test readyz_503_without_leaking_internal_error ... ok
+      1 test readyz_ok_when_all_checks_pass ... ok
+      1 test real_responses_match_schema ... ok
+      1 test redis::tests::config_prefixes_are_valid ... ok
+      1 test redis::tests::environments_do_not_collide ... ok
+      1 test redis::tests::no_collisions_across_tenants_resources_ids ... ok
+      1 test redis::tests::platform_key_format ... ok
+      1 test redis::tests::rejects_invalid_prefix ... ok
+      1 test redis::tests::rejects_segments_that_could_break_namespace ... ok
+      1 test redis::tests::tenant_key_format_matches_prd ... ok
+      1 test redis::tests::tenant_scan_pattern_never_matches_other_tenant_keys ... ok
+      9 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      2 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      2 test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      2 test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test security_headers_present_on_success_and_error ... ok
+      1 test server_errors_counted_including_panics ... ok
+      1 test slow_handler_times_out_with_408_envelope ... ok
+      1 test snapshot_matches_code ... ok
+      1 test tenant_tx_sets_context ... ok
+      5 test tests::crate_name ... ok
+      1 test tests::migrations_are_embedded_and_reversible ... ok
+      1 test unknown_route_is_404_envelope ... ok
+      1 test wrong_method_is_405_envelope ... ok
+exit 0
+
+$ cargo tree -p umkm-domain -e normal | grep -c utoipa   # feature openapi tidak bocor ke domain
+0
+
+$ scripts/check-domain-boundary.sh
+      1 OK: umkm-domain bebas dari axum/sqlx/reqwest/tokio/hyper/tower/redis
+exit 0
+
+$ scripts/check-ci-needs.sh
+      1 OK: ci-gate mengagregasi 5 job: ['containers', 'lint', 'supply-chain', 'test', 'workflow-lint']
+exit 0
+
+$ cargo deny check
+      1 advisories ok, bans ok, licenses ok, sources ok
+      1 warning[duplicate]: found 2 duplicate entries for crate 'block-buffer'
+      1 warning[duplicate]: found 2 duplicate entries for crate 'cpufeatures'
+      1 warning[duplicate]: found 2 duplicate entries for crate 'crypto-common'
+      1 warning[duplicate]: found 2 duplicate entries for crate 'digest'
+      1 warning[duplicate]: found 2 duplicate entries for crate 'hashbrown'
+      1 warning[duplicate]: found 2 duplicate entries for crate 'sha2'
+      1 warning[duplicate]: found 2 duplicate entries for crate 'syn'
+exit 0
+
+$ docker run redocly/cli:2.11.1 lint docs/api/openapi.yaml
+validating openapi.yaml...
+  2:1  warning  info-license  Info object should contain `license` field.
+openapi.yaml: validated in 44ms
+Woohoo! Your API description is valid. 🎉
+You have 1 warning.
+exit 0
+
+$ actionlint
+exit 0
+
+## Negative control 1: ubah deskripsi endpoint di kode tanpa regenerasi snapshot -> drift
+$ cargo test -p umkm-api --test openapi
+      1 docs/api/openapi.yaml drift dari kode. Jalankan: UPDATE_OPENAPI=1 cargo test -p umkm-api --test openapi
+      1 error: test failed, to rerun pass `-p umkm-api --test openapi`
+      1 test every_documented_path_is_routed ... ok
+      1 test real_responses_match_schema ... ok
+      1 test result: FAILED. 2 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test snapshot_matches_code ... FAILED
+      1 thread 'snapshot_matches_code' (329152) panicked at apps/api/tests/openapi.rs:65:5:
+exit 101
+
+## Negative control 2: dokumentasikan path yang tidak di-route -> every_documented_path_is_routed gagal
+$ cargo test -p umkm-api --test openapi
+      1 docs/api/openapi.yaml drift dari kode. Jalankan: UPDATE_OPENAPI=1 cargo test -p umkm-api --test openapi
+      1 error: test failed, to rerun pass `-p umkm-api --test openapi`
+      1 test every_documented_path_is_routed ... FAILED
+      1 test real_responses_match_schema ... ok
+      1 test result: FAILED. 1 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test snapshot_matches_code ... FAILED
+      1 thread 'every_documented_path_is_routed' (329659) panicked at apps/api/tests/openapi.rs:82:9:
+      1 thread 'snapshot_matches_code' (329661) panicked at apps/api/tests/openapi.rs:65:5:
+exit 101
+
+## Dipulihkan
+$ cargo test -p umkm-api --test openapi
+      1 test every_documented_path_is_routed ... ok
+      1 test real_responses_match_schema ... ok
+      1 test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test snapshot_matches_code ... ok
+exit 0
+

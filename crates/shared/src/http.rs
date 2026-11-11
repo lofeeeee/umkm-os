@@ -28,6 +28,7 @@ impl fmt::Display for RequestId {
 }
 
 #[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct Meta {
     pub request_id: String,
 }
@@ -41,6 +42,7 @@ impl Meta {
 }
 
 #[derive(Debug, Serialize)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct SuccessEnvelope<T> {
     pub success: bool,
     pub data: T,
@@ -58,6 +60,7 @@ impl<T> SuccessEnvelope<T> {
 }
 
 #[derive(Debug, Serialize)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct ErrorEnvelope {
     pub success: bool,
     pub error: ErrorBody,
@@ -77,9 +80,11 @@ impl ErrorEnvelope {
 /// Isi `error`. `message` ditujukan ke klien: jangan isi dengan SQL, stack trace,
 /// secret, atau topologi internal (`PRD.md §6.4`).
 #[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct ErrorBody {
     pub code: ErrorCode,
     pub message: String,
+    #[cfg_attr(feature = "openapi", schema(value_type = Option<Object>, required = true))]
     pub details: Option<serde_json::Value>,
 }
 
@@ -105,6 +110,7 @@ impl ErrorBody {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub enum ErrorCode {
     BadRequest,
     Unauthorized,

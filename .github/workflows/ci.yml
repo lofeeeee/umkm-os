@@ -90,6 +90,8 @@ jobs:
         with:
           persist-credentials: false
       - run: docker compose --env-file .env.example config -q
+      - name: OpenAPI lint (Redocly)
+        run: docker run --rm -v "$PWD/docs/api:/spec" redocly/cli:2.11.1 lint /spec/openapi.yaml
       - name: promtool check config + test rules
         run: |
           docker run --rm -v "$PWD/ops/monitoring:/etc/prometheus:ro" --entrypoint promtool \

@@ -4,7 +4,7 @@ Platform SaaS multi-tenant untuk UMKM: website, katalog & stok, order, ticketing
 
 ## Status
 
-Gate A `DISETUJUI` (ADR-0002, ADR-0013). Selesai: P0-0..P0-6, P0-8; P0-7 (CI) siap tetapi belum pernah jalan di GitHub karena repo belum punya remote — lihat `docs/governance/ci.md`. Cara menjalankan API: lihat bagian "Menjalankan stack lengkap" di bawah (API membutuhkan `UMKM_DATABASE_URL` dan `UMKM_REDIS_URL`).
+Gate A `DISETUJUI` (ADR-0002, ADR-0013). Selesai: P0-0..P0-6, P0-8, P0-9; P0-7 (CI) siap tetapi belum pernah jalan di GitHub karena repo belum punya remote — lihat `docs/governance/ci.md`. Cara menjalankan API: lihat bagian "Menjalankan stack lengkap" di bawah (API membutuhkan `UMKM_DATABASE_URL` dan `UMKM_REDIS_URL`).
 
 ## Perintah
 
@@ -24,6 +24,7 @@ scripts/check-domain-boundary.sh   # domain tanpa axum/sqlx/reqwest/tokio (ADR-0
 | `docs/BUILD_PLAN.md` | Urutan kerja berbasis gate |
 | `docs/OPEN_DECISIONS.md` | 12 keputusan + ADR yang diusulkan |
 | `docs/RTM.md` | Register requirement (draft) |
+| `docs/api/openapi.yaml` | Kontrak OpenAPI (snapshot dari kode; `UPDATE_OPENAPI=1 cargo test -p umkm-api --test openapi`) |
 | `docs/decisions/` | ADR (MADR 4.0.0, append-only) |
 | `docs/evidence/` | Bukti perintah + exit code per task |
 

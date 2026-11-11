@@ -18,6 +18,7 @@ Setiap dependency eksternal dicatat di sini **sebelum** ditambahkan ke `Cargo.to
 | http-body-util | 0.1.5 | MIT | 1.61 | api (dev) | Membaca body di tes integrasi | P0-3 |
 | redis | 1.8.1 | BSD-3-Clause | 1.88 | infrastructure | Klien Redis `PRD.md §9.5`; `default-features = false` + `tokio-comp`. 2.0 masih RC, tidak dipakai. Transitif `xxhash-rust` ber-lisensi BSL-1.0 → ditambahkan ke allowlist `deny.toml` | P0-6 |
 | prometheus-client | 0.26.0 | Apache-2.0 | – | infrastructure | Library resmi Prometheus/OpenMetrics untuk 16 metric `PRD.md §9.8`; tanpa fitur protobuf | P0-8 |
+| utoipa | 6.0.0 | MIT OR Apache-2.0 | 1.88 | api; shared (opsional, feature `openapi`) | OpenAPI dari kode `PRD.md §7.1`; fitur `yaml` hanya di api. Tidak masuk ke domain (diverifikasi `cargo tree`) | P0-9 |
 | sqlx | 0.9.0 | MIT OR Apache-2.0 | 1.94 | database | DB access + migration `PRD.md §7.1`; `default-features = false`, hanya postgres/tokio/macros/migrate/uuid | P0-4 |
 
 Kriteria: maintained aktif, tanpa advisory RustSec terbuka, lisensi permisif (MIT/Apache-2.0/BSD/ISC/Unicode/Zlib/BSL-1.0), MSRV ≤ `rust-version` workspace (1.94; dinaikkan dari 1.85 di P0-4 untuk sqlx 0.9.0, rilis 2026-05-21).

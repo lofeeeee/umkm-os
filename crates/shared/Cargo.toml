@@ -6,6 +6,10 @@ rust-version.workspace = true
 license.workspace = true
 publish.workspace = true
 
+[features]
+# Skema OpenAPI untuk tipe envelope; hanya diaktifkan oleh apps/api.
+openapi = ["dep:utoipa"]
+
 [lints]
 workspace = true
 
@@ -15,3 +19,4 @@ toml.workspace = true
 thiserror.workspace = true
 serde_json.workspace = true
 uuid.workspace = true
+utoipa = { workspace = true, optional = true }

@@ -2,35 +2,51 @@ use std::time::Duration;
 
 use axum::{Json, extract::State, response::IntoResponse};
 use serde::Serialize;
-use umkm_shared::http::{ErrorBody, ErrorCode, SuccessEnvelope};
+use umkm_shared::http::{ErrorBody, ErrorCode, ErrorEnvelope, SuccessEnvelope};
+use utoipa::ToSchema;
 
 use crate::{ApiError, AppState, middleware::ReqId};
 
 const CHECK_TIMEOUT: Duration = Duration::from_secs(2);
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 pub struct Status {
     pub status: &'static str,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 pub struct CheckResult {
     pub name: &'static str,
     pub ok: bool,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 pub struct Readiness {
     pub status: &'static str,
     pub checks: Vec<CheckResult>,
 }
 
 /// Liveness: proses hidup. Tidak menyentuh dependensi.
+#[utoipa::path(
+    get,
+    path = "/healthz",
+    tag = "ops",
+    responses((status = 200, description = "Proses hidup", body = SuccessEnvelope<Status>))
+)]
 pub async fn healthz(ReqId(id): ReqId) -> impl IntoResponse {
     Json(SuccessEnvelope::new(Status { status: "ok" }, &id))
 }
 
 /// Readiness: semua dependensi terdaftar siap. Gagal -> 503 tanpa detail internal.
+#[utoipa::path(
+    get,
+    path = "/readyz",
+    tag = "ops",
+    responses(
+        (status = 200, description = "Semua dependensi siap", body = SuccessEnvelope<Readiness>),
+        (status = 503, description = "Ada dependensi tidak siap; `details.failing_checks` berisi nama check", body = ErrorEnvelope)
+    )
+)]
 pub async fn readyz(
     State(state): State<AppState>,
     ReqId(id): ReqId,

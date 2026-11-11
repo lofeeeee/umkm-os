@@ -10,10 +10,11 @@ publish.workspace = true
 workspace = true
 
 [dependencies]
+utoipa = { workspace = true, features = ["yaml"] }
 umkm-application.workspace = true
 umkm-infrastructure.workspace = true
 umkm-database.workspace = true
-umkm-shared.workspace = true
+umkm-shared = { workspace = true, features = ["openapi"] }
 tokio.workspace = true
 axum.workspace = true
 tower.workspace = true
