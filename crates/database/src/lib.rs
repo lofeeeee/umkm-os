@@ -1,0 +1,14 @@
+//! Akses PostgreSQL via SQLx, migration harness, dan tenant context `set_config(..., true)` (P0-4).
+//!
+//! Batas lapisan: `docs/decisions/0013-batas-crate-workspace.md`.
+
+/// Nama crate, dipakai untuk smoke test wiring workspace.
+pub const CRATE: &str = "umkm-database";
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn crate_name() {
+        assert_eq!(super::CRATE, "umkm-database");
+    }
+}

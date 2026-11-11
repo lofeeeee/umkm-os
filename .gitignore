@@ -1,0 +1,23 @@
+# Rust
+/target/
+**/*.rs.bk
+
+# Secrets — never commit (PRD.md §6.7)
+.env
+.env.*
+!.env.example
+config/*.local.toml
+config/secrets/
+*.pem
+*.key
+
+# Frontend (contingent ADR-0014)
+node_modules/
+.next/
+out/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.swp

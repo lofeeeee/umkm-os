@@ -1,0 +1,15 @@
+[package]
+name = "umkm-infrastructure"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+umkm-domain.workspace = true
+umkm-shared.workspace = true
+umkm-database.workspace = true

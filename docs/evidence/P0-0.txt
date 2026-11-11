@@ -1,0 +1,15 @@
+# P0-0 — Repo skeleton netral (BUILD_PLAN.md §5 Phase 0)
+date: 2026-11-11T12:47:10Z
+
+$ for p in README.md .gitignore config .github/workflows/.gitkeep docs/{architecture,api,security,decisions,governance,requirements,test}; do test -e "$p"; done
+exit 0
+
+$ test ! -e Cargo.toml && test ! -d crates && test ! -d apps   # bentuk workspace belum dikunci (ADR-0013)
+exit 0
+
+$ sha256sum docs/PRD.md   # PRD tidak berubah
+95d7d036dcf83e1d9e73c004cdbb153c159a874c29029186997e6d3cfb8266c4  docs/PRD.md
+exit 0
+
+$ grep -rIniE "(password|secret|api[_-]?key|token)\s*[:=]\s*\S+" README.md config .gitignore   # tidak ada secret
+no match; exit 0 (expected)

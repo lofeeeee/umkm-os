@@ -1,0 +1,23 @@
+[workspace]
+resolver = "3"
+members = ["apps/*", "crates/*"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "UNLICENSED"
+publish = false
+
+[workspace.dependencies]
+umkm-shared = { path = "crates/shared" }
+umkm-domain = { path = "crates/domain" }
+umkm-application = { path = "crates/application" }
+umkm-infrastructure = { path = "crates/infrastructure" }
+umkm-database = { path = "crates/database" }
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }

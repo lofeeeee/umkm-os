@@ -1,0 +1,685 @@
+{
+  "discovery_rule": "exclude SKILL.md under tests/ paths in source repos",
+  "expected_unique_skill_names": 97,
+  "rows": [
+    {
+      "repo": "anthropics/skills",
+      "commit": "2c5958ecac7cee2b583967a2c4981d0f4a75c579",
+      "source_path": "skills/academy-guide",
+      "skill_name": "academy-guide",
+      "installed_path": "/home/ryasr/.dsh/skills/academy-guide"
+    },
+    {
+      "repo": "anthropics/skills",
+      "commit": "2c5958ecac7cee2b583967a2c4981d0f4a75c579",
+      "source_path": "skills/algorithmic-art",
+      "skill_name": "algorithmic-art",
+      "installed_path": "/home/ryasr/.dsh/skills/algorithmic-art"
+    },
+    {
+      "repo": "anthropics/skills",
+      "commit": "2c5958ecac7cee2b583967a2c4981d0f4a75c579",
+      "source_path": "skills/brand-guidelines",
+      "skill_name": "brand-guidelines",
+      "installed_path": "/home/ryasr/.dsh/skills/brand-guidelines"
+    },
+    {
+      "repo": "anthropics/skills",
+      "commit": "2c5958ecac7cee2b583967a2c4981d0f4a75c579",
+      "source_path": "skills/canvas-design",
+      "skill_name": "canvas-design",
+      "installed_path": "/home/ryasr/.dsh/skills/canvas-design"
+    },
+    {
+      "repo": "anthropics/skills",
+      "commit": "2c5958ecac7cee2b583967a2c4981d0f4a75c579",
+      "source_path": "skills/claude-api",
+      "skill_name": "claude-api",
+      "installed_path": "/home/ryasr/.dsh/skills/claude-api"
+    },
+    {
+      "repo": "anthropics/skills",
+      "commit": "2c5958ecac7cee2b583967a2c4981d0f4a75c579",
+      "source_path": "skills/discernment-nudge",
+      "skill_name": "discernment-nudge",
+      "installed_path": "/home/ryasr/.dsh/skills/discernment-nudge"
+    },
+    {
+      "repo": "anthropics/skills",
+      "commit": "2c5958ecac7cee2b583967a2c4981d0f4a75c579",
+      "source_path": "skills/doc-coauthoring",
+      "skill_name": "doc-coauthoring",
+      "installed_path": "/home/ryasr/.dsh/skills/doc-coauthoring"
+    },
+    {
+      "repo": "anthropics/skills",
+      "commit": "2c5958ecac7cee2b583967a2c4981d0f4a75c579",
+      "source_path": "skills/docx",
+      "skill_name": "docx",
+      "installed_path": "/home/ryasr/.dsh/skills/docx"
+    },
+    {
+      "repo": "anthropics/skills",
+      "commit": "2c5958ecac7cee2b583967a2c4981d0f4a75c579",
+      "source_path": "skills/frontend-design",
+      "skill_name": "frontend-design",
+      "installed_path": "/home/ryasr/.dsh/skills/frontend-design"
+    },
+    {
+      "repo": "anthropics/skills",
+      "commit": "2c5958ecac7cee2b583967a2c4981d0f4a75c579",
+      "source_path": "skills/internal-comms",
+      "skill_name": "internal-comms",
+      "installed_path": "/home/ryasr/.dsh/skills/internal-comms"
+    },
+    {
+      "repo": "anthropics/skills",
+      "commit": "2c5958ecac7cee2b583967a2c4981d0f4a75c579",
+      "source_path": "skills/mcp-builder",
+      "skill_name": "mcp-builder",
+      "installed_path": "/home/ryasr/.dsh/skills/mcp-builder"
+    },
+    {
+      "repo": "anthropics/skills",
+      "commit": "2c5958ecac7cee2b583967a2c4981d0f4a75c579",
+      "source_path": "skills/pdf",
+      "skill_name": "pdf",
+      "installed_path": "/home/ryasr/.dsh/skills/pdf"
+    },
+    {
+      "repo": "anthropics/skills",
+      "commit": "2c5958ecac7cee2b583967a2c4981d0f4a75c579",
+      "source_path": "skills/pptx",
+      "skill_name": "pptx",
+      "installed_path": "/home/ryasr/.dsh/skills/pptx"
+    },
+    {
+      "repo": "anthropics/skills",
+      "commit": "2c5958ecac7cee2b583967a2c4981d0f4a75c579",
+      "source_path": "skills/skill-creator",
+      "skill_name": "skill-creator",
+      "installed_path": "/home/ryasr/.dsh/skills/skill-creator"
+    },
+    {
+      "repo": "anthropics/skills",
+      "commit": "2c5958ecac7cee2b583967a2c4981d0f4a75c579",
+      "source_path": "skills/slack-gif-creator",
+      "skill_name": "slack-gif-creator",
+      "installed_path": "/home/ryasr/.dsh/skills/slack-gif-creator"
+    },
+    {
+      "repo": "anthropics/skills",
+      "commit": "2c5958ecac7cee2b583967a2c4981d0f4a75c579",
+      "source_path": "skills/theme-factory",
+      "skill_name": "theme-factory",
+      "installed_path": "/home/ryasr/.dsh/skills/theme-factory"
+    },
+    {
+      "repo": "anthropics/skills",
+      "commit": "2c5958ecac7cee2b583967a2c4981d0f4a75c579",
+      "source_path": "skills/web-artifacts-builder",
+      "skill_name": "web-artifacts-builder",
+      "installed_path": "/home/ryasr/.dsh/skills/web-artifacts-builder"
+    },
+    {
+      "repo": "anthropics/skills",
+      "commit": "2c5958ecac7cee2b583967a2c4981d0f4a75c579",
+      "source_path": "skills/webapp-testing",
+      "skill_name": "webapp-testing",
+      "installed_path": "/home/ryasr/.dsh/skills/webapp-testing"
+    },
+    {
+      "repo": "anthropics/skills",
+      "commit": "2c5958ecac7cee2b583967a2c4981d0f4a75c579",
+      "source_path": "skills/xlsx",
+      "skill_name": "xlsx",
+      "installed_path": "/home/ryasr/.dsh/skills/xlsx"
+    },
+    {
+      "repo": "anthropics/skills",
+      "commit": "2c5958ecac7cee2b583967a2c4981d0f4a75c579",
+      "source_path": "template",
+      "skill_name": "template-skill",
+      "installed_path": "/home/ryasr/.dsh/skills/template-skill"
+    },
+    {
+      "repo": "heygen-com/hyperframes",
+      "commit": "3ad7611f9fd36c1cef589c59b116ad7043c3b041",
+      "source_path": ".agents/skills/captions-overlay",
+      "skill_name": "captions-overlay",
+      "installed_path": "/home/ryasr/.dsh/skills/captions-overlay"
+    },
+    {
+      "repo": "heygen-com/hyperframes",
+      "commit": "3ad7611f9fd36c1cef589c59b116ad7043c3b041",
+      "source_path": ".agents/skills/changelog-video",
+      "skill_name": "changelog-video",
+      "installed_path": "/home/ryasr/.dsh/skills/changelog-video"
+    },
+    {
+      "repo": "heygen-com/hyperframes",
+      "commit": "3ad7611f9fd36c1cef589c59b116ad7043c3b041",
+      "source_path": ".agents/skills/cut-the-curve",
+      "skill_name": "cut-the-curve",
+      "installed_path": "/home/ryasr/.dsh/skills/cut-the-curve"
+    },
+    {
+      "repo": "heygen-com/hyperframes",
+      "commit": "3ad7611f9fd36c1cef589c59b116ad7043c3b041",
+      "source_path": ".agents/skills/motion-doctrine",
+      "skill_name": "motion-doctrine",
+      "installed_path": "/home/ryasr/.dsh/skills/motion-doctrine"
+    },
+    {
+      "repo": "heygen-com/hyperframes",
+      "commit": "3ad7611f9fd36c1cef589c59b116ad7043c3b041",
+      "source_path": ".agents/skills/oversized-cursor",
+      "skill_name": "oversized-cursor",
+      "installed_path": "/home/ryasr/.dsh/skills/oversized-cursor"
+    },
+    {
+      "repo": "heygen-com/hyperframes",
+      "commit": "3ad7611f9fd36c1cef589c59b116ad7043c3b041",
+      "source_path": ".agents/skills/seam-craft",
+      "skill_name": "seam-craft",
+      "installed_path": "/home/ryasr/.dsh/skills/seam-craft"
+    },
+    {
+      "repo": "heygen-com/hyperframes",
+      "commit": "3ad7611f9fd36c1cef589c59b116ad7043c3b041",
+      "source_path": "registry/blocks/canopy-part-title",
+      "skill_name": "canopy-part-title",
+      "installed_path": "/home/ryasr/.dsh/skills/canopy-part-title"
+    },
+    {
+      "repo": "heygen-com/hyperframes",
+      "commit": "3ad7611f9fd36c1cef589c59b116ad7043c3b041",
+      "source_path": "registry/blocks/code-slice-hero",
+      "skill_name": "code-slice-hero",
+      "installed_path": "/home/ryasr/.dsh/skills/code-slice-hero"
+    },
+    {
+      "repo": "heygen-com/hyperframes",
+      "commit": "3ad7611f9fd36c1cef589c59b116ad7043c3b041",
+      "source_path": "registry/blocks/cuboid-carousel",
+      "skill_name": "cuboid-carousel",
+      "installed_path": "/home/ryasr/.dsh/skills/cuboid-carousel"
+    },
+    {
+      "repo": "heygen-com/hyperframes",
+      "commit": "3ad7611f9fd36c1cef589c59b116ad7043c3b041",
+      "source_path": "registry/blocks/frost-sequence-camera-orbit",
+      "skill_name": "frost-sequence-camera-orbit",
+      "installed_path": "/home/ryasr/.dsh/skills/frost-sequence-camera-orbit"
+    },
+    {
+      "repo": "heygen-com/hyperframes",
+      "commit": "3ad7611f9fd36c1cef589c59b116ad7043c3b041",
+      "source_path": "registry/blocks/glass-shard-title",
+      "skill_name": "glass-shard-title",
+      "installed_path": "/home/ryasr/.dsh/skills/glass-shard-title"
+    },
+    {
+      "repo": "heygen-com/hyperframes",
+      "commit": "3ad7611f9fd36c1cef589c59b116ad7043c3b041",
+      "source_path": "registry/blocks/orbit-card",
+      "skill_name": "orbit-card",
+      "installed_path": "/home/ryasr/.dsh/skills/orbit-card"
+    },
+    {
+      "repo": "heygen-com/hyperframes",
+      "commit": "3ad7611f9fd36c1cef589c59b116ad7043c3b041",
+      "source_path": "registry/blocks/wireframe-portal-title",
+      "skill_name": "wireframe-portal-title",
+      "installed_path": "/home/ryasr/.dsh/skills/wireframe-portal-title"
+    },
+    {
+      "repo": "heygen-com/hyperframes",
+      "commit": "3ad7611f9fd36c1cef589c59b116ad7043c3b041",
+      "source_path": "skills/figma",
+      "skill_name": "figma",
+      "installed_path": "/home/ryasr/.dsh/skills/figma"
+    },
+    {
+      "repo": "heygen-com/hyperframes",
+      "commit": "3ad7611f9fd36c1cef589c59b116ad7043c3b041",
+      "source_path": "skills/hyperframes",
+      "skill_name": "hyperframes",
+      "installed_path": "/home/ryasr/.dsh/skills/hyperframes"
+    },
+    {
+      "repo": "heygen-com/hyperframes",
+      "commit": "3ad7611f9fd36c1cef589c59b116ad7043c3b041",
+      "source_path": "skills/hyperframes-cli",
+      "skill_name": "hyperframes-cli",
+      "installed_path": "/home/ryasr/.dsh/skills/hyperframes-cli"
+    },
+    {
+      "repo": "heygen-com/hyperframes",
+      "commit": "3ad7611f9fd36c1cef589c59b116ad7043c3b041",
+      "source_path": "skills/hyperframes-registry",
+      "skill_name": "hyperframes-registry",
+      "installed_path": "/home/ryasr/.dsh/skills/hyperframes-registry"
+    },
+    {
+      "repo": "heygen-com/hyperframes",
+      "commit": "3ad7611f9fd36c1cef589c59b116ad7043c3b041",
+      "source_path": "skills/media-use",
+      "skill_name": "media-use",
+      "installed_path": "/home/ryasr/.dsh/skills/media-use"
+    },
+    {
+      "repo": "heygen-com/hyperframes",
+      "commit": "3ad7611f9fd36c1cef589c59b116ad7043c3b041",
+      "source_path": "skills/remotion-to-hyperframes",
+      "skill_name": "remotion-to-hyperframes",
+      "installed_path": "/home/ryasr/.dsh/skills/remotion-to-hyperframes"
+    },
+    {
+      "repo": "heygen-com/hyperframes",
+      "commit": "3ad7611f9fd36c1cef589c59b116ad7043c3b041",
+      "source_path": "skills/reverse-any-video",
+      "skill_name": "reverse-any-video",
+      "installed_path": "/home/ryasr/.dsh/skills/reverse-any-video"
+    },
+    {
+      "repo": "heygen-com/hyperframes",
+      "commit": "3ad7611f9fd36c1cef589c59b116ad7043c3b041",
+      "source_path": "skills/slideshow",
+      "skill_name": "slideshow",
+      "installed_path": "/home/ryasr/.dsh/skills/slideshow"
+    },
+    {
+      "repo": "heygen-com/hyperframes",
+      "commit": "3ad7611f9fd36c1cef589c59b116ad7043c3b041",
+      "source_path": "skills/style-sampling",
+      "skill_name": "style-sampling",
+      "installed_path": "/home/ryasr/.dsh/skills/style-sampling"
+    },
+    {
+      "repo": "mattpocock/skills",
+      "commit": "4ae2317ddb22b046e26455e4f9c9b3aaaf62212d",
+      "source_path": "skills/engineering/ask-matt",
+      "skill_name": "ask-matt",
+      "installed_path": "/home/ryasr/.dsh/skills/ask-matt"
+    },
+    {
+      "repo": "mattpocock/skills",
+      "commit": "4ae2317ddb22b046e26455e4f9c9b3aaaf62212d",
+      "source_path": "skills/engineering/code-review",
+      "skill_name": "code-review",
+      "installed_path": "/home/ryasr/.dsh/skills/code-review"
+    },
+    {
+      "repo": "mattpocock/skills",
+      "commit": "4ae2317ddb22b046e26455e4f9c9b3aaaf62212d",
+      "source_path": "skills/engineering/codebase-design",
+      "skill_name": "codebase-design",
+      "installed_path": "/home/ryasr/.dsh/skills/codebase-design"
+    },
+    {
+      "repo": "mattpocock/skills",
+      "commit": "4ae2317ddb22b046e26455e4f9c9b3aaaf62212d",
+      "source_path": "skills/engineering/diagnosing-bugs",
+      "skill_name": "diagnosing-bugs",
+      "installed_path": "/home/ryasr/.dsh/skills/diagnosing-bugs"
+    },
+    {
+      "repo": "mattpocock/skills",
+      "commit": "4ae2317ddb22b046e26455e4f9c9b3aaaf62212d",
+      "source_path": "skills/engineering/domain-modeling",
+      "skill_name": "domain-modeling",
+      "installed_path": "/home/ryasr/.dsh/skills/domain-modeling"
+    },
+    {
+      "repo": "mattpocock/skills",
+      "commit": "4ae2317ddb22b046e26455e4f9c9b3aaaf62212d",
+      "source_path": "skills/engineering/grill-with-docs",
+      "skill_name": "grill-with-docs",
+      "installed_path": "/home/ryasr/.dsh/skills/grill-with-docs"
+    },
+    {
+      "repo": "mattpocock/skills",
+      "commit": "4ae2317ddb22b046e26455e4f9c9b3aaaf62212d",
+      "source_path": "skills/engineering/implement",
+      "skill_name": "implement",
+      "installed_path": "/home/ryasr/.dsh/skills/implement"
+    },
+    {
+      "repo": "mattpocock/skills",
+      "commit": "4ae2317ddb22b046e26455e4f9c9b3aaaf62212d",
+      "source_path": "skills/engineering/implement-spec",
+      "skill_name": "implement-spec",
+      "installed_path": "/home/ryasr/.dsh/skills/implement-spec"
+    },
+    {
+      "repo": "mattpocock/skills",
+      "commit": "4ae2317ddb22b046e26455e4f9c9b3aaaf62212d",
+      "source_path": "skills/engineering/improve-codebase-architecture",
+      "skill_name": "improve-codebase-architecture",
+      "installed_path": "/home/ryasr/.dsh/skills/improve-codebase-architecture"
+    },
+    {
+      "repo": "mattpocock/skills",
+      "commit": "4ae2317ddb22b046e26455e4f9c9b3aaaf62212d",
+      "source_path": "skills/engineering/pr",
+      "skill_name": "pr",
+      "installed_path": "/home/ryasr/.dsh/skills/pr"
+    },
+    {
+      "repo": "mattpocock/skills",
+      "commit": "4ae2317ddb22b046e26455e4f9c9b3aaaf62212d",
+      "source_path": "skills/engineering/prototype",
+      "skill_name": "prototype",
+      "installed_path": "/home/ryasr/.dsh/skills/prototype"
+    },
+    {
+      "repo": "mattpocock/skills",
+      "commit": "4ae2317ddb22b046e26455e4f9c9b3aaaf62212d",
+      "source_path": "skills/engineering/research",
+      "skill_name": "research",
+      "installed_path": "/home/ryasr/.dsh/skills/research"
+    },
+    {
+      "repo": "mattpocock/skills",
+      "commit": "4ae2317ddb22b046e26455e4f9c9b3aaaf62212d",
+      "source_path": "skills/engineering/retro",
+      "skill_name": "retro",
+      "installed_path": "/home/ryasr/.dsh/skills/retro"
+    },
+    {
+      "repo": "mattpocock/skills",
+      "commit": "4ae2317ddb22b046e26455e4f9c9b3aaaf62212d",
+      "source_path": "skills/engineering/setup-matt-pocock-skills",
+      "skill_name": "setup-matt-pocock-skills",
+      "installed_path": "/home/ryasr/.dsh/skills/setup-matt-pocock-skills"
+    },
+    {
+      "repo": "mattpocock/skills",
+      "commit": "4ae2317ddb22b046e26455e4f9c9b3aaaf62212d",
+      "source_path": "skills/engineering/tdd",
+      "skill_name": "tdd",
+      "installed_path": "/home/ryasr/.dsh/skills/tdd"
+    },
+    {
+      "repo": "mattpocock/skills",
+      "commit": "4ae2317ddb22b046e26455e4f9c9b3aaaf62212d",
+      "source_path": "skills/engineering/to-spec",
+      "skill_name": "to-spec",
+      "installed_path": "/home/ryasr/.dsh/skills/to-spec"
+    },
+    {
+      "repo": "mattpocock/skills",
+      "commit": "4ae2317ddb22b046e26455e4f9c9b3aaaf62212d",
+      "source_path": "skills/engineering/to-tickets",
+      "skill_name": "to-tickets",
+      "installed_path": "/home/ryasr/.dsh/skills/to-tickets"
+    },
+    {
+      "repo": "mattpocock/skills",
+      "commit": "4ae2317ddb22b046e26455e4f9c9b3aaaf62212d",
+      "source_path": "skills/engineering/triage",
+      "skill_name": "triage",
+      "installed_path": "/home/ryasr/.dsh/skills/triage"
+    },
+    {
+      "repo": "mattpocock/skills",
+      "commit": "4ae2317ddb22b046e26455e4f9c9b3aaaf62212d",
+      "source_path": "skills/engineering/wayfinder",
+      "skill_name": "wayfinder",
+      "installed_path": "/home/ryasr/.dsh/skills/wayfinder"
+    },
+    {
+      "repo": "mattpocock/skills",
+      "commit": "4ae2317ddb22b046e26455e4f9c9b3aaaf62212d",
+      "source_path": "skills/engineering/wizard",
+      "skill_name": "wizard",
+      "installed_path": "/home/ryasr/.dsh/skills/wizard"
+    },
+    {
+      "repo": "mattpocock/skills",
+      "commit": "4ae2317ddb22b046e26455e4f9c9b3aaaf62212d",
+      "source_path": "skills/in-progress/chief-of-staff",
+      "skill_name": "chief-of-staff",
+      "installed_path": "/home/ryasr/.dsh/skills/chief-of-staff"
+    },
+    {
+      "repo": "mattpocock/skills",
+      "commit": "4ae2317ddb22b046e26455e4f9c9b3aaaf62212d",
+      "source_path": "skills/in-progress/claude-handoff",
+      "skill_name": "claude-handoff",
+      "installed_path": "/home/ryasr/.dsh/skills/claude-handoff"
+    },
+    {
+      "repo": "mattpocock/skills",
+      "commit": "4ae2317ddb22b046e26455e4f9c9b3aaaf62212d",
+      "source_path": "skills/in-progress/loop-me",
+      "skill_name": "loop-me",
+      "installed_path": "/home/ryasr/.dsh/skills/loop-me"
+    },
+    {
+      "repo": "mattpocock/skills",
+      "commit": "4ae2317ddb22b046e26455e4f9c9b3aaaf62212d",
+      "source_path": "skills/in-progress/setup-ts-deep-modules",
+      "skill_name": "setup-ts-deep-modules",
+      "installed_path": "/home/ryasr/.dsh/skills/setup-ts-deep-modules"
+    },
+    {
+      "repo": "mattpocock/skills",
+      "commit": "4ae2317ddb22b046e26455e4f9c9b3aaaf62212d",
+      "source_path": "skills/in-progress/software-factory",
+      "skill_name": "software-factory",
+      "installed_path": "/home/ryasr/.dsh/skills/software-factory"
+    },
+    {
+      "repo": "mattpocock/skills",
+      "commit": "4ae2317ddb22b046e26455e4f9c9b3aaaf62212d",
+      "source_path": "skills/in-progress/writing-beats",
+      "skill_name": "writing-beats",
+      "installed_path": "/home/ryasr/.dsh/skills/writing-beats"
+    },
+    {
+      "repo": "mattpocock/skills",
+      "commit": "4ae2317ddb22b046e26455e4f9c9b3aaaf62212d",
+      "source_path": "skills/in-progress/writing-fragments",
+      "skill_name": "writing-fragments",
+      "installed_path": "/home/ryasr/.dsh/skills/writing-fragments"
+    },
+    {
+      "repo": "mattpocock/skills",
+      "commit": "4ae2317ddb22b046e26455e4f9c9b3aaaf62212d",
+      "source_path": "skills/in-progress/writing-shape",
+      "skill_name": "writing-shape",
+      "installed_path": "/home/ryasr/.dsh/skills/writing-shape"
+    },
+    {
+      "repo": "mattpocock/skills",
+      "commit": "4ae2317ddb22b046e26455e4f9c9b3aaaf62212d",
+      "source_path": "skills/misc/git-guardrails-claude-code",
+      "skill_name": "git-guardrails-claude-code",
+      "installed_path": "/home/ryasr/.dsh/skills/git-guardrails-claude-code"
+    },
+    {
+      "repo": "mattpocock/skills",
+      "commit": "4ae2317ddb22b046e26455e4f9c9b3aaaf62212d",
+      "source_path": "skills/misc/migrate-to-shoehorn",
+      "skill_name": "migrate-to-shoehorn",
+      "installed_path": "/home/ryasr/.dsh/skills/migrate-to-shoehorn"
+    },
+    {
+      "repo": "mattpocock/skills",
+      "commit": "4ae2317ddb22b046e26455e4f9c9b3aaaf62212d",
+      "source_path": "skills/misc/scaffold-exercises",
+      "skill_name": "scaffold-exercises",
+      "installed_path": "/home/ryasr/.dsh/skills/scaffold-exercises"
+    },
+    {
+      "repo": "mattpocock/skills",
+      "commit": "4ae2317ddb22b046e26455e4f9c9b3aaaf62212d",
+      "source_path": "skills/misc/setup-pre-commit",
+      "skill_name": "setup-pre-commit",
+      "installed_path": "/home/ryasr/.dsh/skills/setup-pre-commit"
+    },
+    {
+      "repo": "mattpocock/skills",
+      "commit": "4ae2317ddb22b046e26455e4f9c9b3aaaf62212d",
+      "source_path": "skills/productivity/grill-me",
+      "skill_name": "grill-me",
+      "installed_path": "/home/ryasr/.dsh/skills/grill-me"
+    },
+    {
+      "repo": "mattpocock/skills",
+      "commit": "4ae2317ddb22b046e26455e4f9c9b3aaaf62212d",
+      "source_path": "skills/productivity/grilling",
+      "skill_name": "grilling",
+      "installed_path": "/home/ryasr/.dsh/skills/grilling"
+    },
+    {
+      "repo": "mattpocock/skills",
+      "commit": "4ae2317ddb22b046e26455e4f9c9b3aaaf62212d",
+      "source_path": "skills/productivity/handoff",
+      "skill_name": "handoff",
+      "installed_path": "/home/ryasr/.dsh/skills/handoff"
+    },
+    {
+      "repo": "mattpocock/skills",
+      "commit": "4ae2317ddb22b046e26455e4f9c9b3aaaf62212d",
+      "source_path": "skills/productivity/teach",
+      "skill_name": "teach",
+      "installed_path": "/home/ryasr/.dsh/skills/teach"
+    },
+    {
+      "repo": "mattpocock/skills",
+      "commit": "4ae2317ddb22b046e26455e4f9c9b3aaaf62212d",
+      "source_path": "skills/productivity/to-questionnaire",
+      "skill_name": "to-questionnaire",
+      "installed_path": "/home/ryasr/.dsh/skills/to-questionnaire"
+    },
+    {
+      "repo": "mattpocock/skills",
+      "commit": "4ae2317ddb22b046e26455e4f9c9b3aaaf62212d",
+      "source_path": "skills/productivity/wait-what",
+      "skill_name": "wait-what",
+      "installed_path": "/home/ryasr/.dsh/skills/wait-what"
+    },
+    {
+      "repo": "mattpocock/skills",
+      "commit": "4ae2317ddb22b046e26455e4f9c9b3aaaf62212d",
+      "source_path": "skills/productivity/writing-for-agents",
+      "skill_name": "writing-for-agents",
+      "installed_path": "/home/ryasr/.dsh/skills/writing-for-agents"
+    },
+    {
+      "repo": "nextlevelbuilder/ui-ux-pro-max-skill",
+      "commit": "6ae86f61f520d6ca229d2f40e070410638c908c5",
+      "source_path": ".claude/skills/banner-design",
+      "skill_name": "banner-design",
+      "installed_path": "/home/ryasr/.dsh/skills/banner-design"
+    },
+    {
+      "repo": "nextlevelbuilder/ui-ux-pro-max-skill",
+      "commit": "6ae86f61f520d6ca229d2f40e070410638c908c5",
+      "source_path": ".claude/skills/brand",
+      "skill_name": "brand",
+      "installed_path": "/home/ryasr/.dsh/skills/brand"
+    },
+    {
+      "repo": "nextlevelbuilder/ui-ux-pro-max-skill",
+      "commit": "6ae86f61f520d6ca229d2f40e070410638c908c5",
+      "source_path": ".claude/skills/design",
+      "skill_name": "design",
+      "installed_path": "/home/ryasr/.dsh/skills/design"
+    },
+    {
+      "repo": "nextlevelbuilder/ui-ux-pro-max-skill",
+      "commit": "6ae86f61f520d6ca229d2f40e070410638c908c5",
+      "source_path": ".claude/skills/design-system",
+      "skill_name": "design-system",
+      "installed_path": "/home/ryasr/.dsh/skills/design-system"
+    },
+    {
+      "repo": "nextlevelbuilder/ui-ux-pro-max-skill",
+      "commit": "6ae86f61f520d6ca229d2f40e070410638c908c5",
+      "source_path": ".claude/skills/slides",
+      "skill_name": "slides",
+      "installed_path": "/home/ryasr/.dsh/skills/slides"
+    },
+    {
+      "repo": "nextlevelbuilder/ui-ux-pro-max-skill",
+      "commit": "6ae86f61f520d6ca229d2f40e070410638c908c5",
+      "source_path": ".claude/skills/ui-styling",
+      "skill_name": "ui-styling",
+      "installed_path": "/home/ryasr/.dsh/skills/ui-styling"
+    },
+    {
+      "repo": "nextlevelbuilder/ui-ux-pro-max-skill",
+      "commit": "6ae86f61f520d6ca229d2f40e070410638c908c5",
+      "source_path": ".claude/skills/ui-ux-pro-max",
+      "skill_name": "ui-ux-pro-max",
+      "installed_path": "/home/ryasr/.dsh/skills/ui-ux-pro-max"
+    },
+    {
+      "repo": "pbakaus/impeccable",
+      "commit": "c1e0e5492fbb524f5df84d635ecfae7dc438ec45",
+      "source_path": ".dsh/skills/impeccable",
+      "skill_name": "impeccable",
+      "installed_path": "/home/ryasr/.dsh/skills/impeccable"
+    },
+    {
+      "repo": "ryasrk/engineering-skills",
+      "commit": "e299afcead1542af72a8ec2b467f86485b115943",
+      "source_path": "skills/api-versioning",
+      "skill_name": "api-versioning",
+      "installed_path": "/home/ryasr/.dsh/skills/api-versioning"
+    },
+    {
+      "repo": "ryasrk/engineering-skills",
+      "commit": "e299afcead1542af72a8ec2b467f86485b115943",
+      "source_path": "skills/brd-writing",
+      "skill_name": "brd-writing",
+      "installed_path": "/home/ryasr/.dsh/skills/brd-writing"
+    },
+    {
+      "repo": "ryasrk/engineering-skills",
+      "commit": "e299afcead1542af72a8ec2b467f86485b115943",
+      "source_path": "skills/daily-reporting",
+      "skill_name": "daily-reporting",
+      "installed_path": "/home/ryasr/.dsh/skills/daily-reporting"
+    },
+    {
+      "repo": "ryasrk/engineering-skills",
+      "commit": "e299afcead1542af72a8ec2b467f86485b115943",
+      "source_path": "skills/design-docs",
+      "skill_name": "design-docs",
+      "installed_path": "/home/ryasr/.dsh/skills/design-docs"
+    },
+    {
+      "repo": "ryasrk/engineering-skills",
+      "commit": "e299afcead1542af72a8ec2b467f86485b115943",
+      "source_path": "skills/engineering-docs",
+      "skill_name": "engineering-docs",
+      "installed_path": "/home/ryasr/.dsh/skills/engineering-docs"
+    },
+    {
+      "repo": "ryasrk/engineering-skills",
+      "commit": "e299afcead1542af72a8ec2b467f86485b115943",
+      "source_path": "skills/fsd-writing",
+      "skill_name": "fsd-writing",
+      "installed_path": "/home/ryasr/.dsh/skills/fsd-writing"
+    },
+    {
+      "repo": "ryasrk/engineering-skills",
+      "commit": "e299afcead1542af72a8ec2b467f86485b115943",
+      "source_path": "skills/project-structure",
+      "skill_name": "project-structure",
+      "installed_path": "/home/ryasr/.dsh/skills/project-structure"
+    },
+    {
+      "repo": "ryasrk/engineering-skills",
+      "commit": "e299afcead1542af72a8ec2b467f86485b115943",
+      "source_path": "skills/qa-docs",
+      "skill_name": "qa-docs",
+      "installed_path": "/home/ryasr/.dsh/skills/qa-docs"
+    }
+  ]
+}

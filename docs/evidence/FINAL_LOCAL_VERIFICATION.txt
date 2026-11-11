@@ -1,0 +1,55 @@
+# Final Local Verification — UMKM Business OS planning workspace
+
+This file records local verification only. It is NOT an independent review verdict and must not be cited as PASS by a reviewer.
+
+## Status
+
+The previous independent final verdict on the older hash snapshot was withdrawn by the reviewer as stale/completion-invalid because live files changed after that snapshot. The current snapshot below is the live workspace after Lead-side fixes for the 3 remaining old defects (#4/#5/#7), the 5 new defects, and the addendum status-vocabulary defect. A fresh independent re-review on these hashes is still pending.
+
+## Commands and observed results
+
+1. PRD integrity
+   - `sha256sum docs/PRD.md /home/ryasr/.dsh/attachments/v1/files/95/95d7d036dcf83e1d9e73c004cdbb153c159a874c29029186997e6d3cfb8266c4/prd.md`
+   - Both: `95d7d036dcf83e1d9e73c004cdbb153c159a874c29029186997e6d3cfb8266c4`
+   - exit 0
+
+2. Skill root after duplicate cleanup
+   - `find /home/ryasr/.dsh/skills -mindepth 2 -maxdepth 2 -name SKILL.md | wc -l` -> 125
+   - strict YAML: `dirs 125 unique names 125 duplicates {} invalid 0`
+   - duplicate `template/` with frontmatter name `template-skill` removed; `template-skill/` retained.
+
+3. Source manifest
+   - `docs/evidence/SKILL_SOURCE_MANIFEST.json`: 97 rows / 97 unique names / pinned commits / source paths / installed paths.
+   - `manifest rows 97 missing installed 0 []`; extra installed dirs 28 with the same unit (directories).
+   - `125 - 97 = 28` directories outside the six supplied repositories.
+
+4. RTM embedded guard
+   - Positive: `PRD ids: 53 missing: 0 []`; `RTM rows: 53 wrong-width: 0 [] empty: 0 []`; exit 0.
+   - Negative controls in /tmp: extra pipe -> exit 1; deleted AUTH-001 -> exit 1; empty cell -> exit 1; restored -> exit 0.
+   - The embedded guard has `sys.exit(1)` on missing/wrong-width/empty rows and does not claim to be a CI gate.
+
+5. Citation guard
+   - Real tree: `bare 0`; exit 0.
+   - Negative control on a temporary copy: `bare 1`; exit 1.
+   - All section citations are qualified as `PRD.md §...`, `BUILD_PLAN.md §...`, etc.
+
+6. Markdown table integrity
+   - Generated docs + PRD: `0 inconsistent`.
+
+7. Consolidated Python audit after final fixes
+   - Output: `OVERALL PASS`, exit 0.
+   - Covers: PRD hash, 125 skills, manifest, 12 `MENUNGGU` decisions, D-12 P3 gate in all three docs, canonical artefact status vocabulary, no final `ACCEPTED`/`REJECTED` states, Gate A0 before Gate A, RTM final after Gate B before P2+, softened task-evidence claim, no WCAG external claim, no invented public endpoint literal, all 69 task rows have evidence paths, decision-sensitive RTM rows marked `Blocked by decision`, no bare citations, table widths, embedded RTM guard.
+
+## Current live hashes
+
+| File | SHA-256 |
+|---|---|
+| `docs/PRD.md` | `95d7d036dcf83e1d9e73c004cdbb153c159a874c29029186997e6d3cfb8266c4` |
+| `docs/BUILD_PLAN.md` | `797442d1fd1fe2a035fadaf5dd008a4f9d0479f300ad94adeb3dc1f8a644c291` |
+| `docs/PRD_FLOW_AND_REQUIREMENTS.md` | `4dc4e22d7a322c1df2a7aeee55f7b43541d1d1d7777b4e56388f8b9647467053` |
+| `docs/OPEN_DECISIONS.md` | `3a75b6169ccb839b9ef7635c6394d6bb4189054b6dc1266ee38b228a035b78e6` |
+| `docs/RTM.md` | `d17661fe499cd18729829bc616e6c2c77b7bca9fdca6d0fbc415e042422ba48a` |
+| `docs/SKILL_INSTALL_REPORT.md` | `fd7d1099410dcd58edfa98989b2a87a4c00baa58754350d909715e1b24d05c31` |
+| `docs/evidence/SKILL_SOURCE_MANIFEST.json` | `9575388845ee9e441dfcb00d585d3646185f7eb725f9002da75e0d7c758e44e4` |
+
+Status: local verification PASS; independent re-review on these hashes is PENDING.
