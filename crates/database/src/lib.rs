@@ -80,6 +80,30 @@ mod tests {
         assert_eq!(super::CRATE, "umkm-database");
     }
 
+    /// Penjaga MIGRATOR basi: setiap `*.up.sql` di `migrations/` harus ter-embed.
+    #[test]
+    fn embedded_migrations_match_directory() {
+        let dir = concat!(env!("CARGO_MANIFEST_DIR"), "/../../migrations");
+        let mut on_disk: Vec<i64> = std::fs::read_dir(dir)
+            .unwrap()
+            .filter_map(|e| {
+                let name = e.unwrap().file_name().into_string().unwrap();
+                name.strip_suffix(".up.sql")
+                    .map(|stem| stem.split('_').next().unwrap().parse().unwrap())
+            })
+            .collect();
+        on_disk.sort_unstable();
+        let embedded: Vec<i64> = super::MIGRATOR
+            .iter()
+            .filter(|m| !m.migration_type.is_down_migration())
+            .map(|m| m.version)
+            .collect();
+        assert_eq!(
+            embedded, on_disk,
+            "MIGRATOR basi: rebuild crate database (build.rs harus memicu ini)"
+        );
+    }
+
     #[test]
     fn migrations_are_embedded_and_reversible() {
         let m: Vec<_> = super::MIGRATOR.iter().collect();
