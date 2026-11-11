@@ -87,6 +87,7 @@ pub struct Settings {
     pub server: ServerSettings,
     pub http: HttpSettings,
     pub legal: LegalSettings,
+    pub worker: WorkerSettings,
     pub metrics: MetricsSettings,
     pub database: DatabaseSettings,
     pub redis: RedisSettings,
@@ -115,6 +116,17 @@ pub struct HttpSettings {
 pub struct LegalSettings {
     pub privacy_policy_version: String,
     pub terms_of_service_version: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct WorkerSettings {
+    pub poll_interval_ms: u64,
+    pub batch_size: i64,
+    pub lease_secs: u64,
+    pub max_attempts: i32,
+    pub base_backoff_secs: u64,
+    pub verify_url_base: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -171,6 +183,13 @@ impl Settings {
         Ok(settings)
     }
 
+    /// URL verifikasi email dengan `<ROOT_DOMAIN>` diganti root domain aktif.
+    pub fn verify_url_base(&self) -> String {
+        self.worker
+            .verify_url_base
+            .replace(ROOT_DOMAIN_PLACEHOLDER, &self.tenancy.root_domain)
+    }
+
     /// Root domain siap dipakai untuk membuat hostname tenant (bukan placeholder).
     pub fn root_domain_ready(&self) -> bool {
         self.tenancy.root_domain != ROOT_DOMAIN_PLACEHOLDER
@@ -225,6 +244,21 @@ impl Settings {
             || self.legal.terms_of_service_version.trim().is_empty()
         {
             return invalid("legal.*_version wajib diisi");
+        }
+        let w = &self.worker;
+        if w.poll_interval_ms == 0
+            || w.batch_size <= 0
+            || w.lease_secs == 0
+            || w.max_attempts <= 0
+            || w.base_backoff_secs == 0
+        {
+            return invalid("worker.* harus > 0");
+        }
+        let url = &w.verify_url_base;
+        if !(url.starts_with("https://")
+            || (self.environment == Environment::Development && url.starts_with("http://")))
+        {
+            return invalid("worker.verify_url_base harus https (http hanya development)");
         }
         if self.metrics.port == 0 {
             return invalid("metrics.port harus > 0");
@@ -333,6 +367,13 @@ trust_forwarded_for = true
 [legal]
 privacy_policy_version = "v1"
 terms_of_service_version = "v1"
+[worker]
+poll_interval_ms = 1000
+batch_size = 20
+lease_secs = 60
+max_attempts = 8
+base_backoff_secs = 30
+verify_url_base = "https://app.<ROOT_DOMAIN>/verify-email"
 [metrics]
 host = "0.0.0.0"
 port = 9090
@@ -433,6 +474,19 @@ log_format = "json"
             .replace("\"production\"", "\"development\"")
             .replace("https://app.example.test", "http://localhost:3000");
         Settings::parse(&dev).unwrap().validate().unwrap();
+    }
+
+    #[test]
+    fn verify_url_substitutes_root_domain_and_requires_https() {
+        let s = Settings::parse(VALID).unwrap();
+        assert_eq!(s.verify_url_base(), "https://app.example.test/verify-email");
+        let raw = VALID.replace(
+            "https://app.<ROOT_DOMAIN>/verify-email",
+            "http://app.example.test/v",
+        );
+        assert!(Settings::parse(&raw).unwrap().validate().is_err());
+        let raw = VALID.replace("batch_size = 20", "batch_size = 0");
+        assert!(Settings::parse(&raw).unwrap().validate().is_err());
     }
 
     #[test]

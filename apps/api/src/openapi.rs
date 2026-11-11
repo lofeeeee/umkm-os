@@ -31,6 +31,7 @@ use crate::{auth, health, tenants};
         auth::login_handler,
         auth::session_handler,
         auth::logout_handler,
+        auth::verify_email_handler,
         tenants::list_tenants,
         tenants::get_tenant,
         tenants::update_tenant
@@ -88,11 +89,12 @@ impl Modify for CommonErrors {
 /// `security: []`. Skema auth tenant/admin ditambahkan di P1.
 struct PublicOps;
 
-const PUBLIC_PATHS: [&str; 4] = [
+const PUBLIC_PATHS: [&str; 5] = [
     "/healthz",
     "/readyz",
     "/api/v1/auth/register",
     "/api/v1/auth/login",
+    "/api/v1/auth/verify-email",
 ];
 
 /// Skema `sessionCookie` (ADR-0015). Endpoint selain PUBLIC_PATHS mewajibkannya.

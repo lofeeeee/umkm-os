@@ -368,23 +368,60 @@ async fn rate_limit_blocks_after_limit_and_is_per_subject() {
     );
 }
 
+/// Semantik window diuji lewat TTL key (deterministik), bukan `sleep`: expiry Redis
+/// memakai jam dinding server, yang di WSL2 bisa dikoreksi mundur di bawah beban
+/// sehingga tes berbasis sleep menjadi flaky (lihat docs/evidence/P1-6.txt).
 #[tokio::test]
-async fn rate_limit_window_expires_and_key_hides_subject() {
+async fn rate_limit_window_is_fixed_from_first_attempt_and_key_hides_subject() {
     const RULE: RateRule = RateRule {
         name: "reset_email",
         limit: 1,
-        window: Duration::from_millis(800),
+        window: Duration::from_secs(60),
     };
     let rl = limiter(&unique()).await;
+    let key = rl.key(&RULE, "budi@x.id").unwrap();
+    let url = std::env::var("REDIS_URL").unwrap();
+    let mut raw = redis::Client::open(url)
+        .unwrap()
+        .get_multiplexed_async_connection()
+        .await
+        .unwrap();
+    let pttl = |c: &mut redis::aio::MultiplexedConnection| {
+        let mut c = c.clone();
+        let k = key.clone();
+        async move {
+            redis::cmd("PTTL")
+                .arg(k)
+                .query_async::<i64>(&mut c)
+                .await
+                .unwrap()
+        }
+    };
+
+    assert_eq!(pttl(&mut raw).await, -2, "belum ada key sebelum percobaan");
     assert!(rl.check(&RULE, "budi@x.id").await.unwrap().allowed);
-    assert!(!rl.check(&RULE, "budi@x.id").await.unwrap().allowed);
-    tokio::time::sleep(Duration::from_millis(1000)).await;
+    let t1 = pttl(&mut raw).await;
     assert!(
-        rl.check(&RULE, "budi@x.id").await.unwrap().allowed,
-        "window harus kedaluwarsa"
+        (1..=60_000).contains(&t1),
+        "TTL = window setelah percobaan pertama: {t1}"
+    );
+    let d = rl.check(&RULE, "budi@x.id").await.unwrap();
+    assert!(!d.allowed);
+    assert!((1..=60).contains(&d.retry_after_secs));
+    let t2 = pttl(&mut raw).await;
+    assert!(
+        t2 <= t1,
+        "fixed window: percobaan berikut tidak memperpanjang TTL ({t1} -> {t2})"
     );
 
-    let key = rl.key(&RULE, "budi@x.id").unwrap();
+    // Key hilang (window berakhir) -> hitungan mulai dari awal
+    let _: i64 = redis::cmd("DEL")
+        .arg(&key)
+        .query_async(&mut raw)
+        .await
+        .unwrap();
+    assert!(rl.check(&RULE, "budi@x.id").await.unwrap().allowed);
+
     assert!(key.contains(":platform:rl_reset_email:"), "{key}");
     assert!(
         !key.contains("budi"),

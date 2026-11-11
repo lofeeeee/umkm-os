@@ -503,12 +503,66 @@ pub async fn logout_handler(
         .into_response())
 }
 
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
+pub struct VerifyEmailRequest {
+    /// Token dari fragment tautan email (`#token=`).
+    pub token: String,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct VerifyEmailResponse {
+    pub verified: bool,
+}
+
+/// Verifikasi email dengan token sekali pakai (AUTH-003). Tidak butuh sesi.
+#[utoipa::path(
+    post, path = "/api/v1/auth/verify-email", tag = "auth",
+    request_body = VerifyEmailRequest,
+    responses(
+        (status = 200, description = "Email terverifikasi", body = SuccessEnvelope<VerifyEmailResponse>),
+        (status = 403, description = "Origin tidak diizinkan", body = umkm_shared::http::ErrorEnvelope),
+        (status = 422, description = "Token tidak valid, kedaluwarsa, atau sudah dipakai", body = umkm_shared::http::ErrorEnvelope),
+        (status = 429, description = "Rate limit; header Retry-After", body = umkm_shared::http::ErrorEnvelope),
+        (status = 503, description = "Rate limiter/DB tidak tersedia (fail-closed)", body = umkm_shared::http::ErrorEnvelope)
+    )
+)]
+pub async fn verify_email_handler(
+    State(state): State<AppState>,
+    ReqId(id): ReqId,
+    ClientIp(ip): ClientIp,
+    headers: HeaderMap,
+    Json(req): Json<VerifyEmailRequest>,
+) -> Result<Response, Reject> {
+    let svc = service(&state).map_err(Reject::from)?;
+    svc.check_origin(&headers).map_err(Reject::from)?;
+    enforce(svc, &rate_rules::VERIFY_TOKEN_PER_IP, &ip).await?;
+    let user = umkm_infrastructure::outbox::verify_email(&svc.pool, hash_token(req.token.trim()))
+        .await
+        .map_err(|_| Reject::from(ApiError::new(ErrorCode::InternalError)))?;
+    match user {
+        Some(user_id) => {
+            tracing::info!(%user_id, "email verified");
+            Ok(Json(SuccessEnvelope::new(
+                VerifyEmailResponse { verified: true },
+                &id,
+            ))
+            .into_response())
+        }
+        None => Err(Reject::from(validation(
+            "token",
+            "token tidak valid atau kedaluwarsa",
+        ))),
+    }
+}
+
 pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/api/v1/auth/register", post(register_handler))
         .route("/api/v1/auth/login", post(login_handler))
         .route("/api/v1/auth/session", get(session_handler))
         .route("/api/v1/auth/logout", post(logout_handler))
+        .route("/api/v1/auth/verify-email", post(verify_email_handler))
 }
 
 #[cfg(test)]

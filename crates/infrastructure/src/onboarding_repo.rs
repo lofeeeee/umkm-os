@@ -152,6 +152,14 @@ impl RegistrationStore for PgRegistrationStore {
         .await
         .map_err(other)?;
 
+        // Transactional outbox: verifikasi email dikirim worker (P1-6).
+        crate::outbox::enqueue(
+            &mut *tx,
+            &umkm_application::notify::OutboxEvent::email_verification_requested(user_id),
+        )
+        .await
+        .map_err(other)?;
+
         tx.commit().await.map_err(other)?;
         Ok(Registered {
             user_id,

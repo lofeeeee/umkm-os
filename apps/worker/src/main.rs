@@ -1,27 +1,38 @@
-//! umkm-worker — kerangka proses background (P0-6).
+//! umkm-worker — memproses transactional outbox (P1-6, `PRD.md §4.13`).
 //!
-//! Belum ada job terdaftar: outbox/email masuk P1-6, purge P1-9. Proses tetap
-//! berjalan sampai SIGTERM agar dapat dideploy, dipantau, dan dimatikan bersih.
+//! Loop: `process_once` sampai antrean kosong, lalu tidur `poll_interval_ms`.
+//! SIGTERM menghentikan loop di antara batch (event yang sedang diklaim tetap
+//! aman: lease kedaluwarsa lalu diklaim ulang).
 
-use std::{net::SocketAddr, path::PathBuf, sync::Arc};
+use std::{net::SocketAddr, path::PathBuf, sync::Arc, time::Duration};
 
 use axum::{Router, http::header, routing::get};
 use tracing_subscriber::{EnvFilter, fmt};
-use umkm_infrastructure::metrics::{CONTENT_TYPE, Metrics};
-use umkm_shared::config::{LogFormat, Settings};
+use umkm_domain::auth::AuthPolicy;
+use umkm_infrastructure::{
+    metrics::{CONTENT_TYPE, Metrics},
+    outbox::{LogEmailSender, WorkerConfig, process_once},
+};
+use umkm_shared::config::{LogFormat, Secrets, Settings};
+
+type BoxError = Box<dyn std::error::Error>;
 
 #[tokio::main]
 async fn main() -> std::process::ExitCode {
+    match run().await {
+        Ok(()) => std::process::ExitCode::SUCCESS,
+        Err(e) => {
+            eprintln!("umkm-worker: {e}");
+            std::process::ExitCode::FAILURE
+        }
+    }
+}
+
+async fn run() -> Result<(), BoxError> {
     let config_dir = std::env::var_os("UMKM_CONFIG_DIR")
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from("config"));
-    let settings = match Settings::load_from_env(&config_dir) {
-        Ok(s) => s,
-        Err(e) => {
-            eprintln!("umkm-worker: {e}");
-            return std::process::ExitCode::FAILURE;
-        }
-    };
+    let settings = Settings::load_from_env(&config_dir)?;
     let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
     match settings.observability.log_format {
         LogFormat::Json => fmt()
@@ -31,46 +42,78 @@ async fn main() -> std::process::ExitCode {
             .init(),
         LogFormat::Pretty => fmt().with_env_filter(filter).init(),
     }
-    tracing::info!(
-        environment = %settings.environment,
-        layers = ?[umkm_application::CRATE, umkm_infrastructure::CRATE, umkm_database::CRATE],
-        "umkm-worker started; no jobs registered yet"
-    );
-
-    // /metrics internal (P0-8): worker_* diisi saat job nyata ada (P1-6).
+    let secrets = Secrets::from_env()?;
+    let pool = umkm_database::connect_lazy(&secrets.database_url, &settings.database)?;
     let metrics = Arc::new(Metrics::new());
+
     let addr: SocketAddr =
-        match format!("{}:{}", settings.metrics.host, settings.metrics.port).parse() {
-            Ok(a) => a,
-            Err(e) => {
-                tracing::error!(error = %e, "metrics address tidak valid");
-                return std::process::ExitCode::FAILURE;
-            }
-        };
-    let listener = match tokio::net::TcpListener::bind(addr).await {
-        Ok(l) => l,
-        Err(e) => {
-            tracing::error!(error = %e, %addr, "gagal bind metrics");
-            return std::process::ExitCode::FAILURE;
-        }
-    };
+        format!("{}:{}", settings.metrics.host, settings.metrics.port).parse()?;
+    let listener = tokio::net::TcpListener::bind(addr).await?;
+    let m = metrics.clone();
     let app = Router::new().route(
         "/metrics",
         get(move || {
-            let metrics = metrics.clone();
-            async move { ([(header::CONTENT_TYPE, CONTENT_TYPE)], metrics.encode()) }
+            let m = m.clone();
+            async move { ([(header::CONTENT_TYPE, CONTENT_TYPE)], m.encode()) }
         }),
     );
-    tracing::info!(%addr, "worker metrics listening");
-    if let Err(e) = axum::serve(listener, app)
-        .with_graceful_shutdown(shutdown_signal())
-        .await
-    {
-        tracing::error!(error = %e, "metrics server error");
-        return std::process::ExitCode::FAILURE;
+    let (stop_tx, stop_rx) = tokio::sync::watch::channel(false);
+    let mut metrics_stop = stop_rx.clone();
+    let metrics_server = tokio::spawn(async move {
+        axum::serve(listener, app)
+            .with_graceful_shutdown(async move {
+                let _ = metrics_stop.changed().await;
+            })
+            .await
+    });
+
+    let w = &settings.worker;
+    let cfg = WorkerConfig {
+        worker_id: format!("{}-{}", hostname(), std::process::id()),
+        batch: w.batch_size,
+        lease: Duration::from_secs(w.lease_secs),
+        max_attempts: w.max_attempts,
+        base_backoff: Duration::from_secs(w.base_backoff_secs),
+        verify_url_base: settings.verify_url_base(),
+        policy: AuthPolicy::default(),
+    };
+    // D-08 ditunda: adapter log-only (tidak mengirim email).
+    let sender = LogEmailSender;
+    let poll = Duration::from_millis(w.poll_interval_ms);
+    tracing::info!(%addr, worker_id = %cfg.worker_id, environment = %settings.environment, "umkm-worker started");
+
+    let mut stop = stop_rx;
+    let shutdown = shutdown_signal();
+    tokio::pin!(shutdown);
+    loop {
+        match process_once(&pool, &sender, &cfg, &metrics).await {
+            Ok(t) if t.claimed > 0 => {
+                tracing::info!(
+                    claimed = t.claimed,
+                    sent = t.sent,
+                    retried = t.retried,
+                    dead = t.dead,
+                    "outbox batch"
+                );
+                continue; // antrean mungkin masih berisi
+            }
+            Ok(_) => {}
+            Err(e) => tracing::error!(error = %e, "outbox tick failed"),
+        }
+        tokio::select! {
+            _ = &mut shutdown => break,
+            _ = stop.changed() => break,
+            _ = tokio::time::sleep(poll) => {}
+        }
     }
+    let _ = stop_tx.send(true);
+    let _ = metrics_server.await;
     tracing::info!("umkm-worker stopped");
-    std::process::ExitCode::SUCCESS
+    Ok(())
+}
+
+fn hostname() -> String {
+    std::env::var("HOSTNAME").unwrap_or_else(|_| "worker".to_owned())
 }
 
 async fn shutdown_signal() {

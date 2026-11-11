@@ -245,6 +245,74 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
       security:
       - sessionCookie: []
+  /api/v1/auth/verify-email:
+    post:
+      tags:
+      - auth
+      summary: Verifikasi email dengan token sekali pakai (AUTH-003). Tidak butuh sesi.
+      operationId: verify_email_handler
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyEmailRequest'
+        required: true
+      responses:
+        '200':
+          description: Email terverifikasi
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_VerifyEmailResponse'
+        '403':
+          description: Origin tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '422':
+          description: Token tidak valid, kedaluwarsa, atau sudah dipakai
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '429':
+          description: Rate limit; header Retry-After
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: Rate limiter/DB tidak tersedia (fail-closed)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security: []
   /api/v1/tenants:
     get:
       tags:
@@ -797,6 +865,24 @@ components:
           $ref: '#/components/schemas/Meta'
         success:
           type: boolean
+    SuccessEnvelope_VerifyEmailResponse:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - verified
+          properties:
+            verified:
+              type: boolean
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
     TenantSummary:
       type: object
       required:
@@ -818,6 +904,15 @@ components:
       properties:
         name:
           type: string
+      additionalProperties: false
+    VerifyEmailRequest:
+      type: object
+      required:
+      - token
+      properties:
+        token:
+          type: string
+          description: Token dari fragment tautan email (`#token=`).
       additionalProperties: false
   securitySchemes:
     sessionCookie:

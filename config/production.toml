@@ -20,6 +20,15 @@ trust_forwarded_for = true
 privacy_policy_version = "placeholder-v0"
 terms_of_service_version = "placeholder-v0"
 
+[worker]
+poll_interval_ms = 1000
+batch_size = 20
+lease_secs = 60
+max_attempts = 8
+base_backoff_secs = 30
+# <ROOT_DOMAIN> diganti tenancy.root_domain saat load (ADR-0001). Token di fragment (#token=).
+verify_url_base = "https://app.<ROOT_DOMAIN>/verify-email"
+
 [metrics]
 # Port internal; TIDAK diproxy Caddy dan tidak dipublish (PRD.md §9.8)
 host = "0.0.0.0"

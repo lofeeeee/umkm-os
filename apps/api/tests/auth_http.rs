@@ -503,3 +503,95 @@ async fn development_cookie_has_no_host_prefix_or_secure(pool: PgPool) {
         "{set}"
     );
 }
+
+#[sqlx::test(migrator = "MIGRATOR")]
+async fn verify_email_end_to_end_via_outbox_worker(pool: PgPool) {
+    use umkm_infrastructure::{
+        metrics::Metrics,
+        outbox::{CapturingEmailSender, WorkerConfig, process_once},
+    };
+    let app = app(pool.clone());
+    let r = send(
+        &app,
+        Method::POST,
+        "/api/v1/auth/register",
+        Some(reg_body("budi@x.id", "Toko Budi")),
+        &[],
+    )
+    .await;
+    assert_eq!(r.status, 201);
+
+    let sender = CapturingEmailSender::default();
+    let cfg = WorkerConfig {
+        worker_id: "t".into(),
+        batch: 10,
+        lease: Duration::from_secs(30),
+        max_attempts: 3,
+        base_backoff: Duration::from_secs(10),
+        verify_url_base: "https://app.ryasai.my.id/verify-email".into(),
+        policy: AuthPolicy::default(),
+    };
+    assert_eq!(
+        process_once(&pool, &sender, &cfg, &Metrics::new())
+            .await
+            .unwrap()
+            .sent,
+        1
+    );
+    let body = sender.sent.lock().unwrap()[0].text_body.clone();
+    let token = body
+        .split("#token=")
+        .nth(1)
+        .unwrap()
+        .split_whitespace()
+        .next()
+        .unwrap()
+        .to_owned();
+
+    let ok = send(
+        &app,
+        Method::POST,
+        "/api/v1/auth/verify-email",
+        Some(json!({"token": token})),
+        &[("origin", APP)],
+    )
+    .await;
+    assert_eq!(
+        (ok.status, ok.body["data"]["verified"].as_bool()),
+        (200, Some(true)),
+        "{}",
+        ok.body
+    );
+    let again = send(
+        &app,
+        Method::POST,
+        "/api/v1/auth/verify-email",
+        Some(json!({"token": token})),
+        &[],
+    )
+    .await;
+    assert_eq!(
+        (
+            again.status,
+            again.body["error"]["details"]["field"].as_str()
+        ),
+        (422, Some("token")),
+        "sekali pakai"
+    );
+    let junk = send(
+        &app,
+        Method::POST,
+        "/api/v1/auth/verify-email",
+        Some(json!({"token": "x"})),
+        &[],
+    )
+    .await;
+    assert_eq!(junk.status, 422);
+    let verified: bool = sqlx::query_scalar(
+        "SELECT email_verified_at IS NOT NULL FROM users WHERE lower(email) = 'budi@x.id'",
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert!(verified);
+}

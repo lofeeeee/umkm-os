@@ -169,19 +169,25 @@ pub mod rate_rules {
         limit: 5,
         window: HOUR,
     };
+    pub const VERIFY_TOKEN_PER_IP: RateRule = RateRule {
+        name: "verify_token_ip",
+        limit: 20,
+        window: HOUR,
+    };
     pub const VERIFY_PER_EMAIL: RateRule = RateRule {
         name: "verify_email",
         limit: 5,
         window: HOUR,
     };
 
-    pub const ALL: [RateRule; 6] = [
+    pub const ALL: [RateRule; 7] = [
         LOGIN_PER_EMAIL,
         LOGIN_PER_IP,
         RESET_PER_EMAIL,
         RESET_PER_IP,
         REGISTER_PER_IP,
         VERIFY_PER_EMAIL,
+        VERIFY_TOKEN_PER_IP,
     ];
 }
 

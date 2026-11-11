@@ -11,6 +11,7 @@ workspace = true
 
 [dependencies]
 umkm-application.workspace = true
+umkm-domain.workspace = true
 umkm-infrastructure.workspace = true
 umkm-database.workspace = true
 umkm-shared.workspace = true
