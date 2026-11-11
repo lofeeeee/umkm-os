@@ -1,0 +1,22 @@
+# Konfigurasi non-rahasia — development. Secret TIDAK boleh di sini (PRD.md §6.7);
+# di-inject via env: UMKM_DATABASE_URL, UMKM_REDIS_URL.
+environment = "development"
+
+[server]
+host = "127.0.0.1"
+port = 8080
+
+[database]
+max_connections = 5
+acquire_timeout_secs = 5
+
+[redis]
+# Namespace key Redis per environment (PRD.md §9.5)
+key_prefix = "umkm:development"
+
+[tenancy]
+# Development memakai localhost; staging/production menunggu D-01.
+root_domain = "localhost"
+
+[observability]
+log_format = "pretty"

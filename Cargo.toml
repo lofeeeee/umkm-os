@@ -16,6 +16,11 @@ umkm-application = { path = "crates/application" }
 umkm-infrastructure = { path = "crates/infrastructure" }
 umkm-database = { path = "crates/database" }
 
+# Dependency eksternal: setiap entri tercatat di docs/architecture/dependency-review.md (PRD.md §7.1)
+serde = { version = "1.0.229", features = ["derive"] }
+toml = "1.2.1"
+thiserror = "2.0.21"
+
 [workspace.lints.rust]
 unsafe_code = "forbid"
 

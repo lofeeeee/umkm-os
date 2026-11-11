@@ -1,0 +1,22 @@
+# Konfigurasi non-rahasia — production. Secret TIDAK boleh di sini (PRD.md §6.7);
+# di-inject via env: UMKM_DATABASE_URL, UMKM_REDIS_URL.
+environment = "production"
+
+[server]
+host = "0.0.0.0"
+port = 8080
+
+[database]
+max_connections = 20
+acquire_timeout_secs = 5
+
+[redis]
+# Namespace key Redis per environment (PRD.md §9.5)
+key_prefix = "umkm:production"
+
+[tenancy]
+# Placeholder sampai D-01 DISETUJUI. Production menolak start dengan placeholder.
+root_domain = "<ROOT_DOMAIN>"
+
+[observability]
+log_format = "json"

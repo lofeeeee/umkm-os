@@ -1,0 +1,35 @@
+# P0-2 — Bootstrap config 3 environment tanpa secret
+date: 2026-11-11T12:54:14Z
+
+Files: config/{development,staging,production}.toml, crates/shared/src/config.rs, crates/shared/tests/config_files.rs
+Secret hanya via env UMKM_DATABASE_URL / UMKM_REDIS_URL; production menolak root_domain placeholder sampai D-01.
+
+$ cargo fmt --all --check
+exit 0
+
+$ cargo clippy --workspace --all-targets -- -D warnings
+exit 0
+
+$ cargo test --workspace
+      7 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      4 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+exit 0
+
+$ scripts/check-domain-boundary.sh
+exit 0
+
+## Negative control: sisipkan 'password = "x"' ke config/staging.toml -> tes harus gagal
+$ cargo test -p umkm-shared --test config_files
+      1 /home/ryasr/umkm-os/crates/shared/../../config/staging.toml: baris berisi "password": password = "hunter2"
+      1 test result: FAILED. 1 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 thread 'config_files_contain_no_secrets' (261259) panicked at crates/shared/tests/config_files.rs:38:21:
+      1 thread 'development_and_staging_load' (261260) panicked at crates/shared/tests/config_files.rs:14:71:
+exit 101
+
+## Dipulihkan
+$ cargo test -p umkm-shared --test config_files
+      1 test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+exit 0
+
