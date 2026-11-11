@@ -1,0 +1,25 @@
+# Gate P0 (BUILD_PLAN.md §5 Phase 0)
+date: 2026-11-11T14:04:55Z
+commit: 721347a
+
+$ cargo fmt --check && cargo clippy --workspace -- -D warnings && cargo test --workspace && docker compose config -q && sqlx migrate run
+      1 Applied 1/migrate app schema
+      9 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      2 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      2 test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      2 test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+exit 0
+
+Catatan: 'docker compose config -q' dijalankan dengan --env-file .env.example (compose sengaja menolak tanpa env wajib).
+
+## Status kriteria Gate P0
+| Kriteria | Status |
+|---|---|
+| ADR-0013 DISETUJUI | Ya (2026-11-11) |
+| Seluruh task P0-0..P0-10 | Selesai + evidence; P0-7 belum pernah jalan di GitHub (repo belum punya remote) |
+| Perintah gate exit 0 | Ya (di atas) |
+| D-01 (TLS produksi) | MENUNGGU -> Gate P0 BELUM LULUS PENUH |
