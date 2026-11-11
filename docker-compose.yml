@@ -158,6 +158,37 @@ services:
       resources:
         limits: { memory: 256M, cpus: "0.50" }
 
+  backup:
+    image: ${BACKUP_IMAGE:-umkm-os/backup:local}
+    build: { context: ., dockerfile: ops/backup/Dockerfile }
+    profiles: [backup]
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    logging: *logging
+    environment:
+      PGHOST: postgres
+      PGUSER: ${POSTGRES_USER:?}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?}
+      PGDATABASE: ${POSTGRES_DB:?}
+      BACKUP_DIR: /backups
+      # File sementara dump di volume, bukan tmpfs (RAM VPS 8 GB).
+      TMPDIR: /backups/.tmp
+      BACKUP_AT_UTC: ${BACKUP_AT_UTC:-02:00}
+      # Public key age; kosong -> backup.sh exit 2 (fail-closed).
+      BACKUP_AGE_RECIPIENT: ${BACKUP_AGE_RECIPIENT:-}
+      # Off-site menunggu D-07; kosong -> backup.sh exit 3 setiap run (sengaja terlihat gagal).
+      BACKUP_OFFSITE_CMD: ${BACKUP_OFFSITE_CMD:-}
+    volumes:
+      - backup_data:/backups
+    networks: [backend]
+    depends_on:
+      postgres: { condition: service_healthy }
+    deploy:
+      resources:
+        limits: { memory: 256M, cpus: "0.50" }
+
   prometheus:
     image: prom/prometheus:v3.7.3
     profiles: [monitoring]
@@ -192,3 +223,4 @@ volumes:
   caddy_data:
   caddy_config:
   prometheus_data:
+  backup_data:

@@ -100,6 +100,9 @@ jobs:
             prom/prometheus:v3.7.3 test rules alerts_test.yml
       - run: docker build --target api -t umkm-os/api:ci .
       - run: docker build --target worker -t umkm-os/worker:ci .
+      - run: docker build -f ops/backup/Dockerfile -t umkm-os/backup:ci .
+      - name: shellcheck
+        run: docker run --rm -v "$PWD:/mnt" -w /mnt koalaman/shellcheck:v0.11.0 scripts/*.sh ops/backup/*.sh
 
   workflow-lint:
     name: actionlint

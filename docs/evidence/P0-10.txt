@@ -1,0 +1,135 @@
+# P0-10 — Backup automation + restore script
+date: 2026-11-11T14:04:28Z
+
+Files: ops/backup/{Dockerfile,backup.sh,backup-loop.sh,restore.sh}, scripts/test-backup-restore.sh, docs/governance/runbook-restore.md, docker-compose.yml (service backup, profile backup), .env.example, CI (build image backup + shellcheck)
+RPO/RTO TIDAK diklaim. Off-site (D-07) dan WAL archiving belum ada -> RPO aktual ~24 jam. Lihat runbook bagian 'Belum ada'.
+
+## Uji harness (pgvector:pg16 + postgres:16-alpine pg_dump 16.15 + age 1.3.2)
+$ scripts/test-backup-restore.sh
+source: 5000:b63619b5d083203c590d6fd205dcb85e
+PASS  backup harian (exit 0)
+PASS  arsip tidak memuat plaintext (exit 1)
+PASS  restore ke DB kosong (exit 0)
+restored: 5000:b63619b5d083203c590d6fd205dcb85e
+PASS  row count + checksum data identik (exit 0)
+PASS  riwayat migration ikut ter-restore (exit 0)
+PASS  fungsi app.current_tenant_id ter-restore (exit 0)
+--- negative controls ---
+PASS  target tidak kosong ditolak (exit 4)
+PASS  identity salah ditolak (exit 1)
+PASS  arsip diubah: checksum gagal (exit 1)
+PASS  arsip diubah tanpa .sha256: autentikasi age gagal (exit 1)
+PASS  target tetap kosong setelah restore gagal (exit 0)
+PASS  tanpa off-site & tanpa ALLOW_LOCAL_ONLY -> exit 3 (exit 3)
+PASS  recipient bukan public key age ditolak (exit 2)
+--- retensi (KEEP_DAILY=7, KEEP_WEEKLY=4, weekly = hari ini) ---
+daily=7 weekly=4 daily_sha=7
+PASS  rotasi 7 daily + 4 weekly (exit 0)
+PASS  rotasi menghapus arsip TERLAMA (backup pertama hilang) (exit 1)
+PASS  arsip terbaru tetap ada (exit 0)
+first=bk_src-20261111T140230Z.dump.age oldest_kept=bk_src-20261111T140238Z.dump.age newest=bk_src-20261111T140246Z.dump.age
+PASS  arsip yang tersisa semuanya lebih baru dari yang dihapus (exit 0)
+RESULT: 17 pass, 0 fail
+exit 0
+
+$ shellcheck v0.11.0 scripts/*.sh ops/backup/*.sh
+exit 0
+
+## Bug yang ditemukan oleh E2E Compose sebelum commit (sudah diperbaiki)
+  1. volume bernama dimiliki root -> 'mkdir /backups/daily: Permission denied' (fix: /backups dibuat + chown di image)
+  2. backup-loop menjalankan backup 2x di hari yang sama: di WSL sleep selesai ~3 s lebih awal, menit target belum lewat (fix: tanggal run terakhir dicatat; run final di bawah menunjukkan 'next run in 86403s')
+  3. shellcheck: ls|grep pada rotasi -> diganti glob; asersi rotasi 'terlama dihapus dulu' ditambahkan
+
+## E2E Compose final (profile backup, jadwal = +1 menit)
+$ docker compose --profile backup logs backup
+{"ts":"2026-11-11T14:03:12Z","component":"backup","level":"info","msg":"next run in 48s"}
+{"ts":"2026-11-11T14:03:57Z","component":"backup","level":"info","msg":"dump start db=umkm"}
+{"ts":"2026-11-11T14:03:57Z","component":"backup","level":"info","msg":"dump ok file=daily/umkm-20261111T140357Z.dump.age bytes=3058 toc_entries=6"}
+{"ts":"2026-11-11T14:03:57Z","component":"backup","level":"error","msg":"OFFSITE NOT CONFIGURED: backup hanya ada di VPS (PRD.md §6.10 mewajibkan di luar VPS; menunggu D-07)"}
+{"ts":"2026-11-11T14:03:57Z","component":"backup","level":"error","msg":"backup run failed exit=3"}
+{"ts":"2026-11-11T14:03:57Z","component":"backup","level":"info","msg":"next run in 86403s"}
+
+$ ls /backups/daily (dalam container)
+total 8
+-rw-r--r--    1 backup   backup        3058 Nov 11 14:03 umkm-20261111T140357Z.dump.age
+-rw-r--r--    1 backup   backup          97 Nov 11 14:03 umkm-20261111T140357Z.dump.age.sha256
+
+$ restore drill dari volume ke DB kosong di stack yang sama
+{"ts":"2026-11-11T14:04:03Z","component":"restore","level":"info","msg":"checksum ok"}
+{"ts":"2026-11-11T14:04:03Z","component":"restore","level":"info","msg":"restore ok db=restore_drill seconds=0"}
+{"ts":"2026-11-11T14:04:03Z","component":"restore","level":"info","msg":"migration version=1 success=t"}
+restore exit 0
+1|app schema|t
+
+$ docker compose --env-file .env.example --profile backup --profile monitoring config -q
+exit 0
+
+$ actionlint
+exit 0
+
+$ scripts/check-ci-needs.sh
+      1 OK: ci-gate mengagregasi 5 job: ['containers', 'lint', 'supply-chain', 'test', 'workflow-lint']
+exit 0
+
+$ cargo test --workspace
+      1 test client_supplied_request_id_is_ignored ... ok
+      1 test concurrent_tenants_each_see_only_their_context ... ok
+      1 test config::tests::environment_parse_is_strict ... ok
+      1 test config::tests::missing_or_empty_secret_is_error_without_value ... ok
+      1 test config::tests::parses_valid_config ... ok
+      1 test config::tests::production_rejects_root_domain_placeholder ... ok
+      1 test config::tests::rejects_unknown_field_such_as_inline_secret ... ok
+      1 test config::tests::rejects_zero_values ... ok
+      1 test config::tests::secrets_debug_is_redacted ... ok
+      1 test config::tests::staging_allows_root_domain_placeholder ... ok
+      1 test config_files_contain_no_secrets ... ok
+      1 test context_does_not_leak_on_connection_reuse ... ok
+      1 test development_and_staging_load ... ok
+      1 test every_documented_path_is_routed ... ok
+      1 test healthz_returns_success_envelope_with_request_id ... ok
+      1 test http::tests::error_envelope_matches_prd_shape ... ok
+      1 test http::tests::request_id_format ... ok
+      1 test http::tests::status_mapping_roundtrips_for_every_code ... ok
+      1 test http::tests::success_envelope_matches_prd_shape ... ok
+      1 test http_requests_recorded_by_route_template ... ok
+      1 test metrics::tests::all_16_required_metrics_exposed_after_observation ... ok
+      1 test metrics::tests::http_observation_counts_and_errors ... ok
+      1 test metrics::tests::output_is_valid_openmetrics_terminated ... ok
+      1 test metrics::tests::unlabeled_metrics_exposed_immediately ... ok
+      1 test metrics_not_exposed_on_public_router ... ok
+      1 test migrations_are_reversible ... ok
+      1 test no_context_means_null_tenant ... ok
+      1 test on_scrape_hook_runs_before_encode ... ok
+      1 test oversized_body_is_413_envelope ... ok
+      1 test panic_is_500_envelope_without_panic_message ... ok
+      1 test production_blocked_until_d01_decided ... ok
+      1 test readyz_503_without_leaking_internal_error ... ok
+      1 test readyz_ok_when_all_checks_pass ... ok
+      1 test real_responses_match_schema ... ok
+      1 test redis::tests::config_prefixes_are_valid ... ok
+      1 test redis::tests::environments_do_not_collide ... ok
+      1 test redis::tests::no_collisions_across_tenants_resources_ids ... ok
+      1 test redis::tests::platform_key_format ... ok
+      1 test redis::tests::rejects_invalid_prefix ... ok
+      1 test redis::tests::rejects_segments_that_could_break_namespace ... ok
+      1 test redis::tests::tenant_key_format_matches_prd ... ok
+      1 test redis::tests::tenant_scan_pattern_never_matches_other_tenant_keys ... ok
+      9 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      2 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      2 test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      2 test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test security_headers_present_on_success_and_error ... ok
+      1 test server_errors_counted_including_panics ... ok
+      1 test slow_handler_times_out_with_408_envelope ... ok
+      1 test snapshot_matches_code ... ok
+      1 test tenant_tx_sets_context ... ok
+      5 test tests::crate_name ... ok
+      1 test tests::migrations_are_embedded_and_reversible ... ok
+      1 test unknown_route_is_404_envelope ... ok
+      1 test wrong_method_is_405_envelope ... ok
+exit 0
+

@@ -4,7 +4,7 @@ Platform SaaS multi-tenant untuk UMKM: website, katalog & stok, order, ticketing
 
 ## Status
 
-Gate A `DISETUJUI` (ADR-0002, ADR-0013). Selesai: P0-0..P0-6, P0-8, P0-9; P0-7 (CI) siap tetapi belum pernah jalan di GitHub karena repo belum punya remote — lihat `docs/governance/ci.md`. Cara menjalankan API: lihat bagian "Menjalankan stack lengkap" di bawah (API membutuhkan `UMKM_DATABASE_URL` dan `UMKM_REDIS_URL`).
+Gate A `DISETUJUI` (ADR-0002, ADR-0013). Selesai: P0-0..P0-6, P0-8..P0-10; P0-7 (CI) siap tetapi belum pernah jalan di GitHub karena repo belum punya remote — lihat `docs/governance/ci.md`. Cara menjalankan API: lihat bagian "Menjalankan stack lengkap" di bawah (API membutuhkan `UMKM_DATABASE_URL` dan `UMKM_REDIS_URL`).
 
 ## Perintah
 
@@ -53,6 +53,7 @@ migrations/            SQLx migrations (reversible: *.up.sql / *.down.sql)
 scripts/               guard CI lokal, dev-db
 ops/caddy/             reverse proxy (Caddyfile)
 ops/monitoring/        Prometheus config + alert rules (+ tes promtool)
+ops/backup/            backup harian terenkripsi (age) + restore; runbook: docs/governance/runbook-restore.md
 config/              konfigurasi non-rahasia per environment (P0-2)
 docs/                PRD, rencana, keputusan, bukti
 .github/workflows/   CI (P0-7)
