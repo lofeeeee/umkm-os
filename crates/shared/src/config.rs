@@ -88,6 +88,7 @@ pub struct Settings {
     pub http: HttpSettings,
     pub legal: LegalSettings,
     pub worker: WorkerSettings,
+    pub retention: RetentionSettings,
     pub metrics: MetricsSettings,
     pub database: DatabaseSettings,
     pub redis: RedisSettings,
@@ -127,6 +128,20 @@ pub struct WorkerSettings {
     pub max_attempts: i32,
     pub base_backoff_secs: u64,
     pub verify_url_base: String,
+}
+
+/// Retensi ADR-0012 (hari).
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct RetentionSettings {
+    pub audit_days: u32,
+    pub closed_tenant_grace_days: u32,
+    pub conversation_days: u32,
+    pub file_grace_days: u32,
+    pub customer_data_grace_days: u32,
+    pub auth_artifact_days: u32,
+    pub outbox_days: u32,
+    pub purge_interval_secs: u64,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -260,6 +275,23 @@ impl Settings {
         {
             return invalid("worker.verify_url_base harus https (http hanya development)");
         }
+        let r = &self.retention;
+        if r.audit_days < 90 {
+            return invalid("retention.audit_days minimal 90 (ADR-0012: 365)");
+        }
+        if r.closed_tenant_grace_days < 30
+            || r.file_grace_days < 30
+            || r.customer_data_grace_days < 30
+        {
+            return invalid("retention.*_grace_days minimal 30 (ADR-0012)");
+        }
+        if r.conversation_days == 0
+            || r.auth_artifact_days == 0
+            || r.outbox_days == 0
+            || r.purge_interval_secs < 60
+        {
+            return invalid("retention: hari >= 1, purge_interval_secs >= 60");
+        }
         if self.metrics.port == 0 {
             return invalid("metrics.port harus > 0");
         }
@@ -374,6 +406,15 @@ lease_secs = 60
 max_attempts = 8
 base_backoff_secs = 30
 verify_url_base = "https://app.<ROOT_DOMAIN>/verify-email"
+[retention]
+audit_days = 365
+closed_tenant_grace_days = 30
+conversation_days = 30
+file_grace_days = 30
+customer_data_grace_days = 30
+auth_artifact_days = 30
+outbox_days = 30
+purge_interval_secs = 3600
 [metrics]
 host = "0.0.0.0"
 port = 9090
@@ -487,6 +528,27 @@ log_format = "json"
         assert!(Settings::parse(&raw).unwrap().validate().is_err());
         let raw = VALID.replace("batch_size = 20", "batch_size = 0");
         assert!(Settings::parse(&raw).unwrap().validate().is_err());
+    }
+
+    #[test]
+    fn retention_floors_enforced() {
+        for (from, to) in [
+            ("audit_days = 365", "audit_days = 30"),
+            (
+                "closed_tenant_grace_days = 30",
+                "closed_tenant_grace_days = 7",
+            ),
+            ("outbox_days = 30", "outbox_days = 0"),
+            ("purge_interval_secs = 3600", "purge_interval_secs = 1"),
+        ] {
+            assert!(
+                Settings::parse(&VALID.replace(from, to))
+                    .unwrap()
+                    .validate()
+                    .is_err(),
+                "{to}"
+            );
+        }
     }
 
     #[test]

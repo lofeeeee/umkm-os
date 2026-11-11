@@ -1,0 +1,72 @@
+# P1-9 — Retention + purge + deletion scaffold (ADR-0012)
+date: 2026-11-11T16:20:46Z
+
+Files: migrations/0009_retention (app.purge_audit / purge_closed_tenants / purge_auth_artifacts / purge_outbox, SECURITY DEFINER, EXECUTE ke umkm_app_role), config [retention], crates/infrastructure/src/retention.rs, apps/worker (job periodik purge_interval_secs)
+Diterapkan sekarang: audit 365 hari; tenant closed +30 hari (CASCADE data tenant, audit tetap); sesi/token tidak berlaku +30 hari; outbox sent/dead +30 hari (pending tidak pernah).
+Scaffold (nilai di config, purge dibuat bersama tabelnya): percakapan 30 hari (P6), file +30 hari (P2-6), data pelanggan +30 hari/permintaan hapus (P3).
+Batas bawah di DB (berlaku walau config salah): audit >= 90 hari, grace tenant >= 30 hari, artefak auth & outbox >= 1 hari. Config juga divalidasi (audit_days >= 90, grace >= 30).
+
+$ cargo fmt --all --check
+exit 0
+
+$ cargo clippy --workspace --all-targets -- -D warnings
+exit 0
+
+$ cargo test -p umkm-shared retention
+      1 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 4 filtered out; 
+      1 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 16 filtered out; 
+exit 0
+
+$ cargo test -p umkm-infrastructure --test retention
+      1 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+exit 0
+
+$ cargo test -p umkm-infrastructure --test rls
+      1 test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+exit 0
+
+$ cargo test --workspace
+      8 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      3 test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test result: ok. 19 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test result: ok. 20 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      2 test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      2 test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      6 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+exit 0
+
+## Negative control: batas bawah purge_audit dihapus
+$ cargo test -p umkm-infrastructure --test retention
+      1 error: test failed, to rerun pass `-p umkm-infrastructure --test retention`
+      1 test result: FAILED. 4 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 thread 'database_floors_reject_dangerous_cutoffs_even_if_config_is_wrong' panicked at crates/infrastructure/tests/retention.rs:244:14:
+exit 101
+
+## Negative control: purge_outbox ikut menghapus pending
+$ cargo test -p umkm-infrastructure --test retention
+      1 error: test failed, to rerun pass `-p umkm-infrastructure --test retention`
+      1 test result: FAILED. 4 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 thread 'stale_sessions_tokens_and_finished_outbox_are_purged' panicked at crates/infrastructure/tests/retention.rs:200:5:
+exit 101
+
+## Negative control: purge_closed_tenants mengabaikan grace
+$ cargo test -p umkm-infrastructure --test retention
+      1 error: test failed, to rerun pass `-p umkm-infrastructure --test retention`
+      1 test result: FAILED. 4 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 thread 'closed_tenants_purged_after_grace_with_their_data_but_audit_kept' panicked at crates/infrastructure/tests/retention.rs:120:5:
+exit 101
+
+## Dipulihkan
+$ cargo test -p umkm-infrastructure --test retention
+      1 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+exit 0
+
+## Compose: worker menjalankan job retensi sebagai umkm_app
+$ worker log (job retensi saat start)
+{"level":"INFO","message":"database role verified","db_role":"umkm_app","rls_enforced":true}
+{"level":"INFO","message":"retention purge","audit_rows":0,"tenants":0,"sessions":0,"tokens":0,"outbox_events":0}

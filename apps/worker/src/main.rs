@@ -12,6 +12,7 @@ use umkm_domain::auth::AuthPolicy;
 use umkm_infrastructure::{
     metrics::{CONTENT_TYPE, Metrics},
     outbox::{LogEmailSender, WorkerConfig, process_once},
+    retention::{RetentionPolicy, purge_job},
 };
 use umkm_shared::config::{LogFormat, Secrets, Settings};
 
@@ -88,10 +89,19 @@ async fn run() -> Result<(), BoxError> {
     let poll = Duration::from_millis(w.poll_interval_ms);
     tracing::info!(%addr, worker_id = %cfg.worker_id, environment = %settings.environment, "umkm-worker started");
 
+    // Job retensi (P1-9, ADR-0012): idempoten, dijalankan periodik.
+    let retention = RetentionPolicy::from(&settings.retention);
+    let purge_every = Duration::from_secs(settings.retention.purge_interval_secs);
+    let mut next_purge = tokio::time::Instant::now();
+
     let mut stop = stop_rx;
     let shutdown = shutdown_signal();
     tokio::pin!(shutdown);
     loop {
+        if tokio::time::Instant::now() >= next_purge {
+            purge_job(&pool, &retention, &metrics).await;
+            next_purge = tokio::time::Instant::now() + purge_every;
+        }
         match process_once(&pool, &sender, &cfg, &metrics).await {
             Ok(t) if t.claimed > 0 => {
                 tracing::info!(

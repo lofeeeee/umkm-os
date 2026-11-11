@@ -29,6 +29,19 @@ base_backoff_secs = 30
 # <ROOT_DOMAIN> diganti tenancy.root_domain saat load (ADR-0001). Token di fragment (#token=).
 verify_url_base = "http://localhost:3000/verify-email"
 
+[retention]
+# ADR-0012. Angka di sini, bukan di kode. Batas bawah keamanan juga dipaksa di fungsi DB.
+audit_days = 365
+closed_tenant_grace_days = 30
+# Belum dipakai: tabel terkait dibuat di P6 (percakapan), P2-6 (file), P3 (pelanggan).
+conversation_days = 30
+file_grace_days = 30
+customer_data_grace_days = 30
+# Minimalisasi data (bukan ADR): sesi/token tidak berlaku & event outbox selesai.
+auth_artifact_days = 30
+outbox_days = 30
+purge_interval_secs = 3600
+
 [metrics]
 # Port internal; TIDAK diproxy Caddy dan tidak dipublish (PRD.md §9.8)
 host = "127.0.0.1"
