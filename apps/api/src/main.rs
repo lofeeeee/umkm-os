@@ -1,11 +1,13 @@
-//! umkm-api — entrypoint. Kerangka P0-1; runtime ditambahkan di P0-3 (api) / P1-6 (worker).
+//! umkm-api entrypoint.
 
-fn main() {
-    let layers = [
-        umkm_shared::CRATE,
-        umkm_application::CRATE,
-        umkm_infrastructure::CRATE,
-        umkm_database::CRATE,
-    ];
-    println!("umkm-api skeleton: {}", layers.join(", "));
+#[tokio::main]
+async fn main() -> std::process::ExitCode {
+    match umkm_api::bootstrap::run().await {
+        Ok(()) => std::process::ExitCode::SUCCESS,
+        Err(e) => {
+            // Tracing mungkin belum terinisialisasi bila config gagal dimuat.
+            eprintln!("umkm-api: {e}");
+            std::process::ExitCode::FAILURE
+        }
+    }
 }

@@ -20,6 +20,15 @@ umkm-database = { path = "crates/database" }
 serde = { version = "1.0.229", features = ["derive"] }
 toml = "1.2.1"
 thiserror = "2.0.21"
+serde_json = "1.0.154"
+uuid = { version = "1.26.1", features = ["v4"] }
+tokio = { version = "1.54.1", features = ["rt-multi-thread", "macros", "net", "signal", "time"] }
+axum = "0.8.9"
+tower = "0.5.3"
+tower-http = { version = "0.7.1", features = ["trace", "catch-panic", "limit", "timeout", "set-header"] }
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.23", features = ["fmt", "json", "env-filter"] }
+http-body-util = "0.1.5"
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

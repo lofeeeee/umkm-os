@@ -4,12 +4,13 @@ Platform SaaS multi-tenant untuk UMKM: website, katalog & stok, order, ticketing
 
 ## Status
 
-Gate A `DISETUJUI` (ADR-0002, ADR-0013). Selesai: P0-0, P0-1. Berikutnya: P0-2 config, P0-3 Axum skeleton.
+Gate A `DISETUJUI` (ADR-0002, ADR-0013). Selesai: P0-0..P0-3. Jalankan API lokal: `UMKM_ENV=development cargo run -p umkm-api` lalu `curl localhost:8080/healthz`.
 
 ## Perintah
 
 ```bash
 cargo fmt --all --check && cargo clippy --workspace --all-targets -- -D warnings && cargo test --workspace
+cargo deny check                   # advisory + lisensi dependency (PRD.md §7.1)
 scripts/check-domain-boundary.sh   # domain tanpa axum/sqlx/reqwest/tokio (ADR-0013)
 ```
 

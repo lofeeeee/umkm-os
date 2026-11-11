@@ -1,0 +1,127 @@
+# P0-3 — Axum skeleton: /healthz, /readyz, request ID, tracing, error envelope
+date: 2026-11-11T12:59:36Z
+
+Files: apps/api/src/{lib,bootstrap,router,error,health,state}.rs, apps/api/src/middleware/{request_id,envelope}.rs, crates/shared/src/http.rs
+Tes: apps/api/tests/health.rs (BUILD_PLAN menyebut tests/integration/health.rs; tes integrasi Cargo harus berada di dalam crate).
+
+$ cargo fmt --all --check
+exit 0
+
+$ cargo clippy --workspace --all-targets -- -D warnings
+exit 0
+
+$ cargo test --workspace
+      1 test client_supplied_request_id_is_ignored ... ok
+      1 test config::tests::environment_parse_is_strict ... ok
+      1 test config::tests::missing_or_empty_secret_is_error_without_value ... ok
+      1 test config::tests::parses_valid_config ... ok
+      1 test config::tests::production_rejects_root_domain_placeholder ... ok
+      1 test config::tests::rejects_unknown_field_such_as_inline_secret ... ok
+      1 test config::tests::rejects_zero_values ... ok
+      1 test config::tests::secrets_debug_is_redacted ... ok
+      1 test config::tests::staging_allows_root_domain_placeholder ... ok
+      1 test config_files_contain_no_secrets ... ok
+      1 test development_and_staging_load ... ok
+      1 test healthz_returns_success_envelope_with_request_id ... ok
+      1 test http::tests::error_envelope_matches_prd_shape ... ok
+      1 test http::tests::request_id_format ... ok
+      1 test http::tests::status_mapping_roundtrips_for_every_code ... ok
+      1 test http::tests::success_envelope_matches_prd_shape ... ok
+      1 test oversized_body_is_413_envelope ... ok
+      1 test panic_is_500_envelope_without_panic_message ... ok
+      1 test production_blocked_until_d01_decided ... ok
+      1 test readyz_503_without_leaking_internal_error ... ok
+      1 test readyz_ok_when_all_checks_pass ... ok
+      9 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      4 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test security_headers_present_on_success_and_error ... ok
+      1 test slow_handler_times_out_with_408_envelope ... ok
+      5 test tests::crate_name ... ok
+      1 test unknown_route_is_404_envelope ... ok
+      1 test wrong_method_is_405_envelope ... ok
+exit 0
+
+$ cargo test -p umkm-api --test health -- --list
+client_supplied_request_id_is_ignored: test
+healthz_returns_success_envelope_with_request_id: test
+oversized_body_is_413_envelope: test
+panic_is_500_envelope_without_panic_message: test
+readyz_503_without_leaking_internal_error: test
+readyz_ok_when_all_checks_pass: test
+security_headers_present_on_success_and_error: test
+slow_handler_times_out_with_408_envelope: test
+unknown_route_is_404_envelope: test
+wrong_method_is_405_envelope: test
+
+$ scripts/check-domain-boundary.sh
+      1 OK: umkm-domain bebas dari axum/sqlx/reqwest/tokio/hyper/tower/redis
+exit 0
+
+$ cargo deny check
+      1 advisories ok, bans ok, licenses ok, sources ok
+exit 0
+
+## Smoke test binary (staging config, port 18080)
+$ curl -si localhost:18080/healthz
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+x-frame-options: DENY
+referrer-policy: no-referrer
+cache-control: no-store
+x-request-id: req-514c9e3e-4885-4c91-a6f1-8c4433826606
+content-length: 104
+date: Wed, 11 Nov 2026 12:58:51 GMT
+
+{"success":true,"data":{"status":"ok"},"meta":{"request_id":"req-514c9e3e-4885-4c91-a6f1-8c4433826606"}}
+
+$ curl -s localhost:18080/api/v1/nope
+{"success":false,"error":{"code":"RESOURCE_NOT_FOUND","message":"Resource not found","details":null},"meta":{"request_id":"req-aa7d216d-9421-4832-bf9a-66c21de22598"}}
+exit after SIGTERM: 0
+--- log JSON per request (query string tidak di-log: 'token leaks: 0') ---
+{"timestamp":"2026-11-11T12:59:14.200858Z","level":"INFO","message":"umkm-api listening","addr":"0.0.0.0:18080","environment":"staging","target":"umkm_api::bootstrap"}
+{"timestamp":"2026-11-11T12:59:14.206966Z","level":"INFO","message":"finished processing request","latency":"0 ms","status":200,"target":"tower_http::trace::on_response","span":{"method":"GET","path":"/healthz","request_id":"req-b3991713-8f8f-4497-b846-aef6b546e6bf","name":"http"},"spans":[{"method":"GET","path":"/healthz","request_id":"req-b3991713-8f8f-4497-b846-aef6b546e6bf","name":"http"}]}
+{"timestamp":"2026-11-11T12:59:14.215342Z","level":"INFO","message":"finished processing request","latency":"0 ms","status":404,"target":"tower_http::trace::on_response","span":{"method":"GET","path":"/x","request_id":"req-14ea83dd-ab7f-4037-8090-9c3730d6893f","name":"http"},"spans":[{"method":"GET","path":"/x","request_id":"req-14ea83dd-ab7f-4037-8090-9c3730d6893f","name":"http"}]}
+{"timestamp":"2026-11-11T12:59:14.216827Z","level":"INFO","message":"umkm-api stopped","target":"umkm_api::bootstrap"}
+
+$ UMKM_ENV= umkm-api
+umkm-api: environment variable UMKM_ENV wajib diisi
+exit 1 (expected 1)
+$ UMKM_ENV=production umkm-api
+umkm-api: konfigurasi tidak valid: tenancy.root_domain masih placeholder; production menunggu D-01 DISETUJUI
+exit 1 (expected 1, D-01)
+
+## Negative control: matikan middleware envelope -> tes 404/405/413/panic harus gagal
+$ cargo test -p umkm-api --test health
+      1 error: test failed, to rerun pass `-p umkm-api --test health`
+      1 test client_supplied_request_id_is_ignored ... ok
+      1 test healthz_returns_success_envelope_with_request_id ... ok
+      1 test oversized_body_is_413_envelope ... FAILED
+      1 test panic_is_500_envelope_without_panic_message ... FAILED
+      1 test readyz_503_without_leaking_internal_error ... FAILED
+      1 test readyz_ok_when_all_checks_pass ... ok
+      1 test result: FAILED. 3 passed; 7 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test security_headers_present_on_success_and_error ... FAILED
+      1 test slow_handler_times_out_with_408_envelope ... FAILED
+      1 test unknown_route_is_404_envelope ... FAILED
+      1 test wrong_method_is_405_envelope ... FAILED
+exit 101
+
+## Dipulihkan
+$ cargo test -p umkm-api --test health
+      1 test client_supplied_request_id_is_ignored ... ok
+      1 test healthz_returns_success_envelope_with_request_id ... ok
+      1 test oversized_body_is_413_envelope ... ok
+      1 test panic_is_500_envelope_without_panic_message ... ok
+      1 test readyz_503_without_leaking_internal_error ... ok
+      1 test readyz_ok_when_all_checks_pass ... ok
+      1 test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test security_headers_present_on_success_and_error ... ok
+      1 test slow_handler_times_out_with_408_envelope ... ok
+      1 test unknown_route_is_404_envelope ... ok
+      1 test wrong_method_is_405_envelope ... ok
+exit 0
+

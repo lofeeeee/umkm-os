@@ -94,6 +94,8 @@ pub struct Settings {
 pub struct ServerSettings {
     pub host: String,
     pub port: u16,
+    pub request_timeout_secs: u64,
+    pub body_limit_bytes: usize,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -164,6 +166,12 @@ impl Settings {
         let invalid = |m: &str| Err(ConfigError::Invalid(m.to_owned()));
         if self.server.port == 0 {
             return invalid("server.port harus > 0");
+        }
+        if self.server.request_timeout_secs == 0 {
+            return invalid("server.request_timeout_secs harus > 0");
+        }
+        if self.server.body_limit_bytes == 0 {
+            return invalid("server.body_limit_bytes harus > 0");
         }
         if self.database.max_connections == 0 {
             return invalid("database.max_connections harus > 0");
@@ -245,6 +253,8 @@ environment = "production"
 [server]
 host = "0.0.0.0"
 port = 8080
+request_timeout_secs = 30
+body_limit_bytes = 1048576
 [database]
 max_connections = 20
 acquire_timeout_secs = 5
@@ -290,6 +300,8 @@ log_format = "json"
     fn rejects_zero_values() {
         for (from, to) in [
             ("port = 8080", "port = 0"),
+            ("request_timeout_secs = 30", "request_timeout_secs = 0"),
+            ("body_limit_bytes = 1048576", "body_limit_bytes = 0"),
             ("max_connections = 20", "max_connections = 0"),
             ("acquire_timeout_secs = 5", "acquire_timeout_secs = 0"),
             ("key_prefix = \"umkm:production\"", "key_prefix = \" \""),
