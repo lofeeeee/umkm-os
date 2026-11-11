@@ -1665,9 +1665,11 @@ dependencies = [
 name = "umkm-infrastructure"
 version = "0.1.0"
 dependencies = [
+ "thiserror",
  "umkm-database",
  "umkm-domain",
  "umkm-shared",
+ "uuid",
 ]
 
 [[package]]
