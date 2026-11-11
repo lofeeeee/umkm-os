@@ -158,6 +158,28 @@ services:
       resources:
         limits: { memory: 256M, cpus: "0.50" }
 
+  prometheus:
+    image: prom/prometheus:v3.7.3
+    profiles: [monitoring]
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    logging: *logging
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=15d
+      - --storage.tsdb.retention.size=1GB
+    volumes:
+      - ./ops/monitoring:/etc/prometheus:ro
+      - prometheus_data:/prometheus
+    # Hanya jaringan internal; UI diakses via `docker compose port`/SSH tunnel, tidak dipublish.
+    networks: [backend]
+    deploy:
+      resources:
+        limits: { memory: 200M, cpus: "0.50" }
+
 networks:
   edge: {}
   # Postgres/Redis hanya di jaringan internal tanpa port publik (PRD.md §9.6).
@@ -169,3 +191,4 @@ volumes:
   redis_data:
   caddy_data:
   caddy_config:
+  prometheus_data:

@@ -9,6 +9,11 @@ port = 8080
 request_timeout_secs = 30
 body_limit_bytes = 1048576
 
+[metrics]
+# Port internal; TIDAK diproxy Caddy dan tidak dipublish (PRD.md §9.8)
+host = "0.0.0.0"
+port = 9090
+
 [database]
 max_connections = 20
 acquire_timeout_secs = 5

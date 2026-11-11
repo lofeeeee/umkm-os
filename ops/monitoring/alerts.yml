@@ -1,0 +1,51 @@
+# Alert awal (PRD.md §9.8, §14.3). Ambang adalah titik awal; disetel ulang setelah P8-2.
+groups:
+  - name: umkm-availability
+    rules:
+      - alert: TargetDown
+        expr: up{job=~"umkm-api|umkm-worker"} == 0
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: "{{ $labels.job }} tidak dapat di-scrape selama 2 menit"
+
+      - alert: ApiHigh5xxRate
+        expr: |
+          sum(rate(http_request_errors_total[5m]))
+            / clamp_min(sum(rate(http_requests_total[5m])), 1e-9) > 0.05
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "Rasio respons 5xx API > 5% selama 5 menit"
+
+      - alert: ApiLatencyP95High
+        expr: |
+          histogram_quantile(0.95,
+            sum by (le) (rate(http_request_duration_seconds_bucket{route!="/readyz"}[5m]))) > 1
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "Latensi p95 API > 1 s selama 10 menit"
+
+  - name: umkm-resources
+    rules:
+      - alert: DbPoolSaturated
+        expr: db_connections_active >= 18
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "Pool DB hampir penuh (max_connections produksi = 20)"
+
+      - alert: WorkerQueueBacklog
+        expr: max(worker_queue_depth) > 1000
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "Antrean worker > 1000 selama 10 menit"
+
+      - alert: AiProviderErrors
+        expr: sum by (provider) (rate(ai_provider_errors_total[10m])) > 0.1
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "Error provider AI {{ $labels.provider }} tinggi"

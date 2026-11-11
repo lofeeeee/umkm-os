@@ -78,7 +78,7 @@ fn test_app() -> Router {
             }),
         )
         .route("/echo", post(|body: String| async move { body }));
-    with_middleware(routes, LIMITS).with_state(AppState::default())
+    with_middleware(routes, LIMITS, Arc::default()).with_state(AppState::default())
 }
 
 fn assert_error(json: &Value, headers: &axum::http::HeaderMap, code: &str) {

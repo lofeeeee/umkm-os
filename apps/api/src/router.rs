@@ -1,10 +1,10 @@
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 
 use axum::{
     Router,
     extract::Request,
     http::{HeaderName, HeaderValue, StatusCode},
-    middleware::from_fn,
+    middleware::{from_fn, from_fn_with_state},
     response::IntoResponse,
     routing::get,
 };
@@ -18,6 +18,7 @@ use tower_http::{
     trace::{DefaultOnResponse, TraceLayer},
 };
 use tracing::Level;
+use umkm_infrastructure::metrics::Metrics;
 use umkm_shared::{config::ServerSettings, http::RequestId};
 
 use crate::{AppState, health, middleware};
@@ -42,12 +43,17 @@ pub fn build_router(state: AppState, limits: HttpLimits) -> Router {
     let routes = Router::new()
         .route("/healthz", get(health::healthz))
         .route("/readyz", get(health::readyz));
-    with_middleware(routes, limits).with_state(state)
+    let metrics = state.metrics.clone();
+    with_middleware(routes, limits, metrics).with_state(state)
 }
 
 /// Pasang middleware standar. Dipisah agar tes dapat memakai stack yang sama
 /// dengan route uji (panic, slow handler, body besar).
-pub fn with_middleware(routes: Router<AppState>, limits: HttpLimits) -> Router<AppState> {
+pub fn with_middleware(
+    routes: Router<AppState>,
+    limits: HttpLimits,
+    metrics: Arc<Metrics>,
+) -> Router<AppState> {
     let security_headers = [
         ("x-content-type-options", "nosniff"),
         ("x-frame-options", "DENY"),
@@ -68,7 +74,9 @@ pub fn with_middleware(routes: Router<AppState>, limits: HttpLimits) -> Router<A
                 ))
                 .layer(RequestBodyLimitLayer::new(limits.body_limit_bytes)),
         )
-        .layer(from_fn(middleware::envelope::render_errors));
+        .layer(from_fn(middleware::envelope::render_errors))
+        // Di luar envelope: mencatat status final, termasuk 408/413/500.
+        .layer(from_fn_with_state(metrics, middleware::metrics::record));
     for (name, value) in security_headers {
         router = router.layer(SetResponseHeaderLayer::overriding(
             HeaderName::from_static(name),

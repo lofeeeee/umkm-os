@@ -1,0 +1,178 @@
+# P0-8 — 16 metrics PRD.md §9.8 + structured log
+date: 2026-11-11T13:39:01Z
+
+Files: crates/infrastructure/src/metrics.rs, apps/api/src/{metrics_server.rs,middleware/metrics.rs,bootstrap.rs}, apps/worker/src/main.rs, config/*.toml [metrics], ops/monitoring/{prometheus,alerts,alerts_test}.yml, docker-compose.yml (prometheus, profile monitoring)
+Deviasi path: BUILD_PLAN menyebut crates/shared/src/metrics.rs; ditempatkan di crates/infrastructure agar library Prometheus tidak masuk transitif ke crate domain (ADR-0013).
+Catatan jujur:
+- Family berlabel (http_*, worker_*, ai_*, tenant_api_usage, db_query_duration) baru tampil setelah observasi pertama (konvensi Prometheus); tidak ada series palsu. Tes membuktikan ke-16 nama tampil setelah tiap family diobservasi.
+- Yang sudah diisi data nyata: http_* (api), db_connections_active (sample saat scrape). Sisanya terdaftar dan diisi saat fiturnya ada: worker_* (P1-6), ai_* (P5), active_websocket_connections (P4-6), active_tenants/tenant_api_usage (P1), db_query_duration/db_pool_wait (repository P1).
+- Counter tampil dengan sufiks _total (OpenMetrics): tenant_api_usage -> tenant_api_usage_total.
+- Alertmanager/tujuan notifikasi dan alert disk/RAM/CPU host (node-exporter) belum: P8-5.
+
+$ cargo fmt --all --check
+exit 0
+
+$ cargo clippy --workspace --all-targets -- -D warnings
+exit 0
+
+$ cargo test --workspace
+      1 test client_supplied_request_id_is_ignored ... ok
+      1 test concurrent_tenants_each_see_only_their_context ... ok
+      1 test config::tests::environment_parse_is_strict ... ok
+      1 test config::tests::missing_or_empty_secret_is_error_without_value ... ok
+      1 test config::tests::parses_valid_config ... ok
+      1 test config::tests::production_rejects_root_domain_placeholder ... ok
+      1 test config::tests::rejects_unknown_field_such_as_inline_secret ... ok
+      1 test config::tests::rejects_zero_values ... ok
+      1 test config::tests::secrets_debug_is_redacted ... ok
+      1 test config::tests::staging_allows_root_domain_placeholder ... ok
+      1 test config_files_contain_no_secrets ... ok
+      1 test context_does_not_leak_on_connection_reuse ... ok
+      1 test development_and_staging_load ... ok
+      1 test healthz_returns_success_envelope_with_request_id ... ok
+      1 test http::tests::error_envelope_matches_prd_shape ... ok
+      1 test http::tests::request_id_format ... ok
+      1 test http::tests::status_mapping_roundtrips_for_every_code ... ok
+      1 test http::tests::success_envelope_matches_prd_shape ... ok
+      1 test http_requests_recorded_by_route_template ... ok
+      1 test metrics::tests::all_16_required_metrics_exposed_after_observation ... ok
+      1 test metrics::tests::http_observation_counts_and_errors ... ok
+      1 test metrics::tests::output_is_valid_openmetrics_terminated ... ok
+      1 test metrics::tests::unlabeled_metrics_exposed_immediately ... ok
+      1 test metrics_not_exposed_on_public_router ... ok
+      1 test migrations_are_reversible ... ok
+      1 test no_context_means_null_tenant ... ok
+      1 test on_scrape_hook_runs_before_encode ... ok
+      1 test oversized_body_is_413_envelope ... ok
+      1 test panic_is_500_envelope_without_panic_message ... ok
+      1 test production_blocked_until_d01_decided ... ok
+      1 test readyz_503_without_leaking_internal_error ... ok
+      1 test readyz_ok_when_all_checks_pass ... ok
+      1 test redis::tests::config_prefixes_are_valid ... ok
+      1 test redis::tests::environments_do_not_collide ... ok
+      1 test redis::tests::no_collisions_across_tenants_resources_ids ... ok
+      1 test redis::tests::platform_key_format ... ok
+      1 test redis::tests::rejects_invalid_prefix ... ok
+      1 test redis::tests::rejects_segments_that_could_break_namespace ... ok
+      1 test redis::tests::tenant_key_format_matches_prd ... ok
+      1 test redis::tests::tenant_scan_pattern_never_matches_other_tenant_keys ... ok
+      9 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      2 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      2 test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test security_headers_present_on_success_and_error ... ok
+      1 test server_errors_counted_including_panics ... ok
+      1 test slow_handler_times_out_with_408_envelope ... ok
+      1 test tenant_tx_sets_context ... ok
+      5 test tests::crate_name ... ok
+      1 test tests::migrations_are_embedded_and_reversible ... ok
+      1 test unknown_route_is_404_envelope ... ok
+      1 test wrong_method_is_405_envelope ... ok
+exit 0
+
+$ cargo test -p umkm-infrastructure metrics -- --list; cargo test -p umkm-api --test metrics -- --list
+metrics::tests::all_16_required_metrics_exposed_after_observation: test
+metrics::tests::http_observation_counts_and_errors: test
+metrics::tests::output_is_valid_openmetrics_terminated: test
+metrics::tests::unlabeled_metrics_exposed_immediately: test
+http_requests_recorded_by_route_template: test
+metrics_not_exposed_on_public_router: test
+on_scrape_hook_runs_before_encode: test
+server_errors_counted_including_panics: test
+
+$ scripts/check-domain-boundary.sh
+      1 OK: umkm-domain bebas dari axum/sqlx/reqwest/tokio/hyper/tower/redis
+exit 0
+
+$ scripts/check-ci-needs.sh
+      1 OK: ci-gate mengagregasi 5 job: ['containers', 'lint', 'supply-chain', 'test', 'workflow-lint']
+exit 0
+
+$ cargo deny check
+      1 advisories ok, bans ok, licenses ok, sources ok
+exit 0
+
+$ promtool check config prometheus.yml
+  SUCCESS: 1 rule files found
+ SUCCESS: /etc/prometheus/prometheus.yml is valid prometheus config file syntax
+  SUCCESS: 6 rules found
+exit 0
+
+$ promtool test rules alerts_test.yml   # termasuk kasus negatif: 1% error -> ApiHigh5xxRate TIDAK firing
+  SUCCESS
+exit 0
+
+$ docker compose --env-file .env.example --profile monitoring config -q
+exit 0
+
+$ actionlint
+exit 0
+
+## Negative control: lepas middleware metrics -> tes metrics API harus gagal
+$ cargo test -p umkm-api --test metrics
+      1 error: test failed, to rerun pass `-p umkm-api --test metrics`
+      1 test http_requests_recorded_by_route_template ... FAILED
+      1 test metrics_not_exposed_on_public_router ... ok
+      1 test on_scrape_hook_runs_before_encode ... ok
+      1 test result: FAILED. 2 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test server_errors_counted_including_panics ... FAILED
+      1 thread 'http_requests_recorded_by_route_template' (319997) panicked at apps/api/tests/metrics.rs:55:5:
+      1 thread 'server_errors_counted_including_panics' (320000) panicked at apps/api/tests/metrics.rs:71:5:
+      1 thread 'server_errors_counted_including_panics' (320000) panicked at apps/api/tests/metrics.rs:85:5:
+exit 101
+
+## Dipulihkan
+$ cargo test -p umkm-api --test metrics
+      1 test http_requests_recorded_by_route_template ... ok
+      1 test metrics_not_exposed_on_public_router ... ok
+      1 test on_scrape_hook_runs_before_encode ... ok
+      1 test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test server_errors_counted_including_panics ... ok
+exit 0
+
+## E2E: docker compose --profile monitoring up -d --wait (port 18082)
+$ curl -s -o /dev/null -w "%{http_code}" -H "Host: api.localhost" localhost:18082/metrics   # tidak lewat Caddy
+404
+$ docker compose exec api: GET http://api:9090/metrics (dari jaringan internal, via container prometheus)
+# TYPE http_requests counter
+http_requests_total{method="GET",route="/readyz",status="200"} 3
+http_requests_total{method="GET",route="/healthz",status="200"} 3
+http_requests_total{method="GET",route="unmatched",status="404"} 1
+# TYPE http_request_duration_seconds histogram
+# TYPE db_connections_active gauge
+db_connections_active 0
+# TYPE db_pool_wait_seconds histogram
+# TYPE active_websocket_connections gauge
+# TYPE active_tenants gauge
+
+$ worker:9090/metrics (# TYPE)
+# TYPE db_connections_active gauge
+# TYPE db_pool_wait_seconds histogram
+# TYPE active_websocket_connections gauge
+# TYPE active_tenants gauge
+
+$ prometheus targets
+umkm-api up http://api:9090/metrics
+umkm-worker up http://worker:9090/metrics
+
+$ prometheus rules
+umkm-availability TargetDown ok
+umkm-availability ApiHigh5xxRate ok
+umkm-availability ApiLatencyP95High ok
+umkm-resources DbPoolSaturated ok
+umkm-resources WorkerQueueBacklog ok
+umkm-resources AiProviderErrors ok
+
+$ query http_requests_total
+/readyz 200 1
+
+$ docker compose ps (publish)
+api [{ 8080 0 tcp}]
+prometheus [{ 9090 0 tcp}]
+
+$ api log JSON (1 baris request)
+{"timestamp":"2026-11-11T13:38:28.443838Z","level":"INFO","message":"finished processing request","latency":"0 ms","status":200,"target":"tower_http::trace::on_response","span":{"method":"GET","path":"/healthz","request_id":"req-4d9e1556-034d-4582-9d69-2fbbfe4338d4","name":"http"},"spans":[{"method":"GET","path":"/healthz","request_id":"req-4d9e1556-034d-4582-9d69-2fbbfe4338d4","name":"http"}]}

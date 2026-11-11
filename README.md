@@ -4,7 +4,7 @@ Platform SaaS multi-tenant untuk UMKM: website, katalog & stok, order, ticketing
 
 ## Status
 
-Gate A `DISETUJUI` (ADR-0002, ADR-0013). Selesai: P0-0..P0-6; P0-7 (CI) siap tetapi belum pernah jalan di GitHub karena repo belum punya remote — lihat `docs/governance/ci.md`. Cara menjalankan API: lihat bagian "Menjalankan stack lengkap" di bawah (API membutuhkan `UMKM_DATABASE_URL` dan `UMKM_REDIS_URL`).
+Gate A `DISETUJUI` (ADR-0002, ADR-0013). Selesai: P0-0..P0-6, P0-8; P0-7 (CI) siap tetapi belum pernah jalan di GitHub karena repo belum punya remote — lihat `docs/governance/ci.md`. Cara menjalankan API: lihat bagian "Menjalankan stack lengkap" di bawah (API membutuhkan `UMKM_DATABASE_URL` dan `UMKM_REDIS_URL`).
 
 ## Perintah
 
@@ -37,6 +37,8 @@ curl -H "Host: api.localhost" localhost/readyz
 
 TLS produksi belum dikonfigurasi (menunggu D-01); stack hanya untuk lokal/staging.
 
+Monitoring (Prometheus, profile opsional): `docker compose --profile monitoring up -d`. Metrics ada di port internal 9090 (`api:9090/metrics`, `worker:9090/metrics`), tidak diproxy Caddy dan tidak dipublish.
+
 ## Struktur
 
 ```text
@@ -49,6 +51,7 @@ crates/database        PostgreSQL/SQLx, tenant context transaction-local
 migrations/            SQLx migrations (reversible: *.up.sql / *.down.sql)
 scripts/               guard CI lokal, dev-db
 ops/caddy/             reverse proxy (Caddyfile)
+ops/monitoring/        Prometheus config + alert rules (+ tes promtool)
 config/              konfigurasi non-rahasia per environment (P0-2)
 docs/                PRD, rencana, keputusan, bukti
 .github/workflows/   CI (P0-7)

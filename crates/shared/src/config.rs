@@ -83,6 +83,7 @@ impl FromStr for Environment {
 pub struct Settings {
     pub environment: Environment,
     pub server: ServerSettings,
+    pub metrics: MetricsSettings,
     pub database: DatabaseSettings,
     pub redis: RedisSettings,
     pub tenancy: TenancySettings,
@@ -96,6 +97,13 @@ pub struct ServerSettings {
     pub port: u16,
     pub request_timeout_secs: u64,
     pub body_limit_bytes: usize,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct MetricsSettings {
+    pub host: String,
+    pub port: u16,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -172,6 +180,12 @@ impl Settings {
         }
         if self.server.body_limit_bytes == 0 {
             return invalid("server.body_limit_bytes harus > 0");
+        }
+        if self.metrics.port == 0 {
+            return invalid("metrics.port harus > 0");
+        }
+        if self.metrics.port == self.server.port {
+            return invalid("metrics.port harus berbeda dari server.port");
         }
         if self.database.max_connections == 0 {
             return invalid("database.max_connections harus > 0");
@@ -255,6 +269,9 @@ host = "0.0.0.0"
 port = 8080
 request_timeout_secs = 30
 body_limit_bytes = 1048576
+[metrics]
+host = "0.0.0.0"
+port = 9090
 [database]
 max_connections = 20
 acquire_timeout_secs = 5
@@ -301,6 +318,8 @@ log_format = "json"
         for (from, to) in [
             ("port = 8080", "port = 0"),
             ("request_timeout_secs = 30", "request_timeout_secs = 0"),
+            ("port = 9090", "port = 0"),
+            ("port = 9090", "port = 8080"),
             ("body_limit_bytes = 1048576", "body_limit_bytes = 0"),
             ("max_connections = 20", "max_connections = 0"),
             ("acquire_timeout_secs = 5", "acquire_timeout_secs = 0"),

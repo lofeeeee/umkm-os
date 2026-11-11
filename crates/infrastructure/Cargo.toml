@@ -15,6 +15,7 @@ umkm-shared.workspace = true
 umkm-database.workspace = true
 thiserror.workspace = true
 redis.workspace = true
+prometheus-client.workspace = true
 
 [dev-dependencies]
 uuid.workspace = true

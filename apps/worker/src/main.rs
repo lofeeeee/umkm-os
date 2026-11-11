@@ -3,9 +3,11 @@
 //! Belum ada job terdaftar: outbox/email masuk P1-6, purge P1-9. Proses tetap
 //! berjalan sampai SIGTERM agar dapat dideploy, dipantau, dan dimatikan bersih.
 
-use std::path::PathBuf;
+use std::{net::SocketAddr, path::PathBuf, sync::Arc};
 
+use axum::{Router, http::header, routing::get};
 use tracing_subscriber::{EnvFilter, fmt};
+use umkm_infrastructure::metrics::{CONTENT_TYPE, Metrics};
 use umkm_shared::config::{LogFormat, Settings};
 
 #[tokio::main]
@@ -34,7 +36,39 @@ async fn main() -> std::process::ExitCode {
         layers = ?[umkm_application::CRATE, umkm_infrastructure::CRATE, umkm_database::CRATE],
         "umkm-worker started; no jobs registered yet"
     );
-    shutdown_signal().await;
+
+    // /metrics internal (P0-8): worker_* diisi saat job nyata ada (P1-6).
+    let metrics = Arc::new(Metrics::new());
+    let addr: SocketAddr =
+        match format!("{}:{}", settings.metrics.host, settings.metrics.port).parse() {
+            Ok(a) => a,
+            Err(e) => {
+                tracing::error!(error = %e, "metrics address tidak valid");
+                return std::process::ExitCode::FAILURE;
+            }
+        };
+    let listener = match tokio::net::TcpListener::bind(addr).await {
+        Ok(l) => l,
+        Err(e) => {
+            tracing::error!(error = %e, %addr, "gagal bind metrics");
+            return std::process::ExitCode::FAILURE;
+        }
+    };
+    let app = Router::new().route(
+        "/metrics",
+        get(move || {
+            let metrics = metrics.clone();
+            async move { ([(header::CONTENT_TYPE, CONTENT_TYPE)], metrics.encode()) }
+        }),
+    );
+    tracing::info!(%addr, "worker metrics listening");
+    if let Err(e) = axum::serve(listener, app)
+        .with_graceful_shutdown(shutdown_signal())
+        .await
+    {
+        tracing::error!(error = %e, "metrics server error");
+        return std::process::ExitCode::FAILURE;
+    }
     tracing::info!("umkm-worker stopped");
     std::process::ExitCode::SUCCESS
 }

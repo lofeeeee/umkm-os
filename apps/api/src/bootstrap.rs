@@ -6,12 +6,18 @@ use std::{
     time::Duration,
 };
 
+use std::future::IntoFuture;
+
 use tokio::net::TcpListener;
 use tracing_subscriber::{EnvFilter, fmt};
-use umkm_infrastructure::redis::RedisClient;
+use umkm_infrastructure::{metrics::Metrics, redis::RedisClient};
 use umkm_shared::config::{LogFormat, Secrets, Settings};
 
-use crate::{AppState, HttpLimits, build_router, readiness};
+use crate::{
+    AppState, HttpLimits, build_router,
+    metrics_server::{OnScrape, metrics_router},
+    readiness,
+};
 
 pub const CONFIG_DIR_VAR: &str = "UMKM_CONFIG_DIR";
 
@@ -52,18 +58,45 @@ pub async fn serve() -> Result<(), BoxError> {
 
     let pool = umkm_database::connect_lazy(&secrets.database_url, &settings.database)?;
     let redis = RedisClient::open(&secrets.redis_url)?;
+    let metrics = Arc::new(Metrics::new());
     let state = AppState::new(vec![
-        Arc::new(readiness::Postgres(pool)),
+        Arc::new(readiness::Postgres(pool.clone())),
         Arc::new(readiness::Redis(redis)),
-    ]);
+    ])
+    .with_metrics(metrics.clone());
+
+    let on_scrape: OnScrape = {
+        let metrics = metrics.clone();
+        Arc::new(move || {
+            let in_use = pool.size().saturating_sub(pool.num_idle() as u32);
+            metrics.db_connections_active.set(i64::from(in_use));
+        })
+    };
 
     let addr: SocketAddr = format!("{}:{}", settings.server.host, settings.server.port).parse()?;
+    let metrics_addr: SocketAddr =
+        format!("{}:{}", settings.metrics.host, settings.metrics.port).parse()?;
     let app = build_router(state, HttpLimits::from(&settings.server));
     let listener = TcpListener::bind(addr).await?;
-    tracing::info!(%addr, environment = %settings.environment, "umkm-api listening");
-    axum::serve(listener, app)
-        .with_graceful_shutdown(shutdown_signal())
-        .await?;
+    let metrics_listener = TcpListener::bind(metrics_addr).await?;
+    tracing::info!(%addr, %metrics_addr, environment = %settings.environment, "umkm-api listening");
+
+    let (stop_tx, _) = tokio::sync::broadcast::channel::<()>(1);
+    let wait = |tx: &tokio::sync::broadcast::Sender<()>| {
+        let mut rx = tx.subscribe();
+        async move {
+            let _ = rx.recv().await;
+        }
+    };
+    let api = axum::serve(listener, app).with_graceful_shutdown(wait(&stop_tx));
+    let metrics_srv = axum::serve(metrics_listener, metrics_router(metrics, on_scrape))
+        .with_graceful_shutdown(wait(&stop_tx));
+    let signal = async move {
+        shutdown_signal().await;
+        let _ = stop_tx.send(());
+        Ok::<(), std::io::Error>(())
+    };
+    tokio::try_join!(api.into_future(), metrics_srv.into_future(), signal)?;
     tracing::info!("umkm-api stopped");
     Ok(())
 }

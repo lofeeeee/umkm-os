@@ -90,6 +90,12 @@ jobs:
         with:
           persist-credentials: false
       - run: docker compose --env-file .env.example config -q
+      - name: promtool check config + test rules
+        run: |
+          docker run --rm -v "$PWD/ops/monitoring:/etc/prometheus:ro" --entrypoint promtool \
+            prom/prometheus:v3.7.3 check config /etc/prometheus/prometheus.yml
+          docker run --rm -v "$PWD/ops/monitoring:/etc/prometheus:ro" -w /etc/prometheus --entrypoint promtool \
+            prom/prometheus:v3.7.3 test rules alerts_test.yml
       - run: docker build --target api -t umkm-os/api:ci .
       - run: docker build --target worker -t umkm-os/worker:ci .
 
