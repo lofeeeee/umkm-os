@@ -4,11 +4,13 @@ Platform SaaS multi-tenant untuk UMKM: website, katalog & stok, order, ticketing
 
 ## Status
 
-Gate A `DISETUJUI` (ADR-0002, ADR-0013). Selesai: P0-0..P0-3. Jalankan API lokal: `UMKM_ENV=development cargo run -p umkm-api` lalu `curl localhost:8080/healthz`.
+Gate A `DISETUJUI` (ADR-0002, ADR-0013). Selesai: P0-0..P0-4. Jalankan API lokal: `UMKM_ENV=development cargo run -p umkm-api` lalu `curl localhost:8080/healthz`.
 
 ## Perintah
 
 ```bash
+eval "$(scripts/dev-db.sh up)"         # Postgres lokal (port 55432) -> DATABASE_URL; wajib untuk tes DB
+sqlx migrate run --source migrations
 cargo fmt --all --check && cargo clippy --workspace --all-targets -- -D warnings && cargo test --workspace
 cargo deny check                   # advisory + lisensi dependency (PRD.md §7.1)
 scripts/check-domain-boundary.sh   # domain tanpa axum/sqlx/reqwest/tokio (ADR-0013)
@@ -33,7 +35,8 @@ crates/shared          tipe/utilitas bersama
 crates/domain          aturan bisnis murni (tanpa framework)
 crates/application     use case
 crates/infrastructure  adapter eksternal
-crates/database        PostgreSQL/SQLx
+crates/database        PostgreSQL/SQLx, tenant context transaction-local
+migrations/            SQLx migrations (reversible: *.up.sql / *.down.sql)
 scripts/               guard CI lokal
 config/              konfigurasi non-rahasia per environment (P0-2)
 docs/                PRD, rencana, keputusan, bukti

@@ -11,3 +11,9 @@ workspace = true
 
 [dependencies]
 umkm-shared.workspace = true
+sqlx.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+tokio.workspace = true
+uuid.workspace = true
