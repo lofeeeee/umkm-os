@@ -1,0 +1,135 @@
+# P0-6 — Docker Compose dengan <ROOT_DOMAIN> placeholder
+date: 2026-11-11T13:18:29Z
+
+Files: docker-compose.yml, Dockerfile, .dockerignore, .env.example, ops/caddy/Caddyfile, apps/api/src/{bootstrap,readiness}.rs, apps/worker/src/main.rs, crates/infrastructure/src/redis.rs (RedisClient)
+TLS produksi: TIDAK dikonfigurasi (auto_https off) — menunggu D-01. Stack ini belum layak trafik produksi.
+Belum: role DB aplikasi tanpa BYPASSRLS (P1-7; saat ini api memakai role owner), secret via docker secrets (P8-5), healthcheck worker (P1-6), monitoring (P0-8).
+
+$ docker compose --env-file .env.example config -q
+exit 0
+
+## Negative control: tanpa env wajib -> compose menolak
+$ env -i docker compose --env-file /dev/null config -q
+required-variable errors: 17
+exit 1 (expected 1)
+
+$ cargo fmt --all --check
+exit 0
+
+$ cargo clippy --workspace --all-targets -- -D warnings
+exit 0
+
+$ cargo test --workspace
+      1 test client_supplied_request_id_is_ignored ... ok
+      1 test concurrent_tenants_each_see_only_their_context ... ok
+      1 test config::tests::environment_parse_is_strict ... ok
+      1 test config::tests::missing_or_empty_secret_is_error_without_value ... ok
+      1 test config::tests::parses_valid_config ... ok
+      1 test config::tests::production_rejects_root_domain_placeholder ... ok
+      1 test config::tests::rejects_unknown_field_such_as_inline_secret ... ok
+      1 test config::tests::rejects_zero_values ... ok
+      1 test config::tests::secrets_debug_is_redacted ... ok
+      1 test config::tests::staging_allows_root_domain_placeholder ... ok
+      1 test config_files_contain_no_secrets ... ok
+      1 test context_does_not_leak_on_connection_reuse ... ok
+      1 test development_and_staging_load ... ok
+      1 test healthz_returns_success_envelope_with_request_id ... ok
+      1 test http::tests::error_envelope_matches_prd_shape ... ok
+      1 test http::tests::request_id_format ... ok
+      1 test http::tests::status_mapping_roundtrips_for_every_code ... ok
+      1 test http::tests::success_envelope_matches_prd_shape ... ok
+      1 test migrations_are_reversible ... ok
+      1 test no_context_means_null_tenant ... ok
+      1 test oversized_body_is_413_envelope ... ok
+      1 test panic_is_500_envelope_without_panic_message ... ok
+      1 test production_blocked_until_d01_decided ... ok
+      1 test readyz_503_without_leaking_internal_error ... ok
+      1 test readyz_ok_when_all_checks_pass ... ok
+      1 test redis::tests::config_prefixes_are_valid ... ok
+      1 test redis::tests::environments_do_not_collide ... ok
+      1 test redis::tests::no_collisions_across_tenants_resources_ids ... ok
+      1 test redis::tests::platform_key_format ... ok
+      1 test redis::tests::rejects_invalid_prefix ... ok
+      1 test redis::tests::rejects_segments_that_could_break_namespace ... ok
+      1 test redis::tests::tenant_key_format_matches_prd ... ok
+      1 test redis::tests::tenant_scan_pattern_never_matches_other_tenant_keys ... ok
+      9 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      2 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test security_headers_present_on_success_and_error ... ok
+      1 test slow_handler_times_out_with_408_envelope ... ok
+      1 test tenant_tx_sets_context ... ok
+      5 test tests::crate_name ... ok
+      1 test tests::migrations_are_embedded_and_reversible ... ok
+      1 test unknown_route_is_404_envelope ... ok
+      1 test wrong_method_is_405_envelope ... ok
+exit 0
+
+$ scripts/check-domain-boundary.sh
+      1 OK: umkm-domain bebas dari axum/sqlx/reqwest/tokio/hyper/tower/redis
+exit 0
+
+$ cargo deny check
+      1 advisories ok, bans ok, licenses FAILED, sources ok
+      1 error[rejected]: failed to satisfy license requirements
+exit 4
+# Ditemukan: xxhash-rust 0.8.19 (BSL-1.0) <- redis 1.8.1. BSL-1.0 permisif + OSI-approved;
+# ditambahkan ke allowlist deny.toml dan dicatat di docs/architecture/dependency-review.md.
+$ cargo deny check   # setelah perbaikan
+      1 advisories ok, bans ok, licenses ok, sources ok
+exit 0
+
+## E2E: docker compose -p umkm-os-e2e build && up -d --wait (env acak di scratchpad, port 18082)
+build: api + worker images Built (3m0s); up --wait exit 0; semua service healthy; migrate Exited 0
+
+$ curl -s -H "Host: api.localhost" localhost:18082/readyz
+{"success":true,"data":{"status":"ready","checks":[{"name":"postgres","ok":true},{"name":"redis","ok":true}]},"meta":{"request_id":"req-8e8dd687-e67c-47e6-b97d-7e84a49b49fd"}}
+$ curl -s -H "Host: api.localhost" localhost:18082/api/v1/nope
+{"success":false,"error":{"code":"RESOURCE_NOT_FOUND","message":"Resource not found","details":null},"meta":{"request_id":"req-ca401b5c-315c-4e09-b113-028af3056daa"}}
+$ curl -si -H "Host: toko-a.localhost" localhost:18082/   # tenant site: ADR-0014
+HTTP/1.1 503 Service Unavailable
+Frontend belum tersedia (ADR-0014 MENUNGGU)
+
+$ curl -sI -H "Host: api.localhost" localhost:18082/healthz | grep -i server   # header Server dihapus
+0
+
+$ docker compose ps --format "{{.Service}} {{.Publishers}}"   # hanya caddy publish port
+api [{ 8080 0 tcp}]
+caddy [{0.0.0.0 80 18082 tcp} {:: 80 18082 tcp} { 443 0 tcp} { 443 0 udp} { 2019 0 tcp}]
+postgres [{ 5432 0 tcp}]
+redis [{ 6379 0 tcp}]
+worker []
+
+$ docker compose logs migrate
+{"timestamp":"2026-11-11T13:17:27.766832Z","level":"INFO","message":"migrations applied","target":"umkm_api::bootstrap"}
+
+$ docker compose exec api id   # non-root
+uid=10001(umkm) gid=10001 groups=10001
+
+$ touch /usr/local/bin/x di api   # read-only rootfs
+touch: cannot touch '/usr/local/bin/x': Read-only file system
+exit 1
+
+$ docker inspect -f "{{.HostConfig.Memory}}" (bytes)
+api 536870912 ro=true capdrop=[ALL]
+worker 402653184 ro=true capdrop=[ALL]
+postgres 2147483648 ro=false capdrop=[]
+redis 268435456 ro=true capdrop=[ALL]
+caddy 67108864 ro=true capdrop=[ALL]
+
+$ docker compose exec postgres psql -c "select count(*) from _sqlx_migrations"
+1|app schema|t
+
+## Failure: stop redis -> /readyz 503, api unhealthy, detail tanpa topologi
+{"success":false,"error":{"code":"SERVICE_UNAVAILABLE","message":"Service unavailable","details":{"failing_checks":["redis"]}},"meta":{"request_id":"req-ad646829-becc-4865-9d79-69f6bdd85a7b"}}
+## Redis kembali
+{"success":true,"data":{"status":"ready","checks":[{"name":"postgres","ok":true},{"name":"redis","ok":true}]},"meta":{"request_id":"req-6854dfdb-3281-4a9d-938c-5a55f4577230"}}
+$ docker compose logs api | grep -c password
+0
+$ docker compose logs worker
+{"timestamp":"2026-11-11T13:17:28.708193Z","level":"INFO","message":"umkm-worker started; no jobs registered yet","environment":"staging","layers":"[\"umkm-application\", \"umkm-infrastructure\", \"umkm-database\"]","target":"umkm_worker"}

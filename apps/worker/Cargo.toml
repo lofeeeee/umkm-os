@@ -14,3 +14,6 @@ umkm-application.workspace = true
 umkm-infrastructure.workspace = true
 umkm-database.workspace = true
 umkm-shared.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true

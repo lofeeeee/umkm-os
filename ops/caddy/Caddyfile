@@ -1,0 +1,31 @@
+# Reverse proxy (PRD.md §9.1, §9.7).
+# ROOT_DOMAIN = placeholder sampai D-01 DISETUJUI.
+# TLS produksi (wildcard *.ROOT_DOMAIN via DNS challenge) MENUNGGU D-01; sampai itu
+# semua site HTTP-only dan TIDAK boleh dipakai untuk trafik produksi.
+{
+	auto_https off
+	admin localhost:2019
+}
+
+(hardening) {
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy no-referrer
+		-Server
+	}
+	request_body {
+		max_size 2MB
+	}
+}
+
+http://api.{$ROOT_DOMAIN} {
+	import hardening
+	reverse_proxy api:8080
+}
+
+# Dashboard, marketing, dan tenant website: kontrak frontend contingent ADR-0014.
+# Tidak ada aset/endpoint publik yang direkayasa sebelum ADR itu DISETUJUI.
+http://{$ROOT_DOMAIN}, http://app.{$ROOT_DOMAIN}, http://*.{$ROOT_DOMAIN} {
+	import hardening
+	respond "Frontend belum tersedia (ADR-0014 MENUNGGU)" 503
+}

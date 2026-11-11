@@ -126,6 +126,41 @@ impl PlatformKeys<'_> {
     }
 }
 
+/// Klien Redis. `open` hanya mem-parse URL; koneksi dibuat saat dipakai sehingga
+/// proses dapat start dan melaporkan `/readyz` 503 bila Redis belum siap.
+#[derive(Clone)]
+pub struct RedisClient(::redis::Client);
+
+#[derive(Debug, thiserror::Error)]
+pub enum RedisError {
+    /// Detail parse sengaja dibuang: URL dapat memuat password.
+    #[error("redis url tidak valid")]
+    InvalidUrl,
+    #[error("redis: {0}")]
+    Redis(#[from] ::redis::RedisError),
+}
+
+impl RedisClient {
+    pub fn open(url: &umkm_shared::config::SecretString) -> Result<Self, RedisError> {
+        ::redis::Client::open(url.expose())
+            .map(Self)
+            .map_err(|_| RedisError::InvalidUrl)
+    }
+
+    pub async fn ping(&self) -> Result<(), RedisError> {
+        let mut conn = self.0.get_multiplexed_async_connection().await?;
+        let pong: String = ::redis::cmd("PING").query_async(&mut conn).await?;
+        if pong == "PONG" {
+            Ok(())
+        } else {
+            Err(RedisError::Redis(::redis::RedisError::from((
+                ::redis::ErrorKind::Client,
+                "unexpected PING reply",
+            ))))
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::HashSet;

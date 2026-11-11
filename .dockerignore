@@ -1,0 +1,6 @@
+target/
+.git/
+docs/
+.env
+.env.*
+!.env.example

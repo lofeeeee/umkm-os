@@ -4,7 +4,7 @@ Platform SaaS multi-tenant untuk UMKM: website, katalog & stok, order, ticketing
 
 ## Status
 
-Gate A `DISETUJUI` (ADR-0002, ADR-0013). Selesai: P0-0..P0-5. Jalankan API lokal: `UMKM_ENV=development cargo run -p umkm-api` lalu `curl localhost:8080/healthz`.
+Gate A `DISETUJUI` (ADR-0002, ADR-0013). Selesai: P0-0..P0-6. Jalankan API lokal: `UMKM_ENV=development cargo run -p umkm-api` lalu `curl localhost:8080/healthz`.
 
 ## Perintah
 
@@ -27,6 +27,16 @@ scripts/check-domain-boundary.sh   # domain tanpa axum/sqlx/reqwest/tokio (ADR-0
 | `docs/decisions/` | ADR (MADR 4.0.0, append-only) |
 | `docs/evidence/` | Bukti perintah + exit code per task |
 
+## Menjalankan stack lengkap (Docker Compose)
+
+```bash
+cp .env.example .env    # isi password; jangan commit .env
+docker compose up -d --build --wait
+curl -H "Host: api.localhost" localhost/readyz
+```
+
+TLS produksi belum dikonfigurasi (menunggu D-01); stack hanya untuk lokal/staging.
+
 ## Struktur
 
 ```text
@@ -37,7 +47,8 @@ crates/application     use case
 crates/infrastructure  adapter eksternal
 crates/database        PostgreSQL/SQLx, tenant context transaction-local
 migrations/            SQLx migrations (reversible: *.up.sql / *.down.sql)
-scripts/               guard CI lokal
+scripts/               guard CI lokal, dev-db
+ops/caddy/             reverse proxy (Caddyfile)
 config/              konfigurasi non-rahasia per environment (P0-2)
 docs/                PRD, rencana, keputusan, bukti
 .github/workflows/   CI (P0-7)

@@ -4,6 +4,7 @@ pub mod bootstrap;
 pub mod error;
 pub mod health;
 pub mod middleware;
+pub mod readiness;
 pub mod router;
 pub mod state;
 
