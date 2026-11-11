@@ -8,6 +8,7 @@ pub mod metrics;
 pub mod onboarding_repo;
 pub mod rate_limit;
 pub mod redis;
+pub mod tenant_repo;
 
 /// Nama crate, dipakai untuk smoke test wiring workspace.
 pub const CRATE: &str = "umkm-infrastructure";

@@ -14,6 +14,8 @@ pub enum TenantError {
     InvalidSlug,
     #[error("slug sudah dipakai atau dicadangkan")]
     SlugUnavailable,
+    #[error("host tidak valid")]
+    InvalidHost,
 }
 
 /// Slug tervalidasi; sama dengan constraint `ck_tenants_slug` di database.
@@ -64,6 +66,38 @@ impl fmt::Debug for Slug {
 impl fmt::Display for Slug {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(&self.0)
+    }
+}
+
+/// Normalisasi header `Host` (TEN-009): buang port & titik akhir, huruf kecil,
+/// validasi label DNS. IP literal dan bentuk aneh ditolak (bukan host tenant).
+pub fn normalize_host(raw: &str) -> Result<String, TenantError> {
+    let raw = raw.trim();
+    if raw.starts_with('[') {
+        return Err(TenantError::InvalidHost); // IPv6 literal
+    }
+    let host = match raw.rsplit_once(':') {
+        Some((h, port)) if !port.is_empty() && port.bytes().all(|b| b.is_ascii_digit()) => h,
+        Some(_) => return Err(TenantError::InvalidHost),
+        None => raw,
+    };
+    let host = host.strip_suffix('.').unwrap_or(host).to_ascii_lowercase();
+    let labels: Vec<&str> = host.split('.').collect();
+    let valid = !host.is_empty()
+        && host.len() <= 253
+        && labels.iter().all(|l| {
+            !l.is_empty()
+                && l.len() <= 63
+                && !l.starts_with('-')
+                && !l.ends_with('-')
+                && l.bytes().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-')
+        })
+        // IPv4 literal (semua label numerik) bukan host tenant
+        && !labels.iter().all(|l| l.bytes().all(|b| b.is_ascii_digit()));
+    if valid {
+        Ok(host)
+    } else {
+        Err(TenantError::InvalidHost)
     }
 }
 
@@ -178,6 +212,39 @@ mod tests {
         assert!(c.as_str().ends_with("-12"));
         let dashy = Slug::parse(&format!("{}-b", "a".repeat(59))).unwrap();
         assert!(Slug::parse(dashy.with_suffix(10).as_str()).is_ok());
+    }
+
+    #[test]
+    fn normalize_host_cases() {
+        for (raw, want) in [
+            ("toko.ryasai.my.id", "toko.ryasai.my.id"),
+            ("TOKO.Ryasai.MY.ID", "toko.ryasai.my.id"),
+            ("toko.ryasai.my.id:443", "toko.ryasai.my.id"),
+            ("toko.ryasai.my.id.", "toko.ryasai.my.id"),
+            ("  toko.localhost:18082 ", "toko.localhost"),
+        ] {
+            assert_eq!(normalize_host(raw).as_deref(), Ok(want), "{raw}");
+        }
+        for bad in [
+            "",
+            "127.0.0.1",
+            "127.0.0.1:80",
+            "[::1]:80",
+            "toko..id",
+            "-x.id",
+            "x_y.id",
+            "toko.id:abc",
+            "toko.id:",
+            "a b.id",
+            "toko.id/x",
+            "t@o.id",
+        ] {
+            assert_eq!(
+                normalize_host(bad),
+                Err(TenantError::InvalidHost),
+                "{bad:?}"
+            );
+        }
     }
 
     #[test]

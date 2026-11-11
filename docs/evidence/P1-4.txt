@@ -1,0 +1,218 @@
+# P1-4 — Tenant resolver dari Host
+date: 2026-11-11T14:44:30Z
+
+Files: migrations/0004_tenant_resolver (app.resolve_host, SECURITY DEFINER), crates/domain/src/tenant.rs (normalize_host), crates/infrastructure/src/tenant_repo.rs, apps/api/src/middleware/tenant.rs (extractor HostTenant), apps/api/tests/tenant_resolver.rs
+Lingkup: extractor siap dipakai route. TIDAK ada endpoint publik baru: kontrak storefront->API (Host via Caddy) = ADR-0014 (MENUNGGU).
+Tanpa cache: suspensi domain berlaku seketika; optimasi (cache singkat) dievaluasi di P8-3.
+
+$ cargo fmt --all --check
+exit 0
+
+$ cargo clippy --workspace --all-targets -- -D warnings
+exit 0
+
+$ cargo test -p umkm-domain normalize_host
+      1 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 12 filtered out; 
+      1 test tenant::tests::normalize_host_cases ... ok
+exit 0
+
+$ cargo test -p umkm-api --test tenant_resolver
+      1 test active_host_resolves_to_its_tenant_with_normalization ... ok
+      1 test domain_suspension_takes_effect_immediately ... ok
+      1 test non_active_domains_and_tenants_are_not_served ... ok
+      1 test resolver_function_exposes_only_ids_and_statuses ... ok
+      1 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test spoofing_attempts_do_not_change_tenant ... ok
+exit 0
+
+$ cargo test --workspace
+      1 test active_host_resolves_to_its_tenant_with_normalization ... ok
+      1 test auth::tests::constant_time_eq_works ... ok
+      1 test auth::tests::csrf_is_deterministic_and_bound_to_session ... ok
+      1 test auth::tests::email_debug_hides_local_part ... ok
+      1 test auth::tests::email_parse_and_canonical ... ok
+      1 test auth::tests::hash_verify_roundtrip_and_unique_salt ... ok
+      1 test auth::tests::old_hash_still_verifies_but_needs_rehash_after_param_upgrade ... ok
+      1 test auth::tests::owasp_defaults ... ok
+      1 test auth::tests::password_policy ... ok
+      1 test auth::tests::rate_rule_names_are_redis_safe_and_unique ... ok
+      1 test auth::tests::reset_expiry_is_short ... ok
+      1 test auth::tests::subject_digest_is_hex_sha256 ... ok
+      1 test auth::tests::token_hash_debug_redacted ... ok
+      1 test auth::tests::tokens_are_random_url_safe_and_only_hash_is_derived ... ok
+      1 test auth::tests::verify_rejects_non_argon2id_and_garbage ... ok
+      1 test auto_slug_collision_gets_suffix_and_hostnames_stay_unique ... ok
+      1 test client_supplied_request_id_is_ignored ... ok
+      1 test concurrent_consumption_succeeds_exactly_once ... ok
+      1 test concurrent_registrations_same_name_all_get_unique_slugs ... ok
+      1 test concurrent_tenants_each_see_only_their_context ... ok
+      1 test config::tests::cors_origins_must_be_exact_https_without_wildcard ... ok
+      1 test config::tests::environment_parse_is_strict ... ok
+      1 test config::tests::missing_or_empty_secret_is_error_without_value ... ok
+      1 test config::tests::parses_valid_config ... ok
+      1 test config::tests::production_rejects_root_domain_placeholder ... ok
+      1 test config::tests::rejects_unknown_field_such_as_inline_secret ... ok
+      1 test config::tests::rejects_zero_values ... ok
+      1 test config::tests::root_domain_must_be_lowercase_hostname ... ok
+      1 test config::tests::secrets_debug_is_redacted ... ok
+      1 test config::tests::staging_allows_root_domain_placeholder ... ok
+      1 test config_files_contain_no_secrets ... ok
+      1 test context_does_not_leak_on_connection_reuse ... ok
+      1 test cors_allows_only_allowlisted_origin_with_credentials ... ok
+      1 test development_and_staging_load ... ok
+      1 test development_cookie_has_no_host_prefix_or_secure ... ok
+      1 test domain_hostname_unique_lowercase_and_custom_needs_verification ... ok
+      1 test domain_suspension_takes_effect_immediately ... ok
+      1 test duplicate_email_rolls_back_everything ... ok
+      1 test every_documented_path_is_routed ... ok
+      1 test expired_session_and_suspended_user_are_rejected ... ok
+      1 test explicit_slug_taken_is_rejected_without_partial_data ... ok
+      1 test foreign_origin_is_rejected ... ok
+      1 test healthz_returns_success_envelope_with_request_id ... ok
+      1 test http::tests::error_envelope_matches_prd_shape ... ok
+      1 test http::tests::request_id_format ... ok
+      1 test http::tests::status_mapping_roundtrips_for_every_code ... ok
+      1 test http::tests::success_envelope_matches_prd_shape ... ok
+      1 test http_requests_recorded_by_route_template ... ok
+      1 test identity_migration_reversible ... ok
+      1 test invitations_hashed_expiring_single_use_and_tenant_scoped_role ... ok
+      1 test login_lookup_case_insensitive_and_password_stored_hashed ... ok
+      1 test login_rotates_session_and_failures_are_indistinguishable ... ok
+      1 test membership_unique_per_user_tenant_and_role_must_match_tenant ... ok
+      1 test metrics::tests::all_16_required_metrics_exposed_after_observation ... ok
+      1 test metrics::tests::http_observation_counts_and_errors ... ok
+      1 test metrics::tests::output_is_valid_openmetrics_terminated ... ok
+      1 test metrics::tests::unlabeled_metrics_exposed_immediately ... ok
+      1 test metrics_not_exposed_on_public_router ... ok
+      1 test migrations_are_reversible ... ok
+      1 test no_context_means_null_tenant ... ok
+      1 test non_active_domains_and_tenants_are_not_served ... ok
+      1 test on_scrape_hook_runs_before_encode ... ok
+      1 test onboarding::tests::consent_is_required ... ok
+      1 test onboarding::tests::explicit_slug_is_the_only_candidate ... ok
+      1 test onboarding::tests::happy_path_passes_validated_data_and_never_plain_password ... ok
+      1 test onboarding::tests::random_tail_candidate_is_valid_for_long_names ... ok
+      1 test onboarding::tests::store_errors_are_mapped ... ok
+      1 test onboarding::tests::validation_errors_before_any_storage ... ok
+      1 test oversized_body_is_413_envelope ... ok
+      1 test panic_is_500_envelope_without_panic_message ... ok
+      1 test production_uses_d01_root_domain ... ok
+      1 test rate_limit_blocks_after_limit_and_is_per_subject ... ok
+      1 test rate_limit_concurrent_attempts_never_exceed_limit ... ok
+      1 test rate_limit_redis_unavailable_returns_error_for_fail_closed ... ok
+      1 test rate_limit_window_expires_and_key_hides_subject ... ok
+      1 test readyz_503_without_leaking_internal_error ... ok
+      1 test readyz_ok_when_all_checks_pass ... ok
+      1 test real_responses_match_schema ... ok
+      1 test redis::tests::config_prefixes_are_valid ... ok
+      1 test redis::tests::environments_do_not_collide ... ok
+      1 test redis::tests::no_collisions_across_tenants_resources_ids ... ok
+      1 test redis::tests::platform_key_format ... ok
+      1 test redis::tests::rejects_invalid_prefix ... ok
+      1 test redis::tests::rejects_segments_that_could_break_namespace ... ok
+      1 test redis::tests::tenant_key_format_matches_prd ... ok
+      1 test redis::tests::tenant_scan_pattern_never_matches_other_tenant_keys ... ok
+      1 test redis_down_fails_closed_with_503 ... ok
+      1 test register_creates_user_tenant_owner_subdomain_profile_consents_session ... ok
+      1 test register_duplicate_email_case_insensitive_is_rejected ... ok
+      1 test register_rate_limited_per_ip_with_retry_after ... ok
+      1 test register_sets_secure_host_only_cookie_and_returns_tenant ... ok
+      1 test reserved_slug_rejected_explicit_and_skipped_when_automatic ... ok
+      1 test reset_token_is_one_time_purpose_bound_and_expires ... ok
+      1 test resolver_function_exposes_only_ids_and_statuses ... ok
+      8 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      2 test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test result: ok. 19 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      2 test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      2 test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      2 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test revoke_all_except_current_and_object_level_scoping ... ok
+      1 test roles_system_iff_global_and_unique_name_per_scope ... ok
+      1 test security_headers_present_on_success_and_error ... ok
+      1 test seeds_33_permissions_and_reserved_subdomains ... ok
+      1 test server_errors_counted_including_panics ... ok
+      1 test session_lifecycle_and_token_never_stored_plaintext ... ok
+      1 test session_then_logout_requires_csrf_and_revokes ... ok
+      1 test sessions_tokens_consents_mfa_constraints ... ok
+      1 test slow_handler_times_out_with_408_envelope ... ok
+      1 test snapshot_matches_code ... ok
+      1 test spoofing_attempts_do_not_change_tenant ... ok
+      1 test tenant::tests::hostname_and_name_validation ... ok
+      1 test tenant::tests::normalize_host_cases ... ok
+      1 test tenant::tests::slug_parse_matches_db_rules ... ok
+      1 test tenant::tests::slugify_always_valid ... ok
+      1 test tenant::tests::slugify_examples ... ok
+      1 test tenant::tests::suffix_candidates_stay_valid ... ok
+      1 test tenant_closed_status_requires_closed_at ... ok
+      1 test tenant_slug_format_unique_and_not_reserved ... ok
+      1 test tenant_tx_sets_context ... ok
+      5 test tests::crate_name ... ok
+      1 test tests::embedded_migrations_match_directory ... ok
+      1 test tests::migrations_are_embedded_and_reversible ... ok
+      1 test unknown_route_is_404_envelope ... ok
+      1 test updated_at_trigger_advances ... ok
+      1 test url_credential_detector ... ok
+      1 test users_email_unique_case_insensitive_and_hash_must_be_argon2id ... ok
+      1 test validation_and_conflicts_map_to_422_409 ... ok
+      1 test wrong_method_is_405_envelope ... ok
+exit 0
+
+$ scripts/check-domain-boundary.sh
+      1 OK: umkm-domain bebas dari axum/sqlx/reqwest/tokio/hyper/tower/redis
+exit 0
+
+## Negative control: X-Forwarded-Host dipercaya
+$ cargo test -p umkm-api --test tenant_resolver
+      1 error: test failed, to rerun pass `-p umkm-api --test tenant_resolver`
+      1 test active_host_resolves_to_its_tenant_with_normalization ... ok
+      1 test domain_suspension_takes_effect_immediately ... ok
+      1 test non_active_domains_and_tenants_are_not_served ... ok
+      1 test resolver_function_exposes_only_ids_and_statuses ... ok
+      1 test result: FAILED. 4 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test spoofing_attempts_do_not_change_tenant ... FAILED
+      1 thread 'spoofing_attempts_do_not_change_tenant' panicked at apps/api/tests/tenant_resolver.rs:140:5:
+exit 101
+
+## Negative control: status tenant diabaikan
+$ cargo test -p umkm-api --test tenant_resolver
+      1 assertion `left == right` failed: toko-t.ryasai.my.id tidak boleh dilayani
+      1 error: test failed, to rerun pass `-p umkm-api --test tenant_resolver`
+      1 test active_host_resolves_to_its_tenant_with_normalization ... ok
+      1 test domain_suspension_takes_effect_immediately ... ok
+      1 test non_active_domains_and_tenants_are_not_served ... FAILED
+      1 test resolver_function_exposes_only_ids_and_statuses ... ok
+      1 test result: FAILED. 4 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test spoofing_attempts_do_not_change_tenant ... ok
+      1 thread 'non_active_domains_and_tenants_are_not_served' panicked at apps/api/tests/tenant_resolver.rs:244:9:
+exit 101
+
+## Negative control: REVOKE EXECUTE FROM PUBLIC dihapus
+$ cargo test -p umkm-api --test tenant_resolver
+      1 PUBLIC tidak boleh EXECUTE
+      1 error: test failed, to rerun pass `-p umkm-api --test tenant_resolver`
+      1 test active_host_resolves_to_its_tenant_with_normalization ... ok
+      1 test domain_suspension_takes_effect_immediately ... ok
+      1 test non_active_domains_and_tenants_are_not_served ... ok
+      1 test resolver_function_exposes_only_ids_and_statuses ... FAILED
+      1 test result: FAILED. 4 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test spoofing_attempts_do_not_change_tenant ... ok
+      1 thread 'resolver_function_exposes_only_ids_and_statuses' panicked at apps/api/tests/tenant_resolver.rs:306:5:
+exit 101
+
+## Dipulihkan
+$ cargo test -p umkm-api --test tenant_resolver
+      1 test active_host_resolves_to_its_tenant_with_normalization ... ok
+      1 test domain_suspension_takes_effect_immediately ... ok
+      1 test non_active_domains_and_tenants_are_not_served ... ok
+      1 test resolver_function_exposes_only_ids_and_statuses ... ok
+      1 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test spoofing_attempts_do_not_change_tenant ... ok
+exit 0
+

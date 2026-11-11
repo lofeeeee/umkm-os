@@ -19,6 +19,8 @@ pub struct AppState {
     pub metrics: Arc<Metrics>,
     /// `None` = endpoint auth menjawab 503 (mis. router uji tanpa DB/Redis).
     pub auth: Option<Arc<AuthService>>,
+    /// Pool untuk extractor yang butuh DB (mis. `HostTenant`). `None` -> 503.
+    pub db: Option<sqlx::PgPool>,
 }
 
 impl AppState {
@@ -27,7 +29,13 @@ impl AppState {
             readiness: Arc::new(readiness),
             metrics: Arc::default(),
             auth: None,
+            db: None,
         }
+    }
+
+    pub fn with_db(mut self, pool: sqlx::PgPool) -> Self {
+        self.db = Some(pool);
+        self
     }
 
     pub fn with_auth(mut self, auth: Arc<AuthService>) -> Self {

@@ -222,9 +222,10 @@ impl From<RegisterError> for ApiError {
                     .with_message(e.to_string())
                     .with_details(serde_json::json!({ "field": "email" })),
             ),
-            RegisterError::Auth(_) | RegisterError::Internal => {
-                ApiError::new(ErrorCode::InternalError)
-            }
+            // InvalidHost tidak terjadi pada registrasi; tetap dipetakan eksplisit.
+            RegisterError::Auth(_)
+            | RegisterError::Tenant(TenantError::InvalidHost)
+            | RegisterError::Internal => ApiError::new(ErrorCode::InternalError),
         }
     }
 }

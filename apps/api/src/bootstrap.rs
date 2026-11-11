@@ -90,7 +90,8 @@ pub async fn serve() -> Result<(), BoxError> {
         Arc::new(readiness::Postgres(pool.clone())),
         Arc::new(readiness::Redis(redis)),
     ])
-    .with_metrics(metrics.clone());
+    .with_metrics(metrics.clone())
+    .with_db(pool.clone());
     if settings.root_domain_ready() {
         state = state.with_auth(auth);
     } else {
