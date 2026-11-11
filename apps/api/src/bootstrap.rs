@@ -10,11 +10,20 @@ use std::future::IntoFuture;
 
 use tokio::net::TcpListener;
 use tracing_subscriber::{EnvFilter, fmt};
-use umkm_infrastructure::{metrics::Metrics, redis::RedisClient};
-use umkm_shared::config::{LogFormat, Secrets, Settings};
+use umkm_application::onboarding::LegalVersions;
+use umkm_domain::auth::AuthPolicy;
+use umkm_infrastructure::{
+    auth::Argon2idHasher,
+    metrics::Metrics,
+    rate_limit::RateLimiter,
+    redis::{KeyNamespace, RedisClient},
+};
+use umkm_shared::config::{Environment, LogFormat, Secrets, Settings};
 
 use crate::{
-    AppState, HttpLimits, build_router,
+    AppState, HttpLimits,
+    auth::AuthService,
+    build_router,
     metrics_server::{OnScrape, metrics_router},
     readiness,
 };
@@ -59,11 +68,37 @@ pub async fn serve() -> Result<(), BoxError> {
     let pool = umkm_database::connect_lazy(&secrets.database_url, &settings.database)?;
     let redis = RedisClient::open(&secrets.redis_url)?;
     let metrics = Arc::new(Metrics::new());
-    let state = AppState::new(vec![
+    let limiter = RateLimiter::new(
+        redis.connection_manager_lazy()?,
+        KeyNamespace::new(&settings.redis.key_prefix)?,
+    );
+    let auth = Arc::new(AuthService {
+        pool: pool.clone(),
+        limiter,
+        hasher: Arc::new(Argon2idHasher::owasp()),
+        policy: AuthPolicy::default(),
+        legal: LegalVersions {
+            privacy_policy: settings.legal.privacy_policy_version.clone(),
+            terms_of_service: settings.legal.terms_of_service_version.clone(),
+        },
+        root_domain: settings.tenancy.root_domain.clone(),
+        secure_cookies: settings.environment != Environment::Development,
+        allowed_origins: settings.http.cors_allowed_origins.clone(),
+        trust_forwarded_for: settings.http.trust_forwarded_for,
+    });
+    let mut state = AppState::new(vec![
         Arc::new(readiness::Postgres(pool.clone())),
         Arc::new(readiness::Redis(redis)),
     ])
     .with_metrics(metrics.clone());
+    if settings.root_domain_ready() {
+        state = state.with_auth(auth);
+    } else {
+        // Tanpa root domain nyata, hostname tenant tidak dapat dibuat: endpoint auth 503.
+        tracing::warn!(
+            "tenancy.root_domain masih placeholder; endpoint auth dinonaktifkan (set UMKM_ROOT_DOMAIN)"
+        );
+    }
 
     let on_scrape: OnScrape = {
         let metrics = metrics.clone();
@@ -88,7 +123,11 @@ pub async fn serve() -> Result<(), BoxError> {
             let _ = rx.recv().await;
         }
     };
-    let api = axum::serve(listener, app).with_graceful_shutdown(wait(&stop_tx));
+    let api = axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<SocketAddr>(),
+    )
+    .with_graceful_shutdown(wait(&stop_tx));
     let metrics_srv = axum::serve(metrics_listener, metrics_router(metrics, on_scrape))
         .with_graceful_shutdown(wait(&stop_tx));
     let signal = async move {

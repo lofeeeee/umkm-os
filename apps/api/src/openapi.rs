@@ -14,7 +14,7 @@ use utoipa::{
     },
 };
 
-use crate::health;
+use crate::{auth, health};
 
 #[derive(OpenApi)]
 #[openapi(
@@ -24,11 +24,21 @@ use crate::health;
             Semua error memakai ErrorEnvelope; header `x-request-id` == `meta.request_id`.",
         version = "0.1.0"
     ),
-    paths(health::healthz, health::readyz),
+    paths(
+        health::healthz,
+        health::readyz,
+        auth::register_handler,
+        auth::login_handler,
+        auth::session_handler,
+        auth::logout_handler
+    ),
     components(schemas(ErrorEnvelope, ErrorBody, ErrorCode, Meta)),
     servers((url = "/", description = "Origin yang sama; root domain menunggu D-01")),
     modifiers(&CommonErrors, &PublicOps, &PruneUnused),
-    tags((name = "ops", description = "Liveness/readiness untuk orchestrator"))
+    tags(
+        (name = "ops", description = "Liveness/readiness untuk orchestrator"),
+        (name = "auth", description = "Registrasi, login, sesi (cookie HttpOnly + CSRF, ADR-0015)")
+    )
 )]
 pub struct ApiDoc;
 
@@ -74,15 +84,37 @@ impl Modify for CommonErrors {
 /// `security: []`. Skema auth tenant/admin ditambahkan di P1.
 struct PublicOps;
 
-const PUBLIC_PATHS: [&str; 2] = ["/healthz", "/readyz"];
+const PUBLIC_PATHS: [&str; 4] = [
+    "/healthz",
+    "/readyz",
+    "/api/v1/auth/register",
+    "/api/v1/auth/login",
+];
 
+/// Skema `sessionCookie` (ADR-0015). Endpoint selain PUBLIC_PATHS mewajibkannya.
+/// Production memakai nama `__Host-umkm_session`; development `umkm_session`.
 impl Modify for PublicOps {
     fn modify(&self, openapi: &mut utoipa::openapi::OpenApi) {
+        use utoipa::openapi::security::{ApiKey, ApiKeyValue, SecurityRequirement, SecurityScheme};
+        let components = openapi.components.get_or_insert_with(Default::default);
+        components.add_security_scheme(
+            "sessionCookie",
+            SecurityScheme::ApiKey(ApiKey::Cookie(ApiKeyValue::with_description(
+                "__Host-umkm_session",
+                "Cookie HttpOnly; request yang mengubah state wajib header X-CSRF-Token",
+            ))),
+        );
         for (path, item) in openapi.paths.paths.iter_mut() {
-            if PUBLIC_PATHS.contains(&path.as_str()) {
-                for op in operations(item) {
-                    op.security = Some(Vec::new());
-                }
+            let public = PUBLIC_PATHS.contains(&path.as_str());
+            for op in operations(item) {
+                op.security = Some(if public {
+                    Vec::new()
+                } else {
+                    vec![SecurityRequirement::new(
+                        "sessionCookie",
+                        Vec::<String>::new(),
+                    )]
+                });
             }
         }
     }

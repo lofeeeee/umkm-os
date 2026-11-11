@@ -1825,9 +1825,11 @@ name = "umkm-api"
 version = "0.1.0"
 dependencies = [
  "axum",
+ "base64",
  "http-body-util",
  "serde",
  "serde_json",
+ "sha2 0.11.1",
  "sqlx",
  "tokio",
  "tower",
@@ -1836,17 +1838,22 @@ dependencies = [
  "tracing-subscriber",
  "umkm-application",
  "umkm-database",
+ "umkm-domain",
  "umkm-infrastructure",
  "umkm-shared",
  "utoipa",
+ "uuid",
 ]
 
 [[package]]
 name = "umkm-application"
 version = "0.1.0"
 dependencies = [
+ "thiserror",
+ "tokio",
  "umkm-domain",
  "umkm-shared",
+ "uuid",
 ]
 
 [[package]]
@@ -1881,6 +1888,7 @@ dependencies = [
  "sqlx",
  "thiserror",
  "tokio",
+ "umkm-application",
  "umkm-database",
  "umkm-domain",
  "umkm-shared",
@@ -1989,6 +1997,7 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 3.0.10",
+ "uuid",
 ]
 
 [[package]]
@@ -1999,6 +2008,7 @@ checksum = "2ef6dac1e96601b4fb3acccccff2139741fcb757cb9a36089bf5be91cfb285ce"
 dependencies = [
  "getrandom",
  "js-sys",
+ "serde_core",
  "wasm-bindgen",
 ]
 

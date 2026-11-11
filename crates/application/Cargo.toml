@@ -12,3 +12,8 @@ workspace = true
 [dependencies]
 umkm-domain.workspace = true
 umkm-shared.workspace = true
+thiserror.workspace = true
+uuid.workspace = true
+
+[dev-dependencies]
+tokio.workspace = true

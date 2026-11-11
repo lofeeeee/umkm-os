@@ -16,6 +16,8 @@ pub const ROOT_DOMAIN_PLACEHOLDER: &str = "<ROOT_DOMAIN>";
 pub const ENV_VAR: &str = "UMKM_ENV";
 pub const DATABASE_URL_VAR: &str = "UMKM_DATABASE_URL";
 pub const REDIS_URL_VAR: &str = "UMKM_REDIS_URL";
+/// Override `tenancy.root_domain` (Compose meneruskan nilai yang sama dengan Caddy).
+pub const ROOT_DOMAIN_VAR: &str = "UMKM_ROOT_DOMAIN";
 
 #[derive(Debug, thiserror::Error)]
 pub enum ConfigError {
@@ -83,6 +85,8 @@ impl FromStr for Environment {
 pub struct Settings {
     pub environment: Environment,
     pub server: ServerSettings,
+    pub http: HttpSettings,
+    pub legal: LegalSettings,
     pub metrics: MetricsSettings,
     pub database: DatabaseSettings,
     pub redis: RedisSettings,
@@ -97,6 +101,20 @@ pub struct ServerSettings {
     pub port: u16,
     pub request_timeout_secs: u64,
     pub body_limit_bytes: usize,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct HttpSettings {
+    pub cors_allowed_origins: Vec<String>,
+    pub trust_forwarded_for: bool,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct LegalSettings {
+    pub privacy_policy_version: String,
+    pub terms_of_service_version: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -142,7 +160,20 @@ impl Settings {
     /// Baca environment dari `UMKM_ENV`, lalu muat `<config_dir>/<env>.toml`.
     pub fn load_from_env(config_dir: &Path) -> Result<Self, ConfigError> {
         let env = std::env::var(ENV_VAR).map_err(|_| ConfigError::MissingVar(ENV_VAR))?;
-        Self::load(config_dir, env.parse()?)
+        let mut settings = Self::load(config_dir, env.parse()?)?;
+        if let Some(domain) = std::env::var(ROOT_DOMAIN_VAR)
+            .ok()
+            .filter(|d| !d.trim().is_empty())
+        {
+            settings.tenancy.root_domain = domain.trim().to_lowercase();
+            settings.validate()?;
+        }
+        Ok(settings)
+    }
+
+    /// Root domain siap dipakai untuk membuat hostname tenant (bukan placeholder).
+    pub fn root_domain_ready(&self) -> bool {
+        self.tenancy.root_domain != ROOT_DOMAIN_PLACEHOLDER
     }
 
     pub fn load(config_dir: &Path, env: Environment) -> Result<Self, ConfigError> {
@@ -181,6 +212,20 @@ impl Settings {
         if self.server.body_limit_bytes == 0 {
             return invalid("server.body_limit_bytes harus > 0");
         }
+        for o in &self.http.cors_allowed_origins {
+            let scheme_ok = o.starts_with("https://")
+                || (self.environment == Environment::Development && o.starts_with("http://"));
+            if !scheme_ok || o.contains('*') || o.ends_with('/') || o.matches('/').count() != 2 {
+                return Err(ConfigError::Invalid(format!(
+                    "http.cors_allowed_origins tidak valid: {o:?} (origin persis, https, tanpa wildcard/path)"
+                )));
+            }
+        }
+        if self.legal.privacy_policy_version.trim().is_empty()
+            || self.legal.terms_of_service_version.trim().is_empty()
+        {
+            return invalid("legal.*_version wajib diisi");
+        }
         if self.metrics.port == 0 {
             return invalid("metrics.port harus > 0");
         }
@@ -196,8 +241,21 @@ impl Settings {
         if self.redis.key_prefix.trim().is_empty() {
             return invalid("redis.key_prefix wajib diisi");
         }
-        if self.tenancy.root_domain.trim().is_empty() {
+        let d = &self.tenancy.root_domain;
+        if d.trim().is_empty() {
             return invalid("tenancy.root_domain wajib diisi");
+        }
+        let hostname_ok = d.len() <= 253
+            && d.split('.').all(|l| {
+                !l.is_empty()
+                    && l.len() <= 63
+                    && !l.starts_with('-')
+                    && !l.ends_with('-')
+                    && l.bytes()
+                        .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-')
+            });
+        if d != ROOT_DOMAIN_PLACEHOLDER && !hostname_ok {
+            return invalid("tenancy.root_domain bukan hostname huruf kecil yang valid");
         }
         if self.environment == Environment::Production
             && self.tenancy.root_domain == ROOT_DOMAIN_PLACEHOLDER
@@ -269,6 +327,12 @@ host = "0.0.0.0"
 port = 8080
 request_timeout_secs = 30
 body_limit_bytes = 1048576
+[http]
+cors_allowed_origins = ["https://app.example.test"]
+trust_forwarded_for = true
+[legal]
+privacy_policy_version = "v1"
+terms_of_service_version = "v1"
 [metrics]
 host = "0.0.0.0"
 port = 9090
@@ -306,6 +370,27 @@ log_format = "json"
     }
 
     #[test]
+    fn root_domain_must_be_lowercase_hostname() {
+        for bad in [
+            "Example.test",
+            "exa mple.test",
+            "-x.test",
+            "x..test",
+            "x.test/",
+        ] {
+            let raw = VALID.replace("example.test", bad);
+            assert!(Settings::parse(&raw).unwrap().validate().is_err(), "{bad}");
+        }
+        for ok in ["localhost", "ryasai.my.id", "a-b.example.test"] {
+            let raw = VALID.replace(
+                "root_domain = \"example.test\"",
+                &format!("root_domain = \"{ok}\""),
+            );
+            Settings::parse(&raw).unwrap().validate().unwrap();
+        }
+    }
+
+    #[test]
     fn staging_allows_root_domain_placeholder() {
         let raw = VALID
             .replace("\"production\"", "\"staging\"")
@@ -328,6 +413,26 @@ log_format = "json"
             let s = Settings::parse(&VALID.replace(from, to)).unwrap();
             assert!(s.validate().is_err(), "{to} seharusnya ditolak");
         }
+    }
+
+    #[test]
+    fn cors_origins_must_be_exact_https_without_wildcard() {
+        for bad in [
+            "*",
+            "https://*.example.test",
+            "http://app.example.test",
+            "https://app.example.test/",
+            "https://app.example.test/x",
+            "app.example.test",
+        ] {
+            let raw = VALID.replace("https://app.example.test\"", &format!("{bad}\""));
+            let s = Settings::parse(&raw).unwrap();
+            assert!(s.validate().is_err(), "{bad} harus ditolak di production");
+        }
+        let dev = VALID
+            .replace("\"production\"", "\"development\"")
+            .replace("https://app.example.test", "http://localhost:3000");
+        Settings::parse(&dev).unwrap().validate().unwrap();
     }
 
     #[test]

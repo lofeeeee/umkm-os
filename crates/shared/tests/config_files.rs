@@ -25,9 +25,20 @@ fn production_uses_d01_root_domain() {
     assert_ne!(s.tenancy.root_domain, ROOT_DOMAIN_PLACEHOLDER);
 }
 
+/// URL dengan kredensial (`scheme://user:pass@host`) = secret.
+fn has_url_credentials(line: &str) -> bool {
+    line.split("://").skip(1).any(|rest| {
+        let authority = rest
+            .split(['/', '"', '\'', ' ', ',', ']'])
+            .next()
+            .unwrap_or("");
+        authority.contains('@')
+    })
+}
+
 #[test]
 fn config_files_contain_no_secrets() {
-    let forbidden = ["password", "secret", "api_key", "apikey", "token", "://"];
+    let forbidden = ["password", "secret", "api_key", "apikey", "token"];
     for entry in std::fs::read_dir(config_dir()).unwrap() {
         let path = entry.unwrap().path();
         if path.extension().is_some_and(|e| e == "toml") {
@@ -40,7 +51,22 @@ fn config_files_contain_no_secrets() {
                         path.display()
                     );
                 }
+                assert!(
+                    !has_url_credentials(line),
+                    "{}: URL berkredensial: {line}",
+                    path.display()
+                );
             }
         }
     }
+}
+
+#[test]
+fn url_credential_detector() {
+    assert!(has_url_credentials(r#"url = "postgres://u:p@db/x""#));
+    assert!(has_url_credentials(r#"x = ["redis://:pw@redis:6379"]"#));
+    assert!(!has_url_credentials(
+        r#"cors = ["https://app.ryasai.my.id"]"#
+    ));
+    assert!(!has_url_credentials(r#"x = "https://h/path@not-userinfo""#));
 }

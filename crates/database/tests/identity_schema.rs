@@ -65,6 +65,15 @@ async fn role(pool: &PgPool, tenant: Option<Uuid>, name: &str) -> Uuid {
     .unwrap()
 }
 
+/// Preset role sistem dari migration 0003.
+async fn preset(pool: &PgPool, name: &str) -> Uuid {
+    sqlx::query_scalar("SELECT id FROM roles WHERE tenant_id IS NULL AND is_system AND name = $1")
+        .bind(name)
+        .fetch_one(pool)
+        .await
+        .unwrap()
+}
+
 #[sqlx::test(migrator = "MIGRATOR")]
 async fn seeds_33_permissions_and_reserved_subdomains(pool: PgPool) {
     let n: i64 = sqlx::query_scalar("SELECT count(*) FROM permissions")
@@ -199,7 +208,7 @@ async fn membership_unique_per_user_tenant_and_role_must_match_tenant(pool: PgPo
         tenant(&pool, "toko-a").await,
         tenant(&pool, "toko-b").await,
     );
-    let preset = role(&pool, None, "Owner").await;
+    let preset = preset(&pool, "Owner").await;
     let role_b = role(&pool, Some(b), "Kasir").await;
 
     ok(&pool, &format!("INSERT INTO tenant_memberships (tenant_id, user_id, role_id) VALUES ('{a}', '{u}', '{preset}')")).await;
@@ -221,7 +230,7 @@ async fn membership_unique_per_user_tenant_and_role_must_match_tenant(pool: PgPo
 #[sqlx::test(migrator = "MIGRATOR")]
 async fn roles_system_iff_global_and_unique_name_per_scope(pool: PgPool) {
     let a = tenant(&pool, "toko-a").await;
-    role(&pool, None, "Owner").await;
+    // 'Owner' sudah ada sebagai preset (0003); nama sama (case-insensitive) ditolak.
     rejected(
         &pool,
         "INSERT INTO roles (tenant_id, name, is_system) VALUES (NULL, 'owner', true)",
@@ -274,7 +283,7 @@ async fn domain_hostname_unique_lowercase_and_custom_needs_verification(pool: Pg
 #[sqlx::test(migrator = "MIGRATOR")]
 async fn invitations_hashed_expiring_single_use_and_tenant_scoped_role(pool: PgPool) {
     let (a, b) = (tenant(&pool, "toko-a").await, tenant(&pool, "toko-b").await);
-    let preset = role(&pool, None, "Viewer").await;
+    let preset = preset(&pool, "Viewer").await;
     let role_b = role(&pool, Some(b), "Kasir").await;
     let h1 = "'\\x".to_owned() + &"11".repeat(32) + "'";
     let h2 = "'\\x".to_owned() + &"22".repeat(32) + "'";

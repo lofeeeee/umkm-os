@@ -74,15 +74,24 @@ async fn every_documented_path_is_routed() {
     let paths = spec["paths"].as_object().unwrap();
     assert!(!paths.is_empty());
     for (path, item) in paths {
-        assert!(
-            item.get("get").is_some(),
-            "{path}: hanya GET didukung tes ini"
-        );
-        let (status, _) = get_json(path).await;
-        assert!(
-            status != 404 && status != 405,
-            "{path} terdokumentasi tetapi status {status}"
-        );
+        for method in item.as_object().unwrap().keys() {
+            let m = axum::http::Method::from_bytes(method.to_uppercase().as_bytes()).unwrap();
+            let res = build_router(AppState::default(), LIMITS)
+                .oneshot(
+                    Request::builder()
+                        .method(m)
+                        .uri(path.as_str())
+                        .body(Body::empty())
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+            let status = res.status().as_u16();
+            assert!(
+                status != 404 && status != 405,
+                "{method} {path} terdokumentasi tetapi status {status}"
+            );
+        }
     }
 }
 

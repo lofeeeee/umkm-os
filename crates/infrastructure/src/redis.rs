@@ -152,6 +152,19 @@ impl RedisClient {
         Ok(::redis::aio::ConnectionManager::new(self.0.clone()).await?)
     }
 
+    /// Varian lazy: tidak terhubung saat dibuat. Timeout 2 s, retry terbatas, sehingga
+    /// Redis mati menghasilkan error cepat (pemanggil fail-closed), bukan request hang.
+    pub fn connection_manager_lazy(&self) -> Result<::redis::aio::ConnectionManager, RedisError> {
+        let cfg = ::redis::aio::ConnectionManagerConfig::new()
+            .set_connection_timeout(Some(std::time::Duration::from_secs(2)))
+            .set_number_of_retries(2)
+            .set_max_delay(std::time::Duration::from_millis(500));
+        Ok(::redis::aio::ConnectionManager::new_lazy_with_config(
+            self.0.clone(),
+            cfg,
+        )?)
+    }
+
     pub async fn ping(&self) -> Result<(), RedisError> {
         let mut conn = self.0.get_multiplexed_async_connection().await?;
         let pong: String = ::redis::cmd("PING").query_async(&mut conn).await?;

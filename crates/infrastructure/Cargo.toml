@@ -11,6 +11,8 @@ workspace = true
 
 [dependencies]
 umkm-domain.workspace = true
+umkm-application.workspace = true
+tokio.workspace = true
 umkm-shared.workspace = true
 umkm-database.workspace = true
 thiserror.workspace = true
@@ -24,5 +26,4 @@ sqlx.workspace = true
 uuid.workspace = true
 
 [dev-dependencies]
-tokio.workspace = true
 umkm-database.workspace = true

@@ -5,6 +5,7 @@
 pub mod auth;
 pub mod auth_repo;
 pub mod metrics;
+pub mod onboarding_repo;
 pub mod rate_limit;
 pub mod redis;
 

@@ -7,6 +7,244 @@ servers:
 - url: /
   description: Origin yang sama; root domain menunggu D-01
 paths:
+  /api/v1/auth/login:
+    post:
+      tags:
+      - auth
+      summary: Login email + password. Pesan gagal seragam (anti user-enumeration).
+      operationId: login_handler
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+        required: true
+      responses:
+        '200':
+          description: Sesi baru (rotasi); cookie di-set
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_SessionResponse'
+        '401':
+          description: Email atau password salah
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '403':
+          description: Origin tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '429':
+          description: Rate limit; header Retry-After
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: Rate limiter/DB tidak tersedia (fail-closed)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security: []
+  /api/v1/auth/logout:
+    post:
+      tags:
+      - auth
+      summary: 'Logout: cabut sesi ini (AUTH-006). Wajib header `X-CSRF-Token`.'
+      operationId: logout_handler
+      responses:
+        '200':
+          description: Sesi dicabut; cookie dihapus
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_LogoutResponse'
+        '401':
+          description: Tidak ada sesi valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '403':
+          description: CSRF token/Origin tidak valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/auth/register:
+    post:
+      tags:
+      - auth
+      summary: 'Registrasi bisnis: user + tenant + Owner + subdomain + sesi (`PRD.md §13.3`).'
+      operationId: register_handler
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+        required: true
+      responses:
+        '201':
+          description: Terdaftar; cookie sesi di-set
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_RegisterResponse'
+        '403':
+          description: Origin tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: Email atau slug sudah dipakai/dicadangkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '422':
+          description: Validasi gagal; `details.field`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '429':
+          description: Rate limit; header Retry-After
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: Rate limiter/DB tidak tersedia (fail-closed)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security: []
+  /api/v1/auth/session:
+    get:
+      tags:
+      - auth
+      summary: 'Sesi aktif dari cookie (untuk reload SPA: mengambil ulang `csrf_token`).'
+      operationId: session_handler
+      responses:
+        '200':
+          description: Sesi valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_SessionResponse'
+        '401':
+          description: Tidak ada sesi valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
   /healthz:
     get:
       tags:
@@ -148,6 +386,17 @@ components:
           $ref: '#/components/schemas/Meta'
         success:
           type: boolean
+    LoginRequest:
+      type: object
+      required:
+      - email
+      - password
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+      additionalProperties: false
     Meta:
       type: object
       required:
@@ -155,6 +404,49 @@ components:
       properties:
         request_id:
           type: string
+    RegisterRequest:
+      type: object
+      required:
+      - email
+      - password
+      - business_name
+      - accept_terms
+      - accept_privacy
+      properties:
+        accept_privacy:
+          type: boolean
+        accept_terms:
+          type: boolean
+        business_name:
+          type: string
+        email:
+          type: string
+        password:
+          type: string
+        slug:
+          type:
+          - string
+          - 'null'
+          description: Kosong = dibuat otomatis dari nama bisnis.
+      additionalProperties: false
+    SuccessEnvelope_LogoutResponse:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - revoked
+          properties:
+            revoked:
+              type: boolean
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
     SuccessEnvelope_Readiness:
       type: object
       required:
@@ -178,6 +470,58 @@ components:
           $ref: '#/components/schemas/Meta'
         success:
           type: boolean
+    SuccessEnvelope_RegisterResponse:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - user_id
+          - tenant
+          - csrf_token
+          properties:
+            csrf_token:
+              type: string
+              description: Kirim balik di header `X-CSRF-Token` untuk request yang mengubah state.
+            tenant:
+              $ref: '#/components/schemas/TenantSummary'
+            user_id:
+              type: string
+              format: uuid
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
+    SuccessEnvelope_SessionResponse:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - user_id
+          - session_id
+          - csrf_token
+          properties:
+            csrf_token:
+              type: string
+            session_id:
+              type: string
+              format: uuid
+            user_id:
+              type: string
+              format: uuid
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
     SuccessEnvelope_Status:
       type: object
       required:
@@ -196,6 +540,28 @@ components:
           $ref: '#/components/schemas/Meta'
         success:
           type: boolean
+    TenantSummary:
+      type: object
+      required:
+      - id
+      - slug
+      - hostname
+      properties:
+        hostname:
+          type: string
+        id:
+          type: string
+          format: uuid
+        slug:
+          type: string
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: __Host-umkm_session
+      description: Cookie HttpOnly; request yang mengubah state wajib header X-CSRF-Token
 tags:
 - name: ops
   description: Liveness/readiness untuk orchestrator
+- name: auth
+  description: Registrasi, login, sesi (cookie HttpOnly + CSRF, ADR-0015)

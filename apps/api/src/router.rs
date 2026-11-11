@@ -3,7 +3,7 @@ use std::{sync::Arc, time::Duration};
 use axum::{
     Router,
     extract::Request,
-    http::{HeaderName, HeaderValue, StatusCode},
+    http::{HeaderName, HeaderValue, Method, StatusCode, header},
     middleware::{from_fn, from_fn_with_state},
     response::IntoResponse,
     routing::get,
@@ -12,6 +12,7 @@ use tower::ServiceBuilder;
 use tower_http::{
     LatencyUnit,
     catch_panic::CatchPanicLayer,
+    cors::{AllowOrigin, CorsLayer},
     limit::RequestBodyLimitLayer,
     set_header::SetResponseHeaderLayer,
     timeout::TimeoutLayer,
@@ -21,7 +22,7 @@ use tracing::Level;
 use umkm_infrastructure::metrics::Metrics;
 use umkm_shared::{config::ServerSettings, http::RequestId};
 
-use crate::{AppState, health, middleware};
+use crate::{AppState, auth, health, middleware};
 
 #[derive(Debug, Clone, Copy)]
 pub struct HttpLimits {
@@ -42,9 +43,43 @@ impl From<&ServerSettings> for HttpLimits {
 pub fn build_router(state: AppState, limits: HttpLimits) -> Router {
     let routes = Router::new()
         .route("/healthz", get(health::healthz))
-        .route("/readyz", get(health::readyz));
+        .route("/readyz", get(health::readyz))
+        .merge(auth::routes());
     let metrics = state.metrics.clone();
-    with_middleware(routes, limits, metrics).with_state(state)
+    let cors = cors_layer(
+        state
+            .auth
+            .as_ref()
+            .map(|a| a.allowed_origins.as_slice())
+            .unwrap_or_default(),
+    );
+    with_middleware(routes, limits, metrics)
+        .with_state(state)
+        .layer(cors)
+}
+
+/// CORS hanya untuk origin allowlist (ADR-0015); tanpa wildcard, dengan credentials.
+/// Daftar kosong = tidak ada header CORS (request lintas-origin diblokir browser).
+fn cors_layer(origins: &[String]) -> CorsLayer {
+    let list: Vec<HeaderValue> = origins
+        .iter()
+        .filter_map(|o| HeaderValue::from_str(o).ok())
+        .collect();
+    CorsLayer::new()
+        .allow_origin(AllowOrigin::list(list))
+        .allow_credentials(true)
+        .allow_methods([
+            Method::GET,
+            Method::POST,
+            Method::PUT,
+            Method::PATCH,
+            Method::DELETE,
+        ])
+        .allow_headers([
+            header::CONTENT_TYPE,
+            HeaderName::from_static(auth::CSRF_HEADER),
+        ])
+        .max_age(Duration::from_secs(600))
 }
 
 /// Pasang middleware standar. Dipisah agar tes dapat memakai stack yang sama

@@ -9,6 +9,17 @@ port = 8080
 request_timeout_secs = 30
 body_limit_bytes = 1048576
 
+[http]
+# CORS allowlist dashboard (ADR-0015). Tanpa wildcard; production wajib https.
+cors_allowed_origins = ["http://localhost:3000"]
+# true hanya bila API berada di belakang Caddy (Caddy membuang XFF dari klien).
+trust_forwarded_for = false
+
+[legal]
+# D-12: placeholder sampai teks final di-review legal (wajib sebelum go-live).
+privacy_policy_version = "placeholder-v0"
+terms_of_service_version = "placeholder-v0"
+
 [metrics]
 # Port internal; TIDAK diproxy Caddy dan tidak dipublish (PRD.md §9.8)
 host = "127.0.0.1"

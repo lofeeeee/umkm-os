@@ -3,6 +3,7 @@
 //! Batas lapisan: `docs/decisions/0013-batas-crate-workspace.md`.
 
 pub mod auth;
+pub mod tenant;
 
 /// Nama crate, dipakai untuk smoke test wiring workspace.
 pub const CRATE: &str = "umkm-domain";
