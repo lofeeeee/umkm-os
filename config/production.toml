@@ -23,8 +23,8 @@ acquire_timeout_secs = 5
 key_prefix = "umkm:production"
 
 [tenancy]
-# Placeholder sampai D-01 DISETUJUI. Production menolak start dengan placeholder.
-root_domain = "<ROOT_DOMAIN>"
+# D-01 DISETUJUI (ADR-0001): tenant = {slug}.ryasai.my.id
+root_domain = "ryasai.my.id"
 
 [observability]
 log_format = "json"

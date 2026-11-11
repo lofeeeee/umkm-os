@@ -23,7 +23,7 @@ acquire_timeout_secs = 5
 key_prefix = "umkm:staging"
 
 [tenancy]
-# Placeholder sampai D-01 DISETUJUI. Production menolak start dengan placeholder.
+# Subdomain staging ditetapkan saat environment staging dibuat (ADR-0001).
 root_domain = "<ROOT_DOMAIN>"
 
 [observability]

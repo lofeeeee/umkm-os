@@ -1,6 +1,6 @@
 # Reverse proxy (PRD.md §9.1, §9.7).
-# ROOT_DOMAIN = placeholder sampai D-01 DISETUJUI.
-# TLS produksi (wildcard *.ROOT_DOMAIN via DNS challenge) MENUNGGU D-01; sampai itu
+# ROOT_DOMAIN: produksi = ryasai.my.id (ADR-0001), lokal = localhost.
+# TLS produksi (wildcard *.ROOT_DOMAIN via DNS-01) MENUNGGU provider DNS; sampai itu
 # semua site HTTP-only dan TIDAK boleh dipakai untuk trafik produksi.
 {
 	auto_https off

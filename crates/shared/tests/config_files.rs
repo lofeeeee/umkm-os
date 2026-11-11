@@ -18,12 +18,11 @@ fn development_and_staging_load() {
 }
 
 #[test]
-fn production_blocked_until_d01_decided() {
-    // Ketika D-01 DISETUJUI dan root_domain diisi, ubah tes ini menjadi "loads".
-    let raw = std::fs::read_to_string(config_dir().join("production.toml")).unwrap();
-    assert!(raw.contains(ROOT_DOMAIN_PLACEHOLDER));
-    let err = Settings::load(&config_dir(), Environment::Production).unwrap_err();
-    assert!(err.to_string().contains("D-01"), "{err}");
+fn production_uses_d01_root_domain() {
+    // ADR-0001 (D-01 DISETUJUI 2026-11-11).
+    let s = Settings::load(&config_dir(), Environment::Production).unwrap();
+    assert_eq!(s.tenancy.root_domain, "ryasai.my.id");
+    assert_ne!(s.tenancy.root_domain, ROOT_DOMAIN_PLACEHOLDER);
 }
 
 #[test]

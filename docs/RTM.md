@@ -73,7 +73,7 @@
 | BR-017 | Background jobs retry & idempotency | `PRD.md §11` | P1-6/P4-4 | workflow/integration test | Planned |
 | BR-018 | External integration timeout & error handling | `PRD.md §11` | P3-7/P5-4/P5-8 | workflow/integration test | Planned |
 | BR-019 | Subscription limits dicek backend | `PRD.md §11` | P7-2 | workflow/integration test | Planned |
-| BR-020 | Data deletion ikut retention policy | `PRD.md §11` | P1-9 contingent D-11 | deletion/purge test; D-11 | Blocked by decision |
+| BR-020 | Data deletion ikut retention policy | `PRD.md §11` | P1-9 (ADR-0012) | deletion/purge test | Planned |
 
 ## 4. NFR — `PRD.md §10`
 
@@ -123,7 +123,7 @@
 
 | ID | Keputusan | Fase terblokir | Status |
 |---|---|---|---|
-| D-01 | lihat `OPEN_DECISIONS.md` | lihat `BUILD_PLAN.md §6` | MENUNGGU |
+| D-01 | lihat `OPEN_DECISIONS.md` | lihat `BUILD_PLAN.md §6` | DISETUJUI |
 | D-02 | lihat `OPEN_DECISIONS.md` | lihat `BUILD_PLAN.md §6` | MENUNGGU |
 | D-03 | lihat `OPEN_DECISIONS.md` | lihat `BUILD_PLAN.md §6` | MENUNGGU |
 | D-04 | lihat `OPEN_DECISIONS.md` | lihat `BUILD_PLAN.md §6` | MENUNGGU |
@@ -133,8 +133,8 @@
 | D-08 | lihat `OPEN_DECISIONS.md` | lihat `BUILD_PLAN.md §6` | MENUNGGU |
 | D-09 | lihat `OPEN_DECISIONS.md` | lihat `BUILD_PLAN.md §6` | MENUNGGU |
 | D-10 | lihat `OPEN_DECISIONS.md` | lihat `BUILD_PLAN.md §6` | MENUNGGU |
-| D-11 | lihat `OPEN_DECISIONS.md` | lihat `BUILD_PLAN.md §6` | MENUNGGU |
-| D-12 | lihat `OPEN_DECISIONS.md` | lihat `BUILD_PLAN.md §6` | MENUNGGU |
+| D-11 | lihat `OPEN_DECISIONS.md` | lihat `BUILD_PLAN.md §6` | DISETUJUI |
+| D-12 | lihat `OPEN_DECISIONS.md` | lihat `BUILD_PLAN.md §6` | MENUNGGU (privacy/terms registrasi DISETUJUI bersyarat) |
 
 ---
 
