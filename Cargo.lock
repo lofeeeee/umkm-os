@@ -1873,6 +1873,7 @@ version = "0.1.0"
 dependencies = [
  "thiserror",
  "umkm-shared",
+ "uuid",
 ]
 
 [[package]]

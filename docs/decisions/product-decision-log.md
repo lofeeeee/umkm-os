@@ -17,3 +17,9 @@ Keputusan produk yang tidak membutuhkan ADR. Entri tidak ditimpa; perubahan = en
 
 - Pemutus: Product owner ("nanti kalau sudah ada").
 - Konsekuensi / syarat: sebelum registrasi tenant dibuka untuk publik, daftar subdomain yang dipakai layanan lain di `ryasai.my.id` WAJIB ditambahkan ke `reserved_subdomains` (migration baru). Dicatat juga di ADR-0001 sebagai item terbuka.
+
+## 2026-11-11 — Preset permission 6 role (P1-5): DISETUJUI
+
+- Pemutus: Product owner (usulan engineering disetujui tanpa perubahan).
+- Owner 33 (semua). Manager 26: semua kecuali `tenant.update`, `members.invite`, `members.manage`, `website.publish`, `ai_config.manage`, `ai_provider.manage`, `audit.read`. Support Agent 9: `tenant.read`, `tickets.read/reply/close`, `conversations.read/reply/takeover`, `orders.read`, `products.read` (+ object-level: hanya yang ditugaskan, saat modul P4/P6 ada). Catalog Manager 7: `tenant.read`, `products.*`, `inventory.*`. Viewer 7: `tenant.read`, `website.read`, `products.read`, `inventory.read`, `orders.read`, `tickets.read`, `analytics.read`. Admin 1: `tenant.read` (hak lain diberikan per anggota lewat role kustom).
+- Sumber kebenaran: `migrations/0005_rbac_presets.up.sql`; diuji matriks 6 × 33 di `crates/infrastructure/tests/rbac.rs`.

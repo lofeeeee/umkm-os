@@ -1,0 +1,151 @@
+# P1-5 — RBAC deny-by-default + object-level
+date: 2026-11-11T15:53:41Z
+
+Files: migrations/0005_rbac_presets, crates/domain/src/rbac.rs, crates/infrastructure/src/rbac_repo.rs, apps/api/src/{session,tenants}.rs, tests: crates/infrastructure/tests/rbac.rs, apps/api/tests/rbac_http.rs
+Keputusan: preset permission disetujui product owner 2026-11-11 (docs/decisions/product-decision-log.md).
+Endpoint (PRD.md §7.4): GET /api/v1/tenants, GET/PATCH /api/v1/tenants/{tenant_id}. tenant_id di path = selector yang diverifikasi terhadap membership aktif; non-anggota -> 404.
+SessionUser memaksa Origin + CSRF untuk semua method non-GET/HEAD/OPTIONS; logout kini memakainya.
+Object-level: require_same_tenant + require_assigned_or (dipakai modul tiket/percakapan P4/P6).
+
+$ cargo fmt --all --check
+exit 0
+
+$ cargo clippy --workspace --all-targets -- -D warnings
+exit 0
+
+$ cargo test -p umkm-domain rbac
+      1 test rbac::tests::deny_by_default ... ok
+      1 test rbac::tests::object_level_tenant_and_assignment ... ok
+      1 test rbac::tests::permission_list_has_33_unique_keys ... ok
+      1 test rbac::tests::unknown_permissions_grant_nothing ... ok
+      1 test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 13 filtered out; 
+exit 0
+
+$ cargo test -p umkm-infrastructure --test rbac
+      1 test custom_role_grants_exactly_its_permissions ... ok
+      1 test inactive_membership_or_tenant_and_foreign_tenant_yield_no_actor ... ok
+      1 test list_memberships_only_active_for_user ... ok
+      1 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test role_without_permissions_is_denied_everything ... ok
+      1 test six_roles_by_33_permissions_matrix ... ok
+exit 0
+
+$ cargo test -p umkm-api --test rbac_http
+      1 test list_shows_only_own_memberships ... ok
+      1 test non_member_and_unknown_tenants_are_404 ... ok
+      1 test owner_reads_and_updates_with_csrf ... ok
+      1 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test roles_without_tenant_update_get_403_with_required_permission ... ok
+      1 test suspending_membership_revokes_access_immediately ... ok
+exit 0
+
+$ cargo test -p umkm-api --test openapi
+      1 test every_documented_path_is_routed ... ok
+      1 test real_responses_match_schema ... ok
+      1 test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test snapshot_matches_code ... ok
+exit 0
+
+$ cargo test --workspace
+      1 test active_host_resolves_to_its_tenant_with_normalization ... ok
+      1 test auth::tests::constant_time_eq_works ... ok
+      1 test auth::tests::csrf_is_deterministic_and_bound_to_session ... ok
+      1 test auth::tests::email_debug_hides_local_part ... ok
+      1 test auth::tests::email_parse_and_canonical ... ok
+      1 test auth::tests::hash_verify_roundtrip_and_unique_salt ... ok
+      1 test auth::tests::old_hash_still_verifies_but_needs_rehash_after_param_upgrade ... ok
+      1 test auth::tests::owasp_defaults ... ok
+      1 test auth::tests::password_policy ... ok
+      1 test auth::tests::rate_rule_names_are_redis_safe_and_unique ... ok
+      1 test auth::tests::reset_expiry_is_short ... ok
+      1 test auth::tests::subject_digest_is_hex_sha256 ... ok
+      1 test auth::tests::token_hash_debug_redacted ... ok
+      1 test auth::tests::tokens_are_random_url_safe_and_only_hash_is_derived ... ok
+      1 test auth::tests::verify_rejects_non_argon2id_and_garbage ... ok
+      1 test auto_slug_collision_gets_suffix_and_hostnames_stay_unique ... ok
+      1 test client_supplied_request_id_is_ignored ... ok
+      1 test concurrent_consumption_succeeds_exactly_once ... ok
+      1 test concurrent_registrations_same_name_all_get_unique_slugs ... ok
+      1 test concurrent_tenants_each_see_only_their_context ... ok
+exit 0
+
+$ scripts/check-domain-boundary.sh
+      1 OK: umkm-domain bebas dari axum/sqlx/reqwest/tokio/hyper/tower/redis
+exit 0
+
+$ redocly lint
+validating openapi.yaml...
+  2:1  warning  info-license  Info object should contain `license` field.
+openapi.yaml: validated in 58ms
+Woohoo! Your API description is valid. 🎉
+You have 1 warning.
+
+## Negative control: preset Viewer diberi tenant.update di migration
+$ cargo test -p umkm-infrastructure --test rbac
+      1 assertion `left == right` failed: Viewer × tenant.update
+      1 error: test failed, to rerun pass `-p umkm-infrastructure --test rbac`
+      1 test custom_role_grants_exactly_its_permissions ... ok
+      1 test inactive_membership_or_tenant_and_foreign_tenant_yield_no_actor ... ok
+      1 test list_memberships_only_active_for_user ... ok
+      1 test result: FAILED. 4 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test role_without_permissions_is_denied_everything ... ok
+      1 test six_roles_by_33_permissions_matrix ... FAILED
+      1 thread 'six_roles_by_33_permissions_matrix' panicked at crates/infrastructure/tests/rbac.rs:125:13:
+exit 101
+
+## Negative control: update_tenant lupa require(tenant.update)
+$ cargo test -p umkm-api --test rbac_http
+      1 assertion `left == right` failed: Manager tidak boleh tenant.update
+      1 error: test failed, to rerun pass `-p umkm-api --test rbac_http`
+      1 test list_shows_only_own_memberships ... ok
+      1 test non_member_and_unknown_tenants_are_404 ... ok
+      1 test owner_reads_and_updates_with_csrf ... ok
+      1 test result: FAILED. 4 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test roles_without_tenant_update_get_403_with_required_permission ... FAILED
+      1 test suspending_membership_revokes_access_immediately ... ok
+      1 thread 'roles_without_tenant_update_get_403_with_required_permission' panicked at apps/api/tests/rbac_http.rs:212:9:
+exit 101
+
+## Negative control: load_actor tidak cek status membership
+$ cargo test -p umkm-api --test rbac_http
+      1 error: test failed, to rerun pass `-p umkm-api --test rbac_http`
+      1 test list_shows_only_own_memberships ... ok
+      1 test non_member_and_unknown_tenants_are_404 ... ok
+      1 test owner_reads_and_updates_with_csrf ... ok
+      1 test result: FAILED. 4 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test roles_without_tenant_update_get_403_with_required_permission ... ok
+      1 test suspending_membership_revokes_access_immediately ... FAILED
+      1 thread 'suspending_membership_revokes_access_immediately' panicked at apps/api/tests/rbac_http.rs:361:5:
+exit 101
+
+## Negative control: PATCH dianggap method aman (lolos tanpa CSRF)
+$ cargo test -p umkm-api --test rbac_http
+      1 error: test failed, to rerun pass `-p umkm-api --test rbac_http`
+      1 test list_shows_only_own_memberships ... ok
+      1 test non_member_and_unknown_tenants_are_404 ... ok
+      1 test owner_reads_and_updates_with_csrf ... FAILED
+      1 test result: FAILED. 4 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test roles_without_tenant_update_get_403_with_required_permission ... ok
+      1 test suspending_membership_revokes_access_immediately ... ok
+      1 thread 'owner_reads_and_updates_with_csrf' panicked at apps/api/tests/rbac_http.rs:156:5:
+exit 101
+
+## Dipulihkan
+$ cargo test -p umkm-api --test rbac_http
+      1 test list_shows_only_own_memberships ... ok
+      1 test non_member_and_unknown_tenants_are_404 ... ok
+      1 test owner_reads_and_updates_with_csrf ... ok
+      1 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test roles_without_tenant_update_get_403_with_required_permission ... ok
+      1 test suspending_membership_revokes_access_immediately ... ok
+exit 0
+
+$ cargo test -p umkm-infrastructure --test rbac
+      1 test custom_role_grants_exactly_its_permissions ... ok
+      1 test inactive_membership_or_tenant_and_foreign_tenant_yield_no_actor ... ok
+      1 test list_memberships_only_active_for_user ... ok
+      1 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test role_without_permissions_is_denied_everything ... ok
+      1 test six_roles_by_33_permissions_matrix ... ok
+exit 0
+

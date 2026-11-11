@@ -245,6 +245,192 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
       security:
       - sessionCookie: []
+  /api/v1/tenants:
+    get:
+      tags:
+      - tenants
+      summary: Tenant tempat pemanggil menjadi anggota aktif (AUTH-008).
+      operationId: list_tenants
+      responses:
+        '200':
+          description: Daftar membership aktif
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_Vec_MembershipItem'
+        '401':
+          description: Tidak ada sesi valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/tenants/{tenant_id}:
+    get:
+      tags:
+      - tenants
+      summary: Detail tenant. Butuh `tenant.read`. Bukan anggota -> 404.
+      operationId: get_tenant
+      parameters:
+      - name: tenant_id
+        in: path
+        description: Selector tenant; diverifikasi terhadap membership
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Detail tenant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_TenantView'
+        '401':
+          description: Tidak ada sesi valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '403':
+          description: Permission kurang; `details.required_permission`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '404':
+          description: Tenant tidak ada atau bukan anggota
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+    patch:
+      tags:
+      - tenants
+      summary: Ubah nama tenant. Butuh `tenant.update` + `X-CSRF-Token`.
+      operationId: update_tenant
+      parameters:
+      - name: tenant_id
+        in: path
+        description: Selector tenant; diverifikasi terhadap membership
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTenantRequest'
+        required: true
+      responses:
+        '200':
+          description: Tenant diperbarui
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_TenantView'
+        '401':
+          description: Tidak ada sesi valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '403':
+          description: Permission kurang atau CSRF/Origin tidak valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '404':
+          description: Tenant tidak ada atau bukan anggota
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '422':
+          description: Nama tidak valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
   /healthz:
     get:
       tags:
@@ -540,6 +726,77 @@ components:
           $ref: '#/components/schemas/Meta'
         success:
           type: boolean
+    SuccessEnvelope_TenantView:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - id
+          - name
+          - slug
+          - status
+          - my_role
+          - my_permissions
+          properties:
+            id:
+              type: string
+              format: uuid
+            my_permissions:
+              type: array
+              items:
+                type: string
+            my_role:
+              type: string
+              description: Role & permission pemanggil di tenant ini (untuk UI menyembunyikan aksi).
+            name:
+              type: string
+            primary_hostname:
+              type:
+              - string
+              - 'null'
+            slug:
+              type: string
+            status:
+              type: string
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
+    SuccessEnvelope_Vec_MembershipItem:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            required:
+            - tenant_id
+            - name
+            - slug
+            - role
+            properties:
+              name:
+                type: string
+              role:
+                type: string
+              slug:
+                type: string
+              tenant_id:
+                type: string
+                format: uuid
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
     TenantSummary:
       type: object
       required:
@@ -554,6 +811,14 @@ components:
           format: uuid
         slug:
           type: string
+    UpdateTenantRequest:
+      type: object
+      required:
+      - name
+      properties:
+        name:
+          type: string
+      additionalProperties: false
   securitySchemes:
     sessionCookie:
       type: apiKey
@@ -565,3 +830,5 @@ tags:
   description: Liveness/readiness untuk orchestrator
 - name: auth
   description: Registrasi, login, sesi (cookie HttpOnly + CSRF, ADR-0015)
+- name: tenants
+  description: Tenant milik pemanggil; tenant_id di path diverifikasi terhadap membership

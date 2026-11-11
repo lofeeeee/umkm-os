@@ -75,7 +75,7 @@ impl AuthService {
         .expect("ascii")
     }
 
-    fn session_cookie<'a>(&self, headers: &'a HeaderMap) -> Option<&'a str> {
+    pub fn session_cookie<'a>(&self, headers: &'a HeaderMap) -> Option<&'a str> {
         let name = self.cookie_name();
         headers
             .get_all(header::COOKIE)
@@ -90,7 +90,7 @@ impl AuthService {
     /// `PRD.md §6.1` CSRF + ADR-0015: request lintas-origin yang tidak di-allowlist ditolak.
     /// Browser selalu mengirim `Origin` pada POST; klien tanpa `Origin` (non-browser)
     /// tidak dapat menjadi korban CSRF.
-    fn check_origin(&self, headers: &HeaderMap) -> Result<(), ApiError> {
+    pub fn check_origin(&self, headers: &HeaderMap) -> Result<(), ApiError> {
         match headers.get(header::ORIGIN).and_then(|o| o.to_str().ok()) {
             None => Ok(()),
             Some(o) if self.allowed_origins.iter().any(|a| a == o) => Ok(()),
@@ -107,7 +107,7 @@ pub fn csrf_token(session_token: &str) -> String {
     URL_SAFE_NO_PAD.encode(Sha256::digest(format!("csrf:{session_token}").as_bytes()))
 }
 
-fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
+pub fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
     a.len() == b.len() && a.iter().zip(b).fold(0u8, |acc, (x, y)| acc | (x ^ y)) == 0
 }
 
@@ -489,27 +489,11 @@ pub struct LogoutResponse {
 pub async fn logout_handler(
     State(state): State<AppState>,
     ReqId(id): ReqId,
-    headers: HeaderMap,
+    // Cek cookie + Origin + CSRF dilakukan oleh extractor (session.rs).
+    user: crate::session::SessionUser,
 ) -> Result<Response, ApiError> {
     let svc = service(&state)?;
-    svc.check_origin(&headers)?;
-    let token = svc
-        .session_cookie(&headers)
-        .ok_or_else(|| ApiError::new(ErrorCode::Unauthorized))?;
-    let sent = headers
-        .get(CSRF_HEADER)
-        .and_then(|v| v.to_str().ok())
-        .unwrap_or("");
-    if !constant_time_eq(sent.as_bytes(), csrf_token(token).as_bytes()) {
-        return Err(ApiError(
-            ErrorBody::new(ErrorCode::Forbidden).with_message("CSRF token invalid"),
-        ));
-    }
-    let s = auth_repo::authenticate_session(&svc.pool, hash_token(token))
-        .await
-        .map_err(|_| ApiError::new(ErrorCode::InternalError))?
-        .ok_or_else(|| ApiError::new(ErrorCode::Unauthorized))?;
-    let revoked = auth_repo::revoke_session(&svc.pool, s.user_id, s.session_id)
+    let revoked = auth_repo::revoke_session(&svc.pool, user.user_id, user.session_id)
         .await
         .map_err(|_| ApiError::new(ErrorCode::InternalError))?;
     Ok((

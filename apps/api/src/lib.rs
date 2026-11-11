@@ -9,7 +9,9 @@ pub mod middleware;
 pub mod openapi;
 pub mod readiness;
 pub mod router;
+pub mod session;
 pub mod state;
+pub mod tenants;
 
 pub use error::ApiError;
 pub use router::{HttpLimits, build_router, with_middleware};

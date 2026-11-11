@@ -12,3 +12,4 @@ workspace = true
 [dependencies]
 umkm-shared.workspace = true
 thiserror.workspace = true
+uuid.workspace = true

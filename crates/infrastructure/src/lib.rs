@@ -7,6 +7,7 @@ pub mod auth_repo;
 pub mod metrics;
 pub mod onboarding_repo;
 pub mod rate_limit;
+pub mod rbac_repo;
 pub mod redis;
 pub mod tenant_repo;
 

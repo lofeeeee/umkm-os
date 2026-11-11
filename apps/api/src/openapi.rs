@@ -14,7 +14,7 @@ use utoipa::{
     },
 };
 
-use crate::{auth, health};
+use crate::{auth, health, tenants};
 
 #[derive(OpenApi)]
 #[openapi(
@@ -30,14 +30,18 @@ use crate::{auth, health};
         auth::register_handler,
         auth::login_handler,
         auth::session_handler,
-        auth::logout_handler
+        auth::logout_handler,
+        tenants::list_tenants,
+        tenants::get_tenant,
+        tenants::update_tenant
     ),
     components(schemas(ErrorEnvelope, ErrorBody, ErrorCode, Meta)),
     servers((url = "/", description = "Origin yang sama; root domain menunggu D-01")),
     modifiers(&CommonErrors, &PublicOps, &PruneUnused),
     tags(
         (name = "ops", description = "Liveness/readiness untuk orchestrator"),
-        (name = "auth", description = "Registrasi, login, sesi (cookie HttpOnly + CSRF, ADR-0015)")
+        (name = "auth", description = "Registrasi, login, sesi (cookie HttpOnly + CSRF, ADR-0015)"),
+        (name = "tenants", description = "Tenant milik pemanggil; tenant_id di path diverifikasi terhadap membership")
     )
 )]
 pub struct ApiDoc;

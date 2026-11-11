@@ -22,7 +22,7 @@ use tracing::Level;
 use umkm_infrastructure::metrics::Metrics;
 use umkm_shared::{config::ServerSettings, http::RequestId};
 
-use crate::{AppState, auth, health, middleware};
+use crate::{AppState, auth, health, middleware, tenants};
 
 #[derive(Debug, Clone, Copy)]
 pub struct HttpLimits {
@@ -44,7 +44,8 @@ pub fn build_router(state: AppState, limits: HttpLimits) -> Router {
     let routes = Router::new()
         .route("/healthz", get(health::healthz))
         .route("/readyz", get(health::readyz))
-        .merge(auth::routes());
+        .merge(auth::routes())
+        .merge(tenants::routes());
     let metrics = state.metrics.clone();
     let cors = cors_layer(
         state
