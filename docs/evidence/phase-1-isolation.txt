@@ -1,0 +1,21 @@
+# Gate P1 — Isolasi tenant (BUILD_PLAN.md §5 Phase 1)
+date: 2026-11-11T16:27:19Z
+commit dasar: 65b5ec6 (+ perubahan P1-10 di commit ini)
+
+## Kriteria (BUILD_PLAN.md §5: 'Gate P1: 9 tes isolasi riil lulus; connection reuse aman; app DB role tidak bypass RLS')
+| Kriteria | Status | Bukti |
+|---|---|---|
+| 9 tes isolasi riil PRD.md §13.2 | 8 Verified, #4 PARSIAL (tabel conversation/AI/ticket/order/file belum ada; penjaga katalog otomatis) | docs/evidence/P1-10.txt |
+| Connection reuse aman | Verified | P0-4, P1-7, P1-10 #8 |
+| App DB role tidak bypass RLS | Verified (login nyata) + startup guard | P1-7, P1-10 #9 |
+| D-01, D-11, D-12 privacy/terms | DISETUJUI (D-12 bersyarat teks final) | docs/OPEN_DECISIONS.md |
+| D-08 email | DITUNDA (adapter log-only) | product-decision-log |
+
+## Satu perintah
+$ cargo fmt --all --check && cargo clippy --workspace --all-targets -- -D warnings && cargo test --workspace && sqlx migrate run && sqlx migrate revert --target-version 0 && sqlx migrate run
+total tests passed: 188  failed: 0
+migrations applied (2x up): 18
+exit 0
+
+## Kesimpulan
+Gate P1 LULUS untuk cakupan yang ada; #4 tetap terbuka sampai modul conversation/AI/ticket/order/file dibangun (penjaga t4 akan otomatis memeriksa tabel barunya).

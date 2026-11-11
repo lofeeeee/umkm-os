@@ -29,6 +29,7 @@ tower-http = { version = "0.7.1", features = ["trace", "catch-panic", "limit", "
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["fmt", "json", "env-filter"] }
 http-body-util = "0.1.5"
+futures-util = { version = "0.3.34", default-features = false, features = ["std"] }
 prometheus-client = "0.26.0"
 argon2 = "0.6.0"
 sha2 = "0.11.1"

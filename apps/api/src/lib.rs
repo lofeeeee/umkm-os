@@ -8,6 +8,7 @@ pub mod metrics_server;
 pub mod middleware;
 pub mod openapi;
 pub mod readiness;
+pub mod realtime;
 pub mod router;
 pub mod session;
 pub mod state;

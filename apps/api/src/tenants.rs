@@ -154,6 +154,12 @@ pub async fn update_tenant(
     rbac_repo::rename_tenant(pool, &actor, &name, Some(id.as_str()), Some(&ip))
         .await
         .map_err(internal)?;
+    // Event realtime untuk tenant ini saja (P1-10).
+    state.realtime.publish(crate::realtime::TenantEvent {
+        tenant_id: actor.tenant_id,
+        kind: "tenant.updated",
+        data: serde_json::json!({ "tenant_id": actor.tenant_id.as_uuid(), "name": name }),
+    });
     tracing::info!(user_id = %actor.user_id, tenant_id = %actor.tenant_id, "tenant renamed");
     Ok(Json(SuccessEnvelope::new(view(&state, &actor).await?, &id)))
 }
@@ -164,5 +170,9 @@ pub fn routes() -> Router<AppState> {
         .route(
             "/api/v1/tenants/{tenant_id}",
             get(get_tenant).patch(update_tenant),
+        )
+        .route(
+            "/api/v1/tenants/{tenant_id}/events",
+            get(crate::realtime::tenant_events),
         )
 }

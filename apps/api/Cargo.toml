@@ -20,6 +20,7 @@ umkm-infrastructure.workspace = true
 umkm-database.workspace = true
 umkm-shared = { workspace = true, features = ["openapi"] }
 tokio.workspace = true
+futures-util.workspace = true
 axum.workspace = true
 tower.workspace = true
 tower-http.workspace = true

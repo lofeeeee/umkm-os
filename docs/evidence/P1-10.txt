@@ -1,0 +1,144 @@
+# P1-10 — 9 tes isolasi tenant PRD.md §13.2 (jalur riil)
+date: 2026-11-11T16:26:01Z
+
+| # | Tes | Lokasi | Status |
+|---|---|---|---|
+| 1 | A membaca miliknya | apps/api/tests/tenancy.rs t1_t2_t3 (HTTP, pool role aplikasi) | Verified |
+| 2 | A tidak membaca B | t1_t2_t3 + crates/infrastructure/tests/rls.rs | Verified |
+| 3 | A tidak mengubah/menghapus B | t1_t2_t3 + rls.rs (UPDATE/DELETE/INSERT lintas tenant) | Verified |
+| 4 | conversation/AI config/ticket/order/file B | crates/infrastructure/tests/tenancy.rs t4 (penjaga katalog: setiap tabel ber-tenant_id wajib RLS+FORCE & policy current_tenant_id) | PARSIAL: tabel modul itu belum ada (P3/P5/P6); penjaga otomatis mencakup saat dibuat |
+| 5 | Background job tidak memproses tenant salah | tenancy.rs t5 (job tenant.guard_probe nyata via outbox/worker, tenant context event) | Verified |
+| 6 | Cache tanpa collision | tenancy.rs t6 (Redis nyata, id identik dua tenant, SCAN per tenant) + unit P0-5 | Verified |
+| 7 | SSE tidak lintas tenant | apps/api/tests/tenancy.rs t7_* (endpoint SSE nyata; cek ulang membership per event; batas koneksi) | Verified (SSE; WebSocket menyusul P6-2) |
+| 8 | RLS pada pooled connection reuse | tenancy.rs t8 (1 koneksi fisik, tenant bergantian) + P0-4/P1-7 | Verified |
+| 9 | App role tidak bypass RLS | tenancy.rs t9 (LOGIN nyata non-superuser; 6 upaya eskalasi ditolak) + startup guard P1-7 | Verified |
+
+Temuan saat menulis tes #9: tes RLS sebelumnya memakai login superuser + SET ROLE; sesi semacam itu bisa SET ROLE kembali ke owner, jadi tidak membuktikan 'tidak bisa bypass'. #9 kini memakai login nyata seperti produksi (umkm_app).
+
+$ cargo fmt --all --check
+exit 0
+
+$ cargo clippy --workspace --all-targets -- -D warnings
+exit 0
+
+$ cargo test -p umkm-api --test tenancy
+      1 test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test t1_t2_t3_read_own_but_not_read_or_modify_other_tenant ... ok
+      1 test t7_sse_connection_limit_enforced ... ok
+      1 test t7_sse_never_delivers_events_across_tenants ... ok
+      1 test t7_sse_stream_closes_when_membership_revoked ... ok
+exit 0
+
+$ cargo test -p umkm-infrastructure --test tenancy
+      1 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test t4_every_tenant_table_policy_filters_by_current_tenant ... ok
+      1 test t5_background_job_processes_only_its_tenant ... ok
+      1 test t6_cache_keys_never_collide_across_tenants_in_redis ... ok
+      1 test t8_rls_holds_on_pooled_connection_reuse ... ok
+      1 test t9_app_role_cannot_bypass_rls ... ok
+exit 0
+
+$ cargo test --workspace
+      1 test active_host_resolves_to_its_tenant_with_normalization ... ok
+      1 test already_verified_user_gets_no_email ... ok
+      1 test app_role_cannot_touch_migrations_or_seed_tables ... ok
+      1 test app_role_cannot_update_delete_or_truncate_audit ... ok
+      1 test app_role_is_not_superuser_and_cannot_bypass_rls ... ok
+      1 test application_flows_work_under_app_role ... ok
+      1 test audit::tests::action_names_match_db_check ... ok
+      1 test audit::tests::builder_always_redacts_summary ... ok
+      1 test audit::tests::redacts_sensitive_keys_recursively ... ok
+      1 test audit_older_than_one_year_is_purged_newer_kept ... ok
+      1 test auth::tests::constant_time_eq_works ... ok
+      1 test auth::tests::csrf_is_deterministic_and_bound_to_session ... ok
+      1 test auth::tests::email_debug_hides_local_part ... ok
+      1 test auth::tests::email_parse_and_canonical ... ok
+      1 test auth::tests::hash_verify_roundtrip_and_unique_salt ... ok
+      1 test auth::tests::old_hash_still_verifies_but_needs_rehash_after_param_upgrade ... ok
+exit 0
+
+$ scripts/check-domain-boundary.sh
+      1 OK: umkm-domain bebas dari axum/sqlx/reqwest/tokio/hyper/tower/redis
+exit 0
+
+$ cargo deny check
+      1 advisories ok, bans ok, licenses ok, sources ok
+exit 0
+
+## Negative control: #7 SSE meneruskan semua event (TenantGuard 1 dihapus)
+$ cargo test -p umkm-api --test tenancy
+      1 B tidak boleh menerima event A
+      1 error: test failed, to rerun pass `-p umkm-api --test tenancy`
+      1 test result: FAILED. 3 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test t1_t2_t3_read_own_but_not_read_or_modify_other_tenant ... ok
+      1 test t7_sse_connection_limit_enforced ... ok
+      1 test t7_sse_stream_closes_when_membership_revoked ... ok
+      1 thread 't7_sse_never_delivers_events_across_tenants' panicked at apps/api/tests/tenancy.rs:260:5:
+exit 101
+
+## Negative control: #7 SSE tidak cek ulang membership per event
+$ cargo test -p umkm-api --test tenancy
+      1 assertion `left == right` failed: stream harus berakhir tanpa data
+      1 error: test failed, to rerun pass `-p umkm-api --test tenancy`
+      1 test result: FAILED. 3 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test t1_t2_t3_read_own_but_not_read_or_modify_other_tenant ... ok
+      1 test t7_sse_connection_limit_enforced ... ok
+      1 test t7_sse_never_delivers_events_across_tenants ... ok
+      1 thread 't7_sse_stream_closes_when_membership_revoked' panicked at apps/api/tests/tenancy.rs:326:5:
+exit 101
+
+## Negative control: #5 worker memproses di tenant resource, bukan tenant event
+$ cargo test -p umkm-infrastructure --test tenancy
+      1 error: test failed, to rerun pass `-p umkm-infrastructure --test tenancy`
+      1 test result: FAILED. 4 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test t4_every_tenant_table_policy_filters_by_current_tenant ... ok
+      1 test t6_cache_keys_never_collide_across_tenants_in_redis ... ok
+      1 test t8_rls_holds_on_pooled_connection_reuse ... ok
+      1 test t9_app_role_cannot_bypass_rls ... ok
+      1 thread 't5_background_job_processes_only_its_tenant' panicked at crates/infrastructure/tests/tenancy.rs:127:5:
+exit 101
+
+## Negative control: #6 key cache tanpa tenant id
+$ cargo test -p umkm-infrastructure --test tenancy
+      1 error: test failed, to rerun pass `-p umkm-infrastructure --test tenancy`
+      1 test result: FAILED. 4 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test t4_every_tenant_table_policy_filters_by_current_tenant ... ok
+      1 test t5_background_job_processes_only_its_tenant ... ok
+      1 test t8_rls_holds_on_pooled_connection_reuse ... ok
+      1 test t9_app_role_cannot_bypass_rls ... ok
+      1 thread 't6_cache_keys_never_collide_across_tenants_in_redis' panicked at crates/infrastructure/tests/tenancy.rs:188:5:
+exit 101
+
+## Negative control: #4/#8 policy business_profiles permisif
+$ cargo test -p umkm-infrastructure --test tenancy
+      1     t4_every_tenant_table_policy_filters_by_current_tenant
+      1 ---- t4_every_tenant_table_policy_filters_by_current_tenant stdout ----
+      1 business_profiles.tenant_isolation: policy tidak memfilter tenant: true true
+      1 error: test failed, to rerun pass `-p umkm-infrastructure --test tenancy`
+      1 test result: FAILED. 3 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test t4_every_tenant_table_policy_filters_by_current_tenant ... FAILED
+      1 test t5_background_job_processes_only_its_tenant ... ok
+      1 test t6_cache_keys_never_collide_across_tenants_in_redis ... ok
+      1 test t9_app_role_cannot_bypass_rls ... ok
+      1 thread 't4_every_tenant_table_policy_filters_by_current_tenant' panicked at crates/infrastructure/tests/tenancy.rs:92:13:
+      1 thread 't8_rls_holds_on_pooled_connection_reuse' panicked at crates/infrastructure/tests/tenancy.rs:223:9:
+exit 101
+
+## Dipulihkan
+$ cargo test -p umkm-api --test tenancy
+      1 test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test t1_t2_t3_read_own_but_not_read_or_modify_other_tenant ... ok
+      1 test t7_sse_connection_limit_enforced ... ok
+      1 test t7_sse_never_delivers_events_across_tenants ... ok
+      1 test t7_sse_stream_closes_when_membership_revoked ... ok
+exit 0
+
+$ cargo test -p umkm-infrastructure --test tenancy
+      1 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test t4_every_tenant_table_policy_filters_by_current_tenant ... ok
+      1 test t5_background_job_processes_only_its_tenant ... ok
+      1 test t6_cache_keys_never_collide_across_tenants_in_redis ... ok
+      1 test t8_rls_holds_on_pooled_connection_reuse ... ok
+      1 test t9_app_role_cannot_bypass_rls ... ok
+exit 0
+

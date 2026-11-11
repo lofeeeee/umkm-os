@@ -40,6 +40,7 @@ pub async fn enqueue<'e>(db: impl PgExecutor<'e>, ev: &OutboxEvent) -> Result<bo
 #[derive(Debug, Clone)]
 pub struct Claimed {
     pub id: Uuid,
+    pub tenant_id: Option<Uuid>,
     pub event_type: String,
     pub payload: serde_json::Value,
     pub attempts: i32,
@@ -63,7 +64,7 @@ pub async fn claim(
              ORDER BY available_at
              LIMIT $1
              FOR UPDATE SKIP LOCKED)
-         RETURNING o.id, o.event_type, o.payload, o.attempts",
+         RETURNING o.id, o.tenant_id, o.event_type, o.payload, o.attempts",
     )
     .bind(limit)
     .bind(worker)
@@ -74,6 +75,7 @@ pub async fn claim(
         .into_iter()
         .map(|r| Claimed {
             id: r.get("id"),
+            tenant_id: r.get("tenant_id"),
             event_type: r.get("event_type"),
             payload: r.get("payload"),
             attempts: r.get("attempts"),
@@ -191,6 +193,7 @@ pub async fn process_once(
             events::EMAIL_VERIFICATION_REQUESTED => {
                 handle_email_verification(pool, sender, cfg, &ev).await
             }
+            events::TENANT_GUARD_PROBE => handle_tenant_guard_probe(pool, &ev).await,
             _ => Outcome::Fail("unknown_event_type", false),
         };
         match outcome {
@@ -287,6 +290,56 @@ async fn handle_email_verification(
     {
         Ok(()) => Outcome::Done,
         Err(SendError { retryable, class }) => Outcome::Fail(class, retryable),
+    }
+}
+
+/// Job tenant-scoped berjalan HANYA di tenant context event (`PRD.md §13.2` #5).
+/// Membaca resource milik `resource_tenant_id`; bila berbeda dari tenant event, RLS +
+/// filter eksplisit membuatnya tidak terlihat dan job gagal permanen (tidak diproses).
+async fn handle_tenant_guard_probe(pool: &PgPool, ev: &Claimed) -> Outcome {
+    let Some(tenant) = ev.tenant_id.map(umkm_shared::ids::TenantId::from_uuid) else {
+        return Outcome::Fail("missing_tenant", false);
+    };
+    let Some(resource_tenant) = ev
+        .payload
+        .get("resource_tenant_id")
+        .and_then(|v| v.as_str())
+        .and_then(|s| s.parse::<Uuid>().ok())
+    else {
+        return Outcome::Fail("invalid_payload", false);
+    };
+    let run = async {
+        let mut tx = umkm_database::begin_tenant_tx(pool, tenant)
+            .await
+            .map_err(|_| "db_error")?;
+        let name: Option<String> = sqlx::query_scalar(
+            "SELECT name FROM business_profiles WHERE tenant_id = $1 AND tenant_id = app.current_tenant_id()",
+        )
+        .bind(resource_tenant)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(|_| "db_error")?;
+        let Some(name) = name else {
+            return Err("resource_not_in_tenant");
+        };
+        crate::audit_repo::record(
+            &mut *tx,
+            &umkm_domain::audit::AuditEvent::new(
+                umkm_domain::audit::actions::TENANT_GUARD_PROBE_PROCESSED,
+                "outbox_event",
+            )
+            .in_tenant(tenant)
+            .resource(ev.id)
+            .with_summary(serde_json::json!({ "profile_name": name })),
+        )
+        .await
+        .map_err(|_| "db_error")?;
+        tx.commit().await.map_err(|_| "db_error")
+    };
+    match run.await {
+        Ok(()) => Outcome::Done,
+        Err("db_error") => Outcome::Fail("db_error", true),
+        Err(class) => Outcome::Fail(class, false),
     }
 }
 

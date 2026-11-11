@@ -15,7 +15,7 @@
 | Verifikasi | Rencana pengujian, belum bukti |
 | Status | `Planned` / `Blocked by decision` / `Verified` (hanya dengan `docs/evidence/*`); keputusan memakai `MENUNGGU`/`DISETUJUI`/`DITOLAK` |
 
-> **Status hari ini:** 53 baris requirement berstatus `Planned` atau `Blocked by decision`; 12 baris keputusan di `RTM.md §7` berstatus `MENUNGGU`. Tidak ada `Verified`. Tidak ada kode aplikasi yang dibangun dalam sesi ini.
+> **Status (2026-11-11):** Phase 0 dan Phase 1 dibangun; baris yang `Verified` menunjuk ke `docs/evidence/*`. Lihat `docs/evidence/phase-1-isolation.txt` untuk Gate P1.
 
 ---
 
@@ -109,15 +109,15 @@
 
 | # | Test | Rencana | Status |
 |---:|---|---|---|
-| 1 | Tenant A baca resource miliknya | P1-10 jalur riil | Planned |
-| 2 | Tenant A tak baca Tenant B | P1-10 jalur riil | Planned |
-| 3 | Tenant A tak ubah/hapus Tenant B | P1-10 jalur riil | Planned |
-| 4 | Tak baca conversation/AI config/ticket/order/file Tenant B | P1-10 jalur riil | Planned |
-| 5 | Background job tak proses tenant salah | P1-10 worker minimum nyata | Planned |
-| 6 | Cache tidak collision | P0-5, P1-10 | Planned |
-| 7 | WebSocket/SSE tidak kirim event lintas tenant | P1-10 realtime minimum nyata | Planned |
-| 8 | RLS bekerja pada pooled connection reuse | P1-7, P1-10 | Planned |
-| 9 | App DB role tidak bisa bypass RLS | P1-7, P1-10 | Planned |
+| 1 | Tenant A baca resource miliknya | P1-10 jalur riil | Verified (`docs/evidence/P1-10.txt`) |
+| 2 | Tenant A tak baca Tenant B | P1-10 jalur riil | Verified (`docs/evidence/P1-10.txt`) |
+| 3 | Tenant A tak ubah/hapus Tenant B | P1-10 jalur riil | Verified (`docs/evidence/P1-10.txt`) |
+| 4 | Tak baca conversation/AI config/ticket/order/file Tenant B | P1-10 jalur riil | Planned (penjaga katalog aktif; tabel modul belum ada) |
+| 5 | Background job tak proses tenant salah | P1-10 worker minimum nyata | Verified (`docs/evidence/P1-10.txt`) |
+| 6 | Cache tidak collision | P0-5, P1-10 | Verified (`docs/evidence/P1-10.txt`) |
+| 7 | WebSocket/SSE tidak kirim event lintas tenant | P1-10 realtime minimum nyata | Verified untuk SSE (`docs/evidence/P1-10.txt`); WebSocket P6-2 |
+| 8 | RLS bekerja pada pooled connection reuse | P1-7, P1-10 | Verified (`docs/evidence/P1-10.txt`) |
+| 9 | App DB role tidak bisa bypass RLS | P1-7, P1-10 | Verified (`docs/evidence/P1-10.txt`) |
 
 ## 7. Open decisions (`PRD.md §20`)
 

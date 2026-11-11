@@ -23,6 +23,7 @@ Setiap dependency eksternal dicatat di sini **sebelum** ditambahkan ke `Cargo.to
 | sha2 | 0.11.1 | MIT OR Apache-2.0 | 1.88 | infrastructure | SHA-256 hash token opak & subjek rate limit | P1-2 |
 | getrandom | 0.4.3 | MIT OR Apache-2.0 | 1.85 | infrastructure | Sumber acak OS untuk token 256-bit | P1-2 |
 | base64 | 0.22.1 | MIT OR Apache-2.0 | 1.48 | infrastructure | Encoding token base64url | P1-2 |
+| futures-util | 0.3.34 | MIT OR Apache-2.0 | 1.71 | api | Stream SSE (`stream::unfold`); sudah transitif lewat axum, `default-features = false` + `std` | P1-10 |
 | sqlx | 0.9.0 | MIT OR Apache-2.0 | 1.94 | database | DB access + migration `PRD.md §7.1`; `default-features = false`, hanya postgres/tokio/macros/migrate/uuid | P0-4 |
 
 Kriteria: maintained aktif, tanpa advisory RustSec terbuka, lisensi permisif (MIT/Apache-2.0/BSD/ISC/Unicode/Zlib/BSL-1.0), MSRV ≤ `rust-version` workspace (1.94; dinaikkan dari 1.85 di P0-4 untuk sqlx 0.9.0, rilis 2026-05-21).

@@ -499,6 +499,77 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
       security:
       - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/events:
+    get:
+      tags:
+      - tenants
+      summary: Stream event tenant (SSE). Butuh `tenant.read`.
+      operationId: tenant_events
+      parameters:
+      - name: tenant_id
+        in: path
+        description: Selector tenant; diverifikasi terhadap membership
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: text/event-stream; hanya event tenant ini
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        '401':
+          description: Tidak ada sesi valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '403':
+          description: Permission kurang
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '404':
+          description: Bukan anggota
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: Batas koneksi realtime tercapai
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
   /healthz:
     get:
       tags:

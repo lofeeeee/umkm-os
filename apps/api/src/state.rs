@@ -21,6 +21,8 @@ pub struct AppState {
     pub auth: Option<Arc<AuthService>>,
     /// Pool untuk extractor yang butuh DB (mis. `HostTenant`). `None` -> 503.
     pub db: Option<sqlx::PgPool>,
+    /// Hub SSE per tenant (P1-10).
+    pub realtime: crate::realtime::RealtimeHub,
 }
 
 impl AppState {
@@ -30,6 +32,7 @@ impl AppState {
             metrics: Arc::default(),
             auth: None,
             db: None,
+            realtime: Default::default(),
         }
     }
 

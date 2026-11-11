@@ -34,7 +34,8 @@ use crate::{auth, health, tenants};
         auth::verify_email_handler,
         tenants::list_tenants,
         tenants::get_tenant,
-        tenants::update_tenant
+        tenants::update_tenant,
+        crate::realtime::tenant_events
     ),
     components(schemas(ErrorEnvelope, ErrorBody, ErrorCode, Meta)),
     servers((url = "/", description = "Origin yang sama; root domain menunggu D-01")),

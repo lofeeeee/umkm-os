@@ -9,6 +9,8 @@ use uuid::Uuid;
 /// Tipe event yang dikenal worker. Payload tidak pernah berisi secret.
 pub mod events {
     pub const EMAIL_VERIFICATION_REQUESTED: &str = "auth.email_verification_requested";
+    /// Canary isolasi (P1-10, `PRD.md §13.2` #5): diproses di tenant context event.
+    pub const TENANT_GUARD_PROBE: &str = "tenant.guard_probe";
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -27,6 +29,19 @@ impl OutboxEvent {
             event_type: events::EMAIL_VERIFICATION_REQUESTED,
             payload: serde_json::json!({ "user_id": user_id }),
             idempotency_key: format!("email_verification:{user_id}:registration"),
+        }
+    }
+}
+
+impl OutboxEvent {
+    /// `resource_tenant_id` = tenant pemilik resource yang akan dibaca job. Untuk probe
+    /// normal sama dengan `tenant_id`; berbeda = upaya lintas tenant yang wajib gagal.
+    pub fn tenant_guard_probe(tenant_id: Uuid, resource_tenant_id: Uuid, nonce: Uuid) -> Self {
+        Self {
+            tenant_id: Some(tenant_id),
+            event_type: events::TENANT_GUARD_PROBE,
+            payload: serde_json::json!({ "resource_tenant_id": resource_tenant_id }),
+            idempotency_key: format!("tenant_guard_probe:{tenant_id}:{nonce}"),
         }
     }
 }

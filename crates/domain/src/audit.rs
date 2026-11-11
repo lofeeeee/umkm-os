@@ -18,6 +18,7 @@ pub mod actions {
     pub const AUTH_LOGIN_FAILED: &str = "auth.login.failed";
     pub const AUTH_LOGOUT: &str = "auth.logout";
     pub const AUTH_EMAIL_VERIFIED: &str = "auth.email.verified";
+    pub const TENANT_GUARD_PROBE_PROCESSED: &str = "tenant.guard_probe.processed";
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
