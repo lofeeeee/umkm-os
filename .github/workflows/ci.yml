@@ -1,0 +1,119 @@
+# CI fail-closed (PRD.md §14.2). Branch protection cukup mewajibkan job `ci-gate`;
+# job itu merah bila SATU saja job lain gagal, di-skip, atau dibatalkan.
+# Semua action dipin ke commit SHA (tag di komentar).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+
+jobs:
+  lint:
+    name: fmt + clippy + boundary
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: rustup show active-toolchain || rustup toolchain install
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+      - run: cargo fmt --all --check
+      - run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - run: scripts/check-domain-boundary.sh
+      - run: scripts/check-ci-needs.sh
+
+  test:
+    name: unit + integration (PostgreSQL)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: umkm_owner
+          POSTGRES_PASSWORD: ci_only_not_secret
+          POSTGRES_DB: umkm_ci
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U umkm_owner -d umkm_ci"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+    env:
+      DATABASE_URL: postgres://umkm_owner:ci_only_not_secret@localhost:5432/umkm_ci
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: rustup show active-toolchain || rustup toolchain install
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
+        with:
+          tool: sqlx-cli@0.9.0
+      - name: Migrations up / down / up
+        run: |
+          sqlx migrate run --source migrations
+          sqlx migrate revert --source migrations --target-version 0
+          sqlx migrate run --source migrations
+      - run: cargo test --workspace --locked
+
+  supply-chain:
+    name: dependency + license scan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
+        with:
+          tool: cargo-deny
+      - run: cargo deny check
+
+  containers:
+    name: compose config + docker build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: docker compose --env-file .env.example config -q
+      - run: docker build --target api -t umkm-os/api:ci .
+      - run: docker build --target worker -t umkm-os/worker:ci .
+
+  workflow-lint:
+    name: actionlint
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.12 -color
+
+  ci-gate:
+    name: ci-gate
+    if: always()
+    needs: [lint, test, supply-chain, containers, workflow-lint]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Aggregate (fail-closed)
+        env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
+        run: scripts/ci-gate.sh

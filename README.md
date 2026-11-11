@@ -4,7 +4,7 @@ Platform SaaS multi-tenant untuk UMKM: website, katalog & stok, order, ticketing
 
 ## Status
 
-Gate A `DISETUJUI` (ADR-0002, ADR-0013). Selesai: P0-0..P0-6. Jalankan API lokal: `UMKM_ENV=development cargo run -p umkm-api` lalu `curl localhost:8080/healthz`.
+Gate A `DISETUJUI` (ADR-0002, ADR-0013). Selesai: P0-0..P0-6; P0-7 (CI) siap tetapi belum pernah jalan di GitHub karena repo belum punya remote — lihat `docs/governance/ci.md`. Cara menjalankan API: lihat bagian "Menjalankan stack lengkap" di bawah (API membutuhkan `UMKM_DATABASE_URL` dan `UMKM_REDIS_URL`).
 
 ## Perintah
 
