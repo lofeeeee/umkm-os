@@ -1,0 +1,241 @@
+# P1-7 — RLS ENABLE + FORCE, role aplikasi tanpa BYPASSRLS
+date: 2026-11-11T16:09:40Z
+
+Files: migrations/0007_rls, crates/database/src/app_role.rs, crates/infrastructure/src/rbac_repo.rs (app.user_memberships), crates/infrastructure/tests/rls.rs, ops/postgres/init/10-app-user.sh, docker-compose.yml (api/worker=umkm_app, migrate=owner), startup guard api+worker
+Tabel ber-RLS: tenants, tenant_memberships, tenant_domains, invitations, roles (preset terbaca, read-only), role_permissions, business_profiles.
+Pengecualian terdokumentasi: notification_outbox (infrastruktur platform, BUILD_PLAN.md §3.4). Tabel global: users, user_sessions, user_tokens, user_consents, mfa_credentials, permissions, reserved_subdomains.
+Lintas tenant yang sah lewat SECURITY DEFINER sempit: app.resolve_host(hostname), app.user_memberships(user_id).
+Tes RLS berjalan sebagai umkm_app_role (SET ROLE); koneksi uji default adalah superuser yang selalu melewati RLS (dibuktikan di tes).
+
+$ cargo fmt --all --check
+exit 0
+
+$ cargo clippy --workspace --all-targets -- -D warnings
+exit 0
+
+$ cargo test -p umkm-infrastructure --test rls
+      1 test app_role_cannot_touch_migrations_or_seed_tables ... ok
+      1 test app_role_is_not_superuser_and_cannot_bypass_rls ... ok
+      1 test application_flows_work_under_app_role ... ok
+      1 test connection_reuse_does_not_leak_context_under_rls ... ok
+      1 test custom_roles_are_tenant_private_and_presets_read_only ... ok
+      1 test every_tenant_table_has_forced_rls ... ok
+      1 test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test startup_guard_rejects_superuser_outside_development ... ok
+      1 test tenant_a_cannot_read_or_modify_tenant_b ... ok
+      1 test without_tenant_context_tenant_tables_are_empty ... ok
+exit 0
+
+$ cargo test --workspace
+      1 test active_host_resolves_to_its_tenant_with_normalization ... ok
+      1 test already_verified_user_gets_no_email ... ok
+      1 test app_role_cannot_touch_migrations_or_seed_tables ... ok
+      1 test app_role_is_not_superuser_and_cannot_bypass_rls ... ok
+      1 test application_flows_work_under_app_role ... ok
+      1 test auth::tests::constant_time_eq_works ... ok
+      1 test auth::tests::csrf_is_deterministic_and_bound_to_session ... ok
+      1 test auth::tests::email_debug_hides_local_part ... ok
+      1 test auth::tests::email_parse_and_canonical ... ok
+      1 test auth::tests::hash_verify_roundtrip_and_unique_salt ... ok
+      1 test auth::tests::old_hash_still_verifies_but_needs_rehash_after_param_upgrade ... ok
+      1 test auth::tests::owasp_defaults ... ok
+      1 test auth::tests::password_policy ... ok
+      1 test auth::tests::rate_rule_names_are_redis_safe_and_unique ... ok
+      1 test auth::tests::reset_expiry_is_short ... ok
+      1 test auth::tests::subject_digest_is_hex_sha256 ... ok
+      1 test auth::tests::token_hash_debug_redacted ... ok
+      1 test auth::tests::tokens_are_random_url_safe_and_only_hash_is_derived ... ok
+      1 test auth::tests::verify_rejects_non_argon2id_and_garbage ... ok
+      1 test auto_slug_collision_gets_suffix_and_hostnames_stay_unique ... ok
+exit 0
+
+$ scripts/check-domain-boundary.sh
+      1 OK: umkm-domain bebas dari axum/sqlx/reqwest/tokio/hyper/tower/redis
+exit 0
+
+$ docker compose --env-file .env.example config -q
+exit 0
+
+$ shellcheck ops/postgres/init/10-app-user.sh
+exit 0
+
+## Negative control: FORCE dihapus pada tenants
+$ cargo test -p umkm-infrastructure --test rls
+      1 error: test failed, to rerun pass `-p umkm-infrastructure --test rls`
+      1 tabel tenants punya tenant_id tetapi RLS ENABLE+FORCE tidak aktif
+      1 test app_role_cannot_touch_migrations_or_seed_tables ... ok
+      1 test app_role_is_not_superuser_and_cannot_bypass_rls ... ok
+      1 test application_flows_work_under_app_role ... ok
+      1 test connection_reuse_does_not_leak_context_under_rls ... ok
+      1 test custom_roles_are_tenant_private_and_presets_read_only ... ok
+      1 test result: FAILED. 8 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test startup_guard_rejects_superuser_outside_development ... ok
+      1 test tenant_a_cannot_read_or_modify_tenant_b ... ok
+      1 test without_tenant_context_tenant_tables_are_empty ... ok
+      1 thread 'every_tenant_table_has_forced_rls' panicked at crates/infrastructure/tests/rls.rs:122:9:
+exit 101
+
+## Negative control: policy tenants USING (true)
+$ cargo test -p umkm-infrastructure --test rls
+      1 assertion `left == right` failed: tenants bocor tanpa tenant context
+      1 assertion `left == right` failed: tenants: A hanya melihat miliknya
+      1 error: test failed, to rerun pass `-p umkm-infrastructure --test rls`
+      1 test app_role_cannot_touch_migrations_or_seed_tables ... ok
+      1 test app_role_is_not_superuser_and_cannot_bypass_rls ... ok
+      1 test application_flows_work_under_app_role ... ok
+      1 test custom_roles_are_tenant_private_and_presets_read_only ... ok
+      1 test every_tenant_table_has_forced_rls ... ok
+      1 test result: FAILED. 6 passed; 3 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test startup_guard_rejects_superuser_outside_development ... ok
+      1 thread 'connection_reuse_does_not_leak_context_under_rls' panicked at crates/infrastructure/tests/rls.rs:329:5:
+      1 thread 'tenant_a_cannot_read_or_modify_tenant_b' panicked at crates/infrastructure/tests/rls.rs:168:9:
+      1 thread 'without_tenant_context_tenant_tables_are_empty' panicked at crates/infrastructure/tests/rls.rs:145:9:
+exit 101
+
+## Negative control: role aplikasi dibuat dengan BYPASSRLS
+$ cargo test -p umkm-infrastructure --test rls
+      1 test app_role_cannot_touch_migrations_or_seed_tables ... ok
+      1 test app_role_is_not_superuser_and_cannot_bypass_rls ... ok
+      1 test application_flows_work_under_app_role ... ok
+      1 test connection_reuse_does_not_leak_context_under_rls ... ok
+      1 test custom_roles_are_tenant_private_and_presets_read_only ... ok
+      1 test every_tenant_table_has_forced_rls ... ok
+      1 test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test startup_guard_rejects_superuser_outside_development ... ok
+      1 test tenant_a_cannot_read_or_modify_tenant_b ... ok
+      1 test without_tenant_context_tenant_tables_are_empty ... ok
+exit 0
+
+## Negative control: list_memberships query langsung (tanpa fungsi SECURITY DEFINER)
+$ cargo test -p umkm-infrastructure --test rls
+      1 error: test failed, to rerun pass `-p umkm-infrastructure --test rls`
+      1 test app_role_cannot_touch_migrations_or_seed_tables ... ok
+      1 test app_role_is_not_superuser_and_cannot_bypass_rls ... ok
+      1 test connection_reuse_does_not_leak_context_under_rls ... ok
+      1 test custom_roles_are_tenant_private_and_presets_read_only ... ok
+      1 test every_tenant_table_has_forced_rls ... ok
+      1 test result: FAILED. 8 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test startup_guard_rejects_superuser_outside_development ... ok
+      1 test tenant_a_cannot_read_or_modify_tenant_b ... ok
+      1 test without_tenant_context_tenant_tables_are_empty ... ok
+      1 thread 'application_flows_work_under_app_role' panicked at crates/infrastructure/tests/rls.rs:279:5:
+exit 101
+
+## Dipulihkan
+$ cargo test -p umkm-infrastructure --test rls
+      1 test app_role_cannot_touch_migrations_or_seed_tables ... ok
+      1 test app_role_is_not_superuser_and_cannot_bypass_rls ... ok
+      1 test application_flows_work_under_app_role ... ok
+      1 test connection_reuse_does_not_leak_context_under_rls ... ok
+      1 test custom_roles_are_tenant_private_and_presets_read_only ... ok
+      1 test every_tenant_table_has_forced_rls ... ok
+      1 test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test startup_guard_rejects_superuser_outside_development ... ok
+      1 test tenant_a_cannot_read_or_modify_tenant_b ... ok
+      1 test without_tenant_context_tenant_tables_are_empty ... ok
+exit 0
+
+## E2E Compose (volume baru; init script membuat umkm_app)
+$ api/worker log: role database
+"db_role":"umkm_app","rls_enforced":true
+"db_role":"umkm_app","rls_enforced":true
+$ pg_roles
+umkm_app|f|f|t
+umkm_app_role|f|f|f
+$ register A + B via Caddy
+A toko-a
+B toko-b
+$ GET /api/v1/tenants (sesi A)
+['toko-a']
+$ GET /api/v1/tenants/{B} dengan sesi A
+404
+$ psql sebagai umkm_app tanpa tenant context: count(tenants)
+0
+$ psql sebagai owner: count(tenants)
+2
+## Negative: API staging dengan kredensial owner -> menolak start
+umkm-api: role database 'umkm_owner' melewati RLS (superuser=true, bypassrls=true); gunakan role aplikasi (P1-7)
+exit 1
+## Perbaikan setelah negative control 3 lolos (exit 0 di atas)
+Sebab: 'CREATE ROLE ... IF NOT EXISTS' tidak memperbaiki atribut role cluster-level yang sudah ada. Fix: ALTER ROLE umkm_app_role ... NOBYPASSRLS selalu dijalankan.
+$ cargo test -p umkm-infrastructure --test rls
+      1 error: test failed, to rerun pass `-p umkm-infrastructure --test rls`
+      1 test result: FAILED. 3 passed; 6 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 thread 'app_role_cannot_touch_migrations_or_seed_tables' panicked at /home/ryasr/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sqlx-core-0.9.0/src/testing/mod.rs:262:14:
+      1 thread 'app_role_is_not_superuser_and_cannot_bypass_rls' panicked at /home/ryasr/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sqlx-core-0.9.0/src/testing/mod.rs:262:14:
+      1 thread 'application_flows_work_under_app_role' panicked at /home/ryasr/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sqlx-core-0.9.0/src/testing/mod.rs:262:14:
+      1 thread 'connection_reuse_does_not_leak_context_under_rls' panicked at /home/ryasr/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sqlx-core-0.9.0/src/testing/mod.rs:262:14:
+      1 thread 'custom_roles_are_tenant_private_and_presets_read_only' panicked at /home/ryasr/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sqlx-core-0.9.0/src/testing/mod.rs:262:14:
+      1 thread 'startup_guard_rejects_superuser_outside_development' panicked at /home/ryasr/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sqlx-core-0.9.0/src/testing/mod.rs:262:14:
+exit 101
+
+## Negative control 3 (diulang): migration memaksa BYPASSRLS
+$ cargo test -p umkm-infrastructure --test rls
+      1 error: test failed, to rerun pass `-p umkm-infrastructure --test rls`
+      1 test result: FAILED. 3 passed; 6 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 thread 'app_role_is_not_superuser_and_cannot_bypass_rls' panicked at /home/ryasr/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sqlx-core-0.9.0/src/testing/mod.rs:262:14:
+      1 thread 'connection_reuse_does_not_leak_context_under_rls' panicked at crates/infrastructure/tests/rls.rs:329:5:
+      1 thread 'custom_roles_are_tenant_private_and_presets_read_only' panicked at /home/ryasr/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sqlx-core-0.9.0/src/testing/mod.rs:262:14:
+      1 thread 'startup_guard_rejects_superuser_outside_development' panicked at /home/ryasr/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sqlx-core-0.9.0/src/testing/mod.rs:262:14:
+      1 thread 'tenant_a_cannot_read_or_modify_tenant_b' panicked at crates/infrastructure/tests/rls.rs:168:9:
+      1 thread 'without_tenant_context_tenant_tables_are_empty' panicked at /home/ryasr/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sqlx-core-0.9.0/src/testing/mod.rs:262:14:
+exit 101
+
+## Dipulihkan (role kembali NOBYPASSRLS oleh migration berikutnya)
+$ cargo test -p umkm-infrastructure --test rls
+      1 error: test failed, to rerun pass `-p umkm-infrastructure --test rls`
+      1 test result: FAILED. 5 passed; 4 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 thread 'app_role_is_not_superuser_and_cannot_bypass_rls' panicked at /home/ryasr/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sqlx-core-0.9.0/src/testing/mod.rs:262:14:
+      1 thread 'connection_reuse_does_not_leak_context_under_rls' panicked at /home/ryasr/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sqlx-core-0.9.0/src/testing/mod.rs:262:14:
+      1 thread 'startup_guard_rejects_superuser_outside_development' panicked at /home/ryasr/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sqlx-core-0.9.0/src/testing/mod.rs:262:14:
+      1 thread 'tenant_a_cannot_read_or_modify_tenant_b' panicked at /home/ryasr/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sqlx-core-0.9.0/src/testing/mod.rs:262:14:
+exit 101
+## Perbaikan kedua: ALTER ROLE tak bersyarat bentrok antar-migration paralel
+Run di atas: 6 tes gagal 'tuple concurrently updated' — tes sqlx paralel menjalankan migration di DB berbeda pada cluster sama, role bersifat cluster-wide (advisory lock per-database tidak menolong).
+Fix: CREATE ROLE toleran duplicate_object; ALTER ROLE hanya bila atribut salah; skenario 'role sudah ada dengan BYPASSRLS' diuji di binary terpisah (crates/infrastructure/tests/rls_role_repair.rs).
+$ cargo test -p umkm-infrastructure --test rls
+      1 test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+exit 0
+
+$ cargo test -p umkm-infrastructure --test rls_role_repair
+      1 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+exit 0
+
+## Negative control 3 (versi sah): migration tidak memperbaiki atribut role yang sudah ada
+$ cargo test -p umkm-infrastructure --test rls_role_repair
+      1 error: test failed, to rerun pass `-p umkm-infrastructure --test rls_role_repair`
+      1 migration harus mencabut BYPASSRLS
+      1 test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 thread 'migration_repairs_preexisting_role_with_bypassrls' panicked at crates/infrastructure/tests/rls_role_repair.rs:31:5:
+exit 101
+
+## Dipulihkan (role cluster dikembalikan NOBYPASSRLS)
+$ cargo test -p umkm-infrastructure --test rls_role_repair
+      1 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+exit 0
+
+$ cargo test --workspace
+      8 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      2 test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      2 test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test result: ok. 19 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      2 test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      2 test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+exit 0
+
+$ cargo test --workspace
+      8 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      2 test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      2 test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test result: ok. 19 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      2 test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      2 test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+exit 0

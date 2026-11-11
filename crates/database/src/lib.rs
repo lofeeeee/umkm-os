@@ -17,6 +17,8 @@ use umkm_shared::{
     ids::TenantId,
 };
 
+pub mod app_role;
+
 /// Nama crate, dipakai untuk smoke test wiring workspace.
 pub const CRATE: &str = "umkm-database";
 

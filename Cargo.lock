@@ -1864,6 +1864,7 @@ dependencies = [
  "sqlx",
  "thiserror",
  "tokio",
+ "tracing",
  "umkm-shared",
  "uuid",
 ]

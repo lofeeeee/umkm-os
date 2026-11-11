@@ -16,7 +16,8 @@ x-app: &app
   logging: *logging
   environment: &app-env
     UMKM_ENV: ${UMKM_ENV:?UMKM_ENV wajib}
-    UMKM_DATABASE_URL: postgres://${POSTGRES_USER:?}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD wajib}@postgres:5432/${POSTGRES_DB:?}
+    # Role aplikasi tanpa BYPASSRLS (P1-7); dibuat ops/postgres/init/10-app-user.sh
+    UMKM_DATABASE_URL: postgres://umkm_app:${APP_DB_PASSWORD:?APP_DB_PASSWORD wajib}@postgres:5432/${POSTGRES_DB:?}
     UMKM_REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD wajib}@redis:6379/0
     RUST_LOG: ${RUST_LOG:-info}
     # Satu sumber kebenaran dengan Caddy (ADR-0001).
@@ -57,6 +58,10 @@ services:
     build: { context: ., target: api }
     command: ["migrate"]
     restart: "no"
+    environment:
+      <<: *app-env
+      # Migration memakai owner skema (bukan role aplikasi).
+      UMKM_DATABASE_URL: postgres://${POSTGRES_USER:?}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD wajib}@postgres:5432/${POSTGRES_DB:?}
     networks: [backend]
     depends_on:
       postgres: { condition: service_healthy }
@@ -106,6 +111,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:?}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
       POSTGRES_DB: ${POSTGRES_DB:?}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:?}
     # Baseline PRD.md §9.4 (harus diuji, P8-3)
     command:
       - postgres
@@ -127,6 +133,7 @@ services:
       - checkpoint_timeout=15min
     volumes:
       - pg_data:/var/lib/postgresql/data
+      - ./ops/postgres/init:/docker-entrypoint-initdb.d:ro
     networks: [backend]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]

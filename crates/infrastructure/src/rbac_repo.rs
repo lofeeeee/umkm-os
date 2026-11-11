@@ -55,25 +55,20 @@ pub struct MembershipSummary {
     pub role_name: String,
 }
 
-/// Tenant tempat user menjadi anggota aktif (AUTH-008). Tabel membership dibaca per user;
-/// pada P1-7 dibuka lewat fungsi SECURITY DEFINER yang terbatas pada `user_id` sesi.
+/// Tenant tempat user menjadi anggota aktif (AUTH-008). Lintas tenant, sehingga lewat
+/// fungsi SECURITY DEFINER `app.user_memberships` (RLS P1-7) yang dibatasi `user_id` sesi.
 pub async fn list_memberships(
     pool: &PgPool,
     user_id: Uuid,
 ) -> Result<Vec<MembershipSummary>, sqlx::Error> {
-    let rows = sqlx::query(
-        "SELECT t.id, t.name, t.slug, r.name AS role_name
-         FROM tenant_memberships m JOIN tenants t ON t.id = m.tenant_id JOIN roles r ON r.id = m.role_id
-         WHERE m.user_id = $1 AND m.status = 'active' AND t.status = 'active'
-         ORDER BY t.name, t.id",
-    )
-    .bind(user_id)
-    .fetch_all(pool)
-    .await?;
+    let rows = sqlx::query("SELECT tenant_id, name, slug, role_name FROM app.user_memberships($1)")
+        .bind(user_id)
+        .fetch_all(pool)
+        .await?;
     Ok(rows
         .into_iter()
         .map(|r| MembershipSummary {
-            tenant_id: r.get("id"),
+            tenant_id: r.get("tenant_id"),
             name: r.get("name"),
             slug: r.get("slug"),
             role_name: r.get("role_name"),

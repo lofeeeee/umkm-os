@@ -66,6 +66,12 @@ pub async fn serve() -> Result<(), BoxError> {
     let secrets = Secrets::from_env()?;
 
     let pool = umkm_database::connect_lazy(&secrets.database_url, &settings.database)?;
+    let role = umkm_database::app_role::ensure_rls_enforced(
+        &pool,
+        settings.environment == Environment::Development,
+    )
+    .await?;
+    tracing::info!(db_role = %role.name, rls_enforced = role.rls_enforced(), "database role verified");
     let redis = RedisClient::open(&secrets.redis_url)?;
     let metrics = Arc::new(Metrics::new());
     let limiter = RateLimiter::new(

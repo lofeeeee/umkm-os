@@ -1,0 +1,22 @@
+ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE SELECT, INSERT, UPDATE, DELETE ON TABLES FROM umkm_app_role;
+DROP FUNCTION IF EXISTS app.user_memberships(uuid);
+DROP POLICY IF EXISTS role_permissions_write ON role_permissions;
+DROP POLICY IF EXISTS role_permissions_read ON role_permissions;
+DROP POLICY IF EXISTS roles_write ON roles;
+DROP POLICY IF EXISTS roles_read ON roles;
+DROP POLICY IF EXISTS tenant_isolation ON business_profiles;
+DROP POLICY IF EXISTS tenant_isolation ON invitations;
+DROP POLICY IF EXISTS tenant_isolation ON tenant_domains;
+DROP POLICY IF EXISTS tenant_isolation ON tenant_memberships;
+DROP POLICY IF EXISTS tenant_isolation ON tenants;
+ALTER TABLE role_permissions NO FORCE ROW LEVEL SECURITY, DISABLE ROW LEVEL SECURITY;
+ALTER TABLE roles NO FORCE ROW LEVEL SECURITY, DISABLE ROW LEVEL SECURITY;
+ALTER TABLE business_profiles NO FORCE ROW LEVEL SECURITY, DISABLE ROW LEVEL SECURITY;
+ALTER TABLE invitations NO FORCE ROW LEVEL SECURITY, DISABLE ROW LEVEL SECURITY;
+ALTER TABLE tenant_domains NO FORCE ROW LEVEL SECURITY, DISABLE ROW LEVEL SECURITY;
+ALTER TABLE tenant_memberships NO FORCE ROW LEVEL SECURITY, DISABLE ROW LEVEL SECURITY;
+ALTER TABLE tenants NO FORCE ROW LEVEL SECURITY, DISABLE ROW LEVEL SECURITY;
+REVOKE ALL ON ALL TABLES IN SCHEMA public FROM umkm_app_role;
+REVOKE ALL ON ALL FUNCTIONS IN SCHEMA app FROM umkm_app_role;
+REVOKE USAGE ON SCHEMA public, app FROM umkm_app_role;
+-- Role cluster-level dibiarkan (mungkin dipakai database lain di cluster yang sama).
