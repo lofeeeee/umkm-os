@@ -2,7 +2,10 @@
 //!
 //! Batas lapisan: `docs/decisions/0013-batas-crate-workspace.md`.
 
+pub mod auth;
+pub mod auth_repo;
 pub mod metrics;
+pub mod rate_limit;
 pub mod redis;
 
 /// Nama crate, dipakai untuk smoke test wiring workspace.

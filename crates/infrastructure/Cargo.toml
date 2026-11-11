@@ -16,6 +16,13 @@ umkm-database.workspace = true
 thiserror.workspace = true
 redis.workspace = true
 prometheus-client.workspace = true
+argon2.workspace = true
+sha2.workspace = true
+getrandom.workspace = true
+base64.workspace = true
+sqlx.workspace = true
+uuid.workspace = true
 
 [dev-dependencies]
-uuid.workspace = true
+tokio.workspace = true
+umkm-database.workspace = true

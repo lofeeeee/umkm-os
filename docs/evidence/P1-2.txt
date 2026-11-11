@@ -1,0 +1,257 @@
+# P1-2 — Argon2id, token hash, rate limit, session revoke
+date: 2026-11-11T14:25:40Z
+
+Files: crates/domain/src/auth.rs, crates/infrastructure/src/{auth,auth_repo,rate_limit}.rs, crates/infrastructure/tests/auth_security.rs, scripts/dev-db.sh (+Redis), CI test job (+Redis)
+BUILD_PLAN menyebut tests/security/auth.rs; tes integrasi Cargo berada di crates/infrastructure/tests/auth_security.rs.
+Lingkup: primitif domain + adapter + repository. Endpoint HTTP register/login/logout/reset + use case: P1-3 (transport sesi cookie vs bearer bergantung ADR-0014).
+Kebijakan (dapat ditimpa konfigurasi): password 8..128 karakter (NIST SP 800-63B); sesi 14 hari; reset 30 menit; verifikasi email 24 jam; undangan 7 hari.
+Rate limit: login 5/15m per email + 30/15m per IP; reset 3/jam per email + 10/jam per IP; register 5/jam per IP; verifikasi 5/jam per email. Redis tidak tersedia -> error (pemanggil wajib fail-closed).
+
+$ cargo fmt --all --check
+exit 0
+
+$ cargo clippy --workspace --all-targets -- -D warnings
+exit 0
+
+$ cargo test -p umkm-domain auth
+      1 test auth::tests::email_debug_hides_local_part ... ok
+      1 test auth::tests::email_parse_and_canonical ... ok
+      1 test auth::tests::password_policy ... ok
+      1 test auth::tests::rate_rule_names_are_redis_safe_and_unique ... ok
+      1 test auth::tests::reset_expiry_is_short ... ok
+      1 test auth::tests::token_hash_debug_redacted ... ok
+      1 test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; 
+exit 0
+
+$ cargo test -p umkm-infrastructure --lib auth
+      1 test auth::tests::hash_verify_roundtrip_and_unique_salt ... ok
+      1 test auth::tests::old_hash_still_verifies_but_needs_rehash_after_param_upgrade ... ok
+      1 test auth::tests::owasp_defaults ... ok
+      1 test auth::tests::subject_digest_is_hex_sha256 ... ok
+      1 test auth::tests::tokens_are_random_url_safe_and_only_hash_is_derived ... ok
+      1 test auth::tests::verify_rejects_non_argon2id_and_garbage ... ok
+      1 test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 13 filtered out; 
+exit 0
+
+$ cargo test -p umkm-infrastructure --test auth_security
+      1 test concurrent_consumption_succeeds_exactly_once ... ok
+      1 test expired_session_and_suspended_user_are_rejected ... ok
+      1 test login_lookup_case_insensitive_and_password_stored_hashed ... ok
+      1 test rate_limit_blocks_after_limit_and_is_per_subject ... ok
+      1 test rate_limit_concurrent_attempts_never_exceed_limit ... ok
+      1 test rate_limit_redis_unavailable_returns_error_for_fail_closed ... ok
+      1 test rate_limit_window_expires_and_key_hides_subject ... ok
+      1 test register_duplicate_email_case_insensitive_is_rejected ... ok
+      1 test reset_token_is_one_time_purpose_bound_and_expires ... ok
+      1 test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test revoke_all_except_current_and_object_level_scoping ... ok
+      1 test session_lifecycle_and_token_never_stored_plaintext ... ok
+exit 0
+
+$ cargo test --workspace
+      1 test auth::tests::email_debug_hides_local_part ... ok
+      1 test auth::tests::email_parse_and_canonical ... ok
+      1 test auth::tests::hash_verify_roundtrip_and_unique_salt ... ok
+      1 test auth::tests::old_hash_still_verifies_but_needs_rehash_after_param_upgrade ... ok
+      1 test auth::tests::owasp_defaults ... ok
+      1 test auth::tests::password_policy ... ok
+      1 test auth::tests::rate_rule_names_are_redis_safe_and_unique ... ok
+      1 test auth::tests::reset_expiry_is_short ... ok
+      1 test auth::tests::subject_digest_is_hex_sha256 ... ok
+      1 test auth::tests::token_hash_debug_redacted ... ok
+      1 test auth::tests::tokens_are_random_url_safe_and_only_hash_is_derived ... ok
+      1 test auth::tests::verify_rejects_non_argon2id_and_garbage ... ok
+      1 test client_supplied_request_id_is_ignored ... ok
+      1 test concurrent_consumption_succeeds_exactly_once ... ok
+      1 test concurrent_tenants_each_see_only_their_context ... ok
+      1 test config::tests::environment_parse_is_strict ... ok
+      1 test config::tests::missing_or_empty_secret_is_error_without_value ... ok
+      1 test config::tests::parses_valid_config ... ok
+      1 test config::tests::production_rejects_root_domain_placeholder ... ok
+      1 test config::tests::rejects_unknown_field_such_as_inline_secret ... ok
+      1 test config::tests::rejects_zero_values ... ok
+      1 test config::tests::secrets_debug_is_redacted ... ok
+      1 test config::tests::staging_allows_root_domain_placeholder ... ok
+      1 test config_files_contain_no_secrets ... ok
+      1 test context_does_not_leak_on_connection_reuse ... ok
+      1 test development_and_staging_load ... ok
+      1 test domain_hostname_unique_lowercase_and_custom_needs_verification ... ok
+      1 test every_documented_path_is_routed ... ok
+      1 test expired_session_and_suspended_user_are_rejected ... ok
+      1 test healthz_returns_success_envelope_with_request_id ... ok
+      1 test http::tests::error_envelope_matches_prd_shape ... ok
+      1 test http::tests::request_id_format ... ok
+      1 test http::tests::status_mapping_roundtrips_for_every_code ... ok
+      1 test http::tests::success_envelope_matches_prd_shape ... ok
+      1 test http_requests_recorded_by_route_template ... ok
+      1 test identity_migration_reversible ... ok
+      1 test invitations_hashed_expiring_single_use_and_tenant_scoped_role ... ok
+      1 test login_lookup_case_insensitive_and_password_stored_hashed ... ok
+      1 test membership_unique_per_user_tenant_and_role_must_match_tenant ... ok
+      1 test metrics::tests::all_16_required_metrics_exposed_after_observation ... ok
+      1 test metrics::tests::http_observation_counts_and_errors ... ok
+      1 test metrics::tests::output_is_valid_openmetrics_terminated ... ok
+      1 test metrics::tests::unlabeled_metrics_exposed_immediately ... ok
+      1 test metrics_not_exposed_on_public_router ... ok
+      1 test migrations_are_reversible ... ok
+      1 test no_context_means_null_tenant ... ok
+      1 test on_scrape_hook_runs_before_encode ... ok
+      1 test oversized_body_is_413_envelope ... ok
+      1 test panic_is_500_envelope_without_panic_message ... ok
+      1 test production_uses_d01_root_domain ... ok
+      1 test rate_limit_blocks_after_limit_and_is_per_subject ... ok
+      1 test rate_limit_concurrent_attempts_never_exceed_limit ... ok
+      1 test rate_limit_redis_unavailable_returns_error_for_fail_closed ... ok
+      1 test rate_limit_window_expires_and_key_hides_subject ... ok
+      1 test readyz_503_without_leaking_internal_error ... ok
+      1 test readyz_ok_when_all_checks_pass ... ok
+      1 test real_responses_match_schema ... ok
+      1 test redis::tests::config_prefixes_are_valid ... ok
+      1 test redis::tests::environments_do_not_collide ... ok
+      1 test redis::tests::no_collisions_across_tenants_resources_ids ... ok
+      1 test redis::tests::platform_key_format ... ok
+      1 test redis::tests::rejects_invalid_prefix ... ok
+      1 test redis::tests::rejects_segments_that_could_break_namespace ... ok
+      1 test redis::tests::tenant_key_format_matches_prd ... ok
+      1 test redis::tests::tenant_scan_pattern_never_matches_other_tenant_keys ... ok
+      1 test register_duplicate_email_case_insensitive_is_rejected ... ok
+      1 test reset_token_is_one_time_purpose_bound_and_expires ... ok
+      9 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      2 test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test result: ok. 19 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      3 test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test revoke_all_except_current_and_object_level_scoping ... ok
+      1 test roles_system_iff_global_and_unique_name_per_scope ... ok
+      1 test security_headers_present_on_success_and_error ... ok
+      1 test seeds_33_permissions_and_reserved_subdomains ... ok
+      1 test server_errors_counted_including_panics ... ok
+      1 test session_lifecycle_and_token_never_stored_plaintext ... ok
+      1 test sessions_tokens_consents_mfa_constraints ... ok
+      1 test slow_handler_times_out_with_408_envelope ... ok
+      1 test snapshot_matches_code ... ok
+      1 test tenant_closed_status_requires_closed_at ... ok
+      1 test tenant_slug_format_unique_and_not_reserved ... ok
+      1 test tenant_tx_sets_context ... ok
+      5 test tests::crate_name ... ok
+      1 test tests::embedded_migrations_match_directory ... ok
+      1 test tests::migrations_are_embedded_and_reversible ... ok
+      1 test unknown_route_is_404_envelope ... ok
+      1 test updated_at_trigger_advances ... ok
+      1 test users_email_unique_case_insensitive_and_hash_must_be_argon2id ... ok
+      1 test wrong_method_is_405_envelope ... ok
+exit 0
+
+$ scripts/check-domain-boundary.sh
+      1 OK: umkm-domain bebas dari axum/sqlx/reqwest/tokio/hyper/tower/redis
+exit 0
+
+$ cargo deny check
+      1 advisories ok, bans ok, licenses ok, sources ok
+exit 0
+
+## Negative control: sesi yang dicabut tetap valid (hapus cek revoked_at)
+$ cargo test -p umkm-infrastructure --test auth_security
+      1 error: test failed, to rerun pass `-p umkm-infrastructure --test auth_security`
+      1 sesi dicabut masih valid
+      1 test concurrent_consumption_succeeds_exactly_once ... ok
+      1 test expired_session_and_suspended_user_are_rejected ... ok
+      1 test login_lookup_case_insensitive_and_password_stored_hashed ... ok
+      1 test rate_limit_blocks_after_limit_and_is_per_subject ... ok
+      1 test rate_limit_concurrent_attempts_never_exceed_limit ... ok
+      1 test rate_limit_redis_unavailable_returns_error_for_fail_closed ... ok
+      1 test rate_limit_window_expires_and_key_hides_subject ... ok
+      1 test register_duplicate_email_case_insensitive_is_rejected ... ok
+      1 test reset_token_is_one_time_purpose_bound_and_expires ... ok
+      1 test result: FAILED. 9 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test revoke_all_except_current_and_object_level_scoping ... FAILED
+      1 test session_lifecycle_and_token_never_stored_plaintext ... FAILED
+      1 thread 'revoke_all_except_current_and_object_level_scoping' panicked at crates/infrastructure/tests/auth_security.rs:188:5:
+      1 thread 'session_lifecycle_and_token_never_stored_plaintext' panicked at crates/infrastructure/tests/auth_security.rs:96:5:
+exit 101
+
+## Negative control: token reset bisa dipakai ulang (hapus cek consumed_at)
+$ cargo test -p umkm-infrastructure --test auth_security
+      1   left: 20
+      1  right: 1
+      1 assertion `left == right` failed: token sekali pakai dipakai 20 kali
+      1 dipakai dua kali
+      1 error: test failed, to rerun pass `-p umkm-infrastructure --test auth_security`
+      1 test concurrent_consumption_succeeds_exactly_once ... FAILED
+      1 test expired_session_and_suspended_user_are_rejected ... ok
+      1 test login_lookup_case_insensitive_and_password_stored_hashed ... ok
+      1 test rate_limit_blocks_after_limit_and_is_per_subject ... ok
+      1 test rate_limit_concurrent_attempts_never_exceed_limit ... ok
+      1 test rate_limit_redis_unavailable_returns_error_for_fail_closed ... ok
+      1 test rate_limit_window_expires_and_key_hides_subject ... ok
+      1 test register_duplicate_email_case_insensitive_is_rejected ... ok
+      1 test reset_token_is_one_time_purpose_bound_and_expires ... FAILED
+      1 test result: FAILED. 9 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test revoke_all_except_current_and_object_level_scoping ... ok
+      1 test session_lifecycle_and_token_never_stored_plaintext ... ok
+      1 thread 'concurrent_consumption_succeeds_exactly_once' panicked at crates/infrastructure/tests/auth_security.rs:315:5:
+      1 thread 'reset_token_is_one_time_purpose_bound_and_expires' panicked at crates/infrastructure/tests/auth_security.rs:237:5:
+exit 101
+
+## Negative control: revoke_session tanpa scoping user_id
+$ cargo test -p umkm-infrastructure --test auth_security
+      1 error: test failed, to rerun pass `-p umkm-infrastructure --test auth_security`
+      1 test concurrent_consumption_succeeds_exactly_once ... ok
+      1 test expired_session_and_suspended_user_are_rejected ... ok
+      1 test login_lookup_case_insensitive_and_password_stored_hashed ... ok
+      1 test rate_limit_blocks_after_limit_and_is_per_subject ... ok
+      1 test rate_limit_concurrent_attempts_never_exceed_limit ... ok
+      1 test rate_limit_redis_unavailable_returns_error_for_fail_closed ... ok
+      1 test rate_limit_window_expires_and_key_hides_subject ... ok
+      1 test register_duplicate_email_case_insensitive_is_rejected ... ok
+      1 test reset_token_is_one_time_purpose_bound_and_expires ... ok
+      1 test result: FAILED. 10 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test revoke_all_except_current_and_object_level_scoping ... FAILED
+      1 test session_lifecycle_and_token_never_stored_plaintext ... ok
+      1 thread 'revoke_all_except_current_and_object_level_scoping' panicked at crates/infrastructure/tests/auth_security.rs:167:5:
+exit 101
+
+## Negative control: rate limit off-by-one (count < limit)
+$ cargo test -p umkm-infrastructure --test auth_security
+      1   left: 9
+      1  right: 10
+      1 error: test failed, to rerun pass `-p umkm-infrastructure --test auth_security`
+      1 percobaan 5 harus diizinkan
+      1 test concurrent_consumption_succeeds_exactly_once ... ok
+      1 test expired_session_and_suspended_user_are_rejected ... ok
+      1 test login_lookup_case_insensitive_and_password_stored_hashed ... ok
+      1 test rate_limit_blocks_after_limit_and_is_per_subject ... FAILED
+      1 test rate_limit_concurrent_attempts_never_exceed_limit ... FAILED
+      1 test rate_limit_redis_unavailable_returns_error_for_fail_closed ... ok
+      1 test rate_limit_window_expires_and_key_hides_subject ... FAILED
+      1 test register_duplicate_email_case_insensitive_is_rejected ... ok
+      1 test reset_token_is_one_time_purpose_bound_and_expires ... ok
+      1 test result: FAILED. 8 passed; 3 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test revoke_all_except_current_and_object_level_scoping ... ok
+      1 test session_lifecycle_and_token_never_stored_plaintext ... ok
+      1 thread 'rate_limit_blocks_after_limit_and_is_per_subject' panicked at crates/infrastructure/tests/auth_security.rs:349:9:
+      1 thread 'rate_limit_concurrent_attempts_never_exceed_limit' panicked at crates/infrastructure/tests/auth_security.rs:409:5:
+      1 thread 'rate_limit_window_expires_and_key_hides_subject' panicked at crates/infrastructure/tests/auth_security.rs:379:5:
+exit 101
+
+## Dipulihkan
+$ cargo test -p umkm-infrastructure --test auth_security
+      1 test concurrent_consumption_succeeds_exactly_once ... ok
+      1 test expired_session_and_suspended_user_are_rejected ... ok
+      1 test login_lookup_case_insensitive_and_password_stored_hashed ... ok
+      1 test rate_limit_blocks_after_limit_and_is_per_subject ... ok
+      1 test rate_limit_concurrent_attempts_never_exceed_limit ... ok
+      1 test rate_limit_redis_unavailable_returns_error_for_fail_closed ... ok
+      1 test rate_limit_window_expires_and_key_hides_subject ... ok
+      1 test register_duplicate_email_case_insensitive_is_rejected ... ok
+      1 test reset_token_is_one_time_purpose_bound_and_expires ... ok
+      1 test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; 
+      1 test revoke_all_except_current_and_object_level_scoping ... ok
+      1 test session_lifecycle_and_token_never_stored_plaintext ... ok
+exit 0
+

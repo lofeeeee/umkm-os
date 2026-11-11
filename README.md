@@ -9,7 +9,7 @@ Gate A `DISETUJUI` (ADR-0002, ADR-0013). Selesai: P0-0..P0-6, P0-8..P0-10; P0-7 
 ## Perintah
 
 ```bash
-eval "$(scripts/dev-db.sh up)"         # Postgres lokal (port 55432) -> DATABASE_URL; wajib untuk tes DB
+eval "$(scripts/dev-db.sh up)"         # Postgres (55432) + Redis (56379) lokal -> DATABASE_URL, REDIS_URL; wajib untuk tes
 sqlx migrate run --source migrations
 cargo fmt --all --check && cargo clippy --workspace --all-targets -- -D warnings && cargo test --workspace
 cargo deny check                   # advisory + lisensi dependency (PRD.md §7.1)

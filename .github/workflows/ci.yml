@@ -36,7 +36,7 @@ jobs:
       - run: scripts/check-ci-needs.sh
 
   test:
-    name: unit + integration (PostgreSQL)
+    name: unit + integration (PostgreSQL + Redis)
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     services:
@@ -50,8 +50,14 @@ jobs:
         options: >-
           --health-cmd "pg_isready -U umkm_owner -d umkm_ci"
           --health-interval 5s --health-timeout 3s --health-retries 20
+      redis:
+        image: redis:7.4-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 3s --health-retries 20
     env:
       DATABASE_URL: postgres://umkm_owner:ci_only_not_secret@localhost:5432/umkm_ci
+      REDIS_URL: redis://localhost:6379/0
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

@@ -147,6 +147,11 @@ impl RedisClient {
             .map_err(|_| RedisError::InvalidUrl)
     }
 
+    /// Koneksi multiplexed dengan reconnect otomatis; dibuat sekali saat startup.
+    pub async fn connection_manager(&self) -> Result<::redis::aio::ConnectionManager, RedisError> {
+        Ok(::redis::aio::ConnectionManager::new(self.0.clone()).await?)
+    }
+
     pub async fn ping(&self) -> Result<(), RedisError> {
         let mut conn = self.0.get_multiplexed_async_connection().await?;
         let pong: String = ::redis::cmd("PING").query_async(&mut conn).await?;
