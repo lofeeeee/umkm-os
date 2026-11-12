@@ -48,17 +48,17 @@ Perintah gate P2: `cargo fmt --check && cargo clippy --workspace -- -D warnings 
 |---|---|---|---|---|
 | TC-WEB-001 | AC-WEB-001 | Unit+Integration+Contract | ditetapkan saat task | Planned |
 | TC-WEB-002 | AC-WEB-002 | Unit+Integration+Contract | ditetapkan saat task | Planned |
-| TC-WEB-003 | AC-WEB-003 | Unit+Integration+Contract | ditetapkan saat task | Planned |
-| TC-WEB-004 | AC-WEB-004 | Unit+Integration+Contract | ditetapkan saat task | Planned |
-| TC-WEB-005 | AC-WEB-005 | Unit+Integration+Contract | ditetapkan saat task | Planned |
-| TC-WEB-006 | AC-WEB-006 | Unit+Integration+Contract | ditetapkan saat task | Planned |
+| TC-WEB-003 | AC-WEB-003 | Unit+Integration+Contract | `crates/infrastructure/tests/website_schema.rs` | Verified |
+| TC-WEB-004 | AC-WEB-004 | Unit+Integration+Contract | `crates/domain/src/website/schema.rs` | Partial (validator; HTTP P2-3) |
+| TC-WEB-005 | AC-WEB-005 | Unit+Integration+Contract | `crates/domain/src/website/schema.rs` | Partial (validator; HTTP 400 P2-3) |
+| TC-WEB-006 | AC-WEB-006 | Unit+Integration+Contract | `crates/domain/tests/website_fuzz.rs` | Verified |
 | TC-WEB-007 | AC-WEB-007 | Unit+Integration+Contract | ditetapkan saat task | Planned |
 | TC-WEB-008 | AC-WEB-008 | Unit+Integration+Contract | ditetapkan saat task | Planned |
 | TC-WEB-009 | AC-WEB-009 | Unit+Integration+Contract | ditetapkan saat task | Planned |
 | TC-WEB-010 | AC-WEB-010 | Unit+Integration+Contract | ditetapkan saat task | Planned |
 | TC-WEB-011 | AC-WEB-011 | Unit+Integration+Contract | ditetapkan saat task | Planned |
 | TC-WEB-012 | AC-WEB-012 | Unit+Integration+Contract | ditetapkan saat task | Planned |
-| TC-WEB-013 | AC-WEB-013 | Unit+Integration+Contract | ditetapkan saat task | Planned |
+| TC-WEB-013 | AC-WEB-013 | Unit+Integration+Contract | `crates/infrastructure/tests/website_schema.rs` | Verified |
 | TC-WEB-014 | AC-WEB-014 | Unit+Integration+Contract | ditetapkan saat task | Planned |
 | TC-WEB-015 | AC-WEB-015 | Unit+Integration+Contract | ditetapkan saat task | Planned |
 | TC-WEB-016 | AC-WEB-016 | Unit+Integration+Contract | ditetapkan saat task | Planned |

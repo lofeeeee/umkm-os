@@ -44,3 +44,5 @@ Aturan kontrak:
 ## More Information
 
 Status di `OPEN_DECISIONS.md`: ADR-0014 `DISETUJUI` 2026-11-12. Terkait ADR-0001, ADR-0007, ADR-0015. Append-only.
+
+Klarifikasi implementasi (P2-1, 2026-11-12, tidak mengubah keputusan): versi bersifat per halaman (`PRD.md §5.4` `website_page_versions.page_id`), sehingga pointer butir 3 disimpan di `website_pages.published_version_id` (composite FK ke versi halaman + tenant yang sama).

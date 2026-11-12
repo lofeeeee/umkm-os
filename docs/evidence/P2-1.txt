@@ -1,0 +1,44 @@
+P2-1 — Schema + tabel website (PRD.md §4.3, §5.4; ADR-0007, ADR-0014)
+Tanggal: 2026-11-12
+
+Artefak
+- migrations/0010_website.{up,down}.sql   (BUILD_PLAN menyebut 0007; nomor bergeser karena P1 memakai 0001–0009)
+  website_templates (global, berversi, hanya-baca role aplikasi), tenant_websites (1/tenant),
+  website_pages (draft + pointer published_version_id), website_page_versions (immutable).
+  RLS ENABLE+FORCE pada 3 tabel tenant; composite FK (tenant_id, page_id, id) untuk pointer.
+  Seed: modern_store v1, warung_hangat v1.
+- crates/domain/src/website/schema.rs     validator tertutup ADR-0007 (11 tipe section, theme
+  preset, URL aman, asset:<uuid>, batas panjang/jumlah/ukuran 256 KiB), error ber-path.
+- crates/domain/tests/website_fuzz.rs     2 × 10.000 input (acak murni + mutasi dokumen valid).
+- crates/infrastructure/tests/website_schema.rs  6 tes sebagai umkm_app_role.
+- crates/infrastructure/tests/rls.rs      TENANT_TABLES + 3 tabel baru.
+- Cargo.toml: sqlx feature `json` (dependency-review diperbarui). cargo deny: ok.
+
+Perbaikan sampingan (bug laten, bukan dari P2-1)
+- Cluster Postgres BARU + sqlx::test paralel: migration 0007 `CREATE ROLE umkm_app_role` serentak
+  -> 23505 unique_violation (hanya duplicate_object yang ditangkap). 7 tes rls gagal pada run
+  pertama container baru. CI tidak terkena (sqlx migrate run sebelum cargo test). Perbaikan tanpa
+  mengubah checksum migration yang sudah diterapkan: scripts/dev-db.sh membuat role sekali saat up.
+  Diverifikasi: down -> up -> tes rls + website_schema lulus pada run pertama.
+
+Hasil
+- cargo fmt --all; cargo clippy --workspace --all-targets --locked -D warnings: bersih
+- cargo test --workspace --locked: semua lulus (domain 28 unit + 2 fuzz; website_schema 6; rls 9)
+- sqlx migrate run -> revert ke 0 -> run: exit 0 (10/10 migration)
+- python3 scripts/check-rtm.py: OK — 73 FR, 83 AC, 83 TC
+
+Cakupan AC
+- AC-WEB-003 Verified: template v2 baru tidak memindahkan website yang memakai v1.
+- AC-WEB-006 Verified: 20.000 input tanpa panic; dokumen diterima selalu aman & idempoten.
+- AC-WEB-013 Verified: UPDATE/DELETE versi oleh role aplikasi -> 42501.
+- AC-WEB-004/005 Partial: validator lengkap; respons HTTP 400 + "tidak ada yang tersimpan" di P2-3.
+- Tambahan: seed template lolos validator Rust; template read-only (42501); pointer ke versi
+  halaman/tenant lain -> 23503; tenant B 0 baris & INSERT tenant_id A -> 42501 (WITH CHECK).
+
+Negative control (implementasi dilemahkan -> tes gagal, lalu dipulihkan)
+- NC1 hapus REVOKE UPDATE,DELETE versi        -> published_versions_are_immutable_for_the_app_role GAGAL
+- NC2 hapus FORCE RLS website_pages           -> every_tenant_table_has_forced_rls GAGAL
+- NC3 pointer FK non-komposit                 -> pointer_cannot_target_another_page_or_tenant GAGAL
+- NC4 is_safe_href menerima javascript:       -> rejects_dangerous_urls GAGAL
+- NC5 field tak dikenal tidak dilaporkan      -> rejects_unknown_fields_everywhere GAGAL
+Semua file dipulihkan (git status hanya berisi perubahan P2-1).
