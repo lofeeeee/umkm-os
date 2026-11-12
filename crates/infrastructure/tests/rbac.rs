@@ -1,4 +1,4 @@
-//! P1-5: matriks 6 role preset × 33 permission (keputusan produk 2026-11-11) dan
+//! P1-5: matriks 6 role preset × 37 permission (33 P1-5 + 4 Gate D 2026-11-12) (keputusan produk 2026-11-11) dan
 //! aturan membership/tenant aktif, di Postgres nyata.
 
 use std::collections::BTreeSet;
@@ -27,6 +27,7 @@ fn expected(role: &str) -> BTreeSet<&'static str> {
                     "ai_config.manage",
                     "ai_provider.manage",
                     "audit.read",
+                    "payments.refund",
                 ]
                 .contains(p)
             })
@@ -41,6 +42,7 @@ fn expected(role: &str) -> BTreeSet<&'static str> {
             "conversations.takeover",
             "orders.read",
             "products.read",
+            "customers.read",
         ]
         .into(),
         "Catalog Manager" => [
@@ -61,6 +63,7 @@ fn expected(role: &str) -> BTreeSet<&'static str> {
             "orders.read",
             "tickets.read",
             "analytics.read",
+            "customers.read",
         ]
         .into(),
         "Admin" => ["tenant.read"].into(),
@@ -108,7 +111,7 @@ async fn member(pool: &PgPool, t: TenantId, u: Uuid, role: &str) {
 }
 
 #[sqlx::test(migrator = "MIGRATOR")]
-async fn six_roles_by_33_permissions_matrix(pool: PgPool) {
+async fn six_roles_by_37_permissions_matrix(pool: PgPool) {
     let t = tenant(&pool, "toko-a").await;
     let mut checked = 0;
     for role in ROLES {
@@ -127,7 +130,7 @@ async fn six_roles_by_33_permissions_matrix(pool: PgPool) {
             checked += 1;
         }
     }
-    assert_eq!(checked, 6 * 33);
+    assert_eq!(checked, 6 * 37);
 }
 
 #[sqlx::test(migrator = "MIGRATOR")]

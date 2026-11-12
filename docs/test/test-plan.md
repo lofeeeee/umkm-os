@@ -86,12 +86,12 @@ Perintah gate P2: `cargo fmt --check && cargo clippy --workspace -- -D warnings 
 | TC-INV-003 | AC-INV-003 | Unit+Integration | `apps/api/tests/inventory_http.rs` | Verified |
 | TC-INV-004 | AC-INV-004 | Unit+Integration | `apps/api/tests/inventory_http.rs` | Verified |
 | TC-INV-005 | AC-INV-005 | Unit+Integration | `apps/api/tests/inventory_http.rs` | Verified |
-| TC-CRM-001 | AC-CRM-001 | lihat §2 | ditetapkan saat task | Planned |
-| TC-CRM-002 | AC-CRM-002 | lihat §2 | ditetapkan saat task | Planned |
+| TC-CRM-001 | AC-CRM-001 | Integration+Security | `apps/api/tests/crm_http.rs` | Verified |
+| TC-CRM-002 | AC-CRM-002 | Integration+Security | `apps/api/tests/crm_http.rs` | Verified |
 | TC-CRM-003 | AC-CRM-003 | lihat §2 | ditetapkan saat task | Planned |
-| TC-CRM-004 | AC-CRM-004 | lihat §2 | ditetapkan saat task | Planned |
-| TC-CRM-005 | AC-CRM-005 | lihat §2 | ditetapkan saat task | Planned |
-| TC-CRM-006 | AC-CRM-006 | lihat §2 | ditetapkan saat task | Planned |
+| TC-CRM-004 | AC-CRM-004 | Integration+Security | `apps/api/tests/crm_http.rs` | Verified |
+| TC-CRM-005 | AC-CRM-005 | Integration+Security | `apps/api/tests/crm_http.rs` | Verified |
+| TC-CRM-006 | AC-CRM-006 | Integration+Security | `apps/api/tests/crm_http.rs` | Verified |
 | TC-ORD-001 | AC-ORD-001 | lihat §2 | ditetapkan saat task | Planned |
 | TC-ORD-002 | AC-ORD-002 | lihat §2 | ditetapkan saat task | Planned |
 | TC-ORD-003 | AC-ORD-003 | lihat §2 | ditetapkan saat task | Planned |

@@ -194,6 +194,9 @@ pub async fn process_once(
                 handle_email_verification(pool, sender, cfg, &ev).await
             }
             events::TENANT_GUARD_PROBE => handle_tenant_guard_probe(pool, &ev).await,
+            events::CUSTOMER_EMAIL_VERIFICATION_REQUESTED => {
+                handle_customer_verification(pool, sender, cfg, &ev).await
+            }
             // Kanal notifikasi staf (in-app/email) menyusul (NTF, D-08); sampai itu dicatat.
             events::INVENTORY_LOW_STOCK => {
                 tracing::info!(event_id = %ev.id, tenant_id = ?ev.tenant_id, "low-stock event (log-only)");
@@ -291,6 +294,51 @@ async fn handle_email_verification(
     }
     match sender
         .send(&verification_email(&email, &cfg.verify_url_base, &token))
+        .await
+    {
+        Ok(()) => Outcome::Done,
+        Err(SendError { retryable, class }) => Outcome::Fail(class, retryable),
+    }
+}
+
+/// Verifikasi akun customer (ADR-0005): token dibuat di tenant context event; tautan ke host toko.
+async fn handle_customer_verification(
+    pool: &PgPool,
+    sender: &impl EmailSender,
+    cfg: &WorkerConfig,
+    ev: &Claimed,
+) -> Outcome {
+    let (Some(tenant), Some(account)) = (
+        ev.tenant_id.map(umkm_shared::ids::TenantId::from_uuid),
+        ev.payload
+            .get("account_id")
+            .and_then(|v| v.as_str())
+            .and_then(|s| s.parse::<Uuid>().ok()),
+    ) else {
+        return Outcome::Fail("invalid_payload", false);
+    };
+    let Ok((token, hash)) = new_token() else {
+        return Outcome::Fail("rng_error", true);
+    };
+    let target = match crate::customer_auth_repo::issue_verification_token(
+        pool,
+        tenant,
+        account,
+        hash,
+        cfg.policy.email_verification_ttl,
+    )
+    .await
+    {
+        Ok(t) => t,
+        Err(_) => return Outcome::Fail("db_error", true),
+    };
+    let Some((email, host)) = target else {
+        return Outcome::Done; // sudah terverifikasi / akun dihapus
+    };
+    match sender
+        .send(&umkm_application::notify::customer_verification_email(
+            &email, &host, &token,
+        ))
         .await
     {
         Ok(()) => Outcome::Done,

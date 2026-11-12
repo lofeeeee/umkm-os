@@ -13,6 +13,8 @@ pub mod events {
     pub const TENANT_GUARD_PROBE: &str = "tenant.guard_probe";
     /// Stok tersedia varian turun melewati `min_stock` (P3-2, AC-INV-002).
     pub const INVENTORY_LOW_STOCK: &str = "inventory.low_stock";
+    /// Verifikasi email akun customer toko (P3-3, ADR-0005). Token dibuat worker.
+    pub const CUSTOMER_EMAIL_VERIFICATION_REQUESTED: &str = "customer.email_verification_requested";
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -36,6 +38,15 @@ impl OutboxEvent {
 }
 
 impl OutboxEvent {
+    pub fn customer_email_verification_requested(tenant_id: Uuid, account_id: Uuid) -> Self {
+        Self {
+            tenant_id: Some(tenant_id),
+            event_type: events::CUSTOMER_EMAIL_VERIFICATION_REQUESTED,
+            payload: serde_json::json!({ "account_id": account_id }),
+            idempotency_key: format!("customer_email_verification:{account_id}:registration"),
+        }
+    }
+
     /// Satu event per persilangan ambang; `cause_id` = movement/reservasi penyebabnya.
     pub fn inventory_low_stock(
         tenant_id: Uuid,
@@ -97,6 +108,18 @@ pub fn verification_email(to: &str, verify_url_base: &str, token: &str) -> Email
         subject: "Verifikasi email Anda".to_owned(),
         text_body: format!(
             "Klik tautan berikut untuk memverifikasi email Anda (berlaku 24 jam):\n{verify_url_base}#token={token}\n\nAbaikan email ini bila Anda tidak mendaftar."
+        ),
+    }
+}
+
+/// Email verifikasi akun customer: tautan ke situs toko itu sendiri (host-only).
+pub fn customer_verification_email(to: &str, shop_host: &str, token: &str) -> EmailMessage {
+    EmailMessage {
+        to: to.to_owned(),
+        template: "customer_email_verification",
+        subject: "Verifikasi email akun toko Anda".to_owned(),
+        text_body: format!(
+            "Klik tautan berikut untuk memverifikasi email Anda (berlaku 24 jam):\nhttps://{shop_host}/akun/verifikasi#token={token}\n\nAbaikan email ini bila Anda tidak mendaftar."
         ),
     }
 }

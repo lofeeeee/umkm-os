@@ -1,0 +1,67 @@
+P3-3 — Customer identity + CRM (PRD.md §4.6, ADR-0005 guest + linking setelah verifikasi)
+Tanggal: 2026-11-12
+
+Cabang terpilih (D-03, 2026-11-12): guest checkout + akun customer opsional per tenant; linking hanya
+setelah email terverifikasi. Cabang guest-only / registered-only tidak diimplementasi (ADR-0005).
+
+Artefak
+- migrations/0015_customers.{up,down}.sql  (BUILD_PLAN menyebut 0010; nomor bergeser)
+  permission baru customers.read/manage, payments.verify/refund (33 → 37; preset sesuai
+  product-decision-log 2026-11-12). customer_accounts (email unik per tenant, Argon2id, versi
+  privacy/terms + waktu persetujuan), customers (tidak pernah digabung berdasarkan email; tags ≤20,
+  catatan internal, deletion_requested_at/anonymized_at), customer_addresses (≤5), customer_sessions,
+  customer_tokens (hash saja). RLS ENABLE+FORCE 5 tabel (rls.rs: 27 tabel).
+  app.purge_customers(grace ≥ 30 hari) SECURITY DEFINER: anonimisasi + hapus alamat + hapus akun.
+- crates/domain/src/crm.rs  validasi kontak (nama + email/telepon wajib salah satu; telepon E.164,
+  08… → +62…), tag (huruf kecil, unik), catatan, alamat.
+- crates/infrastructure/src/crm_repo.rs  create_in (dipakai checkout P3-5), list/search, get, update,
+  replace_addresses, request_deletion (cabut sesi akun), export (diaudit), purge (dipanggil job retensi).
+- crates/infrastructure/src/customer_auth_repo.rs  register (+ outbox verifikasi di tx sama), login
+  session, authenticate per tenant, verify_email (token tenant-scoped, sekali pakai) + link_in.
+- outbox: customer.email_verification_requested → token dibuat worker di tenant context, tautan ke
+  host toko (D-08 ditunda: adapter log-only); retention.rs: customers ikut purge (grace 30 hari).
+- apps/api/src/crm.rs  /api/v1/tenants/{t}/customers[/{id}[/addresses|/deletion-request|/export]].
+- apps/api/src/customer_auth.rs  /api/v1/public/customer/{register,login,logout,me,session,verify-email};
+  tenant dari Host; cookie host-only __Host-umkm_cust; Origin wajib https://{host toko}; CSRF terikat
+  sesi; rate limit register/login/verify per IP + per email per toko; pesan login seragam.
+  Extractor MaybeCustomer disiapkan untuk checkout P3-5. OpenAPI diregenerasi.
+
+Hasil
+- fmt/clippy -D warnings bersih; cargo test --workspace --locked: 283 lulus, 0 gagal (crm_http 5,
+  domain crm 3; matriks RBAC 6 × 37). migration run -> revert 0 -> run pada DB kosong: exit 0.
+
+Cakupan AC
+- AC-CRM-001 Verified: guest email sama → record terpisah; email dobel di toko yang sama 409; akun toko A
+  tidak bisa login di toko B; cookie toko A tidak dikenali host B; akun belum terverifikasi tidak melihat
+  customer guest; registrasi tanpa persetujuan terms 422.
+- AC-CRM-002 Verified: pencarian nama/email/telepon/tag hanya tenant sendiri; tenant B 0 hasil / 404.
+- AC-CRM-004 Verified: tags/internal_note hanya di endpoint staf (customers.read); /public/customer/me
+  tidak memuatnya; Catalog Manager 403, Support Agent baca saja.
+- AC-CRM-005 Verified (email lewat adapter log-only/CapturingEmailSender; email nyata menunggu D-08):
+  token toko A di host B 400; verifikasi menautkan tepat customer toko A beremail sama, tidak termasuk
+  toko B / customer yang diminta hapus / email lain; audit customer.linked; token sekali pakai; guest baru
+  ditautkan saat login berikutnya.
+- AC-CRM-006 Verified: permintaan hapus 202 + audit, sesi akun dicabut, ubah ditolak 409; purge sebelum
+  grace 0, setelah 31 hari anonim + alamat/akun terhapus, idempoten; grace < 30 hari ditolak (22023);
+  export diaudit, Viewer 403.
+- AC-CRM-003 tetap Planned: riwayat order menyusul P3-4/P3-5, ticket/conversation P4/P6.
+
+Negative control (perubahan sementara, dikembalikan; test terkait GAGAL)
+== NEGCTL: linking tanpa syarat verifikasi
+    guests_with_same_email_are_never_merged_and_accounts_are_per_shop
+test result: FAILED. 4 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.82s
+== NEGCTL: linking termasuk customer yang diminta hapus
+    linking_only_after_verification_and_only_same_shop
+test result: FAILED. 4 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.76s
+== NEGCTL: login tanpa cek Origin toko
+    customer_session_requires_same_shop_origin_and_csrf
+test result: FAILED. 4 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.76s
+== NEGCTL: sesi customer tanpa CSRF
+    customer_session_requires_same_shop_origin_and_csrf
+test result: FAILED. 4 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.75s
+== NEGCTL: purge tanpa grace
+    deletion_request_anonymizes_after_grace_and_export_is_audited
+test result: FAILED. 4 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.69s
+== NEGCTL: hapus customer tanpa mencabut sesi akun
+    deletion_request_anonymizes_after_grace_and_export_is_audited
+test result: FAILED. 4 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.79s

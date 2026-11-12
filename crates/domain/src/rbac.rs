@@ -7,7 +7,7 @@ use umkm_shared::ids::TenantId;
 use uuid::Uuid;
 
 /// 33 permission key `PRD.md §3.3` (sama dengan seed migration 0002).
-pub const ALL_PERMISSIONS: [&str; 33] = [
+pub const ALL_PERMISSIONS: [&str; 37] = [
     "tenant.read",
     "tenant.update",
     "members.read",
@@ -41,6 +41,10 @@ pub const ALL_PERMISSIONS: [&str; 33] = [
     "approvals.decide",
     "analytics.read",
     "audit.read",
+    "customers.read",
+    "customers.manage",
+    "payments.verify",
+    "payments.refund",
 ];
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
@@ -143,9 +147,9 @@ mod tests {
     }
 
     #[test]
-    fn permission_list_has_33_unique_keys() {
+    fn permission_list_has_37_unique_keys() {
         let set: BTreeSet<_> = ALL_PERMISSIONS.iter().collect();
-        assert_eq!(set.len(), 33);
+        assert_eq!(set.len(), 37);
     }
 
     #[test]

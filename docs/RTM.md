@@ -209,12 +209,12 @@ Arah balik: TC → AC lewat nomor yang sama (Test Plan §4); AC → FR lewat FSD
 | FR-INV-003 | AC-INV-003 | TC-INV-003 | internal: inventory_repo::reserve_in (checkout P3-5) | — | `docs/evidence/P3-2.txt` | Verified |
 | FR-INV-004 | AC-INV-004 | TC-INV-004 | POST /inventory/{variant_id}/movements, PUT /settings | — | `docs/evidence/P3-2.txt` | Verified |
 | FR-INV-005 | AC-INV-005 | TC-INV-005 | internal: inventory_repo::reserve_in (checkout P3-5) | — | `docs/evidence/P3-2.txt` | Verified |
-| FR-CRM-001 | AC-CRM-001 | TC-CRM-001 | ditetapkan di OpenAPI saat task | ADR-0005 (D-03) | — | Planned |
-| FR-CRM-002 | AC-CRM-002 | TC-CRM-002 | ditetapkan di OpenAPI saat task | ADR-0005 (D-03) | — | Planned |
+| FR-CRM-001 | AC-CRM-001 | TC-CRM-001 | /api/v1/public/customer/{register,login,me} | ADR-0005 (D-03) | `docs/evidence/P3-3.txt` | Verified |
+| FR-CRM-002 | AC-CRM-002 | TC-CRM-002 | GET /api/v1/tenants/{tenant_id}/customers | ADR-0005 (D-03) | `docs/evidence/P3-3.txt` | Verified |
 | FR-CRM-003 | AC-CRM-003 | TC-CRM-003 | ditetapkan di OpenAPI saat task | ADR-0005 (D-03) | — | Planned |
-| FR-CRM-004 | AC-CRM-004 | TC-CRM-004 | ditetapkan di OpenAPI saat task | ADR-0005 (D-03) | — | Planned |
-| FR-CRM-005 | AC-CRM-005 | TC-CRM-005 | ditetapkan di OpenAPI saat task | ADR-0005 (D-03) | — | Planned |
-| FR-CRM-006 | AC-CRM-006 | TC-CRM-006 | ditetapkan di OpenAPI saat task | ADR-0005 (D-03) | — | Planned |
+| FR-CRM-004 | AC-CRM-004 | TC-CRM-004 | GET/PUT /api/v1/tenants/{tenant_id}/customers/{id} | ADR-0005 (D-03) | `docs/evidence/P3-3.txt` | Verified |
+| FR-CRM-005 | AC-CRM-005 | TC-CRM-005 | POST /api/v1/public/customer/verify-email | ADR-0005 (D-03) | `docs/evidence/P3-3.txt` | Verified |
+| FR-CRM-006 | AC-CRM-006 | TC-CRM-006 | POST /customers/{id}/deletion-request, GET /customers/{id}/export | ADR-0005 (D-03) | `docs/evidence/P3-3.txt` | Verified |
 | FR-ORD-001 | AC-ORD-001 | TC-ORD-001 | ditetapkan di OpenAPI saat task | ADR-0004 (D-02) | — | Planned |
 | FR-ORD-002 | AC-ORD-002 | TC-ORD-002 | ditetapkan di OpenAPI saat task | ADR-0004 (D-02) | — | Planned |
 | FR-ORD-003 | AC-ORD-003 | TC-ORD-003 | ditetapkan di OpenAPI saat task | ADR-0004 (D-02) | — | Planned |

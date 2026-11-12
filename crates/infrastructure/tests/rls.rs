@@ -18,7 +18,7 @@ use umkm_shared::ids::TenantId;
 use uuid::Uuid;
 
 /// Tabel milik tenant yang WAJIB ber-RLS (selain yang di allowlist katalog).
-const TENANT_TABLES: [&str; 22] = [
+const TENANT_TABLES: [&str; 27] = [
     "audit_logs",
     "tenants",
     "tenant_memberships",
@@ -38,6 +38,11 @@ const TENANT_TABLES: [&str; 22] = [
     "inventory_levels",
     "inventory_movements",
     "inventory_reservations",
+    "customer_accounts",
+    "customers",
+    "customer_addresses",
+    "customer_sessions",
+    "customer_tokens",
     "business_addresses",
     "business_hours",
     "business_hour_exceptions",
@@ -288,7 +293,7 @@ async fn application_flows_work_under_app_role(pool: PgPool) {
 
     // RBAC
     let actor = rbac_repo::load_actor(&app, u, a).await.unwrap().unwrap();
-    assert_eq!(actor.permissions().count(), 33);
+    assert_eq!(actor.permissions().count(), 37);
     assert!(rbac_repo::load_actor(&app, u, b).await.unwrap().is_none());
     let t = rbac_repo::get_tenant(&app, &actor).await.unwrap().unwrap();
     assert_eq!(t.primary_hostname.as_deref(), Some("toko-a.ryasai.my.id"));

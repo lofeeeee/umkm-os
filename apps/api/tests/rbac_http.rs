@@ -142,7 +142,7 @@ async fn owner_reads_and_updates_with_csrf(pool: PgPool) {
     let (s, body) = call(&app, Method::GET, &uri, Some(&owner), false, None).await;
     assert_eq!(s, 200, "{body}");
     assert_eq!(body["data"]["my_role"], "Owner");
-    assert_eq!(body["data"]["my_permissions"].as_array().unwrap().len(), 33);
+    assert_eq!(body["data"]["my_permissions"].as_array().unwrap().len(), 37);
 
     let (s, _) = call(
         &app,

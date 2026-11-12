@@ -4,6 +4,8 @@ pub mod auth;
 pub mod bootstrap;
 pub mod business;
 pub mod catalog;
+pub mod crm;
+pub mod customer_auth;
 pub mod error;
 pub mod health;
 pub mod http_util;

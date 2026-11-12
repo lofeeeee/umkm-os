@@ -36,6 +36,8 @@ pub struct PurgeReport {
     pub sessions: i64,
     pub tokens: i64,
     pub outbox_events: i64,
+    /// Customer yang diminta hapus, dianonimkan setelah grace (ADR-0012, AC-CRM-006).
+    pub customers: i64,
 }
 
 pub async fn run_purge(pool: &PgPool, p: &RetentionPolicy) -> Result<PurgeReport, sqlx::Error> {
@@ -61,7 +63,10 @@ pub async fn run_purge(pool: &PgPool, p: &RetentionPolicy) -> Result<PurgeReport
             .bind(secs(p.outbox))
             .fetch_one(pool)
             .await?;
+    // Grace sama dengan data pelanggan saat tenant tutup: +30 hari (ADR-0012).
+    let customers = crate::crm_repo::purge(pool, p.closed_tenant_grace.as_secs() as i64).await?;
     Ok(PurgeReport {
+        customers,
         audit_rows,
         tenants,
         sessions: row.get("sessions"),
@@ -83,6 +88,7 @@ pub async fn purge_job(pool: &PgPool, p: &RetentionPolicy, metrics: &Metrics) {
             sessions = r.sessions,
             tokens = r.tokens,
             outbox_events = r.outbox_events,
+            customers = r.customers,
             "retention purge"
         ),
         Err(e) => {

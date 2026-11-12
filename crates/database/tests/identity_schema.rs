@@ -75,12 +75,15 @@ async fn preset(pool: &PgPool, name: &str) -> Uuid {
 }
 
 #[sqlx::test(migrator = "MIGRATOR")]
-async fn seeds_33_permissions_and_reserved_subdomains(pool: PgPool) {
+async fn seeds_37_permissions_and_reserved_subdomains(pool: PgPool) {
     let n: i64 = sqlx::query_scalar("SELECT count(*) FROM permissions")
         .fetch_one(&pool)
         .await
         .unwrap();
-    assert_eq!(n, 33, "PRD.md §3.3");
+    assert_eq!(
+        n, 37,
+        "PRD.md §3.3 + Gate D (product-decision-log 2026-11-12)"
+    );
     for label in ["app", "api", "www", "admin"] {
         let r: bool = sqlx::query_scalar(
             "SELECT EXISTS (SELECT 1 FROM reserved_subdomains WHERE label = $1)",

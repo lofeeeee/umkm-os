@@ -352,6 +352,290 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
       security:
       - sessionCookie: []
+  /api/v1/public/customer/login:
+    post:
+      tags:
+      - public
+      summary: Login customer (per toko). Pesan error sama untuk email tidak ada / password salah.
+      operationId: login
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerLogin'
+        required: true
+      responses:
+        '200':
+          description: Sesi dibuat (cookie)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_CustomerSessionView'
+        '401':
+          description: Email/password salah
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '429':
+          description: Terlalu banyak percobaan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/public/customer/logout:
+    post:
+      tags:
+      - public
+      summary: Logout (cabut sesi + hapus cookie).
+      operationId: logout
+      responses:
+        '204':
+          description: Keluar
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/public/customer/me:
+    get:
+      tags:
+      - public
+      summary: Akun yang sedang login + customer tertaut.
+      operationId: me
+      responses:
+        '200':
+          description: Akun
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_CustomerMe'
+        '401':
+          description: Belum login
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/public/customer/register:
+    post:
+      tags:
+      - public
+      summary: Daftar akun customer di toko ini (opsional; checkout tetap bisa sebagai guest).
+      operationId: register
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerRegister'
+        required: true
+      responses:
+        '201':
+          description: Akun dibuat; email verifikasi diantrekan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_Registered'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: Email sudah terdaftar di toko ini
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '422':
+          description: Validasi gagal
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/public/customer/session:
+    get:
+      tags:
+      - public
+      summary: Ambil ulang `csrf_token` (reload halaman).
+      operationId: session
+      responses:
+        '200':
+          description: Sesi
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_CustomerSessionView'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/public/customer/verify-email:
+    post:
+      tags:
+      - public
+      summary: Verifikasi email lalu tautkan customer guest beremail sama di toko ini (AC-CRM-005).
+      operationId: verify_email
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerVerify'
+        required: true
+      responses:
+        '200':
+          description: Terverifikasi
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_Value'
+        '400':
+          description: Token tidak valid/kedaluwarsa
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
   /api/v1/public/products:
     get:
       tags:
@@ -1191,6 +1475,403 @@ paths:
       responses:
         '204':
           description: Dihapus
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/customers:
+    get:
+      tags:
+      - crm
+      summary: Daftar + pencarian customer tenant (AC-CRM-002).
+      operationId: list
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: q
+        in: path
+        description: Cari nama/email/telepon
+        required: true
+        schema:
+          type:
+          - string
+          - 'null'
+      - name: tag
+        in: path
+        required: true
+        schema:
+          type:
+          - string
+          - 'null'
+      - name: limit
+        in: path
+        required: true
+        schema:
+          type:
+          - integer
+          - 'null'
+          format: int64
+      - name: offset
+        in: path
+        required: true
+        schema:
+          type:
+          - integer
+          - 'null'
+          format: int64
+      responses:
+        '200':
+          description: Customer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_CustomerList'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+    post:
+      tags:
+      - crm
+      summary: Tambah customer manual (pelanggan offline).
+      operationId: create
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerInput'
+        required: true
+      responses:
+        '201':
+          description: Dibuat
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_CustomerView'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/customers/{customer_id}:
+    get:
+      tags:
+      - crm
+      summary: Profil customer + alamat + tag + catatan internal.
+      operationId: get_one
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: customer_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Customer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_CustomerView'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+    put:
+      tags:
+      - crm
+      summary: Ubah profil, tag, catatan internal.
+      operationId: update
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: customer_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerInput'
+        required: true
+      responses:
+        '200':
+          description: Tersimpan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_CustomerView'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/customers/{customer_id}/addresses:
+    put:
+      tags:
+      - crm
+      summary: Ganti daftar alamat (maks 5).
+      operationId: put_addresses
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: customer_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/AddressDto'
+        required: true
+      responses:
+        '200':
+          description: Tersimpan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_CustomerView'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/customers/{customer_id}/deletion-request:
+    post:
+      tags:
+      - crm
+      summary: 'Permintaan hapus data (AC-CRM-006): anonimisasi otomatis +30 hari (ADR-0012).'
+      operationId: request_deletion
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: customer_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '202':
+          description: Dijadwalkan
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/customers/{customer_id}/export:
+    get:
+      tags:
+      - crm
+      summary: Export data customer (JSON). Diaudit.
+      operationId: export
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: customer_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Data customer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_CustomerView'
         '405':
           description: Method tidak diizinkan
           content:
@@ -2767,16 +3448,10 @@ components:
           type:
           - string
           - 'null'
-        latitude:
+        note:
           type:
-          - number
+          - string
           - 'null'
-          format: double
-        longitude:
-          type:
-          - number
-          - 'null'
-          format: double
       additionalProperties: false
     BusinessView:
       type: object
@@ -2826,6 +3501,101 @@ components:
           type: string
         ok:
           type: boolean
+    CustomerInput:
+      type: object
+      required:
+      - name
+      properties:
+        email:
+          type:
+          - string
+          - 'null'
+        internal_note:
+          type:
+          - string
+          - 'null'
+        name:
+          type: string
+        phone:
+          type:
+          - string
+          - 'null'
+        tags:
+          type: array
+          items:
+            type: string
+      additionalProperties: false
+    CustomerLogin:
+      type: object
+      required:
+      - email
+      - password
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+      additionalProperties: false
+    CustomerRegister:
+      type: object
+      required:
+      - email
+      - password
+      - accept_privacy
+      - accept_terms
+      properties:
+        accept_privacy:
+          type: boolean
+          description: 'D-12: wajib `true`'
+        accept_terms:
+          type: boolean
+          description: 'D-12: wajib `true`'
+        email:
+          type: string
+        password:
+          type: string
+      additionalProperties: false
+    CustomerSummaryView:
+      type: object
+      required:
+      - id
+      - name
+      - tags
+      - has_account
+      - created_at
+      - deletion_requested
+      properties:
+        created_at:
+          type: string
+        deletion_requested:
+          type: boolean
+        email:
+          type:
+          - string
+          - 'null'
+        has_account:
+          type: boolean
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        phone:
+          type:
+          - string
+          - 'null'
+        tags:
+          type: array
+          items:
+            type: string
+    CustomerVerify:
+      type: object
+      required:
+      - token
+      properties:
+        token:
+          type: string
+      additionalProperties: false
     ErrorBody:
       type: object
       description: |-
@@ -3426,6 +4196,116 @@ components:
           $ref: '#/components/schemas/Meta'
         success:
           type: boolean
+    SuccessEnvelope_CustomerList:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - items
+          - total
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/CustomerSummaryView'
+            total:
+              type: integer
+              format: int64
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
+    SuccessEnvelope_CustomerMe:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - account_id
+          - email
+          - email_verified
+          - customer_ids
+          properties:
+            account_id:
+              type: string
+              format: uuid
+            customer_ids:
+              type: array
+              items:
+                type: string
+                format: uuid
+              description: Customer yang tertaut (riwayat order hanya dari sini; kosong sebelum verifikasi)
+            email:
+              type: string
+            email_verified:
+              type: boolean
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
+    SuccessEnvelope_CustomerSessionView:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - account_id
+          - email
+          - email_verified
+          - csrf_token
+          properties:
+            account_id:
+              type: string
+              format: uuid
+            csrf_token:
+              type: string
+            email:
+              type: string
+            email_verified:
+              type: boolean
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
+    SuccessEnvelope_CustomerView:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          allOf:
+          - $ref: '#/components/schemas/CustomerSummaryView'
+          - type: object
+            required:
+            - addresses
+            properties:
+              addresses:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AddressDto'
+              internal_note:
+                type:
+                - string
+                - 'null'
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
     SuccessEnvelope_DraftView:
       type: object
       required:
@@ -3777,6 +4657,29 @@ components:
           $ref: '#/components/schemas/Meta'
         success:
           type: boolean
+    SuccessEnvelope_Registered:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - account_id
+          - verification_sent
+          properties:
+            account_id:
+              type: string
+              format: uuid
+            verification_sent:
+              type: boolean
+              description: 'Email verifikasi dikirim lewat outbox (D-08: adapter log-only)'
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
     SuccessEnvelope_SavedDraft:
       type: object
       required:
@@ -3989,6 +4892,18 @@ components:
             url:
               type: string
               description: Path signed URL relatif terhadap origin API; berlaku terbatas (ADR-0009).
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
+    SuccessEnvelope_Value:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data: {}
         meta:
           $ref: '#/components/schemas/Meta'
         success:
@@ -4365,6 +5280,8 @@ tags:
   description: Profil, alamat, jam operasional tenant (PRD.md §4.4)
 - name: catalog
   description: Produk, varian, kategori (PRD.md §4.5)
+- name: crm
+  description: Customer, tag, catatan internal, hapus/export (PRD.md §4.6, ADR-0005)
 - name: inventory
   description: Stok, movement ledger, ambang low-stock (PRD.md §4.5)
 - name: files

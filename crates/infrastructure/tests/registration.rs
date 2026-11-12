@@ -70,7 +70,7 @@ async fn register_creates_user_tenant_owner_subdomain_profile_consents_session(p
     assert_eq!(r.hostname, "toko-budi.ryasai.my.id");
     let tid = *r.tenant_id.as_uuid();
 
-    // Owner membership dengan seluruh 33 permission
+    // Owner membership dengan seluruh 37 permission
     let perms: i64 = sqlx::query_scalar(
         "SELECT count(*) FROM tenant_memberships m JOIN roles ro ON ro.id = m.role_id
          JOIN role_permissions rp ON rp.role_id = ro.id
@@ -81,7 +81,7 @@ async fn register_creates_user_tenant_owner_subdomain_profile_consents_session(p
     .fetch_one(&pool)
     .await
     .unwrap();
-    assert_eq!(perms, 33);
+    assert_eq!(perms, 37);
 
     let (host, ty, status): (String, String, String) =
         sqlx::query_as("SELECT hostname, type, status FROM tenant_domains WHERE tenant_id = $1")
