@@ -13,6 +13,8 @@ pub mod events {
     pub const TENANT_GUARD_PROBE: &str = "tenant.guard_probe";
     /// Stok tersedia varian turun melewati `min_stock` (P3-2, AC-INV-002).
     pub const INVENTORY_LOW_STOCK: &str = "inventory.low_stock";
+    /// Order baru masuk (P3-5): notifikasi staf menyusul NTF/D-08 (log-only).
+    pub const ORDER_CREATED: &str = "order.created";
     /// Verifikasi email akun customer toko (P3-3, ADR-0005). Token dibuat worker.
     pub const CUSTOMER_EMAIL_VERIFICATION_REQUESTED: &str = "customer.email_verification_requested";
 }

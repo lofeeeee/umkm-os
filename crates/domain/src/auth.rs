@@ -180,7 +180,15 @@ pub mod rate_rules {
         window: HOUR,
     };
 
-    pub const ALL: [RateRule; 7] = [
+    /// Checkout publik per IP (P3-5): membatasi pembuatan order/reservasi palsu.
+    pub const CHECKOUT_PER_IP: RateRule = RateRule {
+        name: "checkout_ip",
+        limit: 20,
+        window: MIN15,
+    };
+
+    pub const ALL: [RateRule; 8] = [
+        CHECKOUT_PER_IP,
         LOGIN_PER_EMAIL,
         LOGIN_PER_IP,
         RESET_PER_EMAIL,

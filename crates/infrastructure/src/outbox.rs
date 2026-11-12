@@ -198,7 +198,7 @@ pub async fn process_once(
                 handle_customer_verification(pool, sender, cfg, &ev).await
             }
             // Kanal notifikasi staf (in-app/email) menyusul (NTF, D-08); sampai itu dicatat.
-            events::INVENTORY_LOW_STOCK => {
+            events::INVENTORY_LOW_STOCK | events::ORDER_CREATED => {
                 tracing::info!(event_id = %ev.id, tenant_id = ?ev.tenant_id, "low-stock event (log-only)");
                 Outcome::Done
             }

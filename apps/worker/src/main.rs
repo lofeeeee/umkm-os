@@ -107,6 +107,11 @@ async fn run() -> Result<(), BoxError> {
             next_purge = tokio::time::Instant::now() + purge_every;
         }
         if tokio::time::Instant::now() >= next_expire {
+            match umkm_infrastructure::commerce_repo::expire_orders(&pool, 500).await {
+                Ok(n) if n > 0 => tracing::info!(expired = n, "orders expired"),
+                Ok(_) => {}
+                Err(e) => tracing::error!(error = %e, "order expiry failed"),
+            }
             match umkm_infrastructure::inventory_repo::expire_reservations(&pool, 500).await {
                 Ok(n) if n > 0 => tracing::info!(released = n, "reservations expired"),
                 Ok(_) => {}

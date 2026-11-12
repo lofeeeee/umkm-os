@@ -88,20 +88,20 @@ Perintah gate P2: `cargo fmt --check && cargo clippy --workspace -- -D warnings 
 | TC-INV-005 | AC-INV-005 | Unit+Integration | `apps/api/tests/inventory_http.rs` | Verified |
 | TC-CRM-001 | AC-CRM-001 | Integration+Security | `apps/api/tests/crm_http.rs` | Verified |
 | TC-CRM-002 | AC-CRM-002 | Integration+Security | `apps/api/tests/crm_http.rs` | Verified |
-| TC-CRM-003 | AC-CRM-003 | lihat §2 | ditetapkan saat task | Planned |
+| TC-CRM-003 | AC-CRM-003 | Integration | `apps/api/tests/checkout_http.rs` | Verified |
 | TC-CRM-004 | AC-CRM-004 | Integration+Security | `apps/api/tests/crm_http.rs` | Verified |
 | TC-CRM-005 | AC-CRM-005 | Integration+Security | `apps/api/tests/crm_http.rs` | Verified |
 | TC-CRM-006 | AC-CRM-006 | Integration+Security | `apps/api/tests/crm_http.rs` | Verified |
-| TC-ORD-001 | AC-ORD-001 | lihat §2 | ditetapkan saat task | Planned |
-| TC-ORD-002 | AC-ORD-002 | lihat §2 | ditetapkan saat task | Planned |
-| TC-ORD-003 | AC-ORD-003 | lihat §2 | ditetapkan saat task | Planned |
+| TC-ORD-001 | AC-ORD-001 | Integration | `apps/api/tests/checkout_http.rs` | Verified |
+| TC-ORD-002 | AC-ORD-002 | Integration | `apps/api/tests/checkout_http.rs` | Verified |
+| TC-ORD-003 | AC-ORD-003 | Integration | `apps/api/tests/checkout_http.rs` | Verified |
 | TC-ORD-004 | AC-ORD-004 | Unit+Integration | `crates/infrastructure/tests/commerce_schema.rs` | Verified |
 | TC-ORD-005 | AC-ORD-005 | lihat §2 | ditetapkan saat task | Planned |
-| TC-ORD-006 | AC-ORD-006 | lihat §2 | ditetapkan saat task | Planned |
+| TC-ORD-006 | AC-ORD-006 | Integration | `apps/api/tests/checkout_http.rs` | Verified |
 | TC-ORD-007 | AC-ORD-007 | lihat §2 | ditetapkan saat task | Planned |
 | TC-ORD-008 | AC-ORD-008 | lihat §2 | ditetapkan saat task | Planned |
-| TC-ORD-009 | AC-ORD-009 | lihat §2 | ditetapkan saat task | Planned |
-| TC-ORD-010 | AC-ORD-010 | lihat §2 | ditetapkan saat task | Planned |
+| TC-ORD-009 | AC-ORD-009 | Integration | `apps/api/tests/checkout_http.rs` | Verified |
+| TC-ORD-010 | AC-ORD-010 | Integration | `apps/api/tests/checkout_http.rs` | Verified |
 | TC-TKT-001 | AC-TKT-001 | lihat §2 | ditetapkan saat task | Planned |
 | TC-TKT-002 | AC-TKT-002 | lihat §2 | ditetapkan saat task | Planned |
 | TC-TKT-003 | AC-TKT-003 | lihat §2 | ditetapkan saat task | Planned |

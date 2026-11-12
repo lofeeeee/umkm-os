@@ -15,7 +15,8 @@ use utoipa::{
 };
 
 use crate::{
-    auth, business, catalog, crm, customer_auth, health, inventory, tenants, upload, website,
+    auth, business, catalog, commerce, crm, customer_auth, health, inventory, tenants, upload,
+    website,
 };
 
 #[derive(OpenApi)]
@@ -87,7 +88,15 @@ use crate::{
         customer_auth::logout,
         customer_auth::me,
         customer_auth::session,
-        customer_auth::verify_email
+        customer_auth::verify_email,
+        commerce::get_settings,
+        commerce::put_settings,
+        commerce::list_orders,
+        commerce::get_order,
+        commerce::checkout_config,
+        commerce::checkout,
+        commerce::current_order,
+        commerce::customer_orders
     ),
     components(schemas(ErrorEnvelope, ErrorBody, ErrorCode, Meta)),
     servers((url = "/", description = "Origin yang sama; root domain menunggu D-01")),
@@ -100,6 +109,7 @@ use crate::{
         (name = "public", description = "Situs publik tenant; tenant dari Host, tanpa sesi (ADR-0014)"),
         (name = "business", description = "Profil, alamat, jam operasional tenant (PRD.md §4.4)"),
         (name = "catalog", description = "Produk, varian, kategori (PRD.md §4.5)"),
+        (name = "commerce", description = "Pengaturan checkout, order, pembayaran QRIS statis (PRD.md §4.7, ADR-0004)"),
         (name = "crm", description = "Customer, tag, catatan internal, hapus/export (PRD.md §4.6, ADR-0005)"),
         (name = "inventory", description = "Stok, movement ledger, ambang low-stock (PRD.md §4.5)"),
         (name = "files", description = "Upload gambar tenant + signed URL ber-expiry (ADR-0009)")

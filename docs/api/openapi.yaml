@@ -352,6 +352,115 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
       security:
       - sessionCookie: []
+  /api/v1/public/checkout:
+    post:
+      tags:
+      - public
+      summary: Buat order dari cart (AC-ORD-001/002/006/010). Header `Idempotency-Key` wajib.
+      operationId: checkout
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        description: 8..100 karakter [A-Za-z0-9_-], unik per pesanan
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckoutRequest'
+        required: true
+      responses:
+        '200':
+          description: Replay idempoten (order yang sama)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_CheckoutResult'
+        '201':
+          description: Order dibuat; bayar via QRIS toko
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_CheckoutResult'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: Stok habis / toko belum aktif / kunci dipakai ulang
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '422':
+          description: Validasi gagal
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/public/checkout-config:
+    get:
+      tags:
+      - public
+      summary: Konfigurasi checkout toko (tanpa data rahasia).
+      operationId: checkout_config
+      responses:
+        '200':
+          description: Konfigurasi
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_CheckoutConfig'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
   /api/v1/public/customer/login:
     post:
       tags:
@@ -463,6 +572,64 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/public/customer/orders:
+    get:
+      tags:
+      - public
+      summary: Riwayat order customer login (hanya customer tertaut akun; AC-CRM-003).
+      operationId: customer_orders
+      parameters:
+      - name: limit
+        in: path
+        description: 1..=100, default 20
+        required: true
+        schema:
+          type:
+          - integer
+          - 'null'
+          format: int64
+      - name: offset
+        in: path
+        description: default 0
+        required: true
+        schema:
+          type:
+          - integer
+          - 'null'
+          format: int64
+      responses:
+        '200':
+          description: Order
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_OrderList'
         '405':
           description: Method tidak diizinkan
           content:
@@ -606,6 +773,57 @@ paths:
                 $ref: '#/components/schemas/SuccessEnvelope_Value'
         '400':
           description: Token tidak valid/kedaluwarsa
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/public/orders/current:
+    get:
+      tags:
+      - public
+      summary: Status order untuk pembeli (header `X-Order-Token`).
+      operationId: current_order
+      parameters:
+      - name: X-Order-Token
+        in: header
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Order
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_PublicOrder'
+        '404':
+          description: Token tidak valid
           content:
             application/json:
               schema:
@@ -1501,6 +1719,109 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
       security:
       - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/commerce/settings:
+    get:
+      tags:
+      - commerce
+      summary: Pengaturan checkout toko.
+      operationId: get_settings
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Pengaturan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_SettingsDto'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+    put:
+      tags:
+      - commerce
+      summary: Ubah pengaturan; mengganti QRIS hanya Owner (`tenant.update`) dan diaudit (ADR-0004).
+      operationId: put_settings
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SettingsDto'
+        required: true
+      responses:
+        '200':
+          description: Tersimpan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_SettingsDto'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '422':
+          description: Validasi gagal / QRIS belum diatur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
   /api/v1/tenants/{tenant_id}/customers:
     get:
       tags:
@@ -2210,6 +2531,135 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SuccessEnvelope_LevelView'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/orders:
+    get:
+      tags:
+      - commerce
+      summary: Daftar order (filter status/customer).
+      operationId: list_orders
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: status
+        in: path
+        required: true
+        schema:
+          type:
+          - string
+          - 'null'
+      - name: customer_id
+        in: path
+        required: true
+        schema:
+          type:
+          - string
+          - 'null'
+          format: uuid
+      - name: limit
+        in: path
+        required: true
+        schema:
+          type:
+          - integer
+          - 'null'
+          format: int64
+      - name: offset
+        in: path
+        required: true
+        schema:
+          type:
+          - integer
+          - 'null'
+          format: int64
+      responses:
+        '200':
+          description: Order
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_OrderList'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/orders/{order_id}:
+    get:
+      tags:
+      - commerce
+      summary: Detail order + pembayaran + riwayat status.
+      operationId: get_order
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: order_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Order
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_OrderView'
         '405':
           description: Method tidak diizinkan
           content:
@@ -3501,6 +3951,58 @@ components:
           type: string
         ok:
           type: boolean
+    CheckoutItem:
+      type: object
+      required:
+      - variant_id
+      - quantity
+      properties:
+        quantity:
+          type: integer
+          format: int64
+        variant_id:
+          type: string
+          format: uuid
+    CheckoutRequest:
+      type: object
+      required:
+      - items
+      - fulfillment
+      - name
+      - accept_privacy
+      - accept_terms
+      properties:
+        accept_privacy:
+          type: boolean
+          description: 'D-12: wajib `true`'
+        accept_terms:
+          type: boolean
+          description: 'D-12: wajib `true`'
+        delivery_address:
+          type:
+          - string
+          - 'null'
+        email:
+          type:
+          - string
+          - 'null'
+        fulfillment:
+          type: string
+          description: '`pickup` | `delivery`'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CheckoutItem'
+        name:
+          type: string
+        note:
+          type:
+          - string
+          - 'null'
+        phone:
+          type:
+          - string
+          - 'null'
     CustomerInput:
       type: object
       required:
@@ -3764,6 +4266,90 @@ components:
           items:
             type: string
       additionalProperties: false
+    OrderEventView:
+      type: object
+      required:
+      - to_status
+      - actor_type
+      - created_at
+      properties:
+        actor_type:
+          type: string
+        actor_user_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        created_at:
+          type: string
+        from_status:
+          type:
+          - string
+          - 'null'
+        reason:
+          type:
+          - string
+          - 'null'
+        to_status:
+          type: string
+    OrderItemView:
+      type: object
+      required:
+      - product_name
+      - variant_name
+      - sku
+      - unit_price
+      - quantity
+      - line_total
+      properties:
+        line_total:
+          type: string
+        product_name:
+          type: string
+        quantity:
+          type: integer
+          format: int64
+        sku:
+          type: string
+        unit_price:
+          type: string
+        variant_name:
+          type: string
+    OrderSummaryView:
+      type: object
+      required:
+      - id
+      - code
+      - status
+      - fulfillment
+      - customer_id
+      - total
+      - created_at
+      properties:
+        code:
+          type: string
+        created_at:
+          type: string
+        customer_id:
+          type: string
+          format: uuid
+        customer_name:
+          type:
+          - string
+          - 'null'
+        fulfillment:
+          type: string
+        id:
+          type: string
+          format: uuid
+        payment_status:
+          type:
+          - string
+          - 'null'
+        status:
+          type: string
+        total:
+          type: string
     PageView:
       type: object
       required:
@@ -3783,6 +4369,60 @@ components:
           type: string
         title:
           type: string
+    PaymentView:
+      type: object
+      required:
+      - id
+      - method
+      - status
+      - amount
+      - refunded
+      properties:
+        amount:
+          type: string
+        amount_received:
+          type:
+          - string
+          - 'null'
+        claimed_at:
+          type:
+          - string
+          - 'null'
+        decided_at:
+          type:
+          - string
+          - 'null'
+        decided_by:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        id:
+          type: string
+          format: uuid
+        method:
+          type: string
+        payer_reference:
+          type:
+          - string
+          - 'null'
+        proof_url:
+          type:
+          - string
+          - 'null'
+          description: Signed URL bukti bayar dari pembeli (bila ada)
+        refunded:
+          type: string
+        rejection_reason:
+          type:
+          - string
+          - 'null'
+        status:
+          type: string
+        verifier_note:
+          type:
+          - string
+          - 'null'
     ProductInputDto:
       type: object
       required:
@@ -3918,6 +4558,52 @@ components:
           - string
           - 'null'
       additionalProperties: false
+    PublicOrder:
+      type: object
+      required:
+      - code
+      - status
+      - fulfillment
+      - items
+      - subtotal
+      - delivery_fee
+      - total
+      - created_at
+      - expires_at
+      properties:
+        code:
+          type: string
+        created_at:
+          type: string
+        delivery_address:
+          type:
+          - string
+          - 'null'
+        delivery_fee:
+          type: string
+        expires_at:
+          type: string
+          description: Batas pembayaran
+        fulfillment:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItemView'
+        name:
+          type:
+          - string
+          - 'null'
+        payment:
+          oneOf:
+          - $ref: '#/components/schemas/PublicPayment'
+          - type: 'null'
+        status:
+          type: string
+        subtotal:
+          type: string
+        total:
+          type: string
     PublicPage:
       type: object
       required:
@@ -3933,6 +4619,33 @@ components:
         version:
           type: integer
           format: int32
+    PublicPayment:
+      type: object
+      required:
+      - method
+      - status
+      - amount
+      properties:
+        amount:
+          type: string
+        method:
+          type: string
+        qris_url:
+          type:
+          - string
+          - 'null'
+          description: Signed URL gambar QRIS toko (hanya saat menunggu pembayaran)
+        receiver_name:
+          type:
+          - string
+          - 'null'
+        rejection_reason:
+          type:
+          - string
+          - 'null'
+        status:
+          type: string
+          description: '`pending` | `claimed` | `confirmed` | `rejected` | `expired`'
     PublicProduct:
       type: object
       description: 'Produk publik: tanpa status/updated_at internal; gambar sebagai signed URL.'
@@ -4063,6 +4776,29 @@ components:
       properties:
         template_key:
           type: string
+      additionalProperties: false
+    SettingsDto:
+      type: object
+      properties:
+        checkout_enabled:
+          type: boolean
+        delivery_fee:
+          type: string
+          description: Ongkir datar untuk delivery, desimal string
+        order_approval_required:
+          type: boolean
+        qris:
+          type:
+          - string
+          - 'null'
+          description: '`asset:<uuid>` gambar QRIS merchant milik toko'
+        qris_receiver_name:
+          type:
+          - string
+          - 'null'
+        reservation_ttl_minutes:
+          type: integer
+          format: int32
       additionalProperties: false
     SettingsInput:
       type: object
@@ -4196,6 +4932,68 @@ components:
           $ref: '#/components/schemas/Meta'
         success:
           type: boolean
+    SuccessEnvelope_CheckoutConfig:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - checkout_enabled
+          - pickup_available
+          - delivery_available
+          - delivery_fee
+          - payment_method
+          - privacy_version
+          - terms_version
+          properties:
+            checkout_enabled:
+              type: boolean
+            delivery_available:
+              type: boolean
+            delivery_fee:
+              type: string
+            payment_method:
+              type: string
+            pickup_available:
+              type: boolean
+            privacy_version:
+              type: string
+            terms_version:
+              type: string
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
+    SuccessEnvelope_CheckoutResult:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - order
+          - access_token
+          - replay
+          properties:
+            access_token:
+              type: string
+              description: Simpan di klien; dikirim di header `X-Order-Token` untuk melihat status
+            order:
+              $ref: '#/components/schemas/PublicOrder'
+            replay:
+              type: boolean
+              description: '`true` bila request ulang dengan Idempotency-Key yang sama'
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
     SuccessEnvelope_CustomerList:
       type: object
       required:
@@ -4293,6 +5091,7 @@ components:
           - type: object
             required:
             - addresses
+            - orders
             properties:
               addresses:
                 type: array
@@ -4302,6 +5101,11 @@ components:
                 type:
                 - string
                 - 'null'
+              orders:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OrderSummaryView'
+                description: Riwayat order customer ini (AC-CRM-003); kosong bila pemanggil tanpa `orders.read`
         meta:
           $ref: '#/components/schemas/Meta'
         success:
@@ -4397,6 +5201,111 @@ components:
           $ref: '#/components/schemas/Meta'
         success:
           type: boolean
+    SuccessEnvelope_OrderList:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - items
+          - total
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/OrderSummaryView'
+            total:
+              type: integer
+              format: int64
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
+    SuccessEnvelope_OrderView:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - id
+          - code
+          - customer_id
+          - status
+          - fulfillment
+          - items
+          - subtotal
+          - delivery_fee
+          - total
+          - created_at
+          - expires_at
+          - events
+          properties:
+            code:
+              type: string
+            created_at:
+              type: string
+            customer_email:
+              type:
+              - string
+              - 'null'
+            customer_id:
+              type: string
+              format: uuid
+            customer_name:
+              type:
+              - string
+              - 'null'
+            customer_note:
+              type:
+              - string
+              - 'null'
+            customer_phone:
+              type:
+              - string
+              - 'null'
+            delivery_address:
+              type:
+              - string
+              - 'null'
+            delivery_fee:
+              type: string
+            events:
+              type: array
+              items:
+                $ref: '#/components/schemas/OrderEventView'
+            expires_at:
+              type: string
+            fulfillment:
+              type: string
+            id:
+              type: string
+              format: uuid
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/OrderItemView'
+            payment:
+              oneOf:
+              - $ref: '#/components/schemas/PaymentView'
+              - type: 'null'
+            status:
+              type: string
+            subtotal:
+              type: string
+            total:
+              type: string
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
     SuccessEnvelope_ProductList:
       type: object
       required:
@@ -4476,6 +5385,63 @@ components:
               type: array
               items:
                 $ref: '#/components/schemas/VariantView'
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
+    SuccessEnvelope_PublicOrder:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - code
+          - status
+          - fulfillment
+          - items
+          - subtotal
+          - delivery_fee
+          - total
+          - created_at
+          - expires_at
+          properties:
+            code:
+              type: string
+            created_at:
+              type: string
+            delivery_address:
+              type:
+              - string
+              - 'null'
+            delivery_fee:
+              type: string
+            expires_at:
+              type: string
+              description: Batas pembayaran
+            fulfillment:
+              type: string
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/OrderItemView'
+            name:
+              type:
+              - string
+              - 'null'
+            payment:
+              oneOf:
+              - $ref: '#/components/schemas/PublicPayment'
+              - type: 'null'
+            status:
+              type: string
+            subtotal:
+              type: string
+            total:
+              type: string
         meta:
           $ref: '#/components/schemas/Meta'
         success:
@@ -4721,6 +5687,40 @@ components:
             user_id:
               type: string
               format: uuid
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
+    SuccessEnvelope_SettingsDto:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          properties:
+            checkout_enabled:
+              type: boolean
+            delivery_fee:
+              type: string
+              description: Ongkir datar untuk delivery, desimal string
+            order_approval_required:
+              type: boolean
+            qris:
+              type:
+              - string
+              - 'null'
+              description: '`asset:<uuid>` gambar QRIS merchant milik toko'
+            qris_receiver_name:
+              type:
+              - string
+              - 'null'
+            reservation_ttl_minutes:
+              type: integer
+              format: int32
+          additionalProperties: false
         meta:
           $ref: '#/components/schemas/Meta'
         success:
@@ -5280,6 +6280,8 @@ tags:
   description: Profil, alamat, jam operasional tenant (PRD.md §4.4)
 - name: catalog
   description: Produk, varian, kategori (PRD.md §4.5)
+- name: commerce
+  description: Pengaturan checkout, order, pembayaran QRIS statis (PRD.md §4.7, ADR-0004)
 - name: crm
   description: Customer, tag, catatan internal, hapus/export (PRD.md §4.6, ADR-0005)
 - name: inventory

@@ -49,6 +49,8 @@ pub struct CustomerView {
     pub summary: CustomerSummaryView,
     pub internal_note: Option<String>,
     pub addresses: Vec<AddressDto>,
+    /// Riwayat order customer ini (AC-CRM-003); kosong bila pemanggil tanpa `orders.read`
+    pub orders: Vec<crate::commerce::OrderSummaryView>,
 }
 
 #[derive(Debug, Serialize, ToSchema)]
@@ -103,6 +105,7 @@ fn view(c: Customer) -> CustomerView {
         summary: summary_view(c.summary),
         internal_note: c.internal_note,
         addresses: c.addresses.into_iter().map(address_dto).collect(),
+        orders: vec![],
     }
 }
 
@@ -236,10 +239,25 @@ pub async fn get_one(
     Path((_, cid)): Path<(Uuid, Uuid)>,
 ) -> Ok<CustomerView> {
     actor.require("customers.read")?;
-    Ok(Json(SuccessEnvelope::new(
-        current(&state, actor.tenant_id, cid).await?,
-        &id,
-    )))
+    let mut v = current(&state, actor.tenant_id, cid).await?;
+    if actor.has("orders.read") {
+        let (list, _) = umkm_infrastructure::commerce_repo::list(
+            pool(&state)?,
+            actor.tenant_id,
+            &umkm_infrastructure::commerce_repo::OrderFilter {
+                customer_id: Some(cid),
+                limit: 50,
+                ..Default::default()
+            },
+        )
+        .await
+        .map_err(internal)?;
+        v.orders = list
+            .into_iter()
+            .map(crate::commerce::summary_view)
+            .collect();
+    }
+    Ok(Json(SuccessEnvelope::new(v, &id)))
 }
 
 /// Ubah profil, tag, catatan internal.

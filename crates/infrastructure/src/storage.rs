@@ -325,6 +325,16 @@ impl UrlSigner {
         format!("/files/{object}?t={}&exp={exp}&sig={sig}", tenant.as_uuid())
     }
 
+    /// Token akses turunan HMAC (domain-separated dari signature file). Dipakai untuk token
+    /// akses order guest (ADR-0005): stabil untuk order yang sama sehingga replay checkout
+    /// idempoten mengembalikan token yang sama, tanpa menyimpan token mentah.
+    pub fn derive_token(&self, purpose: &str, tenant: TenantId, id: Uuid) -> String {
+        let mut m = <Hmac<Sha256> as KeyInit>::new_from_slice(self.key.expose().as_bytes())
+            .expect("HMAC menerima kunci sembarang panjang");
+        m.update(format!("umkm-token-v1|{purpose}|{}|{id}", tenant.as_uuid()).as_bytes());
+        URL_SAFE_NO_PAD.encode(m.finalize().into_bytes())
+    }
+
     /// Verifikasi konstan-waktu. `None` bila signature salah, kedaluwarsa, atau expiry
     /// melampaui batas wajar (mencegah URL "abadi" dari kunci yang bocor sebagian).
     pub fn verify(

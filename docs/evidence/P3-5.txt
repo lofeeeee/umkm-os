@@ -1,0 +1,70 @@
+P3-5 — Checkout transaction boundary (PRD.md §11.1, §4.7, ADR-0004/0005)
+Tanggal: 2026-11-12
+
+Artefak
+- crates/infrastructure/src/commerce_repo.rs  checkout dalam SATU transaksi tenant (urutan PRD §11.1):
+  cek kunci idempotensi → pengaturan toko (checkout_enabled, QRIS) → fulfillment tersedia → kunci katalog
+  FOR SHARE → hitung ulang harga di server (domain pricing; promo bila ada; ongkir hanya delivery) →
+  customer guest baru (ADR-0005, tidak digabung via email) / tertaut akun login → order AWAITING_PAYMENT →
+  snapshot item → payment pending (amount = total server) → reservasi stok (inventory_repo::reserve_in,
+  kunci baris urut varian, all-or-nothing) → order_event → outbox order.created. Tanpa panggilan eksternal.
+  Balapan kunci idempotensi: 23505 uq_orders_idempotency → baca order pemenang (replay) atau 409 bila isi beda.
+  Pengaturan toko put_settings (audit before/after QRIS), detail/list order, expire_orders.
+- migrations/0017_order_expiry.{up,down}.sql  app.expire_orders(batch) SECURITY DEFINER (AWAITING_PAYMENT lewat
+  batas → EXPIRED, payment expired, reservasi dilepas, event system; SKIP LOCKED); app.expire_reservations kini
+  melewati reservasi milik order (dilepas bersama ordernya). Worker menjalankan keduanya tiap 15 detik.
+- crates/infrastructure/src/storage.rs UrlSigner::derive_token  token akses order = HMAC(kunci server,
+  "umkm-token-v1|order-access|tenant|order"), disimpan hash SHA-256 saja; stabil untuk replay idempoten.
+- crates/domain/src/auth.rs rate_rules::CHECKOUT_PER_IP (20 / 15 menit).
+- apps/api/src/commerce.rs  staf: GET/PUT /tenants/{t}/commerce/settings, GET /tenants/{t}/orders[/{id}];
+  publik (Host): GET /public/checkout-config, POST /public/checkout (Idempotency-Key wajib, Origin toko,
+  DTO tanpa deny_unknown_fields sehingga harga/total klien diabaikan), GET /public/orders/current (header
+  X-Order-Token; Cache-Control private, no-store), GET /public/customer/orders.
+- apps/api/src/crm.rs detail customer memuat riwayat order (pemanggil dengan orders.read).
+- OpenAPI diregenerasi (tag commerce).
+
+Hasil
+- fmt/clippy -D warnings bersih; cargo deny OK; cargo test --workspace --locked --no-fail-fast: 300 lulus,
+  0 gagal (checkout_http 9). migration run -> revert 0 -> run DB kosong: exit 0.
+- Catatan: crates/database/tests/identity_schema.rs::updated_at_trigger_advances gagal sekali saat suite
+  penuh berjalan (uji berbasis jeda 10 ms; lulus 3/3 terisolasi dan pada run ulang). Tidak terkait perubahan
+  ini; dicatat sebagai follow-up flaky.
+
+Cakupan AC
+- AC-ORD-001 Verified: qty 0 → 422 items[0].quantity; varian toko lain / produk arsip → 422 product_unavailable;
+  tanpa Idempotency-Key valid → 422; Origin toko lain 403; tidak ada reservasi tersisa.
+- AC-ORD-002 Verified: price/total/subtotal dari klien diabaikan; total = promo server × qty (+ ongkir hanya delivery).
+- AC-ORD-003 Verified: setelah nama & harga produk diubah, item order tetap "Kopi Susu" 15000.00.
+- AC-ORD-006 Verified: kunci sama → 201 lalu 200 replay (kode & token sama); isi beda → 409 idempotency_key_reused;
+  10 request paralel kunci sama → 1 order, 1 × 201, reservasi tidak ganda.
+- AC-ORD-009 Verified: token order A hanya membuka order A; token diubah / tanpa token / token di host toko B → 404;
+  respons publik tanpa customer_id/events/catatan verifikator.
+- AC-ORD-010 Verified: tanpa accept_terms → 422; versi privacy/terms tersimpan di order.
+- AC-INV-005 (HTTP) stok 1 × 10 checkout paralel → tepat 1 order, sisanya 409 insufficient_stock, tanpa sisa
+  order/customer dari checkout yang gagal.
+- AC-CRM-003 Verified (bagian order): detail customer staf memuat order customer itu; riwayat order customer
+  login dari customer tertaut akun. Riwayat ticket/conversation menyusul P4/P6.
+- AC-ORD-009 bagian pickup/delivery: delivery wajib alamat; fulfillment yang tidak diaktifkan toko → 422.
+- Expiry: order lewat batas → EXPIRED, stok kembali, payment expired, event system; idempoten.
+
+Negative control (perubahan sementara, dikembalikan; test terkait GAGAL)
+== NEGCTL: tanpa penanganan balapan kunci idempotensi
+    idempotency_key_creates_exactly_one_order
+test result: FAILED. 8 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.01s
+== NEGCTL: replay tanpa membandingkan hash request
+    idempotency_key_creates_exactly_one_order
+test result: FAILED. 8 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.02s
+== NEGCTL: produk non-active tetap bisa dijual
+    invalid_carts_are_rejected
+test result: FAILED. 8 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.02s
+== NEGCTL: akses order tanpa mencocokkan token
+    order_access_is_token_bound
+test result: FAILED. 8 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.04s
+== NEGCTL: checkout tanpa reservasi stok
+    guest_checkout_prices_on_server_and_reserves_stock
+    idempotency_key_creates_exactly_one_order
+    parallel_checkouts_do_not_oversell
+test result: FAILED. 6 passed; 3 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.58s
+== NEGCTL: job reservasi melepas reservasi order
+    unpaid_orders_expire_and_release_stock
+test result: FAILED. 8 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.54s

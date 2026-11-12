@@ -211,20 +211,20 @@ Arah balik: TC → AC lewat nomor yang sama (Test Plan §4); AC → FR lewat FSD
 | FR-INV-005 | AC-INV-005 | TC-INV-005 | internal: inventory_repo::reserve_in (checkout P3-5) | — | `docs/evidence/P3-2.txt` | Verified |
 | FR-CRM-001 | AC-CRM-001 | TC-CRM-001 | /api/v1/public/customer/{register,login,me} | ADR-0005 (D-03) | `docs/evidence/P3-3.txt` | Verified |
 | FR-CRM-002 | AC-CRM-002 | TC-CRM-002 | GET /api/v1/tenants/{tenant_id}/customers | ADR-0005 (D-03) | `docs/evidence/P3-3.txt` | Verified |
-| FR-CRM-003 | AC-CRM-003 | TC-CRM-003 | ditetapkan di OpenAPI saat task | ADR-0005 (D-03) | — | Planned |
+| FR-CRM-003 | AC-CRM-003 | TC-CRM-003 | GET /customers/{id}, GET /api/v1/public/customer/orders | ADR-0005 (D-03) | `docs/evidence/P3-5.txt` | Verified (bagian order; ticket/conversation P4/P6) |
 | FR-CRM-004 | AC-CRM-004 | TC-CRM-004 | GET/PUT /api/v1/tenants/{tenant_id}/customers/{id} | ADR-0005 (D-03) | `docs/evidence/P3-3.txt` | Verified |
 | FR-CRM-005 | AC-CRM-005 | TC-CRM-005 | POST /api/v1/public/customer/verify-email | ADR-0005 (D-03) | `docs/evidence/P3-3.txt` | Verified |
 | FR-CRM-006 | AC-CRM-006 | TC-CRM-006 | POST /customers/{id}/deletion-request, GET /customers/{id}/export | ADR-0005 (D-03) | `docs/evidence/P3-3.txt` | Verified |
-| FR-ORD-001 | AC-ORD-001 | TC-ORD-001 | ditetapkan di OpenAPI saat task | ADR-0004 (D-02) | — | Planned |
-| FR-ORD-002 | AC-ORD-002 | TC-ORD-002 | ditetapkan di OpenAPI saat task | ADR-0004 (D-02) | — | Planned |
-| FR-ORD-003 | AC-ORD-003 | TC-ORD-003 | ditetapkan di OpenAPI saat task | ADR-0004 (D-02) | — | Planned |
+| FR-ORD-001 | AC-ORD-001 | TC-ORD-001 | POST /api/v1/public/checkout | ADR-0004 (D-02) | `docs/evidence/P3-5.txt` | Verified |
+| FR-ORD-002 | AC-ORD-002 | TC-ORD-002 | POST /api/v1/public/checkout | ADR-0004 (D-02) | `docs/evidence/P3-5.txt` | Verified |
+| FR-ORD-003 | AC-ORD-003 | TC-ORD-003 | GET /api/v1/public/orders/current | ADR-0004 (D-02) | `docs/evidence/P3-5.txt` | Verified |
 | FR-ORD-004 | AC-ORD-004 | TC-ORD-004 | internal: OrderStatus::can_transition + trg_orders_transition | ADR-0004 (D-02) | `docs/evidence/P3-6.txt` | Verified |
 | FR-ORD-005 | AC-ORD-005 | TC-ORD-005 | ditetapkan di OpenAPI saat task | ADR-0004 (D-02) | — | Planned |
-| FR-ORD-006 | AC-ORD-006 | TC-ORD-006 | ditetapkan di OpenAPI saat task | ADR-0004 (D-02) | — | Planned |
+| FR-ORD-006 | AC-ORD-006 | TC-ORD-006 | POST /api/v1/public/checkout (Idempotency-Key) | ADR-0004 (D-02) | `docs/evidence/P3-5.txt` | Verified |
 | FR-ORD-007 | AC-ORD-007 | TC-ORD-007 | ditetapkan di OpenAPI saat task | ADR-0004 (D-02) | — | Planned |
 | FR-ORD-008 | AC-ORD-008 | TC-ORD-008 | ditetapkan di OpenAPI saat task | ADR-0004 (D-02) | — | Planned |
-| FR-ORD-009 | AC-ORD-009 | TC-ORD-009 | ditetapkan di OpenAPI saat task | ADR-0004 (D-02) | — | Planned |
-| FR-ORD-010 | AC-ORD-010 | TC-ORD-010 | ditetapkan di OpenAPI saat task | D-12 (product-decision-log) | — | Planned |
+| FR-ORD-009 | AC-ORD-009 | TC-ORD-009 | GET /api/v1/public/orders/current (X-Order-Token) | ADR-0004 (D-02) | `docs/evidence/P3-5.txt` | Verified |
+| FR-ORD-010 | AC-ORD-010 | TC-ORD-010 | POST /api/v1/public/checkout | D-12 (product-decision-log) | `docs/evidence/P3-5.txt` | Verified |
 | FR-TKT-001 | AC-TKT-001 | TC-TKT-001 | ditetapkan di OpenAPI saat task | — | — | Planned |
 | FR-TKT-002 | AC-TKT-002 | TC-TKT-002 | ditetapkan di OpenAPI saat task | — | — | Planned |
 | FR-TKT-003 | AC-TKT-003 | TC-TKT-003 | ditetapkan di OpenAPI saat task | — | — | Planned |
