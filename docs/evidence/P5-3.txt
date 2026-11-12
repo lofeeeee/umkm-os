@@ -1,0 +1,40 @@
+P5-3 — SSRF guard 9 kontrol untuk endpoint LLM (PRD.md §6.5, ADR-0011)
+Tanggal: 2026-11-12
+
+Artefak
+- crates/infrastructure/src/http_client/ssrf.rs (murni): validate_url (kontrol 1–3: scheme https; http hanya operator;
+  tanpa userinfo/fragment/spasi; ≤300; nama lokal: localhost, *.local/.internal/.lan/.home.arpa/.intranet/.corp, host tanpa
+  titik, metadata.google.internal; IP literal termasuk bentuk numerik 2130706433/0x7f.0.0.1 yang dinormalkan parser);
+  forbidden_ip: v4 privat/loopback/CGNAT (tenant) + selalu: 0/8, 169.254/16 (metadata), 192.0.0/24, dokumentasi,
+  198.18/15, 6to4 relay, multicast, 240/4, broadcast; v6 ::1, ULA fc00::/7 (fd00:ec2::254), link/site-local, multicast,
+  ::, IPv4-mapped/compatible/NAT64 diperiksa IPv4-nya, 6to4 & Teredo ditolak, 2001:db8::/32, 100::/64.
+- crates/infrastructure/src/http_client/mod.rs: Egress — kontrol 4 semua IP hasil resolusi diperiksa (satu terlarang =
+  tolak); 5 reqwest.resolve_to_addrs dipatok ke IP tervalidasi + no_proxy (tanpa resolusi kedua); 6 redirect none, 3xx =
+  error; 7 connect 5 s + timeout total, batas byte (Content-Length & chunked), semaphore konkurensi (Busy, tanpa antre);
+  8 Authorization dipasang setelah validasi, header ditandai sensitive; 9 EgressPolicy::operator (http/privat) hanya untuk
+  endpoint platform — metadata/link-local tetap terlarang. TLS rustls+ring (provider dipasang sekali).
+- SsrfError::code() stabil untuk ai_runs.error_code (tanpa URL/host).
+- Cargo: tokio fitur "sync" dideklarasikan eksplisit (bukan crate baru); axum sebagai dev-dependency infrastructure.
+
+Uji
+- unit (3): 27 alamat terlarang + 7 publik (termasuk ::ffff:8.8.8.8, 64:ff9b::808:808 diizinkan); operator boleh privat tapi
+  tidak metadata; 17 URL buruk dengan error yang tepat + host dinormalkan (huruf besar, titik akhir).
+- tests/egress.rs terhadap server HTTP lokal nyata (3):
+  * kebijakan tenant: http/https ke 127.0.0.1, localhost, [::1], DNS campuran [8.8.8.8, 127.0.0.1], DNS → 169.254.169.254
+    semuanya ditolak; server menerima 0 request dan 0 header Authorization.
+  * pinning: nama yang tidak ada di DNS sistem (llm.pinned.test → 127.0.0.1 tervalidasi) berhasil 200 → koneksi memakai IP
+    tervalidasi; kunci sampai hanya di sini. Operator ke metadata ditolak.
+  * 302 → Redirect dan /secret tidak pernah diminta; 4 KiB & 4 KiB chunked > batas 1 KiB → TooLarge; /slow → Timeout < 2 s;
+    konkurensi 1 → request kedua Busy.
+- clippy -D warnings, fmt, cargo deny OK.
+
+Kontrol negatif (mutasi; target diverifikasi ada; dipulihkan + touch)
+- M1 tanpa pinning (alamat kosong)        -> connection_is_pinned... GAGAL
+- M2 redirect diikuti (limited(5))        -> redirects_size_timeout... GAGAL
+- M3 lewati cek IP per hasil resolusi     -> tenant_policy... & pinned (metadata) GAGAL
+- M4 tanpa batas ukuran chunked           -> redirects_size_timeout... GAGAL
+- Dipulihkan: 3/3 lulus.
+
+Batas yang diketahui
+- Validasi sintaks host tidak melindungi dari IP publik milik pihak ketiga — itu memang tujuan BYOK yang sah.
+- DNS sistem dipanggil via getaddrinfo; TTL/rebinding ditangani dengan pinning per request (resolusi tidak dipakai ulang).

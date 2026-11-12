@@ -35,3 +35,4 @@ tracing.workspace = true
 
 [dev-dependencies]
 umkm-database.workspace = true
+axum.workspace = true
