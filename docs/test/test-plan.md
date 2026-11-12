@@ -81,11 +81,11 @@ Perintah gate P2: `cargo fmt --check && cargo clippy --workspace -- -D warnings 
 | TC-CAT-002 | AC-CAT-002 | Unit+Integration | `apps/api/tests/catalog_http.rs` | Verified |
 | TC-CAT-003 | AC-CAT-003 | Unit+Integration | `apps/api/tests/catalog_http.rs` | Verified |
 | TC-CAT-004 | AC-CAT-004 | Unit+Integration | `apps/api/tests/catalog_http.rs` | Verified |
-| TC-INV-001 | AC-INV-001 | lihat §2 | ditetapkan saat task | Planned |
-| TC-INV-002 | AC-INV-002 | lihat §2 | ditetapkan saat task | Planned |
-| TC-INV-003 | AC-INV-003 | lihat §2 | ditetapkan saat task | Planned |
-| TC-INV-004 | AC-INV-004 | lihat §2 | ditetapkan saat task | Planned |
-| TC-INV-005 | AC-INV-005 | lihat §2 | ditetapkan saat task | Planned |
+| TC-INV-001 | AC-INV-001 | Unit+Integration | `apps/api/tests/inventory_http.rs` | Verified |
+| TC-INV-002 | AC-INV-002 | Unit+Integration | `apps/api/tests/inventory_http.rs` | Verified |
+| TC-INV-003 | AC-INV-003 | Unit+Integration | `apps/api/tests/inventory_http.rs` | Verified |
+| TC-INV-004 | AC-INV-004 | Unit+Integration | `apps/api/tests/inventory_http.rs` | Verified |
+| TC-INV-005 | AC-INV-005 | Unit+Integration | `apps/api/tests/inventory_http.rs` | Verified |
 | TC-CRM-001 | AC-CRM-001 | lihat §2 | ditetapkan saat task | Planned |
 | TC-CRM-002 | AC-CRM-002 | lihat §2 | ditetapkan saat task | Planned |
 | TC-CRM-003 | AC-CRM-003 | lihat §2 | ditetapkan saat task | Planned |

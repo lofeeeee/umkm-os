@@ -11,6 +11,8 @@ pub mod events {
     pub const EMAIL_VERIFICATION_REQUESTED: &str = "auth.email_verification_requested";
     /// Canary isolasi (P1-10, `PRD.md §13.2` #5): diproses di tenant context event.
     pub const TENANT_GUARD_PROBE: &str = "tenant.guard_probe";
+    /// Stok tersedia varian turun melewati `min_stock` (P3-2, AC-INV-002).
+    pub const INVENTORY_LOW_STOCK: &str = "inventory.low_stock";
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -29,6 +31,26 @@ impl OutboxEvent {
             event_type: events::EMAIL_VERIFICATION_REQUESTED,
             payload: serde_json::json!({ "user_id": user_id }),
             idempotency_key: format!("email_verification:{user_id}:registration"),
+        }
+    }
+}
+
+impl OutboxEvent {
+    /// Satu event per persilangan ambang; `cause_id` = movement/reservasi penyebabnya.
+    pub fn inventory_low_stock(
+        tenant_id: Uuid,
+        variant_id: Uuid,
+        available: i64,
+        min_stock: i64,
+        cause_id: Uuid,
+    ) -> Self {
+        Self {
+            tenant_id: Some(tenant_id),
+            event_type: events::INVENTORY_LOW_STOCK,
+            payload: serde_json::json!({
+                "variant_id": variant_id, "available": available, "min_stock": min_stock
+            }),
+            idempotency_key: format!("inventory_low_stock:{variant_id}:{cause_id}"),
         }
     }
 }

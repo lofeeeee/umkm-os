@@ -1288,6 +1288,273 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
       security:
       - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/inventory:
+    get:
+      tags:
+      - inventory
+      summary: Stok semua varian (produk non-arsip).
+      operationId: list
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: low
+        in: path
+        description: Hanya stok di bawah ambang
+        required: true
+        schema:
+          type: boolean
+      - name: q
+        in: path
+        description: Cari nama produk / SKU
+        required: true
+        schema:
+          type:
+          - string
+          - 'null'
+      - name: limit
+        in: path
+        required: true
+        schema:
+          type:
+          - integer
+          - 'null'
+          format: int64
+      - name: offset
+        in: path
+        required: true
+        schema:
+          type:
+          - integer
+          - 'null'
+          format: int64
+      responses:
+        '200':
+          description: Stok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_StockList'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/inventory/{variant_id}/movements:
+    get:
+      tags:
+      - inventory
+      summary: Riwayat mutasi satu varian (terbaru dulu, maks 100).
+      operationId: list_movements
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: variant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: limit
+        in: path
+        description: 1..=100, default 20
+        required: true
+        schema:
+          type:
+          - integer
+          - 'null'
+          format: int64
+      - name: offset
+        in: path
+        description: default 0
+        required: true
+        schema:
+          type:
+          - integer
+          - 'null'
+          format: int64
+      responses:
+        '200':
+          description: Movement
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_Vec_MovementView'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+    post:
+      tags:
+      - inventory
+      summary: Stock in / out / opname (AC-INV-001/002/004).
+      operationId: create_movement
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: variant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MovementInput'
+        required: true
+      responses:
+        '201':
+          description: Tercatat
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_LevelView'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: Stok tidak cukup
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/inventory/{variant_id}/settings:
+    put:
+      tags:
+      - inventory
+      summary: Ambang low-stock dan izin stok negatif (diaudit).
+      operationId: put_settings
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: variant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SettingsInput'
+        required: true
+      responses:
+        '200':
+          description: Tersimpan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_LevelView'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
   /api/v1/tenants/{tenant_id}/products:
     get:
       tags:
@@ -2649,6 +2916,33 @@ components:
           type: string
           description: '`HH:MM`'
       additionalProperties: false
+    LevelView:
+      type: object
+      required:
+      - on_hand
+      - reserved
+      - available
+      - allow_negative
+      - is_low
+      properties:
+        allow_negative:
+          type: boolean
+        available:
+          type: integer
+          format: int64
+        is_low:
+          type: boolean
+        min_stock:
+          type:
+          - integer
+          - 'null'
+          format: int64
+        on_hand:
+          type: integer
+          format: int64
+        reserved:
+          type: integer
+          format: int64
     LoginRequest:
       type: object
       required:
@@ -2667,6 +2961,26 @@ components:
       properties:
         request_id:
           type: string
+    MovementInput:
+      type: object
+      required:
+      - kind
+      - quantity
+      - reason
+      properties:
+        kind:
+          type: string
+          description: '`stock_in` | `stock_out` | `adjustment` (stock opname: `quantity` = jumlah fisik)'
+        quantity:
+          type: integer
+          format: int64
+        reason:
+          type: string
+        reference:
+          type:
+          - string
+          - 'null'
+      additionalProperties: false
     OptionDto:
       type: object
       required:
@@ -2980,6 +3294,17 @@ components:
         template_key:
           type: string
       additionalProperties: false
+    SettingsInput:
+      type: object
+      properties:
+        allow_negative:
+          type: boolean
+        min_stock:
+          type:
+          - integer
+          - 'null'
+          format: int64
+      additionalProperties: false
     SocialDto:
       type: object
       required:
@@ -3014,6 +3339,29 @@ components:
           description: '`open` | `closed`'
         timezone:
           type: string
+    StockRow:
+      allOf:
+      - $ref: '#/components/schemas/LevelView'
+      - type: object
+        required:
+        - variant_id
+        - product_id
+        - product_name
+        - variant_name
+        - sku
+        properties:
+          product_id:
+            type: string
+            format: uuid
+          product_name:
+            type: string
+          sku:
+            type: string
+          variant_id:
+            type: string
+            format: uuid
+          variant_name:
+            type: string
     SuccessEnvelope_BusinessView:
       type: object
       required:
@@ -3109,6 +3457,44 @@ components:
             revision:
               type: integer
               format: int32
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
+    SuccessEnvelope_LevelView:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - on_hand
+          - reserved
+          - available
+          - allow_negative
+          - is_low
+          properties:
+            allow_negative:
+              type: boolean
+            available:
+              type: integer
+              format: int64
+            is_low:
+              type: boolean
+            min_stock:
+              type:
+              - integer
+              - 'null'
+              format: int64
+            on_hand:
+              type: integer
+              format: int64
+            reserved:
+              type: integer
+              format: int64
         meta:
           $ref: '#/components/schemas/Meta'
         success:
@@ -3479,6 +3865,30 @@ components:
           $ref: '#/components/schemas/Meta'
         success:
           type: boolean
+    SuccessEnvelope_StockList:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - items
+          - total
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/StockRow'
+            total:
+              type: integer
+              format: int64
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
     SuccessEnvelope_TemplatePreview:
       type: object
       required:
@@ -3642,6 +4052,54 @@ components:
               tenant_id:
                 type: string
                 format: uuid
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
+    SuccessEnvelope_Vec_MovementView:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            required:
+            - id
+            - kind
+            - delta
+            - on_hand_after
+            - reason
+            - created_at
+            properties:
+              actor_user_id:
+                type:
+                - string
+                - 'null'
+                format: uuid
+              created_at:
+                type: string
+              delta:
+                type: integer
+                format: int64
+              id:
+                type: string
+                format: uuid
+              kind:
+                type: string
+                description: '`stock_in` | `stock_out` | `adjustment` | `sale`'
+              on_hand_after:
+                type: integer
+                format: int64
+              reason:
+                type: string
+              reference:
+                type:
+                - string
+                - 'null'
         meta:
           $ref: '#/components/schemas/Meta'
         success:
@@ -3907,5 +4365,7 @@ tags:
   description: Profil, alamat, jam operasional tenant (PRD.md §4.4)
 - name: catalog
   description: Produk, varian, kategori (PRD.md §4.5)
+- name: inventory
+  description: Stok, movement ledger, ambang low-stock (PRD.md §4.5)
 - name: files
   description: Upload gambar tenant + signed URL ber-expiry (ADR-0009)

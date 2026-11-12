@@ -1,0 +1,60 @@
+P3-2 — Inventory ledger + reservation (PRD.md §4.5, §11.1)
+Tanggal: 2026-11-12
+
+Artefak
+- migrations/0014_inventory.{up,down}.sql
+  inventory_levels (PK tenant+variant; dibuat trigger saat varian dibuat + backfill; CHECK reserved>=0 dan
+  allow_negative OR on_hand-reserved>=0), inventory_movements (append-only: REVOKE UPDATE, DELETE dari
+  role aplikasi; actor, delta, on_hand_after, reason wajib, reference; FK RESTRICT ke varian),
+  inventory_reservations (active/committed/released/expired + expires_at), app.expire_reservations(batch)
+  SECURITY DEFINER lintas tenant, FOR UPDATE SKIP LOCKED. RLS ENABLE+FORCE 3 tabel (rls.rs: 22 tabel).
+- crates/domain/src/inventory.rs  Level.apply/set_count/reserve/release/commit, policy stok negatif,
+  crossed_low (event hanya saat melintasi ambang).
+- crates/infrastructure/src/inventory_repo.rs  mutate (in/out/opname), update_settings (diaudit),
+  reserve_in/release_in/commit_in (transaksi pemanggil, dipakai checkout P3-5): baris digabung per varian,
+  dikunci FOR UPDATE urut variant_id, all-or-nothing; release/commit idempoten; low-stock -> outbox
+  inventory.low_stock (kunci idempotensi per penyebab).
+- apps/worker: job expire tiap 15 detik; event inventory.low_stock diproses log-only sampai kanal NTF/D-08.
+- apps/api/src/inventory.rs  GET /inventory (?low, ?q), GET|POST /inventory/{variant}/movements,
+  PUT /inventory/{variant}/settings. inventory.read / inventory.adjust. OpenAPI diregenerasi.
+
+Hasil
+- fmt/clippy -D warnings bersih; cargo deny OK; cargo test --workspace --locked: 275 lulus, 0 gagal
+  (inventory_http 6, domain inventory 3). migration run -> revert 0 -> run pada DB kosong: exit 0.
+
+Cakupan AC (semua Verified)
+- AC-INV-001 movement memuat actor, tenant, varian, delta, reason, reference, timestamp, on_hand_after;
+  UPDATE/DELETE movement sebagai role aplikasi -> 42501.
+- AC-INV-002 ambang 5: turun di bawah -> 1 event; mutasi berikutnya di bawah ambang tidak menambah; pulih
+  lalu turun lagi -> event baru; reservasi juga memicu; ?low=true hanya varian rendah.
+- AC-INV-003 reservasi kedaluwarsa dilepas job (tersedia kembali, idempoten); yang belum kedaluwarsa tidak
+  disentuh; reservasi kedaluwarsa tidak dapat di-commit.
+- AC-INV-004 default stok keluar > tersedia -> 409 insufficient_stock; izin eksplisit boleh negatif;
+  menonaktifkan saat negatif -> 409; UPDATE langsung on_hand=-1 -> CHECK 23514.
+- AC-INV-005 stok 1 × 20 reservasi paralel -> tepat 1; stok 5 × 20 -> tepat 5; 20 reservasi dua varian
+  dengan urutan berlawanan -> semua berhasil tanpa deadlock.
+- Isolasi: tenant B 404 untuk varian A (mutasi, settings, riwayat), reserve varian A dengan konteks B gagal;
+  Viewer 403, Catalog Manager boleh; varian dengan riwayat stok tidak dapat dihapus (409 variant_in_use).
+- Catatan: angka benchmark checkout PRD §9 tidak diukur di sini (fixture kebenaran saja).
+
+Negative control (perubahan sementara, dikembalikan; test terkait GAGAL)
+== NEGCTL: lock level tanpa FOR UPDATE
+    parallel_checkouts_never_oversell
+test result: FAILED. 5 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.43s
+== NEGCTL: tanpa cek stok negatif (domain + CHECK)
+    negative_stock_disabled_by_default
+    parallel_checkouts_never_oversell
+    reservation_expiry_release_and_commit
+test result: FAILED. 3 passed; 3 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.09s
+== NEGCTL: movement tanpa REVOKE
+    movements_are_complete_and_immutable
+test result: FAILED. 5 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.50s
+== NEGCTL: low-stock tiap mutasi (bukan persilangan)
+    low_stock_event_once_per_crossing
+test result: FAILED. 5 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.90s
+== NEGCTL: expiry tanpa filter expires_at
+    reservation_expiry_release_and_commit
+test result: FAILED. 5 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.57s
+== NEGCTL: kunci mengikuti urutan input (bukan variant_id)
+    parallel_checkouts_never_oversell
+test result: FAILED. 5 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 12.22s

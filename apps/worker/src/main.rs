@@ -94,6 +94,10 @@ async fn run() -> Result<(), BoxError> {
     let purge_every = Duration::from_secs(settings.retention.purge_interval_secs);
     let mut next_purge = tokio::time::Instant::now();
 
+    // P3-2 (AC-INV-003): reservasi kedaluwarsa dilepas periodik.
+    let expire_every = Duration::from_secs(15);
+    let mut next_expire = tokio::time::Instant::now();
+
     let mut stop = stop_rx;
     let shutdown = shutdown_signal();
     tokio::pin!(shutdown);
@@ -101,6 +105,14 @@ async fn run() -> Result<(), BoxError> {
         if tokio::time::Instant::now() >= next_purge {
             purge_job(&pool, &retention, &metrics).await;
             next_purge = tokio::time::Instant::now() + purge_every;
+        }
+        if tokio::time::Instant::now() >= next_expire {
+            match umkm_infrastructure::inventory_repo::expire_reservations(&pool, 500).await {
+                Ok(n) if n > 0 => tracing::info!(released = n, "reservations expired"),
+                Ok(_) => {}
+                Err(e) => tracing::error!(error = %e, "reservation expiry failed"),
+            }
+            next_expire = tokio::time::Instant::now() + expire_every;
         }
         match process_once(&pool, &sender, &cfg, &metrics).await {
             Ok(t) if t.claimed > 0 => {

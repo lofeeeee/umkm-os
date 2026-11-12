@@ -194,6 +194,11 @@ pub async fn process_once(
                 handle_email_verification(pool, sender, cfg, &ev).await
             }
             events::TENANT_GUARD_PROBE => handle_tenant_guard_probe(pool, &ev).await,
+            // Kanal notifikasi staf (in-app/email) menyusul (NTF, D-08); sampai itu dicatat.
+            events::INVENTORY_LOW_STOCK => {
+                tracing::info!(event_id = %ev.id, tenant_id = ?ev.tenant_id, "low-stock event (log-only)");
+                Outcome::Done
+            }
             _ => Outcome::Fail("unknown_event_type", false),
         };
         match outcome {

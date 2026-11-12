@@ -7,6 +7,7 @@ pub mod auth;
 pub mod auth_repo;
 pub mod business_repo;
 pub mod catalog_repo;
+pub mod inventory_repo;
 pub mod metrics;
 pub mod onboarding_repo;
 pub mod outbox;

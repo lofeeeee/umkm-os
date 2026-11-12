@@ -204,11 +204,11 @@ Arah balik: TC → AC lewat nomor yang sama (Test Plan §4); AC → FR lewat FSD
 | FR-CAT-002 | AC-CAT-002 | TC-CAT-002 | /api/v1/tenants/{tenant_id}/categories | — | `docs/evidence/P3-1.txt` | Verified |
 | FR-CAT-003 | AC-CAT-003 | TC-CAT-003 | POST/PUT /api/v1/tenants/{tenant_id}/products | — | `docs/evidence/P3-1.txt` | Verified |
 | FR-CAT-004 | AC-CAT-004 | TC-CAT-004 | POST/PUT /api/v1/tenants/{tenant_id}/products | — | `docs/evidence/P3-1.txt` | Verified |
-| FR-INV-001 | AC-INV-001 | TC-INV-001 | ditetapkan di OpenAPI saat task | — | — | Planned |
-| FR-INV-002 | AC-INV-002 | TC-INV-002 | ditetapkan di OpenAPI saat task | — | — | Planned |
-| FR-INV-003 | AC-INV-003 | TC-INV-003 | ditetapkan di OpenAPI saat task | — | — | Planned |
-| FR-INV-004 | AC-INV-004 | TC-INV-004 | ditetapkan di OpenAPI saat task | — | — | Planned |
-| FR-INV-005 | AC-INV-005 | TC-INV-005 | ditetapkan di OpenAPI saat task | — | — | Planned |
+| FR-INV-001 | AC-INV-001 | TC-INV-001 | GET/POST /api/v1/tenants/{tenant_id}/inventory/{variant_id}/movements | — | `docs/evidence/P3-2.txt` | Verified |
+| FR-INV-002 | AC-INV-002 | TC-INV-002 | PUT /api/v1/tenants/{tenant_id}/inventory/{variant_id}/settings, GET /inventory?low=true | — | `docs/evidence/P3-2.txt` | Verified |
+| FR-INV-003 | AC-INV-003 | TC-INV-003 | internal: inventory_repo::reserve_in (checkout P3-5) | — | `docs/evidence/P3-2.txt` | Verified |
+| FR-INV-004 | AC-INV-004 | TC-INV-004 | POST /inventory/{variant_id}/movements, PUT /settings | — | `docs/evidence/P3-2.txt` | Verified |
+| FR-INV-005 | AC-INV-005 | TC-INV-005 | internal: inventory_repo::reserve_in (checkout P3-5) | — | `docs/evidence/P3-2.txt` | Verified |
 | FR-CRM-001 | AC-CRM-001 | TC-CRM-001 | ditetapkan di OpenAPI saat task | ADR-0005 (D-03) | — | Planned |
 | FR-CRM-002 | AC-CRM-002 | TC-CRM-002 | ditetapkan di OpenAPI saat task | ADR-0005 (D-03) | — | Planned |
 | FR-CRM-003 | AC-CRM-003 | TC-CRM-003 | ditetapkan di OpenAPI saat task | ADR-0005 (D-03) | — | Planned |
