@@ -1,0 +1,49 @@
+P2-6 — Object storage adapter (PRD.md §6.3, §6.8; ADR-0009 lokal PostgreSQL)
+Tanggal: 2026-11-12
+
+Artefak
+- migrations/0011_storage.{up,down}.sql  stored_objects (bytea, sha256, tipe CHECK), RLS ENABLE+FORCE,
+  role aplikasi tanpa UPDATE (objek immutable).
+- crates/domain/src/storage.rs           inspect_image: tipe dari magic bytes (PNG/JPEG/WebP), struktur
+  (chunk PNG s/d IEND, EOI JPEG di akhir, ukuran RIFF WebP persis), tolak SVG/HTML/tipe lain, tolak data
+  setelah penanda akhir (polyglot) dan penanda markup (<script, <html, <svg, <body, <iframe, <?php).
+- crates/infrastructure/src/storage.rs   port ObjectStorage + PgObjectStorage (tx tenant + filter tenant_id),
+  kuota per tenant di bawah pg_advisory_xact_lock, tolak hapus objek yang dirujuk draft/versi,
+  audit storage.object.uploaded/deleted; UrlSigner HMAC-SHA256 "umkm-file-v1|tenant|object|exp",
+  verify konstan-waktu (hmac::verify_slice), exp dibulatkan (cache) dan dibatasi <= 2×ttl.
+- apps/api/src/upload.rs                  POST/GET /api/v1/tenants/{id}/uploads, DELETE .../{object_id},
+  GET /files/{object_id}?t&exp&sig (publik; semua kegagalan 404 seragam; CSP "default-src 'none';
+  sandbox", nosniff, CORP same-site, Cache-Control private max-age=sisa expiry).
+- Config: [storage] max_object_bytes=2 MiB, max_objects_per_tenant=200 (sementara s/d D-10),
+  signed_url_ttl_secs=3600; server.body_limit_bytes=2 MiB+64 KiB; secret UMKM_FILE_SIGNING_KEY (>=32 byte,
+  wajib, tidak pernah tercetak); compose + .env.example; Caddy request_body 3MB.
+- Router: Cache-Control no-store kini default if_not_present (handler file menetapkan sendiri).
+- hmac 0.13.0: sudah ada di Cargo.lock lewat sqlx-postgres; kini dependency langsung infrastructure.
+- OpenAPI diregenerasi (4 operasi, tag files; /files publik); Redocly lint 0 error.
+- apps/api/tests/common/mod.rs: harness HTTP P2 di atas pool umkm_app_role (RLS aktif).
+
+Hasil
+- cargo fmt; clippy -D warnings: bersih. cargo test --workspace --locked: 0 biner gagal.
+- apps/api/tests/upload_http.rs: 9 lulus. Domain storage: 7 lulus. Signer: 3 lulus.
+- cargo deny: ok. check-domain-boundary: ok. check-rtm: ok. docker compose --env-file .env.example config: ok.
+
+Cakupan AC (semua Verified)
+- AC-FILE-001 PNG/JPEG/WebP tersimpan; content_type dari isi; audit 1 baris.
+- AC-FILE-002 SVG, HTML-sebagai-PNG, polyglot, kosong -> 422 + reason; > max -> 413; 0 baris tersimpan;
+  kuota (sekuensial dan paralel: tepat 1 sukses untuk 1 slot tersisa).
+- AC-FILE-003 respons tanpa nama file/path internal; key UUID acak.
+- AC-FILE-004 sig diubah / sig bukan base64 / exp diubah / kedaluwarsa / tanpa query / path rusak -> 404.
+- AC-FILE-005 objek B dengan sig A, t diganti B, sig SAH tenant A untuk objek B -> 404.
+- AC-FILE-006 tenant B: daftar kosong, DELETE objek A lewat path A atau B -> 404, objek tetap ada; RLS katalog.
+
+Temuan selama pengerjaan
+- Tes kuota paralel awal TIDAK membuktikan apa-apa: negative control (lock dihapus) tetap lulus karena
+  pool 5 koneksi == kuota 5. Diperbaiki: sisakan 1 slot lalu 20 put serentak (port) / 15 upload (HTTP).
+- /files tanpa query semula 400 (rejection extractor) -> kini 404 seragam.
+
+Negative control (dilemahkan -> gagal -> dipulihkan)
+- NC1 tenant tidak masuk pesan HMAC         -> roundtrip_and_tamper_detection GAGAL
+- NC2 get() tanpa filter tenant + RLS mati  -> signed_urls_cannot_cross_tenants_or_be_forged GAGAL
+- NC3 deteksi markup dimatikan              -> rejects_markup_embedded_inside_a_structurally_valid_image GAGAL
+- NC4 advisory lock kuota dihapus           -> concurrent_puts_on_the_port_respect_quota GAGAL 3/3 (2 lolos)
+- NC5 cek "masih dirujuk" dimatikan         -> object_referenced_by_a_page_cannot_be_deleted GAGAL

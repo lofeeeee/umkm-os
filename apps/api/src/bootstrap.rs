@@ -12,6 +12,7 @@ use tokio::net::TcpListener;
 use tracing_subscriber::{EnvFilter, fmt};
 use umkm_application::onboarding::LegalVersions;
 use umkm_domain::auth::AuthPolicy;
+use umkm_infrastructure::storage::{PgObjectStorage, StorageLimits, UrlSigner};
 use umkm_infrastructure::{
     auth::Argon2idHasher,
     metrics::Metrics,
@@ -97,7 +98,20 @@ pub async fn serve() -> Result<(), BoxError> {
         Arc::new(readiness::Redis(redis)),
     ])
     .with_metrics(metrics.clone())
-    .with_db(pool.clone());
+    .with_db(pool.clone())
+    .with_files(Arc::new(crate::state::FileService {
+        store: PgObjectStorage::new(
+            pool.clone(),
+            StorageLimits {
+                max_object_bytes: settings.storage.max_object_bytes,
+                max_objects_per_tenant: settings.storage.max_objects_per_tenant,
+            },
+        ),
+        signer: UrlSigner::new(
+            secrets.file_signing_key.clone(),
+            settings.storage.signed_url_ttl_secs,
+        ),
+    }));
     if settings.root_domain_ready() {
         state = state.with_auth(auth);
     } else {

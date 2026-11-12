@@ -1,5 +1,5 @@
 # Konfigurasi non-rahasia — development. Secret TIDAK boleh di sini (PRD.md §6.7);
-# di-inject via env: UMKM_DATABASE_URL, UMKM_REDIS_URL.
+# di-inject via env: UMKM_DATABASE_URL, UMKM_REDIS_URL, UMKM_FILE_SIGNING_KEY.
 environment = "development"
 
 [server]
@@ -7,7 +7,8 @@ host = "127.0.0.1"
 port = 8080
 # Batas request (PRD.md §6.4)
 request_timeout_secs = 30
-body_limit_bytes = 1048576
+# 2 MiB upload gambar (ADR-0009) + 64 KiB overhead; body JSON dibatasi lagi oleh validator.
+body_limit_bytes = 2162688
 
 [http]
 # CORS allowlist dashboard (ADR-0015). Tanpa wildcard; production wajib https.
@@ -58,6 +59,12 @@ key_prefix = "umkm:development"
 [tenancy]
 # Development memakai localhost; staging/production menunggu D-01.
 root_domain = "localhost"
+
+[storage]
+# ADR-0009: lokal PostgreSQL. Kuota sementara sampai D-10 (plan limits).
+max_object_bytes = 2097152
+max_objects_per_tenant = 200
+signed_url_ttl_secs = 3600
 
 [observability]
 log_format = "pretty"

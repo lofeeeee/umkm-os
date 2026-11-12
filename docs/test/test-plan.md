@@ -71,12 +71,12 @@ Perintah gate P2: `cargo fmt --check && cargo clippy --workspace -- -D warnings 
 | TC-BIZ-005 | AC-BIZ-005 | Unit+Integration | ditetapkan saat task | Planned |
 | TC-BIZ-006 | AC-BIZ-006 | Unit+Integration | ditetapkan saat task | Planned |
 | TC-BIZ-007 | AC-BIZ-007 | Unit+Integration | ditetapkan saat task | Planned |
-| TC-FILE-001 | AC-FILE-001 | Security+Integration | ditetapkan saat task | Planned |
-| TC-FILE-002 | AC-FILE-002 | Security+Integration | ditetapkan saat task | Planned |
-| TC-FILE-003 | AC-FILE-003 | Security+Integration | ditetapkan saat task | Planned |
-| TC-FILE-004 | AC-FILE-004 | Security+Integration | ditetapkan saat task | Planned |
-| TC-FILE-005 | AC-FILE-005 | Security+Integration | ditetapkan saat task | Planned |
-| TC-FILE-006 | AC-FILE-006 | Security+Integration | ditetapkan saat task | Planned |
+| TC-FILE-001 | AC-FILE-001 | Security+Integration | `apps/api/tests/upload_http.rs` | Verified |
+| TC-FILE-002 | AC-FILE-002 | Security+Integration | `apps/api/tests/upload_http.rs`, `crates/domain/src/storage.rs` | Verified |
+| TC-FILE-003 | AC-FILE-003 | Security+Integration | `apps/api/tests/upload_http.rs` | Verified |
+| TC-FILE-004 | AC-FILE-004 | Security+Integration | `apps/api/tests/upload_http.rs`, `crates/infrastructure/src/storage.rs` | Verified |
+| TC-FILE-005 | AC-FILE-005 | Security+Integration | `apps/api/tests/upload_http.rs` | Verified |
+| TC-FILE-006 | AC-FILE-006 | Security+Integration | `apps/api/tests/upload_http.rs`, `crates/infrastructure/tests/rls.rs` | Verified |
 | TC-CAT-001 | AC-CAT-001 | lihat §2 | ditetapkan saat task | Planned |
 | TC-CAT-002 | AC-CAT-002 | lihat §2 | ditetapkan saat task | Planned |
 | TC-CAT-003 | AC-CAT-003 | lihat §2 | ditetapkan saat task | Planned |

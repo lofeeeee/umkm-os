@@ -196,10 +196,10 @@ Arah balik: TC → AC lewat nomor yang sama (Test Plan §4); AC → FR lewat FSD
 | FR-BIZ-004 | AC-BIZ-005 | TC-BIZ-005 | PUT /api/v1/tenants/{tenant_id}/business/hour-exceptions | — | `docs/evidence/P2-5.txt` | Planned |
 | FR-BIZ-005 | AC-BIZ-006 | TC-BIZ-006 | GET /api/v1/tenants/{tenant_id}/business/status | — | `docs/evidence/P2-5.txt` | Planned |
 | FR-BIZ-006 | AC-BIZ-007 | TC-BIZ-007 | GET/PUT /api/v1/tenants/{tenant_id}/business/profile | — | `docs/evidence/P2-5.txt` | Planned |
-| FR-FILE-001 | AC-FILE-001, AC-FILE-002 | TC-FILE-001, TC-FILE-002 | POST /api/v1/tenants/{tenant_id}/uploads | ADR-0009 | `docs/evidence/P2-6.txt` | Planned |
-| FR-FILE-002 | AC-FILE-003 | TC-FILE-003 | POST /api/v1/tenants/{tenant_id}/uploads | ADR-0009 | `docs/evidence/P2-6.txt` | Planned |
-| FR-FILE-003 | AC-FILE-004, AC-FILE-005 | TC-FILE-004, TC-FILE-005 | GET /files/{object_id} | ADR-0009 | `docs/evidence/P2-6.txt` | Planned |
-| FR-FILE-004 | AC-FILE-006 | TC-FILE-006 | GET /files/{object_id} | ADR-0009 | `docs/evidence/P2-6.txt` | Planned |
+| FR-FILE-001 | AC-FILE-001, AC-FILE-002 | TC-FILE-001, TC-FILE-002 | POST /api/v1/tenants/{tenant_id}/uploads | ADR-0009 | `docs/evidence/P2-6.txt` | Verified |
+| FR-FILE-002 | AC-FILE-003 | TC-FILE-003 | POST /api/v1/tenants/{tenant_id}/uploads | ADR-0009 | `docs/evidence/P2-6.txt` | Verified |
+| FR-FILE-003 | AC-FILE-004, AC-FILE-005 | TC-FILE-004, TC-FILE-005 | GET /files/{object_id} | ADR-0009 | `docs/evidence/P2-6.txt` | Verified |
+| FR-FILE-004 | AC-FILE-006 | TC-FILE-006 | GET /files/{object_id} | ADR-0009 | `docs/evidence/P2-6.txt` | Verified |
 | FR-CAT-001 | AC-CAT-001 | TC-CAT-001 | ditetapkan di OpenAPI saat task | — | — | Planned |
 | FR-CAT-002 | AC-CAT-002 | TC-CAT-002 | ditetapkan di OpenAPI saat task | — | — | Planned |
 | FR-CAT-003 | AC-CAT-003 | TC-CAT-003 | ditetapkan di OpenAPI saat task | — | — | Planned |

@@ -14,7 +14,7 @@ use utoipa::{
     },
 };
 
-use crate::{auth, health, tenants};
+use crate::{auth, health, tenants, upload};
 
 #[derive(OpenApi)]
 #[openapi(
@@ -35,7 +35,11 @@ use crate::{auth, health, tenants};
         tenants::list_tenants,
         tenants::get_tenant,
         tenants::update_tenant,
-        crate::realtime::tenant_events
+        crate::realtime::tenant_events,
+        upload::upload,
+        upload::list_uploads,
+        upload::delete_upload,
+        upload::serve_file
     ),
     components(schemas(ErrorEnvelope, ErrorBody, ErrorCode, Meta)),
     servers((url = "/", description = "Origin yang sama; root domain menunggu D-01")),
@@ -43,7 +47,8 @@ use crate::{auth, health, tenants};
     tags(
         (name = "ops", description = "Liveness/readiness untuk orchestrator"),
         (name = "auth", description = "Registrasi, login, sesi (cookie HttpOnly + CSRF, ADR-0015)"),
-        (name = "tenants", description = "Tenant milik pemanggil; tenant_id di path diverifikasi terhadap membership")
+        (name = "tenants", description = "Tenant milik pemanggil; tenant_id di path diverifikasi terhadap membership"),
+        (name = "files", description = "Upload gambar tenant + signed URL ber-expiry (ADR-0009)")
     )
 )]
 pub struct ApiDoc;
@@ -90,7 +95,8 @@ impl Modify for CommonErrors {
 /// `security: []`. Skema auth tenant/admin ditambahkan di P1.
 struct PublicOps;
 
-const PUBLIC_PATHS: [&str; 5] = [
+const PUBLIC_PATHS: [&str; 6] = [
+    "/files/{object_id}",
     "/healthz",
     "/readyz",
     "/api/v1/auth/register",

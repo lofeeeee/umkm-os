@@ -23,6 +23,14 @@ pub struct AppState {
     pub db: Option<sqlx::PgPool>,
     /// Hub SSE per tenant (P1-10).
     pub realtime: crate::realtime::RealtimeHub,
+    /// Object storage + signed URL (P2-6, ADR-0009). `None` -> endpoint file 503.
+    pub files: Option<Arc<FileService>>,
+}
+
+/// Storage lokal + penanda URL (ADR-0009).
+pub struct FileService {
+    pub store: umkm_infrastructure::storage::PgObjectStorage,
+    pub signer: umkm_infrastructure::storage::UrlSigner,
 }
 
 impl AppState {
@@ -33,7 +41,13 @@ impl AppState {
             auth: None,
             db: None,
             realtime: Default::default(),
+            files: None,
         }
+    }
+
+    pub fn with_files(mut self, files: Arc<FileService>) -> Self {
+        self.files = Some(files);
+        self
     }
 
     pub fn with_db(mut self, pool: sqlx::PgPool) -> Self {

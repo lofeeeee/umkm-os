@@ -570,6 +570,241 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
       security:
       - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/uploads:
+    get:
+      tags:
+      - files
+      summary: Daftar file tenant untuk pemilih gambar editor. Butuh `website.read`.
+      operationId: list_uploads
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: File tenant (terbaru dulu)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_Vec_UploadView'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+    post:
+      tags:
+      - files
+      summary: Upload gambar (AC-FILE-001/002). Butuh `website.edit`.
+      operationId: upload
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        description: Byte mentah PNG/JPEG/WebP, maks storage.max_object_bytes
+        content:
+          application/octet-stream:
+            schema:
+              type: array
+              items:
+                type: integer
+                format: int32
+                minimum: 0
+        required: true
+      responses:
+        '201':
+          description: Tersimpan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_UploadView'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Terlalu besar
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '422':
+          description: Tipe/struktur ditolak atau kuota habis
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/uploads/{object_id}:
+    delete:
+      tags:
+      - files
+      summary: Hapus file yang tidak dirujuk halaman mana pun. Butuh `website.edit`.
+      operationId: delete_upload
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: object_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '204':
+          description: Dihapus
+        '404':
+          description: Tidak ada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: Masih dirujuk halaman
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /files/{object_id}:
+    get:
+      tags:
+      - files
+      summary: Sajikan objek via signed URL (AC-FILE-003..005). Publik, tanpa cookie.
+      operationId: serve_file
+      parameters:
+      - name: object_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: t
+        in: query
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: exp
+        in: query
+        required: true
+        schema:
+          type: integer
+          format: int64
+          minimum: 0
+      - name: sig
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Byte gambar
+          content:
+            image/*: {}
+        '404':
+          description: Signature salah/kedaluwarsa/objek tidak ada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security: []
   /healthz:
     get:
       tags:
@@ -906,6 +1141,44 @@ components:
           $ref: '#/components/schemas/Meta'
         success:
           type: boolean
+    SuccessEnvelope_UploadView:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - id
+          - ref
+          - content_type
+          - byte_size
+          - created_at_unix
+          - url
+          properties:
+            byte_size:
+              type: integer
+              format: int32
+            content_type:
+              type: string
+            created_at_unix:
+              type: integer
+              format: int64
+            id:
+              type: string
+              format: uuid
+            ref:
+              type: string
+              description: Nilai untuk dipakai di `content_json` (ADR-0007), mis. `asset:<uuid>`.
+            url:
+              type: string
+              description: Path signed URL relatif terhadap origin API; berlaku terbatas (ADR-0009).
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
     SuccessEnvelope_Vec_MembershipItem:
       type: object
       required:
@@ -932,6 +1205,46 @@ components:
               tenant_id:
                 type: string
                 format: uuid
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
+    SuccessEnvelope_Vec_UploadView:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            required:
+            - id
+            - ref
+            - content_type
+            - byte_size
+            - created_at_unix
+            - url
+            properties:
+              byte_size:
+                type: integer
+                format: int32
+              content_type:
+                type: string
+              created_at_unix:
+                type: integer
+                format: int64
+              id:
+                type: string
+                format: uuid
+              ref:
+                type: string
+                description: Nilai untuk dipakai di `content_json` (ADR-0007), mis. `asset:<uuid>`.
+              url:
+                type: string
+                description: Path signed URL relatif terhadap origin API; berlaku terbatas (ADR-0009).
         meta:
           $ref: '#/components/schemas/Meta'
         success:
@@ -998,3 +1311,5 @@ tags:
   description: Registrasi, login, sesi (cookie HttpOnly + CSRF, ADR-0015)
 - name: tenants
   description: Tenant milik pemanggil; tenant_id di path diverifikasi terhadap membership
+- name: files
+  description: Upload gambar tenant + signed URL ber-expiry (ADR-0009)

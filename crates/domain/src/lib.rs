@@ -5,6 +5,7 @@
 pub mod audit;
 pub mod auth;
 pub mod rbac;
+pub mod storage;
 pub mod tenant;
 pub mod website;
 

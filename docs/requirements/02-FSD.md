@@ -31,7 +31,7 @@ Status keputusan per 2026-11-12: D-05, ADR-0014 `DISETUJUI`; D-07 `DISETUJUI` se
 | AC-WEB-002 | Given template, When preview template diminta, Then konten contoh template dirender tanpa membuat/mengubah website tenant |
 | AC-WEB-003 | Given tenant memilih template versi N, When template versi N+1 diterbitkan platform, Then website tenant tetap memakai N sampai tenant memilih ulang |
 | AC-WEB-004 | Given `content_json` valid sesuai ADR-0007, When disimpan sebagai draft, Then diterima dan tersimpan apa adanya (normalisasi kanonik) |
-| AC-WEB-005 | Given `content_json` dengan field tak dikenal, tipe section tak dikenal, `schema_version ≠ 1`, URL `javascript:`/`data:`, teks melebihi batas, > 30 section, atau id ganda, When disimpan/dipublish, Then ditolak `400 VALIDATION_ERROR` dengan path field, dan tidak ada yang tersimpan |
+| AC-WEB-005 | Given `content_json` dengan field tak dikenal, tipe section tak dikenal, `schema_version ≠ 1`, URL `javascript:`/`data:`, teks melebihi batas, > 30 section, atau id ganda, When disimpan/dipublish, Then ditolak `422 VALIDATION_FAILED` (envelope P0) dengan path field, dan tidak ada yang tersimpan |
 | AC-WEB-006 | Given input acak (fuzz), When divalidasi, Then validator tidak panic dan hanya menerima dokumen yang lolos aturan |
 | AC-WEB-007 | Given draft dengan section A,B,C, When urutan disimpan C,A,B, Then draft memuat urutan C,A,B |
 | AC-WEB-008 | Given section `enabled=false`, When versi itu dipublish dan dibuka publik, Then section tidak dirender |
@@ -60,7 +60,7 @@ Status keputusan per 2026-11-12: D-05, ADR-0014 `DISETUJUI`; D-07 `DISETUJUI` se
 | AC | Kriteria |
 |---|---|
 | AC-BIZ-001 | Given `tenant.update`, When profil diubah dengan data valid, Then tersimpan dan audit `business.update` tercatat; tanpa permission → ditolak |
-| AC-BIZ-002 | Given email/telepon/URL social tidak valid, When disimpan, Then `400 VALIDATION_ERROR`; logo/cover hanya `asset:<uuid>` milik tenant |
+| AC-BIZ-002 | Given email/telepon/URL social tidak valid, When disimpan, Then `422 VALIDATION_FAILED`; logo/cover hanya `asset:<uuid>` milik tenant |
 | AC-BIZ-003 | Given latitude ∉ [-90,90] atau longitude ∉ [-180,180], When disimpan, Then ditolak; alamat tanpa koordinat diterima |
 | AC-BIZ-004 | Given jam buka ≥ jam tutup pada hari yang tidak melewati tengah malam, When disimpan, Then ditolak; maksimal satu baris per `day_of_week` |
 | AC-BIZ-005 | Given exception tanggal D `is_closed=true`, When status dihitung pada D, Then tutup meski jam reguler buka |
@@ -79,7 +79,7 @@ Status keputusan per 2026-11-12: D-05, ADR-0014 `DISETUJUI`; D-07 `DISETUJUI` se
 | AC | Kriteria |
 |---|---|
 | AC-FILE-001 | Given PNG/JPEG/WebP ≤ 2 MB, When diupload user dengan `website.edit`, Then tersimpan dan id objek dikembalikan |
-| AC-FILE-002 | Given file > 2 MB, SVG, HTML berganti nama `.png`, polyglot, atau magic bytes tak cocok, When diupload, Then ditolak dan tidak ada yang tersimpan; kuota objek tenant terlampaui → ditolak |
+| AC-FILE-002 | Given file > 2 MB (→ 413), SVG, HTML berganti nama `.png`, polyglot, atau magic bytes tak cocok, When diupload, Then ditolak dan tidak ada yang tersimpan; kuota objek tenant terlampaui → ditolak |
 | AC-FILE-003 | Given objek tersimpan, When respons/URL diperiksa, Then tidak memuat nama file asli atau path internal |
 | AC-FILE-004 | Given signed URL kedaluwarsa atau signature diubah, When diakses, Then 404 |
 | AC-FILE-005 | Given signed URL tenant A, When `object_id` diganti objek tenant B (atau `t` diganti B), Then 404 |

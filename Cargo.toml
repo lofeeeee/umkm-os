@@ -33,6 +33,7 @@ futures-util = { version = "0.3.34", default-features = false, features = ["std"
 prometheus-client = "0.26.0"
 argon2 = "0.6.0"
 sha2 = "0.11.1"
+hmac = "0.13.0"
 getrandom = "0.4.3"
 base64 = "0.22.1"
 utoipa = { version = "6.0.0", default-features = false, features = ["macros"] }

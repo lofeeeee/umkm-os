@@ -13,6 +13,7 @@ pub mod router;
 pub mod session;
 pub mod state;
 pub mod tenants;
+pub mod upload;
 
 pub use error::ApiError;
 pub use router::{HttpLimits, build_router, with_middleware};

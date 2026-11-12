@@ -12,6 +12,7 @@ pub mod rate_limit;
 pub mod rbac_repo;
 pub mod redis;
 pub mod retention;
+pub mod storage;
 pub mod tenant_repo;
 
 /// Nama crate, dipakai untuk smoke test wiring workspace.

@@ -1,0 +1,267 @@
+//! Upload & penyajian file (P2-6, `PRD.md §6.8`, ADR-0009).
+//!
+//! - `POST /api/v1/tenants/{tenant_id}/uploads`: body = byte mentah gambar. Nama file dan
+//!   `Content-Type` klien diabaikan; tipe ditentukan dari isi (domain `inspect_image`).
+//! - `GET /files/{object_id}?t=&exp=&sig=`: tanpa sesi; hanya signed URL valid. Semua
+//!   kegagalan -> 404 seragam (tidak membocorkan apakah objek ada).
+
+use std::time::{SystemTime, UNIX_EPOCH};
+
+use axum::{
+    Json, Router,
+    body::Bytes,
+    extract::{
+        Path, Query, State,
+        rejection::{PathRejection, QueryRejection},
+    },
+    http::{HeaderValue, StatusCode, header},
+    response::{IntoResponse, Response},
+    routing::{delete, get},
+};
+use serde::{Deserialize, Serialize};
+use umkm_infrastructure::storage::{ObjectStorage, StorageError, StoredObjectMeta};
+use umkm_shared::http::{ErrorBody, ErrorCode, SuccessEnvelope};
+use utoipa::ToSchema;
+use uuid::Uuid;
+
+use crate::{
+    ApiError, AppState, auth::ClientIp, middleware::ReqId, session::Member, state::FileService,
+};
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct UploadView {
+    pub id: Uuid,
+    /// Nilai untuk dipakai di `content_json` (ADR-0007), mis. `asset:<uuid>`.
+    #[serde(rename = "ref")]
+    pub asset_ref: String,
+    pub content_type: String,
+    pub byte_size: i32,
+    pub created_at_unix: i64,
+    /// Path signed URL relatif terhadap origin API; berlaku terbatas (ADR-0009).
+    pub url: String,
+}
+
+pub fn now_unix() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0)
+}
+
+fn files(state: &AppState) -> Result<&FileService, ApiError> {
+    state
+        .files
+        .as_deref()
+        .ok_or_else(|| ApiError::new(ErrorCode::ServiceUnavailable))
+}
+
+fn view(f: &FileService, tenant: umkm_shared::ids::TenantId, m: StoredObjectMeta) -> UploadView {
+    UploadView {
+        url: f.signer.sign(tenant, m.id, now_unix()),
+        asset_ref: format!("asset:{}", m.id),
+        id: m.id,
+        content_type: m.content_type,
+        byte_size: m.byte_size,
+        created_at_unix: m.created_at_unix,
+    }
+}
+
+fn storage_error(e: StorageError) -> ApiError {
+    match e {
+        StorageError::Rejected(u) => {
+            let code = if matches!(u, umkm_domain::storage::UploadError::TooLarge(_)) {
+                ErrorCode::PayloadTooLarge
+            } else {
+                ErrorCode::ValidationFailed
+            };
+            ApiError(
+                ErrorBody::new(code)
+                    .with_message(u.to_string())
+                    .with_details(serde_json::json!({ "reason": u.code() })),
+            )
+        }
+        StorageError::InUse => ApiError(
+            ErrorBody::new(ErrorCode::Conflict)
+                .with_message("file masih dipakai di halaman website (draft atau versi terbit)"),
+        ),
+        StorageError::Db(e) => {
+            tracing::error!(error = %e, "storage query failed");
+            ApiError::new(ErrorCode::InternalError)
+        }
+    }
+}
+
+/// Upload gambar (AC-FILE-001/002). Butuh `website.edit`.
+#[utoipa::path(
+    post, path = "/api/v1/tenants/{tenant_id}/uploads", tag = "files",
+    params(("tenant_id" = Uuid, Path)),
+    request_body(content = Vec<u8>, content_type = "application/octet-stream",
+        description = "Byte mentah PNG/JPEG/WebP, maks storage.max_object_bytes"),
+    responses(
+        (status = 201, description = "Tersimpan", body = SuccessEnvelope<UploadView>),
+        (status = 413, description = "Terlalu besar", body = umkm_shared::http::ErrorEnvelope),
+        (status = 422, description = "Tipe/struktur ditolak atau kuota habis", body = umkm_shared::http::ErrorEnvelope)
+    )
+)]
+pub async fn upload(
+    State(state): State<AppState>,
+    ReqId(id): ReqId,
+    ClientIp(ip): ClientIp,
+    Member(actor): Member,
+    body: Bytes,
+) -> Result<(StatusCode, Json<SuccessEnvelope<UploadView>>), ApiError> {
+    actor.require("website.edit")?;
+    let f = files(&state)?;
+    let m = f
+        .store
+        .put(&actor, &body, (Some(id.as_str()), Some(&ip)))
+        .await
+        .map_err(storage_error)?;
+    tracing::info!(tenant_id = %actor.tenant_id, object_id = %m.id, bytes = m.byte_size, "object uploaded");
+    Ok((
+        StatusCode::CREATED,
+        Json(SuccessEnvelope::new(view(f, actor.tenant_id, m), &id)),
+    ))
+}
+
+/// Daftar file tenant untuk pemilih gambar editor. Butuh `website.read`.
+#[utoipa::path(
+    get, path = "/api/v1/tenants/{tenant_id}/uploads", tag = "files",
+    params(("tenant_id" = Uuid, Path)),
+    responses((status = 200, description = "File tenant (terbaru dulu)", body = SuccessEnvelope<Vec<UploadView>>))
+)]
+pub async fn list_uploads(
+    State(state): State<AppState>,
+    ReqId(id): ReqId,
+    Member(actor): Member,
+) -> Result<Json<SuccessEnvelope<Vec<UploadView>>>, ApiError> {
+    actor.require("website.read")?;
+    let f = files(&state)?;
+    let items = f
+        .store
+        .list(actor.tenant_id)
+        .await
+        .map_err(storage_error)?
+        .into_iter()
+        .map(|m| view(f, actor.tenant_id, m))
+        .collect();
+    Ok(Json(SuccessEnvelope::new(items, &id)))
+}
+
+#[derive(Deserialize)]
+pub struct ObjectPath {
+    #[allow(dead_code)]
+    tenant_id: Uuid,
+    object_id: Uuid,
+}
+
+/// Hapus file yang tidak dirujuk halaman mana pun. Butuh `website.edit`.
+#[utoipa::path(
+    delete, path = "/api/v1/tenants/{tenant_id}/uploads/{object_id}", tag = "files",
+    params(("tenant_id" = Uuid, Path), ("object_id" = Uuid, Path)),
+    responses(
+        (status = 204, description = "Dihapus"),
+        (status = 404, description = "Tidak ada", body = umkm_shared::http::ErrorEnvelope),
+        (status = 409, description = "Masih dirujuk halaman", body = umkm_shared::http::ErrorEnvelope)
+    )
+)]
+pub async fn delete_upload(
+    State(state): State<AppState>,
+    ReqId(id): ReqId,
+    ClientIp(ip): ClientIp,
+    Member(actor): Member,
+    Path(p): Path<ObjectPath>,
+) -> Result<StatusCode, ApiError> {
+    actor.require("website.edit")?;
+    let deleted = files(&state)?
+        .store
+        .delete(&actor, p.object_id, (Some(id.as_str()), Some(&ip)))
+        .await
+        .map_err(storage_error)?;
+    if deleted {
+        Ok(StatusCode::NO_CONTENT)
+    } else {
+        Err(ApiError::new(ErrorCode::ResourceNotFound))
+    }
+}
+
+#[derive(Deserialize)]
+pub struct SignedQuery {
+    t: Uuid,
+    exp: u64,
+    sig: String,
+}
+
+/// Sajikan objek via signed URL (AC-FILE-003..005). Publik, tanpa cookie.
+#[utoipa::path(
+    get, path = "/files/{object_id}", tag = "files",
+    params(("object_id" = Uuid, Path), ("t" = Uuid, Query), ("exp" = u64, Query), ("sig" = String, Query)),
+    responses(
+        (status = 200, description = "Byte gambar", content_type = "image/*"),
+        (status = 404, description = "Signature salah/kedaluwarsa/objek tidak ada", body = umkm_shared::http::ErrorEnvelope)
+    )
+)]
+pub async fn serve_file(
+    State(state): State<AppState>,
+    path: Result<Path<Uuid>, PathRejection>,
+    query: Result<Query<SignedQuery>, QueryRejection>,
+) -> Result<Response, ApiError> {
+    let not_found = || ApiError::new(ErrorCode::ResourceNotFound);
+    let f = files(&state)?;
+    // Path/query rusak diperlakukan sama dengan signature salah: 404 seragam.
+    let (Ok(Path(object_id)), Ok(Query(q))) = (path, query) else {
+        return Err(not_found());
+    };
+    let now = now_unix();
+    let v = f
+        .signer
+        .verify(object_id, q.t, q.exp, &q.sig, now)
+        .ok_or_else(not_found)?;
+    // Tenant dari signature = tenant context RLS: objek tenant lain tidak terlihat.
+    let obj = f
+        .store
+        .get(v.tenant, v.object)
+        .await
+        .map_err(storage_error)?
+        .ok_or_else(not_found)?;
+    let mut res = obj.bytes.into_response();
+    let h = res.headers_mut();
+    h.insert(
+        header::CONTENT_TYPE,
+        HeaderValue::from_static(obj.content_type.content_type()),
+    );
+    h.insert(
+        header::CONTENT_DISPOSITION,
+        HeaderValue::from_static("inline"),
+    );
+    // Bila browser tetap mencoba menafsirkan sebagai dokumen: tanpa skrip, origin unik.
+    h.insert(
+        header::CONTENT_SECURITY_POLICY,
+        HeaderValue::from_static("default-src 'none'; sandbox"),
+    );
+    h.insert(
+        "cross-origin-resource-policy",
+        HeaderValue::from_static("same-site"),
+    );
+    let max_age = v.expires_unix.saturating_sub(now);
+    if let Ok(cc) = HeaderValue::from_str(&format!("private, max-age={max_age}, immutable")) {
+        h.insert(header::CACHE_CONTROL, cc);
+    }
+    if let Ok(etag) = HeaderValue::from_str(&format!("\"{}\"", obj.sha256_hex)) {
+        h.insert(header::ETAG, etag);
+    }
+    Ok(res)
+}
+
+pub fn routes() -> Router<AppState> {
+    Router::new()
+        .route(
+            "/api/v1/tenants/{tenant_id}/uploads",
+            get(list_uploads).post(upload),
+        )
+        .route(
+            "/api/v1/tenants/{tenant_id}/uploads/{object_id}",
+            delete(delete_upload),
+        )
+        .route("/files/{object_id}", get(serve_file))
+}

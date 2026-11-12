@@ -1887,6 +1887,7 @@ dependencies = [
  "argon2",
  "base64",
  "getrandom",
+ "hmac",
  "prometheus-client",
  "redis",
  "serde_json",

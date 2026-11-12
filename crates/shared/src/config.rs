@@ -16,6 +16,9 @@ pub const ROOT_DOMAIN_PLACEHOLDER: &str = "<ROOT_DOMAIN>";
 pub const ENV_VAR: &str = "UMKM_ENV";
 pub const DATABASE_URL_VAR: &str = "UMKM_DATABASE_URL";
 pub const REDIS_URL_VAR: &str = "UMKM_REDIS_URL";
+/// Kunci HMAC signed URL file (ADR-0009); minimal 32 byte.
+pub const FILE_SIGNING_KEY_VAR: &str = "UMKM_FILE_SIGNING_KEY";
+pub const FILE_SIGNING_KEY_MIN_LEN: usize = 32;
 /// Override `tenancy.root_domain` (Compose meneruskan nilai yang sama dengan Caddy).
 pub const ROOT_DOMAIN_VAR: &str = "UMKM_ROOT_DOMAIN";
 
@@ -93,6 +96,7 @@ pub struct Settings {
     pub database: DatabaseSettings,
     pub redis: RedisSettings,
     pub tenancy: TenancySettings,
+    pub storage: StorageSettings,
     pub observability: ObservabilitySettings,
 }
 
@@ -168,6 +172,16 @@ pub struct RedisSettings {
 #[serde(deny_unknown_fields)]
 pub struct TenancySettings {
     pub root_domain: String,
+}
+
+/// Object storage lokal (ADR-0009). Kuota sementara sampai D-10 (plan limits).
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct StorageSettings {
+    pub max_object_bytes: usize,
+    pub max_objects_per_tenant: i64,
+    /// Masa berlaku signed URL; ADR-0009: maksimal 3600.
+    pub signed_url_ttl_secs: u64,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
@@ -304,6 +318,18 @@ impl Settings {
         if self.database.acquire_timeout_secs == 0 {
             return invalid("database.acquire_timeout_secs harus > 0");
         }
+        let st = &self.storage;
+        if st.max_object_bytes == 0 || st.max_objects_per_tenant <= 0 {
+            return invalid("storage.max_* harus > 0");
+        }
+        if st.max_object_bytes > self.server.body_limit_bytes {
+            return invalid(
+                "storage.max_object_bytes tidak boleh melebihi server.body_limit_bytes",
+            );
+        }
+        if st.signed_url_ttl_secs < 60 || st.signed_url_ttl_secs > 3600 {
+            return invalid("storage.signed_url_ttl_secs harus 60..=3600 (ADR-0009)");
+        }
         if self.redis.key_prefix.trim().is_empty() {
             return invalid("redis.key_prefix wajib diisi");
         }
@@ -360,6 +386,7 @@ impl fmt::Debug for SecretString {
 pub struct Secrets {
     pub database_url: SecretString,
     pub redis_url: SecretString,
+    pub file_signing_key: SecretString,
 }
 
 impl Secrets {
@@ -375,9 +402,18 @@ impl Secrets {
                 .map(SecretString::new)
                 .ok_or(ConfigError::MissingVar(k))
         };
+        let database_url = get(DATABASE_URL_VAR)?;
+        let redis_url = get(REDIS_URL_VAR)?;
+        let file_signing_key = get(FILE_SIGNING_KEY_VAR)?;
+        if file_signing_key.expose().len() < FILE_SIGNING_KEY_MIN_LEN {
+            return Err(ConfigError::Invalid(format!(
+                "{FILE_SIGNING_KEY_VAR} minimal {FILE_SIGNING_KEY_MIN_LEN} byte"
+            )));
+        }
         Ok(Self {
-            database_url: get(DATABASE_URL_VAR)?,
-            redis_url: get(REDIS_URL_VAR)?,
+            database_url,
+            redis_url,
+            file_signing_key,
         })
     }
 }
@@ -425,6 +461,10 @@ acquire_timeout_secs = 5
 key_prefix = "umkm:production"
 [tenancy]
 root_domain = "example.test"
+[storage]
+max_object_bytes = 1048576
+max_objects_per_tenant = 200
+signed_url_ttl_secs = 3600
 [observability]
 log_format = "json"
 "#;
@@ -566,12 +606,13 @@ log_format = "json"
         let s = Secrets::from_lookup(|k| match k {
             DATABASE_URL_VAR => Some("postgres://user:hunter2@db/app".into()),
             REDIS_URL_VAR => Some("redis://:topsecret@redis:6379".into()),
+            FILE_SIGNING_KEY_VAR => Some("signing-key-0123456789-abcdefghijkl".into()),
             _ => None,
         })
         .unwrap();
         let dbg = format!("{s:?}");
         assert!(
-            !dbg.contains("hunter2") && !dbg.contains("topsecret"),
+            !dbg.contains("hunter2") && !dbg.contains("topsecret") && !dbg.contains("signing-key"),
             "{dbg}"
         );
         assert_eq!(s.database_url.expose(), "postgres://user:hunter2@db/app");
@@ -584,5 +625,22 @@ log_format = "json"
         assert!(matches!(err, ConfigError::MissingVar(REDIS_URL_VAR)));
         let err = Secrets::from_lookup(|_| Some("  ".into())).unwrap_err();
         assert!(matches!(err, ConfigError::MissingVar(DATABASE_URL_VAR)));
+        let err =
+            Secrets::from_lookup(|k| (k != FILE_SIGNING_KEY_VAR).then(|| "x".into())).unwrap_err();
+        assert!(matches!(err, ConfigError::MissingVar(FILE_SIGNING_KEY_VAR)));
+    }
+
+    #[test]
+    fn short_file_signing_key_is_rejected_without_echoing_it() {
+        let err = Secrets::from_lookup(|k| {
+            Some(if k == FILE_SIGNING_KEY_VAR {
+                "pendek".into()
+            } else {
+                "x".into()
+            })
+        })
+        .unwrap_err();
+        assert!(matches!(err, ConfigError::Invalid(_)));
+        assert!(!err.to_string().contains("pendek"));
     }
 }

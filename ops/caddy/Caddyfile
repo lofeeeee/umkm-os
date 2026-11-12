@@ -13,8 +13,9 @@
 		Referrer-Policy no-referrer
 		-Server
 	}
+	# Upload gambar maks 2 MiB (ADR-0009) + overhead; API menegakkan batas persisnya.
 	request_body {
-		max_size 2MB
+		max_size 3MB
 	}
 }
 

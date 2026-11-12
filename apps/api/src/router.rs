@@ -22,7 +22,7 @@ use tracing::Level;
 use umkm_infrastructure::metrics::Metrics;
 use umkm_shared::{config::ServerSettings, http::RequestId};
 
-use crate::{AppState, auth, health, middleware, tenants};
+use crate::{AppState, auth, health, middleware, tenants, upload};
 
 #[derive(Debug, Clone, Copy)]
 pub struct HttpLimits {
@@ -45,7 +45,8 @@ pub fn build_router(state: AppState, limits: HttpLimits) -> Router {
         .route("/healthz", get(health::healthz))
         .route("/readyz", get(health::readyz))
         .merge(auth::routes())
-        .merge(tenants::routes());
+        .merge(tenants::routes())
+        .merge(upload::routes());
     let metrics = state.metrics.clone();
     let cors = cors_layer(
         state
@@ -94,7 +95,6 @@ pub fn with_middleware(
         ("x-content-type-options", "nosniff"),
         ("x-frame-options", "DENY"),
         ("referrer-policy", "no-referrer"),
-        ("cache-control", "no-store"),
     ];
     let mut router = routes
         // Urutan layer: terakhir dipasang = terluar.
@@ -119,6 +119,11 @@ pub fn with_middleware(
             HeaderValue::from_static(value),
         ));
     }
+    // Default no-store; handler boleh menetapkan sendiri (mis. file bertanda tangan, P2-6).
+    router = router.layer(SetResponseHeaderLayer::if_not_present(
+        header::CACHE_CONTROL,
+        HeaderValue::from_static("no-store"),
+    ));
     router
         .layer(TraceLayer::new_for_http().make_span_with(|req: &Request| {
             let request_id = req
