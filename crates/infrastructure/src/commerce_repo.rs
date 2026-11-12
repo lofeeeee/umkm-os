@@ -34,6 +34,8 @@ pub struct Settings {
     pub delivery_fee: Money,
     pub order_approval_required: bool,
     pub reservation_ttl_minutes: i32,
+    /// PRD §4.7: penyetuju ≠ pemohon (staf yang mengonfirmasi pembayaran)
+    pub separation_of_duties: bool,
 }
 
 impl Default for Settings {
@@ -45,6 +47,7 @@ impl Default for Settings {
             delivery_fee: Money::ZERO,
             order_approval_required: false,
             reservation_ttl_minutes: 60,
+            separation_of_duties: true,
         }
     }
 }
@@ -129,7 +132,7 @@ pub struct Payment {
     pub amount: String,
     pub amount_received: Option<String>,
     pub payer_reference: Option<String>,
-    pub proof_object_id: Option<Uuid>,
+    pub has_proof: bool,
     pub verifier_note: Option<String>,
     pub rejection_reason: Option<String>,
     pub claimed_at: Option<String>,
@@ -195,7 +198,7 @@ fn ts(col: &str) -> String {
 pub async fn settings_in(tx: &mut Tx, t: TenantId) -> Result<Settings, sqlx::Error> {
     let r = sqlx::query(
         "SELECT qris_object_id, qris_receiver_name, checkout_enabled, (delivery_fee * 100)::bigint AS fee,
-                order_approval_required, reservation_ttl_minutes
+                order_approval_required, reservation_ttl_minutes, separation_of_duties
          FROM commerce_settings WHERE tenant_id = $1",
     )
     .bind(t.as_uuid())
@@ -208,6 +211,7 @@ pub async fn settings_in(tx: &mut Tx, t: TenantId) -> Result<Settings, sqlx::Err
         delivery_fee: Money::from_sen(r.get("fee")).unwrap_or(Money::ZERO),
         order_approval_required: r.get("order_approval_required"),
         reservation_ttl_minutes: r.get("reservation_ttl_minutes"),
+        separation_of_duties: r.get("separation_of_duties"),
     })
     .unwrap_or_default())
 }
@@ -231,12 +235,13 @@ pub async fn put_settings(
     let before = settings_in(&mut tx, t).await?;
     sqlx::query(
         "INSERT INTO commerce_settings (tenant_id, qris_object_id, qris_receiver_name, checkout_enabled,
-             delivery_fee, order_approval_required, reservation_ttl_minutes)
-         VALUES ($1, $2, $3, $4, $5::bigint::numeric / 100, $6, $7)
+             delivery_fee, order_approval_required, reservation_ttl_minutes, separation_of_duties)
+         VALUES ($1, $2, $3, $4, $5::bigint::numeric / 100, $6, $7, $8)
          ON CONFLICT (tenant_id) DO UPDATE SET qris_object_id = EXCLUDED.qris_object_id,
              qris_receiver_name = EXCLUDED.qris_receiver_name, checkout_enabled = EXCLUDED.checkout_enabled,
              delivery_fee = EXCLUDED.delivery_fee, order_approval_required = EXCLUDED.order_approval_required,
-             reservation_ttl_minutes = EXCLUDED.reservation_ttl_minutes, updated_at = now()",
+             reservation_ttl_minutes = EXCLUDED.reservation_ttl_minutes,
+             separation_of_duties = EXCLUDED.separation_of_duties, updated_at = now()",
     )
     .bind(t.as_uuid())
     .bind(s.qris_object_id)
@@ -245,6 +250,7 @@ pub async fn put_settings(
     .bind(s.delivery_fee.sen())
     .bind(s.order_approval_required)
     .bind(s.reservation_ttl_minutes)
+    .bind(s.separation_of_duties)
     .execute(&mut *tx)
     .await
     .map_err(|e| match violation(&e) {
@@ -265,6 +271,7 @@ pub async fn put_settings(
                 "qris_after": s.qris_object_id,
                 "checkout_enabled": s.checkout_enabled,
                 "order_approval_required": s.order_approval_required,
+                "separation_of_duties": s.separation_of_duties,
             })),
     )
     .await?;
@@ -566,7 +573,8 @@ pub async fn detail_in(
     .collect();
     let payment = sqlx::query(sqlx::AssertSqlSafe(format!(
         "SELECT p.id, p.method, p.status, (p.amount * 100)::bigint AS amount_sen,
-                (p.amount_received * 100)::bigint AS received_sen, p.payer_reference, p.proof_object_id,
+                (p.amount_received * 100)::bigint AS received_sen, p.payer_reference,
+                EXISTS (SELECT 1 FROM payment_proofs pp WHERE pp.tenant_id = p.tenant_id AND pp.payment_id = p.id) AS has_proof,
                 p.verifier_note, p.rejection_reason, {} AS claimed_at, {} AS decided_at, p.decided_by,
                 (SELECT COALESCE(sum(amount), 0) * 100 FROM refunds f WHERE f.tenant_id = p.tenant_id AND f.payment_id = p.id)::bigint AS refunded_sen
          FROM payments p WHERE p.tenant_id = $1 AND p.order_id = $2",
@@ -584,7 +592,7 @@ pub async fn detail_in(
         amount: format_sen(p.get("amount_sen")),
         amount_received: p.get::<Option<i64>, _>("received_sen").map(format_sen),
         payer_reference: p.get("payer_reference"),
-        proof_object_id: p.get("proof_object_id"),
+        has_proof: p.get("has_proof"),
         verifier_note: p.get("verifier_note"),
         rejection_reason: p.get("rejection_reason"),
         claimed_at: p.get("claimed_at"),
@@ -595,7 +603,7 @@ pub async fn detail_in(
     let events = if with_events {
         sqlx::query(sqlx::AssertSqlSafe(format!(
             "SELECT from_status, to_status, actor_type, actor_user_id, reason, {} AS created_at
-             FROM order_events WHERE tenant_id = $1 AND order_id = $2 ORDER BY created_at, id",
+             FROM order_events WHERE tenant_id = $1 AND order_id = $2 ORDER BY seq",
             ts("created_at")
         )))
         .bind(t.as_uuid())

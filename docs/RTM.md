@@ -219,10 +219,10 @@ Arah balik: TC → AC lewat nomor yang sama (Test Plan §4); AC → FR lewat FSD
 | FR-ORD-002 | AC-ORD-002 | TC-ORD-002 | POST /api/v1/public/checkout | ADR-0004 (D-02) | `docs/evidence/P3-5.txt` | Verified |
 | FR-ORD-003 | AC-ORD-003 | TC-ORD-003 | GET /api/v1/public/orders/current | ADR-0004 (D-02) | `docs/evidence/P3-5.txt` | Verified |
 | FR-ORD-004 | AC-ORD-004 | TC-ORD-004 | internal: OrderStatus::can_transition + trg_orders_transition | ADR-0004 (D-02) | `docs/evidence/P3-6.txt` | Verified |
-| FR-ORD-005 | AC-ORD-005 | TC-ORD-005 | ditetapkan di OpenAPI saat task | ADR-0004 (D-02) | — | Planned |
+| FR-ORD-005 | AC-ORD-005 | TC-ORD-005 | POST /tenants/{tenant_id}/orders/{id}/approve, /reject | ADR-0004 (D-02) | `docs/evidence/P3-8.txt` | Verified |
 | FR-ORD-006 | AC-ORD-006 | TC-ORD-006 | POST /api/v1/public/checkout (Idempotency-Key) | ADR-0004 (D-02) | `docs/evidence/P3-5.txt` | Verified |
-| FR-ORD-007 | AC-ORD-007 | TC-ORD-007 | ditetapkan di OpenAPI saat task | ADR-0004 (D-02) | — | Planned |
-| FR-ORD-008 | AC-ORD-008 | TC-ORD-008 | ditetapkan di OpenAPI saat task | ADR-0004 (D-02) | — | Planned |
+| FR-ORD-007 | AC-ORD-007 | TC-ORD-007 | POST /tenants/{tenant_id}/orders/{id}/payment/confirm, /payment/reject, /public/orders/current/payment-claim | ADR-0004 (D-02) | `docs/evidence/P3-7.txt` | Verified |
+| FR-ORD-008 | AC-ORD-008 | TC-ORD-008 | POST /tenants/{tenant_id}/orders/{id}/refunds | ADR-0004 (D-02) | `docs/evidence/P3-7.txt` | Verified |
 | FR-ORD-009 | AC-ORD-009 | TC-ORD-009 | GET /api/v1/public/orders/current (X-Order-Token) | ADR-0004 (D-02) | `docs/evidence/P3-5.txt` | Verified |
 | FR-ORD-010 | AC-ORD-010 | TC-ORD-010 | POST /api/v1/public/checkout | D-12 (product-decision-log) | `docs/evidence/P3-5.txt` | Verified |
 | FR-TKT-001 | AC-TKT-001 | TC-TKT-001 | ditetapkan di OpenAPI saat task | — | — | Planned |

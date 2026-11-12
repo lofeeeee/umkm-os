@@ -22,6 +22,7 @@ use umkm_domain::{
     auth::rate_rules,
     catalog::Money,
     commerce::{
+        payment::PaymentError,
         pricing::{CartError, CartLine},
         state::{Fulfillment, OrderStatus},
     },
@@ -34,6 +35,7 @@ use umkm_infrastructure::{
         Settings, SettingsError,
     },
     inventory_repo::InventoryError,
+    payment_repo::{self, FlowError},
 };
 use umkm_shared::{
     http::{ErrorBody, ErrorCode, SuccessEnvelope},
@@ -73,6 +75,13 @@ pub struct SettingsDto {
     pub order_approval_required: bool,
     #[serde(default = "ttl")]
     pub reservation_ttl_minutes: i32,
+    /// Penyetuju order ≠ staf yang mengonfirmasi pembayaran (default aktif)
+    #[serde(default = "yes")]
+    pub separation_of_duties: bool,
+}
+
+fn yes() -> bool {
+    true
 }
 
 fn zero() -> String {
@@ -191,8 +200,8 @@ pub struct PaymentView {
     pub amount: String,
     pub amount_received: Option<String>,
     pub payer_reference: Option<String>,
-    /// Signed URL bukti bayar dari pembeli (bila ada)
-    pub proof_url: Option<String>,
+    /// Ada bukti bayar dari pembeli (`GET .../payment/proof`)
+    pub has_proof: bool,
     pub verifier_note: Option<String>,
     pub rejection_reason: Option<String>,
     pub claimed_at: Option<String>,
@@ -251,6 +260,7 @@ fn settings_dto(s: Settings) -> SettingsDto {
         delivery_fee: s.delivery_fee.format(),
         order_approval_required: s.order_approval_required,
         reservation_ttl_minutes: s.reservation_ttl_minutes,
+        separation_of_duties: s.separation_of_duties,
     }
 }
 
@@ -324,10 +334,8 @@ pub async fn public_view(state: &AppState, t: TenantId, o: Order) -> Result<Publ
     })
 }
 
-pub async fn staff_view(state: &AppState, t: TenantId, o: Order) -> Result<OrderView, ApiError> {
+pub fn staff_view(o: Order) -> Result<OrderView, ApiError> {
     let items = items_view(&o);
-    let proof_url =
-        signed_one(state, t, o.payment.as_ref().and_then(|p| p.proof_object_id)).await?;
     Ok(OrderView {
         id: o.id,
         code: o.code,
@@ -352,7 +360,7 @@ pub async fn staff_view(state: &AppState, t: TenantId, o: Order) -> Result<Order
             amount: p.amount,
             amount_received: p.amount_received,
             payer_reference: p.payer_reference,
-            proof_url,
+            has_proof: p.has_proof,
             verifier_note: p.verifier_note,
             rejection_reason: p.rejection_reason,
             claimed_at: p.claimed_at,
@@ -541,6 +549,7 @@ pub async fn put_settings(
         delivery_fee: fee.unwrap_or(Money::ZERO),
         order_approval_required: req.order_approval_required,
         reservation_ttl_minutes: req.reservation_ttl_minutes,
+        separation_of_duties: req.separation_of_duties,
     };
     repo::put_settings(pool(&state)?, &actor, &s, (Some(id.as_str()), Some(&ip)))
         .await
@@ -615,10 +624,7 @@ pub async fn get_order(
         .await
         .map_err(internal)?
         .ok_or_else(not_found)?;
-    Ok(Json(SuccessEnvelope::new(
-        staff_view(&state, actor.tenant_id, o).await?,
-        &id,
-    )))
+    Ok(Json(SuccessEnvelope::new(staff_view(o)?, &id)))
 }
 
 // ------------------------------------------------------------------ publik
@@ -861,6 +867,430 @@ pub fn stock_conflict(e: InventoryError) -> ApiError {
     crate::inventory::stock_err(e)
 }
 
+// ------------------------------------------------------------------ P3-7 pembayaran / P3-8 approval
+
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
+pub struct ClaimInput {
+    /// Mis. nama pemilik akun pembayar / 4 digit terakhir (opsional, ≤120)
+    pub payer_reference: Option<String>,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
+pub struct ConfirmInput {
+    /// Jumlah yang benar-benar diterima di aplikasi merchant
+    pub amount_received: String,
+    /// Wajib bila jumlah berbeda dari tagihan
+    pub note: Option<String>,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
+pub struct ReasonInput {
+    pub reason: Option<String>,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
+pub struct RefundInput {
+    pub amount: String,
+    pub reason: String,
+    /// Kembalikan stok item order
+    #[serde(default)]
+    pub restock: bool,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
+pub struct StatusInput {
+    /// `PROCESSING` | `READY_FOR_PICKUP` | `SHIPPED` | `COMPLETED` | `CANCELLED`
+    pub status: String,
+    pub reason: Option<String>,
+}
+
+fn flow_err(e: FlowError) -> ApiError {
+    match e {
+        FlowError::NotFound => not_found(),
+        FlowError::WrongStatus(s) => ApiError(
+            ErrorBody::new(ErrorCode::Conflict)
+                .with_message("Status order tidak mengizinkan aksi ini")
+                .with_details(serde_json::json!({ "reason": "invalid_order_status", "status": s })),
+        ),
+        FlowError::Payment(PaymentError::AlreadyDecided) => {
+            conflict("payment_already_decided", "Pembayaran sudah diputus")
+        }
+        FlowError::Payment(PaymentError::NoteRequiredForMismatch) => {
+            one("note", "required_for_amount_mismatch")
+        }
+        FlowError::Payment(PaymentError::RefundExceedsBalance) => {
+            one("amount", "exceeds_refundable")
+        }
+        FlowError::Payment(PaymentError::InvalidAmount) => one("amount", "invalid_price"),
+        FlowError::SelfApproval => ApiError(
+            ErrorBody::new(ErrorCode::Forbidden)
+                .with_message("Penyetuju tidak boleh pemohon (separation of duties)")
+                .with_details(serde_json::json!({ "reason": "separation_of_duties" })),
+        ),
+        FlowError::Upload(e) => crate::upload::upload_error(e),
+        FlowError::Stock(e) => crate::inventory::stock_err(e),
+        FlowError::Db(e) => internal(e),
+    }
+}
+
+fn text(
+    v: Option<String>,
+    path: &str,
+    max: usize,
+    required: bool,
+) -> Result<Option<String>, ApiError> {
+    let v = v.map(|s| s.trim().to_owned()).filter(|s| !s.is_empty());
+    let mut e = vec![];
+    umkm_domain::business::plain_text(&mut e, path, v.as_deref(), max, required);
+    if e.is_empty() {
+        Ok(v)
+    } else {
+        Err(field_errors(e.iter().map(|x| (x.path.as_str(), x.code))))
+    }
+}
+
+async fn reload(
+    state: &AppState,
+    t: TenantId,
+    order: Uuid,
+    id: &umkm_shared::http::RequestId,
+) -> Result<Json<SuccessEnvelope<OrderView>>, ApiError> {
+    let o = repo::detail(pool(state)?, t, OrderKey::Id(order), true)
+        .await
+        .map_err(internal)?
+        .ok_or_else(not_found)?;
+    Ok(Json(SuccessEnvelope::new(staff_view(o)?, id)))
+}
+
+fn token_hash(headers: &HeaderMap) -> Result<[u8; 32], ApiError> {
+    let token = headers
+        .get(ORDER_TOKEN_HEADER)
+        .and_then(|v| v.to_str().ok())
+        .map(str::trim)
+        .filter(|s| !s.is_empty() && s.len() <= 128)
+        .ok_or_else(not_found)?;
+    Ok(hash_token(token).0)
+}
+
+/// Pembeli menandai sudah membayar via QRIS (bukan bukti; staf tetap memverifikasi).
+#[utoipa::path(
+    post, path = "/api/v1/public/orders/current/payment-claim", tag = "public",
+    params(("X-Order-Token" = String, Header)), request_body = ClaimInput,
+    responses(
+        (status = 200, description = "Tercatat; menunggu verifikasi toko", body = SuccessEnvelope<PublicOrder>),
+        (status = 409, description = "Order tidak menunggu pembayaran", body = umkm_shared::http::ErrorEnvelope)
+    )
+)]
+pub async fn claim_payment(
+    State(state): State<AppState>,
+    ReqId(id): ReqId,
+    ClientIp(ip): ClientIp,
+    HostTenant(t): HostTenant,
+    headers: HeaderMap,
+    Json(req): Json<ClaimInput>,
+) -> Result<Response, ApiError> {
+    check_shop_origin(&state, &headers)?;
+    rate_limit(&state, &ip).await?;
+    let reference = text(
+        req.payer_reference,
+        "payer_reference",
+        umkm_domain::commerce::payment::REFERENCE_MAX,
+        false,
+    )?;
+    let h = token_hash(&headers)?;
+    payment_repo::claim(pool(&state)?, t, &h, reference.as_deref())
+        .await
+        .map_err(flow_err)?;
+    let o = order_from_token(&state, t, &headers).await?;
+    Ok(no_store(
+        Json(SuccessEnvelope::new(public_view(&state, t, o).await?, &id)).into_response(),
+    ))
+}
+
+/// Unggah bukti bayar (PNG/JPEG/WebP; isi diperiksa server; menggantikan bukti lama).
+#[utoipa::path(
+    post, path = "/api/v1/public/orders/current/payment-proof", tag = "public",
+    params(("X-Order-Token" = String, Header)),
+    request_body(content = Vec<u8>, content_type = "image/png"),
+    responses(
+        (status = 204, description = "Tersimpan"),
+        (status = 415, description = "Bukan gambar yang diizinkan", body = umkm_shared::http::ErrorEnvelope)
+    )
+)]
+pub async fn upload_proof(
+    State(state): State<AppState>,
+    ClientIp(ip): ClientIp,
+    HostTenant(t): HostTenant,
+    headers: HeaderMap,
+    body: axum::body::Bytes,
+) -> Result<StatusCode, ApiError> {
+    check_shop_origin(&state, &headers)?;
+    rate_limit(&state, &ip).await?;
+    let h = token_hash(&headers)?;
+    let max = state
+        .files
+        .as_deref()
+        .map(|f| f.store.limits().max_object_bytes)
+        .unwrap_or(2 * 1024 * 1024);
+    payment_repo::put_proof(pool(&state)?, t, &h, &body, max)
+        .await
+        .map_err(flow_err)?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// Bukti bayar pembeli untuk staf (`orders.read`).
+#[utoipa::path(
+    get, path = "/api/v1/tenants/{tenant_id}/orders/{order_id}/payment/proof", tag = "commerce",
+    params(("tenant_id" = Uuid, Path), ("order_id" = Uuid, Path)),
+    responses((status = 200, description = "Gambar", content_type = "image/png"), (status = 404, description = "Tidak ada"))
+)]
+pub async fn get_proof(
+    State(state): State<AppState>,
+    Member(actor): Member,
+    Path((_, oid)): Path<(Uuid, Uuid)>,
+) -> Result<Response, ApiError> {
+    actor.require("orders.read")?;
+    let (ct, bytes) = payment_repo::proof(pool(&state)?, actor.tenant_id, oid)
+        .await
+        .map_err(internal)?
+        .ok_or_else(not_found)?;
+    let mut res = bytes.into_response();
+    let h = res.headers_mut();
+    h.insert(
+        header::CONTENT_TYPE,
+        HeaderValue::from_str(&ct).map_err(internal)?,
+    );
+    h.insert(
+        "x-content-type-options",
+        HeaderValue::from_static("nosniff"),
+    );
+    h.insert(
+        header::CONTENT_SECURITY_POLICY,
+        HeaderValue::from_static("default-src 'none'; sandbox"),
+    );
+    h.insert(
+        header::CACHE_CONTROL,
+        HeaderValue::from_static("private, no-store"),
+    );
+    Ok(res)
+}
+
+/// AC-ORD-007: konfirmasi pembayaran (`payments.verify`), diproses sekali.
+#[utoipa::path(
+    post, path = "/api/v1/tenants/{tenant_id}/orders/{order_id}/payment/confirm", tag = "commerce",
+    params(("tenant_id" = Uuid, Path), ("order_id" = Uuid, Path)), request_body = ConfirmInput,
+    responses(
+        (status = 200, description = "Dikonfirmasi; order PAID → PROCESSING/APPROVAL_PENDING", body = SuccessEnvelope<OrderView>),
+        (status = 409, description = "Sudah diputus / order tidak menunggu pembayaran", body = umkm_shared::http::ErrorEnvelope)
+    )
+)]
+pub async fn confirm_payment(
+    State(state): State<AppState>,
+    ReqId(id): ReqId,
+    ClientIp(ip): ClientIp,
+    Member(actor): Member,
+    Path((_, oid)): Path<(Uuid, Uuid)>,
+    Json(req): Json<ConfirmInput>,
+) -> Result<Json<SuccessEnvelope<OrderView>>, ApiError> {
+    actor.require("payments.verify")?;
+    let received = Money::parse(req.amount_received.trim())
+        .ok_or_else(|| one("amount_received", "invalid_price"))?;
+    let note = text(
+        req.note,
+        "note",
+        umkm_domain::commerce::payment::NOTE_MAX,
+        false,
+    )?;
+    payment_repo::confirm(
+        pool(&state)?,
+        &actor,
+        oid,
+        received,
+        note.as_deref(),
+        (Some(id.as_str()), Some(&ip)),
+    )
+    .await
+    .map_err(flow_err)?;
+    reload(&state, actor.tenant_id, oid, &id).await
+}
+
+/// Tolak klaim pembayaran (alasan wajib); order dibatalkan, stok dilepas.
+#[utoipa::path(
+    post, path = "/api/v1/tenants/{tenant_id}/orders/{order_id}/payment/reject", tag = "commerce",
+    params(("tenant_id" = Uuid, Path), ("order_id" = Uuid, Path)), request_body = ReasonInput,
+    responses((status = 200, description = "Ditolak", body = SuccessEnvelope<OrderView>))
+)]
+pub async fn reject_payment(
+    State(state): State<AppState>,
+    ReqId(id): ReqId,
+    ClientIp(ip): ClientIp,
+    Member(actor): Member,
+    Path((_, oid)): Path<(Uuid, Uuid)>,
+    Json(req): Json<ReasonInput>,
+) -> Result<Json<SuccessEnvelope<OrderView>>, ApiError> {
+    actor.require("payments.verify")?;
+    let reason = text(
+        req.reason,
+        "reason",
+        umkm_domain::commerce::payment::REASON_MAX,
+        true,
+    )?
+    .unwrap_or_default();
+    payment_repo::reject_payment(
+        pool(&state)?,
+        &actor,
+        oid,
+        &reason,
+        (Some(id.as_str()), Some(&ip)),
+    )
+    .await
+    .map_err(flow_err)?;
+    reload(&state, actor.tenant_id, oid, &id).await
+}
+
+/// AC-ORD-008: catat refund (`payments.refund`, Owner). Lunas → REFUNDED.
+#[utoipa::path(
+    post, path = "/api/v1/tenants/{tenant_id}/orders/{order_id}/refunds", tag = "commerce",
+    params(("tenant_id" = Uuid, Path), ("order_id" = Uuid, Path)), request_body = RefundInput,
+    responses((status = 200, description = "Refund tercatat", body = SuccessEnvelope<OrderView>))
+)]
+pub async fn create_refund(
+    State(state): State<AppState>,
+    ReqId(id): ReqId,
+    ClientIp(ip): ClientIp,
+    Member(actor): Member,
+    Path((_, oid)): Path<(Uuid, Uuid)>,
+    Json(req): Json<RefundInput>,
+) -> Result<Json<SuccessEnvelope<OrderView>>, ApiError> {
+    actor.require("payments.refund")?;
+    let amount = Money::parse(req.amount.trim()).ok_or_else(|| one("amount", "invalid_price"))?;
+    let reason = text(
+        Some(req.reason),
+        "reason",
+        umkm_domain::commerce::payment::REASON_MAX,
+        true,
+    )?
+    .unwrap_or_default();
+    payment_repo::refund(
+        pool(&state)?,
+        &actor,
+        oid,
+        amount,
+        &reason,
+        req.restock,
+        (Some(id.as_str()), Some(&ip)),
+    )
+    .await
+    .map_err(flow_err)?;
+    reload(&state, actor.tenant_id, oid, &id).await
+}
+
+/// Ubah status manual: pemrosesan/pengiriman/selesai (`orders.approve`) atau batal order
+/// belum dibayar (`orders.cancel`). AC-ORD-004.
+#[utoipa::path(
+    post, path = "/api/v1/tenants/{tenant_id}/orders/{order_id}/status", tag = "commerce",
+    params(("tenant_id" = Uuid, Path), ("order_id" = Uuid, Path)), request_body = StatusInput,
+    responses(
+        (status = 200, description = "Status berubah", body = SuccessEnvelope<OrderView>),
+        (status = 409, description = "Transisi tidak diizinkan", body = umkm_shared::http::ErrorEnvelope)
+    )
+)]
+pub async fn change_status(
+    State(state): State<AppState>,
+    ReqId(id): ReqId,
+    ClientIp(ip): ClientIp,
+    Member(actor): Member,
+    Path((_, oid)): Path<(Uuid, Uuid)>,
+    Json(req): Json<StatusInput>,
+) -> Result<Json<SuccessEnvelope<OrderView>>, ApiError> {
+    let to = OrderStatus::parse(&req.status)
+        .filter(|s| s.manual_target())
+        .ok_or_else(|| one("status", "invalid_status"))?;
+    actor.require(if to == OrderStatus::Cancelled {
+        "orders.cancel"
+    } else {
+        "orders.approve"
+    })?;
+    let reason = text(req.reason, "reason", 500, false)?;
+    payment_repo::set_status(
+        pool(&state)?,
+        &actor,
+        oid,
+        to,
+        reason.as_deref(),
+        (Some(id.as_str()), Some(&ip)),
+    )
+    .await
+    .map_err(flow_err)?;
+    reload(&state, actor.tenant_id, oid, &id).await
+}
+
+/// AC-ORD-005: setujui order (`orders.approve`); SoD: bukan staf yang mengonfirmasi pembayaran.
+#[utoipa::path(
+    post, path = "/api/v1/tenants/{tenant_id}/orders/{order_id}/approve", tag = "commerce",
+    params(("tenant_id" = Uuid, Path), ("order_id" = Uuid, Path)), request_body = ReasonInput,
+    responses(
+        (status = 200, description = "Disetujui", body = SuccessEnvelope<OrderView>),
+        (status = 403, description = "Separation of duties", body = umkm_shared::http::ErrorEnvelope)
+    )
+)]
+pub async fn approve_order(
+    State(state): State<AppState>,
+    ReqId(id): ReqId,
+    ClientIp(ip): ClientIp,
+    Member(actor): Member,
+    Path((_, oid)): Path<(Uuid, Uuid)>,
+    Json(req): Json<ReasonInput>,
+) -> Result<Json<SuccessEnvelope<OrderView>>, ApiError> {
+    actor.require("orders.approve")?;
+    let reason = text(req.reason, "reason", 500, false)?;
+    payment_repo::decide(
+        pool(&state)?,
+        &actor,
+        oid,
+        true,
+        reason.as_deref(),
+        (Some(id.as_str()), Some(&ip)),
+    )
+    .await
+    .map_err(flow_err)?;
+    reload(&state, actor.tenant_id, oid, &id).await
+}
+
+/// AC-ORD-005: tolak order (`orders.reject`, alasan wajib); stok dikembalikan, lanjut refund.
+#[utoipa::path(
+    post, path = "/api/v1/tenants/{tenant_id}/orders/{order_id}/reject", tag = "commerce",
+    params(("tenant_id" = Uuid, Path), ("order_id" = Uuid, Path)), request_body = ReasonInput,
+    responses((status = 200, description = "Ditolak", body = SuccessEnvelope<OrderView>))
+)]
+pub async fn reject_order(
+    State(state): State<AppState>,
+    ReqId(id): ReqId,
+    ClientIp(ip): ClientIp,
+    Member(actor): Member,
+    Path((_, oid)): Path<(Uuid, Uuid)>,
+    Json(req): Json<ReasonInput>,
+) -> Result<Json<SuccessEnvelope<OrderView>>, ApiError> {
+    actor.require("orders.reject")?;
+    let reason = text(req.reason, "reason", 500, true)?;
+    payment_repo::decide(
+        pool(&state)?,
+        &actor,
+        oid,
+        false,
+        reason.as_deref(),
+        (Some(id.as_str()), Some(&ip)),
+    )
+    .await
+    .map_err(flow_err)?;
+    reload(&state, actor.tenant_id, oid, &id).await
+}
+
 pub fn routes() -> Router<AppState> {
     let t = "/api/v1/tenants/{tenant_id}";
     Router::new()
@@ -874,4 +1304,40 @@ pub fn routes() -> Router<AppState> {
         .route("/api/v1/public/checkout", post(checkout))
         .route("/api/v1/public/orders/current", get(current_order))
         .route("/api/v1/public/customer/orders", get(customer_orders))
+        .route(
+            "/api/v1/public/orders/current/payment-claim",
+            post(claim_payment),
+        )
+        .route(
+            "/api/v1/public/orders/current/payment-proof",
+            post(upload_proof),
+        )
+        .route(
+            &format!("{t}/orders/{{order_id}}/payment/proof"),
+            get(get_proof),
+        )
+        .route(
+            &format!("{t}/orders/{{order_id}}/payment/confirm"),
+            post(confirm_payment),
+        )
+        .route(
+            &format!("{t}/orders/{{order_id}}/payment/reject"),
+            post(reject_payment),
+        )
+        .route(
+            &format!("{t}/orders/{{order_id}}/refunds"),
+            post(create_refund),
+        )
+        .route(
+            &format!("{t}/orders/{{order_id}}/status"),
+            post(change_status),
+        )
+        .route(
+            &format!("{t}/orders/{{order_id}}/approve"),
+            post(approve_order),
+        )
+        .route(
+            &format!("{t}/orders/{{order_id}}/reject"),
+            post(reject_order),
+        )
 }

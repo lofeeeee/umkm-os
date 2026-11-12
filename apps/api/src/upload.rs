@@ -66,20 +66,23 @@ fn view(f: &FileService, tenant: umkm_shared::ids::TenantId, m: StoredObjectMeta
     }
 }
 
+/// Upload ditolak (tipe/ukuran/kuota): 413 untuk ukuran, 422 lainnya.
+pub fn upload_error(u: umkm_domain::storage::UploadError) -> ApiError {
+    let code = if matches!(u, umkm_domain::storage::UploadError::TooLarge(_)) {
+        ErrorCode::PayloadTooLarge
+    } else {
+        ErrorCode::ValidationFailed
+    };
+    ApiError(
+        ErrorBody::new(code)
+            .with_message(u.to_string())
+            .with_details(serde_json::json!({ "reason": u.code() })),
+    )
+}
+
 fn storage_error(e: StorageError) -> ApiError {
     match e {
-        StorageError::Rejected(u) => {
-            let code = if matches!(u, umkm_domain::storage::UploadError::TooLarge(_)) {
-                ErrorCode::PayloadTooLarge
-            } else {
-                ErrorCode::ValidationFailed
-            };
-            ApiError(
-                ErrorBody::new(code)
-                    .with_message(u.to_string())
-                    .with_details(serde_json::json!({ "reason": u.code() })),
-            )
-        }
+        StorageError::Rejected(u) => upload_error(u),
         StorageError::InUse => ApiError(
             ErrorBody::new(ErrorCode::Conflict)
                 .with_message("file masih dipakai di halaman website (draft atau versi terbit)"),

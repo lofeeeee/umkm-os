@@ -1,0 +1,68 @@
+P3-7 — Payment QRIS statis + verifikasi manual + refund (ADR-0004, PRD.md §4.7) dan
+P3-8 — Order approval dengan separation-of-duties (PRD.md §4.7, §4.9)
+Tanggal: 2026-11-12
+
+Cabang terpilih (D-02): QRIS statis milik tenant, tanpa gateway/webhook. Signature webhook (AC-ORD-007 versi
+gateway) tidak berlaku sampai adapter gateway ditambahkan lewat ADR baru.
+
+Artefak
+- migrations/0018_payments.{up,down}.sql  payment_proofs (bukti bayar pembeli; tabel terpisah dari stored_objects
+  sehingga tidak pernah dapat dirujuk sebagai aset publik website/produk/QRIS; RLS; REVOKE UPDATE);
+  payments.proof_object_id dihapus; commerce_settings.separation_of_duties (default aktif);
+  order_events.seq (urutan stabil dalam satu transaksi); app.purge_customers juga menghapus bukti bayar.
+- crates/domain/src/commerce/payment.rs  PaymentStatus, check_confirm (sudah diputus → tolak; jumlah beda → catatan
+  wajib; 0 → tolak), check_refund (≤ diterima − refund sebelumnya; lunas → REFUNDED), CLAIM_HOLD_SECS 48 jam.
+- crates/infrastructure/src/payment_repo.rs  semua aksi mengunci order FOR UPDATE lalu payment: claim (memperpanjang
+  order + reservasi 48 jam), put_proof (inspect_image; 1 per payment), confirm (commit reservasi → sale; PAID →
+  APPROVAL_PENDING bila toko mewajibkan approval, selain itu PROCESSING), reject_payment (→ CANCELLED, reservasi
+  dilepas), refund (dicatat; restock opsional; lunas → REFUNDED), set_status (manual target), decide (approve/reject;
+  pemohon = staf yang memasukkan order ke APPROVAL_PENDING; reject mengembalikan stok). Setiap transisi: trigger DB,
+  order_event, outbox order.status_changed (notifikasi customer, log-only sampai NTF/D-08). Audit payment.confirmed/
+  rejected/refunded, order.approved/rejected/status_changed.
+- crates/infrastructure/src/inventory_repo.rs movement_in (restock di transaksi pemanggil).
+- apps/api/src/commerce.rs  publik: POST /public/orders/current/payment-claim, POST /public/orders/current/payment-proof
+  (X-Order-Token, Origin toko, rate limit); staf: GET .../payment/proof (nosniff, CSP sandbox, no-store; orders.read),
+  POST .../payment/confirm|reject (payments.verify), POST .../refunds (payments.refund), POST .../status
+  (CANCELLED: orders.cancel; lainnya: orders.approve), POST .../approve (orders.approve), POST .../reject (orders.reject).
+  OpenAPI diregenerasi.
+
+Keputusan engineering yang dicatat di sini (dalam batas ADR-0004)
+- Order yang sudah diklaim dan melewati batas 48 jam tetap kedaluwarsa (EXPIRED) dan tidak dapat dikonfirmasi; dana
+  yang terlanjur masuk dikembalikan pemilik di luar platform. ADR-0004 menyebut cabang ini "diputuskan di P3-7".
+- Transisi pemrosesan (PROCESSING/READY_FOR_PICKUP/SHIPPED/COMPLETED) memakai permission orders.approve karena preset
+  2026-11-11 tidak punya permission "fulfill"; pemegangnya sama (Owner, Manager).
+
+Hasil
+- fmt/clippy -D warnings bersih; cargo deny OK; cargo test --workspace --locked --no-fail-fast: 307 lulus, 0 gagal
+  (payment_http 5, domain payment 2). migration run -> revert 0 -> run DB kosong: exit 0.
+
+Cakupan AC
+- AC-ORD-007 Verified (cabang QRIS statis): 6 konfirmasi paralel → 1 × 200, 5 × 409, 1 audit, stok dipotong sekali
+  (1 movement sale); Support Agent/Viewer 403; tenant lain 404; jumlah beda tanpa catatan → 422; QRIS hanya diganti
+  tenant.update + audit before/after (lihat P3-5); checkout tanpa QRIS → 409 payment_not_configured (P3-5).
+- AC-ORD-008 Verified: refund sebelum dibayar 409; Manager 403 (payments.refund hanya Owner); refund parsial tetap
+  PROCESSING; melebihi sisa → 422; pelunasan → REFUNDED; audit memuat actor, jumlah, alasan, full, restock.
+- AC-ORD-005 Verified: verifikator (Manager) approve sendiri → 403 separation_of_duties; Owner approve → APPROVED;
+  approve ulang 409; reject tanpa alasan 422; Viewer 403; reject → REJECTED + stok kembali + audit alasan; refund
+  setelah reject tidak restock dua kali; SoD dimatikan → verifikator boleh approve. Notifikasi customer: outbox
+  order.status_changed per transisi (pengiriman nyata menunggu NTF/D-08).
+- AC-ORD-004 (alur): pickup → SHIPPED 409; PAID lewat endpoint status 422; order dibayar tidak bisa CANCELLED (409).
+- Bukti bayar: SVG/bukan gambar 422; bukti mengganti yang lama (1 baris); token salah 404; tidak muncul di pustaka
+  media; Catalog Manager 403; klaim/unggah setelah diputus 409.
+
+Negative control (perubahan sementara, dikembalikan; test terkait GAGAL)
+== NEGCTL: tanpa kunci baris order/payment
+    confirmation_is_processed_once
+test result: FAILED. 4 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.93s
+== NEGCTL: tanpa separation of duties
+    approval_enforces_separation_of_duties
+test result: FAILED. 4 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.01s
+== NEGCTL: refund tanpa batas saldo
+    refunds_are_bounded_and_audited
+test result: FAILED. 4 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.00s
+== NEGCTL: order ditolak tanpa mengembalikan stok
+    approval_enforces_separation_of_duties
+test result: FAILED. 4 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.99s
+== NEGCTL: klaim setelah pembayaran diputus
+    buyer_claim_and_private_proof
+test result: FAILED. 4 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.97s

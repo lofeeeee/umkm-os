@@ -15,6 +15,10 @@ pub mod events {
     pub const INVENTORY_LOW_STOCK: &str = "inventory.low_stock";
     /// Order baru masuk (P3-5): notifikasi staf menyusul NTF/D-08 (log-only).
     pub const ORDER_CREATED: &str = "order.created";
+    /// Status order berubah: notifikasi customer (PRD §4.7) menyusul NTF/D-08 (log-only).
+    pub const ORDER_STATUS_CHANGED: &str = "order.status_changed";
+    /// Pembeli menandai sudah bayar: notifikasi staf (log-only).
+    pub const PAYMENT_CLAIMED: &str = "payment.claimed";
     /// Verifikasi email akun customer toko (P3-3, ADR-0005). Token dibuat worker.
     pub const CUSTOMER_EMAIL_VERIFICATION_REQUESTED: &str = "customer.email_verification_requested";
 }

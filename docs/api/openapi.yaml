@@ -854,6 +854,120 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
       security:
       - sessionCookie: []
+  /api/v1/public/orders/current/payment-claim:
+    post:
+      tags:
+      - public
+      summary: Pembeli menandai sudah membayar via QRIS (bukan bukti; staf tetap memverifikasi).
+      operationId: claim_payment
+      parameters:
+      - name: X-Order-Token
+        in: header
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClaimInput'
+        required: true
+      responses:
+        '200':
+          description: Tercatat; menunggu verifikasi toko
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_PublicOrder'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: Order tidak menunggu pembayaran
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/public/orders/current/payment-proof:
+    post:
+      tags:
+      - public
+      summary: Unggah bukti bayar (PNG/JPEG/WebP; isi diperiksa server; menggantikan bukti lama).
+      operationId: upload_proof
+      parameters:
+      - name: X-Order-Token
+        in: header
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          image/png:
+            schema:
+              type: array
+              items:
+                type: integer
+                format: int32
+                minimum: 0
+        required: true
+      responses:
+        '204':
+          description: Tersimpan
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '415':
+          description: Bukan gambar yang diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
   /api/v1/public/products:
     get:
       tags:
@@ -2686,6 +2800,426 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
       security:
       - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/orders/{order_id}/approve:
+    post:
+      tags:
+      - commerce
+      summary: 'AC-ORD-005: setujui order (`orders.approve`); SoD: bukan staf yang mengonfirmasi pembayaran.'
+      operationId: approve_order
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: order_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReasonInput'
+        required: true
+      responses:
+        '200':
+          description: Disetujui
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_OrderView'
+        '403':
+          description: Separation of duties
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/orders/{order_id}/payment/confirm:
+    post:
+      tags:
+      - commerce
+      summary: 'AC-ORD-007: konfirmasi pembayaran (`payments.verify`), diproses sekali.'
+      operationId: confirm_payment
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: order_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfirmInput'
+        required: true
+      responses:
+        '200':
+          description: Dikonfirmasi; order PAID → PROCESSING/APPROVAL_PENDING
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_OrderView'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: Sudah diputus / order tidak menunggu pembayaran
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/orders/{order_id}/payment/proof:
+    get:
+      tags:
+      - commerce
+      summary: Bukti bayar pembeli untuk staf (`orders.read`).
+      operationId: get_proof
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: order_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Gambar
+          content:
+            image/png: {}
+        '404':
+          description: Tidak ada
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/orders/{order_id}/payment/reject:
+    post:
+      tags:
+      - commerce
+      summary: Tolak klaim pembayaran (alasan wajib); order dibatalkan, stok dilepas.
+      operationId: reject_payment
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: order_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReasonInput'
+        required: true
+      responses:
+        '200':
+          description: Ditolak
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_OrderView'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/orders/{order_id}/refunds:
+    post:
+      tags:
+      - commerce
+      summary: 'AC-ORD-008: catat refund (`payments.refund`, Owner). Lunas → REFUNDED.'
+      operationId: create_refund
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: order_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefundInput'
+        required: true
+      responses:
+        '200':
+          description: Refund tercatat
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_OrderView'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/orders/{order_id}/reject:
+    post:
+      tags:
+      - commerce
+      summary: 'AC-ORD-005: tolak order (`orders.reject`, alasan wajib); stok dikembalikan, lanjut refund.'
+      operationId: reject_order
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: order_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReasonInput'
+        required: true
+      responses:
+        '200':
+          description: Ditolak
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_OrderView'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/orders/{order_id}/status:
+    post:
+      tags:
+      - commerce
+      summary: |-
+        Ubah status manual: pemrosesan/pengiriman/selesai (`orders.approve`) atau batal order
+        belum dibayar (`orders.cancel`). AC-ORD-004.
+      operationId: change_status
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: order_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StatusInput'
+        required: true
+      responses:
+        '200':
+          description: Status berubah
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_OrderView'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: Transisi tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
   /api/v1/tenants/{tenant_id}/products:
     get:
       tags:
@@ -4003,6 +4537,29 @@ components:
           type:
           - string
           - 'null'
+    ClaimInput:
+      type: object
+      properties:
+        payer_reference:
+          type:
+          - string
+          - 'null'
+          description: Mis. nama pemilik akun pembayar / 4 digit terakhir (opsional, ≤120)
+      additionalProperties: false
+    ConfirmInput:
+      type: object
+      required:
+      - amount_received
+      properties:
+        amount_received:
+          type: string
+          description: Jumlah yang benar-benar diterima di aplikasi merchant
+        note:
+          type:
+          - string
+          - 'null'
+          description: Wajib bila jumlah berbeda dari tagihan
+      additionalProperties: false
     CustomerInput:
       type: object
       required:
@@ -4376,6 +4933,7 @@ components:
       - method
       - status
       - amount
+      - has_proof
       - refunded
       properties:
         amount:
@@ -4397,6 +4955,9 @@ components:
           - string
           - 'null'
           format: uuid
+        has_proof:
+          type: boolean
+          description: Ada bukti bayar dari pembeli (`GET .../payment/proof`)
         id:
           type: string
           format: uuid
@@ -4406,11 +4967,6 @@ components:
           type:
           - string
           - 'null'
-        proof_url:
-          type:
-          - string
-          - 'null'
-          description: Signed URL bukti bayar dari pembeli (bila ada)
         refunded:
           type: string
         rejection_reason:
@@ -4722,6 +5278,28 @@ components:
           format: int32
           description: Bila diisi, publish gagal 409 jika draft sudah berubah sejak revisi ini.
       additionalProperties: false
+    ReasonInput:
+      type: object
+      properties:
+        reason:
+          type:
+          - string
+          - 'null'
+      additionalProperties: false
+    RefundInput:
+      type: object
+      required:
+      - amount
+      - reason
+      properties:
+        amount:
+          type: string
+        reason:
+          type: string
+        restock:
+          type: boolean
+          description: Kembalikan stok item order
+      additionalProperties: false
     RegisterRequest:
       type: object
       required:
@@ -4799,6 +5377,9 @@ components:
         reservation_ttl_minutes:
           type: integer
           format: int32
+        separation_of_duties:
+          type: boolean
+          description: Penyetuju order ≠ staf yang mengonfirmasi pembayaran (default aktif)
       additionalProperties: false
     SettingsInput:
       type: object
@@ -4830,6 +5411,19 @@ components:
         status:
           type: string
           description: '`active` | `archived`'
+      additionalProperties: false
+    StatusInput:
+      type: object
+      required:
+      - status
+      properties:
+        reason:
+          type:
+          - string
+          - 'null'
+        status:
+          type: string
+          description: '`PROCESSING` | `READY_FOR_PICKUP` | `SHIPPED` | `COMPLETED` | `CANCELLED`'
       additionalProperties: false
     StatusView:
       type: object
@@ -5720,6 +6314,9 @@ components:
             reservation_ttl_minutes:
               type: integer
               format: int32
+            separation_of_duties:
+              type: boolean
+              description: Penyetuju order ≠ staf yang mengonfirmasi pembayaran (default aktif)
           additionalProperties: false
         meta:
           $ref: '#/components/schemas/Meta'

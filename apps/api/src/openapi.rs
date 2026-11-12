@@ -96,7 +96,16 @@ use crate::{
         commerce::checkout_config,
         commerce::checkout,
         commerce::current_order,
-        commerce::customer_orders
+        commerce::customer_orders,
+        commerce::claim_payment,
+        commerce::upload_proof,
+        commerce::get_proof,
+        commerce::confirm_payment,
+        commerce::reject_payment,
+        commerce::create_refund,
+        commerce::change_status,
+        commerce::approve_order,
+        commerce::reject_order
     ),
     components(schemas(ErrorEnvelope, ErrorBody, ErrorCode, Meta)),
     servers((url = "/", description = "Origin yang sama; root domain menunggu D-01")),

@@ -93,6 +93,10 @@ impl PgObjectStorage {
     pub fn new(pool: PgPool, limits: StorageLimits) -> Self {
         Self { pool, limits }
     }
+
+    pub fn limits(&self) -> StorageLimits {
+        self.limits
+    }
 }
 
 fn db_err(e: umkm_database::DbError) -> sqlx::Error {

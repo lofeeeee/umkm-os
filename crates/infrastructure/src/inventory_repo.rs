@@ -356,6 +356,26 @@ pub async fn update_settings(
     Ok(after)
 }
 
+/// Mutasi stok di transaksi pemanggil (restock order ditolak/refund). `delta` bertanda.
+#[allow(clippy::too_many_arguments)]
+pub async fn movement_in(
+    tx: &mut Tx,
+    t: TenantId,
+    variant: Uuid,
+    kind: MovementKind,
+    delta: i64,
+    reason: &str,
+    reference: Option<&str>,
+    actor: Option<Uuid>,
+) -> Result<Level, InventoryError> {
+    let before = lock(tx, t, variant).await?;
+    let after = before.apply(delta)?;
+    store(tx, t, variant, after).await?;
+    let id = movement(tx, t, variant, kind, delta, after, reason, reference, actor).await?;
+    low_stock(tx, t, variant, before, after, id).await?;
+    Ok(after)
+}
+
 // ------------------------------------------------------------------ reservasi (checkout)
 
 /// Reservasi semua baris atau tidak sama sekali (AC-INV-003/005). Baris digabung per varian
