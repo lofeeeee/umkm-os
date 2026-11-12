@@ -118,7 +118,7 @@ Perintah gate P2: `cargo fmt --check && cargo clippy --workspace -- -D warnings 
 | TC-AIO-001 | AC-AIO-001 | Unit+Integration | `crates/application/src/ai/guardrails.rs`, `crates/application/tests/orchestrator.rs` | Verified |
 | TC-AIO-002 | AC-AIO-002 | Unit+Integration | `crates/application/src/ai/tools.rs`, `crates/application/tests/orchestrator.rs` | Verified |
 | TC-AIO-003 | AC-AIO-003 | Unit+Integration | `crates/application/src/ai/orchestrator.rs`, `crates/application/tests/orchestrator.rs` | Verified |
-| TC-AIO-004 | AC-AIO-004 | lihat §2 | ditetapkan saat task | Planned |
+| TC-AIO-004 | AC-AIO-004 | Integration | `crates/infrastructure/tests/rag.rs` | Verified |
 | TC-CNV-001 | AC-CNV-001 | lihat §2 | ditetapkan saat task | Planned |
 | TC-CNV-002 | AC-CNV-002 | lihat §2 | ditetapkan saat task | Planned |
 | TC-CNV-003 | AC-CNV-003 | lihat §2 | ditetapkan saat task | Planned |

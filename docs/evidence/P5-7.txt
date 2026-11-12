@@ -1,0 +1,30 @@
+P5-7 — RAG tenant-scoped dengan pgvector (PRD.md §8.2, AC-AIO-004)
+Tanggal: 2026-11-12
+
+Artefak
+- migrations/0024_knowledge: CREATE EXTENSION vector (pgvector 0.8.7 tersedia di image produksi pgvector/pgvector:pg16
+  dan image uji); knowledge_documents (judul 1–200, isi 1–50.000, status pending/indexed/failed/disabled, error_code,
+  attempts) & knowledge_chunks (FK komposit ke dokumen tenant yang sama, ord unik, konten ≤2000, embedding_model, dims =
+  vector_dims(embedding)). RLS FORCE. Dimensi tidak dipatok (model berbeda), tanpa indeks ANN: korpus per tenant
+  dibatasi (100 dokumen, 2000 chunk; sementara sampai D-10) dan selalu difilter tenant + model + dims.
+  Satu basis pengetahuan implisit per tenant (tabel knowledge_bases PRD §5.4 tidak dibuat — tidak ada kebutuhan multi-KB).
+- crates/domain/src/ai/knowledge.rs: validasi dokumen; chunking deterministik paragraf → kalimat → karakter, ≤1000 char,
+  overlap 150, setiap chunk diawali judul.
+- crates/infrastructure/src/rag.rs: create/list/delete dokumen (+audit ai.knowledge_added/deleted, tanpa isi), mark_pending,
+  index_document (embedding di luar transaksi per batch 32, lalu ganti chunk atomik; gagal → failed + kode), PgRetriever
+  (terikat SATU tenant; embed pertanyaan; cosine distance ≤ 0.6; maks 10; hanya dokumen indexed).
+- rls.rs: 50 → 52 tabel tenant.
+
+Uji (tests/rag.rs, role aplikasi, pgvector nyata, embedder tiruan deterministik) 2 lulus:
+- AC-AIO-004: tenant A bertanya dengan kata-kata identik dokumen B (paling mirip) → hanya chunk A; B hanya chunk B;
+  model lain → kosong; pertanyaan tak relevan → kosong; chunk ke dokumen tenant lain ditolak FK komposit.
+- indeks ulang tidak menggandakan chunk; provider gagal → status failed/upstream; batas 100 dokumen; audit tanpa isi.
+- migration run → revert 23 → run → revert 0: exit 0. clippy OK.
+
+Kontrol negatif (mutasi; dipulihkan + touch)
+- M1 policy RLS USING (true)        -> tenant_a_never_receives... GAGAL (chunk B bocor)
+- M2 tanpa filter embedding_model   -> GAGAL (model lain mengembalikan chunk)
+- M3 tanpa ambang jarak              -> GAGAL (pertanyaan tak relevan mendapat konteks)
+- Dipulihkan: 2/2 lulus.
+
+Belum: endpoint dokumen + job worker pengindeks (bersama factory provider) — P5-8.
