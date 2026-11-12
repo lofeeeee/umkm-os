@@ -7,6 +7,45 @@ servers:
 - url: /
   description: Origin yang sama; root domain menunggu D-01
 paths:
+  /api/v1/approval-entity-types:
+    get:
+      tags:
+      - approvals
+      summary: Tipe entity yang didukung engine.
+      operationId: entity_types
+      responses:
+        '200':
+          description: Tipe
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_Vec_String'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
   /api/v1/auth/login:
     post:
       tags:
@@ -1412,6 +1451,547 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
       security:
       - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/approval-delegations:
+    get:
+      tags:
+      - approvals
+      summary: Delegasi aktif.
+      operationId: list_delegations
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Delegasi
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_Vec_DelegationView'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+    post:
+      tags:
+      - approvals
+      summary: Delegasikan wewenang approval sendiri (`approvals.decide`) ke anggota lain, maks 90 hari.
+      operationId: create_delegation
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DelegateInput'
+        required: true
+      responses:
+        '201':
+          description: Dibuat
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/approval-delegations/{delegation_id}:
+    delete:
+      tags:
+      - approvals
+      summary: Cabut delegasi (hanya pemberi).
+      operationId: revoke_delegation
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: delegation_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '204':
+          description: Dicabut
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/approval-policies:
+    get:
+      tags:
+      - approvals
+      summary: Semua kebijakan approval tenant.
+      operationId: list_policies
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Kebijakan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_Vec_PolicyDto'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/approval-policies/{entity_type}:
+    put:
+      tags:
+      - approvals
+      summary: Atur kebijakan satu tipe entity (`tenant.update`).
+      operationId: put_policy
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: entity_type
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PolicyDto'
+        required: true
+      responses:
+        '200':
+          description: Tersimpan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_Vec_PolicyDto'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/approvals:
+    get:
+      tags:
+      - approvals
+      summary: Daftar permintaan approval.
+      operationId: list
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: status
+        in: path
+        required: true
+        schema:
+          type:
+          - string
+          - 'null'
+      - name: limit
+        in: path
+        required: true
+        schema:
+          type:
+          - integer
+          - 'null'
+          format: int64
+      - name: offset
+        in: path
+        required: true
+        schema:
+          type:
+          - integer
+          - 'null'
+          format: int64
+      responses:
+        '200':
+          description: Permintaan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_RequestList'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/approvals/{approval_id}:
+    get:
+      tags:
+      - approvals
+      summary: Detail + riwayat keputusan.
+      operationId: get_one
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: approval_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Permintaan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_RequestView'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/approvals/{approval_id}/approve:
+    post:
+      tags:
+      - approvals
+      summary: Setujui langkah aktif. Langkah terakhir → perubahan diterapkan.
+      operationId: approve
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: approval_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DecideInput'
+        required: true
+      responses:
+        '200':
+          description: Tercatat
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_RequestView'
+        '403':
+          description: Tidak ditugaskan / pemohon sendiri
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: Langkah salah / tidak menunggu
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/approvals/{approval_id}/cancel:
+    post:
+      tags:
+      - approvals
+      summary: Pemohon membatalkan permintaannya.
+      operationId: cancel
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: approval_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '204':
+          description: Dibatalkan
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/approvals/{approval_id}/reject:
+    post:
+      tags:
+      - approvals
+      summary: Tolak langkah aktif (alasan wajib).
+      operationId: reject
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: approval_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DecideInput'
+        required: true
+      responses:
+        '200':
+          description: Ditolak
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_RequestView'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
   /api/v1/tenants/{tenant_id}/business/addresses:
     put:
       tags:
@@ -1996,6 +2576,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SuccessEnvelope_SettingsDto'
+        '202':
+          description: Menunggu approval (kebijakan aktif)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_PendingApproval'
         '405':
           description: Method tidak diizinkan
           content:
@@ -2673,6 +3259,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SuccessEnvelope_LevelView'
+        '202':
+          description: Menunggu approval (kebijakan stock_adjustment aktif)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_PendingApproval'
         '405':
           description: Method tidak diizinkan
           content:
@@ -3185,6 +3777,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SuccessEnvelope_OrderView'
+        '202':
+          description: Menunggu approval (kebijakan aktif)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_PendingApproval'
         '403':
           description: Separation of duties
           content:
@@ -3423,6 +4021,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SuccessEnvelope_OrderView'
+        '202':
+          description: Menunggu approval (kebijakan aktif)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_PendingApproval'
         '405':
           description: Method tidak diizinkan
           content:
@@ -3481,6 +4085,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SuccessEnvelope_OrderView'
+        '202':
+          description: Menunggu approval (kebijakan aktif)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_PendingApproval'
         '405':
           description: Method tidak diizinkan
           content:
@@ -3806,6 +4416,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SuccessEnvelope_ProductView'
+        '202':
+          description: Perubahan harga menunggu approval
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_PendingApproval'
         '405':
           description: Method tidak diizinkan
           content:
@@ -5223,6 +5839,62 @@ components:
         token:
           type: string
       additionalProperties: false
+    DecideInput:
+      type: object
+      required:
+      - step
+      properties:
+        reason:
+          type:
+          - string
+          - 'null'
+        step:
+          type: integer
+          description: Langkah yang diputus (0-based); harus langkah aktif
+          minimum: 0
+      additionalProperties: false
+    DecisionView:
+      type: object
+      required:
+      - decision
+      - created_at
+      properties:
+        actor_user_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        created_at:
+          type: string
+        decision:
+          type: string
+        on_behalf_user_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        reason:
+          type:
+          - string
+          - 'null'
+        step:
+          type:
+          - integer
+          - 'null'
+          format: int32
+    DelegateInput:
+      type: object
+      required:
+      - to_user
+      - hours
+      properties:
+        hours:
+          type: integer
+          format: int32
+        to_user:
+          type: string
+          format: uuid
+      additionalProperties: false
     ErrorBody:
       type: object
       description: |-
@@ -5573,6 +6245,25 @@ components:
           type:
           - string
           - 'null'
+    PolicyDto:
+      type: object
+      required:
+      - enabled
+      - steps
+      properties:
+        enabled:
+          type: boolean
+        entity_type:
+          type: string
+          description: '`order` | `refund` | `stock_adjustment` | `price_change` | `ai_response` | `business_config`'
+        steps:
+          type: array
+          items:
+            $ref: '#/components/schemas/StepDto'
+        timeout_hours:
+          type: integer
+          format: int32
+      additionalProperties: false
     ProductInputDto:
       type: object
       required:
@@ -5919,6 +6610,67 @@ components:
           - 'null'
           description: Kosong = dibuat otomatis dari nama bisnis.
       additionalProperties: false
+    RequestView:
+      type: object
+      required:
+      - id
+      - entity_type
+      - action
+      - summary
+      - payload
+      - status
+      - current_step
+      - steps
+      - requested_by
+      - expires_at
+      - created_at
+      - decisions
+      properties:
+        action:
+          type: string
+        created_at:
+          type: string
+        current_step:
+          type: integer
+          minimum: 0
+        decisions:
+          type: array
+          items:
+            $ref: '#/components/schemas/DecisionView'
+        entity_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        entity_type:
+          type: string
+        executed_at:
+          type:
+          - string
+          - 'null'
+        execution_error:
+          type:
+          - string
+          - 'null'
+        expires_at:
+          type: string
+        id:
+          type: string
+          format: uuid
+        payload:
+          type: object
+        requested_by:
+          type: string
+          format: uuid
+        status:
+          type: string
+          description: '`pending` | `approved` | `rejected` | `expired` | `cancelled`'
+        steps:
+          type: array
+          items:
+            $ref: '#/components/schemas/StepDto'
+        summary:
+          type: string
     RoleInput:
       type: object
       required:
@@ -6061,6 +6813,20 @@ components:
           description: '`open` | `closed`'
         timezone:
           type: string
+    StepDto:
+      type: object
+      properties:
+        role_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        user_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+      additionalProperties: false
     StockRow:
       allOf:
       - $ref: '#/components/schemas/LevelView'
@@ -6545,6 +7311,28 @@ components:
           $ref: '#/components/schemas/Meta'
         success:
           type: boolean
+    SuccessEnvelope_PendingApproval:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - approval_request_id
+          - status
+          properties:
+            approval_request_id:
+              type: string
+              format: uuid
+            status:
+              type: string
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
     SuccessEnvelope_ProductList:
       type: object
       required:
@@ -6885,6 +7673,102 @@ components:
           $ref: '#/components/schemas/Meta'
         success:
           type: boolean
+    SuccessEnvelope_RequestList:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - items
+          - total
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/RequestView'
+            total:
+              type: integer
+              format: int64
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
+    SuccessEnvelope_RequestView:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - id
+          - entity_type
+          - action
+          - summary
+          - payload
+          - status
+          - current_step
+          - steps
+          - requested_by
+          - expires_at
+          - created_at
+          - decisions
+          properties:
+            action:
+              type: string
+            created_at:
+              type: string
+            current_step:
+              type: integer
+              minimum: 0
+            decisions:
+              type: array
+              items:
+                $ref: '#/components/schemas/DecisionView'
+            entity_id:
+              type:
+              - string
+              - 'null'
+              format: uuid
+            entity_type:
+              type: string
+            executed_at:
+              type:
+              - string
+              - 'null'
+            execution_error:
+              type:
+              - string
+              - 'null'
+            expires_at:
+              type: string
+            id:
+              type: string
+              format: uuid
+            payload:
+              type: object
+            requested_by:
+              type: string
+              format: uuid
+            status:
+              type: string
+              description: '`pending` | `approved` | `rejected` | `expired` | `cancelled`'
+            steps:
+              type: array
+              items:
+                $ref: '#/components/schemas/StepDto'
+            summary:
+              type: string
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
     SuccessEnvelope_SavedDraft:
       type: object
       required:
@@ -7183,6 +8067,41 @@ components:
           $ref: '#/components/schemas/Meta'
         success:
           type: boolean
+    SuccessEnvelope_Vec_DelegationView:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            required:
+            - id
+            - from_user
+            - to_user
+            - starts_at
+            - ends_at
+            properties:
+              ends_at:
+                type: string
+              from_user:
+                type: string
+                format: uuid
+              id:
+                type: string
+                format: uuid
+              starts_at:
+                type: string
+              to_user:
+                type: string
+                format: uuid
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
     SuccessEnvelope_Vec_InvitationView:
       type: object
       required:
@@ -7336,6 +8255,38 @@ components:
                 type:
                 - string
                 - 'null'
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
+    SuccessEnvelope_Vec_PolicyDto:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            required:
+            - enabled
+            - steps
+            properties:
+              enabled:
+                type: boolean
+              entity_type:
+                type: string
+                description: '`order` | `refund` | `stock_adjustment` | `price_change` | `ai_response` | `business_config`'
+              steps:
+                type: array
+                items:
+                  $ref: '#/components/schemas/StepDto'
+              timeout_hours:
+                type: integer
+                format: int32
+            additionalProperties: false
         meta:
           $ref: '#/components/schemas/Meta'
         success:
@@ -7654,6 +8605,8 @@ tags:
   description: Produk, varian, kategori (PRD.md §4.5)
 - name: commerce
   description: Pengaturan checkout, order, pembayaran QRIS statis (PRD.md §4.7, ADR-0004)
+- name: approvals
+  description: Approval engine multi-step (PRD.md §4.9, P4-2)
 - name: team
   description: Anggota, role kustom, undangan (PRD.md §3, P4-1)
 - name: crm

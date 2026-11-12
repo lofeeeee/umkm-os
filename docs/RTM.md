@@ -231,9 +231,9 @@ Arah balik: TC → AC lewat nomor yang sama (Test Plan §4); AC → FR lewat FSD
 | FR-TKT-004 | AC-TKT-004 | TC-TKT-004 | ditetapkan di OpenAPI saat task | — | — | Planned |
 | FR-TKT-005 | AC-TKT-005 | TC-TKT-005 | ditetapkan di OpenAPI saat task | — | — | Planned |
 | FR-TKT-006 | AC-TKT-006 | TC-TKT-006 | ditetapkan di OpenAPI saat task | — | — | Planned |
-| FR-APR-001 | AC-APR-001 | TC-APR-001 | ditetapkan di OpenAPI saat task | — | — | Planned |
-| FR-APR-002 | AC-APR-002 | TC-APR-002 | ditetapkan di OpenAPI saat task | — | — | Planned |
-| FR-APR-003 | AC-APR-003 | TC-APR-003 | ditetapkan di OpenAPI saat task | — | — | Planned |
+| FR-APR-001 | AC-APR-001 | TC-APR-001 | /tenants/{tenant_id}/approval-policies, /approvals | — | `docs/evidence/P4-2.txt` | Verified |
+| FR-APR-002 | AC-APR-002 | TC-APR-002 | POST /approvals/{id}/approve, /reject, /cancel, /approval-delegations | — | `docs/evidence/P4-2.txt` | Verified |
+| FR-APR-003 | AC-APR-003 | TC-APR-003 | 202 dari endpoint stok/refund/harga/pengaturan/keputusan order | — | `docs/evidence/P4-2.txt` | Verified |
 | FR-AIC-001 | AC-AIC-001 | TC-AIC-001 | ditetapkan di OpenAPI saat task | ADR-0011 (D-09) | — | Planned |
 | FR-AIC-002 | AC-AIC-002 | TC-AIC-002 | ditetapkan di OpenAPI saat task | ADR-0011 (D-09) | — | Planned |
 | FR-AIC-003 | AC-AIC-003 | TC-AIC-003 | ditetapkan di OpenAPI saat task | ADR-0011 (D-09) | — | Planned |

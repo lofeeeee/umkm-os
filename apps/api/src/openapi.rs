@@ -15,8 +15,8 @@ use utoipa::{
 };
 
 use crate::{
-    auth, business, catalog, commerce, crm, customer_auth, health, inventory, team, tenants,
-    upload, website,
+    approvals, auth, business, catalog, commerce, crm, customer_auth, health, inventory, team,
+    tenants, upload, website,
 };
 
 #[derive(OpenApi)]
@@ -116,7 +116,18 @@ use crate::{
         team::list_invitations,
         team::invite,
         team::revoke_invitation,
-        team::accept
+        team::accept,
+        approvals::entity_types,
+        approvals::list_policies,
+        approvals::put_policy,
+        approvals::list,
+        approvals::get_one,
+        approvals::approve,
+        approvals::reject,
+        approvals::cancel,
+        approvals::list_delegations,
+        approvals::create_delegation,
+        approvals::revoke_delegation
     ),
     components(schemas(ErrorEnvelope, ErrorBody, ErrorCode, Meta)),
     servers((url = "/", description = "Origin yang sama; root domain menunggu D-01")),
@@ -130,6 +141,7 @@ use crate::{
         (name = "business", description = "Profil, alamat, jam operasional tenant (PRD.md §4.4)"),
         (name = "catalog", description = "Produk, varian, kategori (PRD.md §4.5)"),
         (name = "commerce", description = "Pengaturan checkout, order, pembayaran QRIS statis (PRD.md §4.7, ADR-0004)"),
+        (name = "approvals", description = "Approval engine multi-step (PRD.md §4.9, P4-2)"),
         (name = "team", description = "Anggota, role kustom, undangan (PRD.md §3, P4-1)"),
         (name = "crm", description = "Customer, tag, catatan internal, hapus/export (PRD.md §4.6, ADR-0005)"),
         (name = "inventory", description = "Stok, movement ledger, ambang low-stock (PRD.md §4.5)"),

@@ -5,10 +5,12 @@ use axum::{
     Json, Router,
     extract::{Path, Query, State},
     http::StatusCode,
+    response::{IntoResponse, Response},
     routing::{get, put},
 };
 use serde::{Deserialize, Serialize};
 use umkm_domain::{
+    approvals::EntityType,
     business::{FieldError, plain_text, push},
     inventory::{Level, MAX_QTY, MovementKind, REASON_MAX, REFERENCE_MAX, StockError},
 };
@@ -21,6 +23,7 @@ use uuid::Uuid;
 
 use crate::{
     ApiError, AppState,
+    approvals::Gate,
     auth::ClientIp,
     http_util::{Page, conflict, internal, not_found, pool},
     middleware::ReqId,
@@ -68,7 +71,7 @@ pub struct MovementView {
     pub created_at: String,
 }
 
-#[derive(Debug, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(deny_unknown_fields)]
 pub struct MovementInput {
     /// `stock_in` | `stock_out` | `adjustment` (stock opname: `quantity` = jumlah fisik)
@@ -234,17 +237,46 @@ pub async fn list_movements(
     params(("tenant_id" = Uuid, Path), ("variant_id" = Uuid, Path)), request_body = MovementInput,
     responses(
         (status = 201, description = "Tercatat", body = SuccessEnvelope<LevelView>),
+        (status = 202, description = "Menunggu approval (kebijakan stock_adjustment aktif)", body = SuccessEnvelope<crate::approvals::PendingApproval>),
         (status = 409, description = "Stok tidak cukup", body = umkm_shared::http::ErrorEnvelope)
     )
 )]
 pub async fn create_movement(
     State(state): State<AppState>,
     ReqId(id): ReqId,
+    ClientIp(ip): ClientIp,
     Member(actor): Member,
     Path((_, variant)): Path<(Uuid, Uuid)>,
     Json(req): Json<MovementInput>,
-) -> Result<(StatusCode, Json<SuccessEnvelope<LevelView>>), ApiError> {
+) -> Result<Response, ApiError> {
     actor.require("inventory.adjust")?;
+    let (_, reason, _) = parse_movement(&req)?;
+    // AC-APR-003: penyesuaian stok tidak bisa melewati kebijakan approval.
+    match crate::approvals::gate(
+        &state,
+        &actor,
+        EntityType::StockAdjustment,
+        Some(variant),
+        "stock.mutate",
+        serde_json::json!({ "variant_id": variant, "input": &req }),
+        &format!("Stok {} {}: {reason}", req.kind, req.quantity),
+        (Some(id.as_str()), Some(&ip)),
+    )
+    .await?
+    {
+        Gate::Pending(aid) => Ok(crate::approvals::pending_response(aid, &id)),
+        Gate::Direct => {
+            let l = apply_movement(&state, &actor, variant, req).await?;
+            Ok((
+                StatusCode::CREATED,
+                Json(SuccessEnvelope::new(level_view(l), &id)),
+            )
+                .into_response())
+        }
+    }
+}
+
+fn parse_movement(req: &MovementInput) -> Result<(Mutation, String, Option<String>), ApiError> {
     let mut e: Vec<FieldError> = vec![];
     let kind = MovementKind::parse_manual(&req.kind);
     if kind.is_none() {
@@ -262,8 +294,10 @@ pub async fn create_movement(
     plain_text(&mut e, "reason", Some(&reason), REASON_MAX, true);
     let reference = req
         .reference
-        .map(|s| s.trim().to_owned())
-        .filter(|s| !s.is_empty());
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(str::to_owned);
     plain_text(
         &mut e,
         "reference",
@@ -279,20 +313,27 @@ pub async fn create_movement(
         Some(MovementKind::StockOut) => Mutation::Out(req.quantity),
         _ => Mutation::Count(req.quantity),
     };
-    let l = repo::mutate(
-        pool(&state)?,
-        &actor,
+    Ok((m, reason, reference))
+}
+
+/// Terapkan mutasi (langsung atau oleh executor approval).
+pub(crate) async fn apply_movement(
+    state: &AppState,
+    actor: &umkm_domain::rbac::Actor,
+    variant: Uuid,
+    req: MovementInput,
+) -> Result<Level, ApiError> {
+    let (m, reason, reference) = parse_movement(&req)?;
+    repo::mutate(
+        pool(state)?,
+        actor,
         variant,
         m,
         &reason,
         reference.as_deref(),
     )
     .await
-    .map_err(stock_err)?;
-    Ok((
-        StatusCode::CREATED,
-        Json(SuccessEnvelope::new(level_view(l), &id)),
-    ))
+    .map_err(stock_err)
 }
 
 /// Ambang low-stock dan izin stok negatif (diaudit).

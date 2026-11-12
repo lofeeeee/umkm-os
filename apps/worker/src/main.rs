@@ -112,6 +112,11 @@ async fn run() -> Result<(), BoxError> {
                 Ok(_) => {}
                 Err(e) => tracing::error!(error = %e, "order expiry failed"),
             }
+            match umkm_infrastructure::approval_repo::expire(&pool, 500).await {
+                Ok(n) if n > 0 => tracing::info!(expired = n, "approvals expired"),
+                Ok(_) => {}
+                Err(e) => tracing::error!(error = %e, "approval expiry failed"),
+            }
             match umkm_infrastructure::inventory_repo::expire_reservations(&pool, 500).await {
                 Ok(n) if n > 0 => tracing::info!(released = n, "reservations expired"),
                 Ok(_) => {}

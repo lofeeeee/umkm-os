@@ -108,9 +108,9 @@ Perintah gate P2: `cargo fmt --check && cargo clippy --workspace -- -D warnings 
 | TC-TKT-004 | AC-TKT-004 | lihat §2 | ditetapkan saat task | Planned |
 | TC-TKT-005 | AC-TKT-005 | lihat §2 | ditetapkan saat task | Planned |
 | TC-TKT-006 | AC-TKT-006 | lihat §2 | ditetapkan saat task | Planned |
-| TC-APR-001 | AC-APR-001 | lihat §2 | ditetapkan saat task | Planned |
-| TC-APR-002 | AC-APR-002 | lihat §2 | ditetapkan saat task | Planned |
-| TC-APR-003 | AC-APR-003 | lihat §2 | ditetapkan saat task | Planned |
+| TC-APR-001 | AC-APR-001 | Unit+Integration+Workflow | `apps/api/tests/approval_http.rs` | Verified |
+| TC-APR-002 | AC-APR-002 | Unit+Integration+Workflow | `apps/api/tests/approval_http.rs` | Verified |
+| TC-APR-003 | AC-APR-003 | Unit+Integration+Workflow | `apps/api/tests/approval_http.rs` | Verified |
 | TC-AIC-001 | AC-AIC-001 | lihat §2 | ditetapkan saat task | Planned |
 | TC-AIC-002 | AC-AIC-002 | lihat §2 | ditetapkan saat task | Planned |
 | TC-AIC-003 | AC-AIC-003 | lihat §2 | ditetapkan saat task | Planned |

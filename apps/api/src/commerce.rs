@@ -19,6 +19,7 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use umkm_domain::{
+    approvals::EntityType,
     auth::rate_rules,
     catalog::Money,
     commerce::{
@@ -27,6 +28,7 @@ use umkm_domain::{
         state::{Fulfillment, OrderStatus},
     },
     crm,
+    rbac::Actor,
 };
 use umkm_infrastructure::{
     auth::hash_token,
@@ -46,6 +48,7 @@ use uuid::Uuid;
 
 use crate::{
     ApiError, AppState,
+    approvals::Gate,
     auth::ClientIp,
     customer_auth::{CustomerAuth, MaybeCustomer},
     http_util::{Page, asset_ref, conflict, internal, not_found, parse_asset_ref, pool},
@@ -496,6 +499,7 @@ pub async fn get_settings(
     put, path = "/api/v1/tenants/{tenant_id}/commerce/settings", tag = "commerce",
     params(("tenant_id" = Uuid, Path)), request_body = SettingsDto,
     responses(
+        (status = 202, description = "Menunggu approval (kebijakan aktif)", body = SuccessEnvelope<crate::approvals::PendingApproval>),
         (status = 200, description = "Tersimpan", body = SuccessEnvelope<SettingsDto>),
         (status = 422, description = "Validasi gagal / QRIS belum diatur", body = umkm_shared::http::ErrorEnvelope)
     )
@@ -506,8 +510,31 @@ pub async fn put_settings(
     ClientIp(ip): ClientIp,
     Member(actor): Member,
     Json(req): Json<SettingsDto>,
-) -> Result<Json<SuccessEnvelope<SettingsDto>>, ApiError> {
+) -> Result<Response, ApiError> {
     actor.require("tenant.update")?;
+    parse_settings(&req)?;
+    // AC-APR-003: konfigurasi bisnis (termasuk QRIS) tidak bisa melewati kebijakan approval.
+    match crate::approvals::gate(
+        &state,
+        &actor,
+        EntityType::BusinessConfig,
+        None,
+        "commerce.settings",
+        serde_json::json!({ "input": &req }),
+        "Ubah pengaturan toko online",
+        (Some(id.as_str()), Some(&ip)),
+    )
+    .await?
+    {
+        Gate::Pending(aid) => Ok(crate::approvals::pending_response(aid, &id)),
+        Gate::Direct => {
+            let s = apply_settings(&state, &actor, &req, (Some(id.as_str()), Some(&ip))).await?;
+            Ok(Json(SuccessEnvelope::new(settings_dto(s), &id)).into_response())
+        }
+    }
+}
+
+pub(crate) fn parse_settings(req: &SettingsDto) -> Result<Settings, ApiError> {
     let mut e: Vec<(String, &str)> = vec![];
     let qris = match req.qris.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
         None => None,
@@ -521,8 +548,10 @@ pub async fn put_settings(
     };
     let receiver = req
         .qris_receiver_name
-        .map(|s| s.trim().to_owned())
-        .filter(|s| !s.is_empty());
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(str::to_owned);
     if receiver
         .as_ref()
         .is_some_and(|r| r.chars().count() > 80 || r.chars().any(char::is_control))
@@ -542,7 +571,7 @@ pub async fn put_settings(
     if !e.is_empty() {
         return Err(field_errors(e.iter().map(|(p, c)| (p.as_str(), *c))));
     }
-    let s = Settings {
+    Ok(Settings {
         qris_object_id: qris,
         qris_receiver_name: receiver,
         checkout_enabled: req.checkout_enabled,
@@ -550,15 +579,24 @@ pub async fn put_settings(
         order_approval_required: req.order_approval_required,
         reservation_ttl_minutes: req.reservation_ttl_minutes,
         separation_of_duties: req.separation_of_duties,
-    };
-    repo::put_settings(pool(&state)?, &actor, &s, (Some(id.as_str()), Some(&ip)))
+    })
+}
+
+pub(crate) async fn apply_settings(
+    state: &AppState,
+    actor: &Actor,
+    req: &SettingsDto,
+    ctx: (Option<&str>, Option<&str>),
+) -> Result<Settings, ApiError> {
+    let s = parse_settings(req)?;
+    repo::put_settings(pool(state)?, actor, &s, ctx)
         .await
         .map_err(|e| match e {
             SettingsError::QrisRequired => one("qris", "required_for_checkout"),
             SettingsError::InvalidImage => one("qris", "invalid_asset_ref"),
             SettingsError::Db(e) => internal(e),
         })?;
-    Ok(Json(SuccessEnvelope::new(settings_dto(s), &id)))
+    Ok(s)
 }
 
 // ------------------------------------------------------------------ staf: order
@@ -891,7 +929,7 @@ pub struct ReasonInput {
     pub reason: Option<String>,
 }
 
-#[derive(Debug, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(deny_unknown_fields)]
 pub struct RefundInput {
     pub amount: String,
@@ -1157,7 +1195,10 @@ pub async fn reject_payment(
 #[utoipa::path(
     post, path = "/api/v1/tenants/{tenant_id}/orders/{order_id}/refunds", tag = "commerce",
     params(("tenant_id" = Uuid, Path), ("order_id" = Uuid, Path)), request_body = RefundInput,
-    responses((status = 200, description = "Refund tercatat", body = SuccessEnvelope<OrderView>))
+    responses(
+        (status = 200, description = "Refund tercatat", body = SuccessEnvelope<OrderView>),
+        (status = 202, description = "Menunggu approval (kebijakan aktif)", body = SuccessEnvelope<crate::approvals::PendingApproval>),
+    )
 )]
 pub async fn create_refund(
     State(state): State<AppState>,
@@ -1166,28 +1207,55 @@ pub async fn create_refund(
     Member(actor): Member,
     Path((_, oid)): Path<(Uuid, Uuid)>,
     Json(req): Json<RefundInput>,
-) -> Result<Json<SuccessEnvelope<OrderView>>, ApiError> {
+) -> Result<Response, ApiError> {
     actor.require("payments.refund")?;
+    let (amount, reason) = parse_refund(&req)?;
+    match crate::approvals::gate(
+        &state,
+        &actor,
+        EntityType::Refund,
+        Some(oid),
+        "refund.create",
+        serde_json::json!({ "order_id": oid, "input": &req }),
+        &format!("Refund {}: {reason}", amount.format()),
+        (Some(id.as_str()), Some(&ip)),
+    )
+    .await?
+    {
+        Gate::Pending(aid) => Ok(crate::approvals::pending_response(aid, &id)),
+        Gate::Direct => {
+            apply_refund(&state, &actor, oid, req, (Some(id.as_str()), Some(&ip))).await?;
+            Ok(reload(&state, actor.tenant_id, oid, &id)
+                .await?
+                .into_response())
+        }
+    }
+}
+
+fn parse_refund(req: &RefundInput) -> Result<(Money, String), ApiError> {
     let amount = Money::parse(req.amount.trim()).ok_or_else(|| one("amount", "invalid_price"))?;
     let reason = text(
-        Some(req.reason),
+        Some(req.reason.clone()),
         "reason",
         umkm_domain::commerce::payment::REASON_MAX,
         true,
     )?
     .unwrap_or_default();
-    payment_repo::refund(
-        pool(&state)?,
-        &actor,
-        oid,
-        amount,
-        &reason,
-        req.restock,
-        (Some(id.as_str()), Some(&ip)),
-    )
-    .await
-    .map_err(flow_err)?;
-    reload(&state, actor.tenant_id, oid, &id).await
+    Ok((amount, reason))
+}
+
+pub(crate) async fn apply_refund(
+    state: &AppState,
+    actor: &Actor,
+    oid: Uuid,
+    req: RefundInput,
+    ctx: (Option<&str>, Option<&str>),
+) -> Result<(), ApiError> {
+    let (amount, reason) = parse_refund(&req)?;
+    payment_repo::refund(pool(state)?, actor, oid, amount, &reason, req.restock, ctx)
+        .await
+        .map_err(flow_err)?;
+    Ok(())
 }
 
 /// Ubah status manual: pemrosesan/pengiriman/selesai (`orders.approve`) atau batal order
@@ -1235,6 +1303,7 @@ pub async fn change_status(
     post, path = "/api/v1/tenants/{tenant_id}/orders/{order_id}/approve", tag = "commerce",
     params(("tenant_id" = Uuid, Path), ("order_id" = Uuid, Path)), request_body = ReasonInput,
     responses(
+        (status = 202, description = "Menunggu approval (kebijakan aktif)", body = SuccessEnvelope<crate::approvals::PendingApproval>),
         (status = 200, description = "Disetujui", body = SuccessEnvelope<OrderView>),
         (status = 403, description = "Separation of duties", body = umkm_shared::http::ErrorEnvelope)
     )
@@ -1246,27 +1315,20 @@ pub async fn approve_order(
     Member(actor): Member,
     Path((_, oid)): Path<(Uuid, Uuid)>,
     Json(req): Json<ReasonInput>,
-) -> Result<Json<SuccessEnvelope<OrderView>>, ApiError> {
+) -> Result<Response, ApiError> {
     actor.require("orders.approve")?;
     let reason = text(req.reason, "reason", 500, false)?;
-    payment_repo::decide(
-        pool(&state)?,
-        &actor,
-        oid,
-        true,
-        reason.as_deref(),
-        (Some(id.as_str()), Some(&ip)),
-    )
-    .await
-    .map_err(flow_err)?;
-    reload(&state, actor.tenant_id, oid, &id).await
+    decide_gated(&state, &actor, oid, true, reason, &id, &ip).await
 }
 
 /// AC-ORD-005: tolak order (`orders.reject`, alasan wajib); stok dikembalikan, lanjut refund.
 #[utoipa::path(
     post, path = "/api/v1/tenants/{tenant_id}/orders/{order_id}/reject", tag = "commerce",
     params(("tenant_id" = Uuid, Path), ("order_id" = Uuid, Path)), request_body = ReasonInput,
-    responses((status = 200, description = "Ditolak", body = SuccessEnvelope<OrderView>))
+    responses(
+        (status = 200, description = "Ditolak", body = SuccessEnvelope<OrderView>),
+        (status = 202, description = "Menunggu approval (kebijakan aktif)", body = SuccessEnvelope<crate::approvals::PendingApproval>),
+    )
 )]
 pub async fn reject_order(
     State(state): State<AppState>,
@@ -1275,20 +1337,79 @@ pub async fn reject_order(
     Member(actor): Member,
     Path((_, oid)): Path<(Uuid, Uuid)>,
     Json(req): Json<ReasonInput>,
-) -> Result<Json<SuccessEnvelope<OrderView>>, ApiError> {
+) -> Result<Response, ApiError> {
     actor.require("orders.reject")?;
     let reason = text(req.reason, "reason", 500, true)?;
-    payment_repo::decide(
-        pool(&state)?,
-        &actor,
-        oid,
-        false,
-        reason.as_deref(),
-        (Some(id.as_str()), Some(&ip)),
+    decide_gated(&state, &actor, oid, false, reason, &id, &ip).await
+}
+
+/// Keputusan order: bila kebijakan approval `order` aktif, keputusan menjadi permintaan approval.
+async fn decide_gated(
+    state: &AppState,
+    actor: &Actor,
+    oid: Uuid,
+    approve: bool,
+    reason: Option<String>,
+    id: &umkm_shared::http::RequestId,
+    ip: &str,
+) -> Result<Response, ApiError> {
+    let o = repo::detail(pool(state)?, actor.tenant_id, OrderKey::Id(oid), false)
+        .await
+        .map_err(internal)?
+        .ok_or_else(not_found)?;
+    if o.status != OrderStatus::ApprovalPending {
+        return Err(flow_err(FlowError::WrongStatus(o.status.as_str())));
+    }
+    let action = if approve {
+        "order.approve"
+    } else {
+        "order.reject"
+    };
+    match crate::approvals::gate(
+        state,
+        actor,
+        EntityType::Order,
+        Some(oid),
+        action,
+        serde_json::json!({ "order_id": oid, "reason": reason }),
+        &format!(
+            "{} pesanan {}",
+            if approve { "Setujui" } else { "Tolak" },
+            o.code
+        ),
+        (Some(id.as_str()), Some(ip)),
     )
-    .await
-    .map_err(flow_err)?;
-    reload(&state, actor.tenant_id, oid, &id).await
+    .await?
+    {
+        Gate::Pending(aid) => Ok(crate::approvals::pending_response(aid, id)),
+        Gate::Direct => {
+            apply_decision(
+                state,
+                actor,
+                oid,
+                approve,
+                reason.as_deref(),
+                (Some(id.as_str()), Some(ip)),
+            )
+            .await?;
+            Ok(reload(state, actor.tenant_id, oid, id)
+                .await?
+                .into_response())
+        }
+    }
+}
+
+pub(crate) async fn apply_decision(
+    state: &AppState,
+    actor: &Actor,
+    oid: Uuid,
+    approve: bool,
+    reason: Option<&str>,
+    ctx: (Option<&str>, Option<&str>),
+) -> Result<(), ApiError> {
+    payment_repo::decide(pool(state)?, actor, oid, approve, reason, ctx)
+        .await
+        .map_err(flow_err)
 }
 
 pub fn routes() -> Router<AppState> {

@@ -204,7 +204,9 @@ pub async fn process_once(
             events::INVENTORY_LOW_STOCK
             | events::ORDER_CREATED
             | events::ORDER_STATUS_CHANGED
-            | events::PAYMENT_CLAIMED => {
+            | events::PAYMENT_CLAIMED
+            | crate::approval_repo::APPROVAL_REQUESTED
+            | crate::approval_repo::APPROVAL_DECIDED => {
                 tracing::info!(event_id = %ev.id, tenant_id = ?ev.tenant_id, "low-stock event (log-only)");
                 Outcome::Done
             }

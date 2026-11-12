@@ -7,10 +7,11 @@ use axum::{
     Json, Router,
     extract::{Path, Query, State},
     http::StatusCode,
-    response::Response,
+    response::{IntoResponse, Response},
     routing::{get, post, put},
 };
 use serde::{Deserialize, Serialize};
+use umkm_domain::approvals::EntityType;
 use umkm_domain::catalog::{
     self, OptionDef, ProductInput, ProductStatus, VariantInput, validate_category_name,
 };
@@ -23,6 +24,7 @@ use uuid::Uuid;
 
 use crate::{
     ApiError, AppState,
+    approvals::Gate,
     auth::ClientIp,
     http_util::{
         Page, asset_ref, conflict, internal, not_found, parse_asset_ref, pool, public_json,
@@ -61,7 +63,7 @@ fn yes() -> bool {
     true
 }
 
-#[derive(Debug, Clone, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ProductInputDto {
     pub name: String,
@@ -527,7 +529,10 @@ pub async fn get_product(
 #[utoipa::path(
     put, path = "/api/v1/tenants/{tenant_id}/products/{product_id}", tag = "catalog",
     params(("tenant_id" = Uuid, Path), ("product_id" = Uuid, Path)), request_body = ProductInputDto,
-    responses((status = 200, description = "Tersimpan", body = SuccessEnvelope<ProductView>))
+    responses(
+        (status = 200, description = "Tersimpan", body = SuccessEnvelope<ProductView>),
+        (status = 202, description = "Perubahan harga menunggu approval", body = SuccessEnvelope<crate::approvals::PendingApproval>)
+    )
 )]
 pub async fn update_product(
     State(state): State<AppState>,
@@ -536,19 +541,56 @@ pub async fn update_product(
     Member(actor): Member,
     Path((_, pid)): Path<(Uuid, Uuid)>,
     Json(req): Json<ProductInputDto>,
-) -> Ok<ProductView> {
+) -> Result<Response, ApiError> {
     actor.require("products.update")?;
+    let d = validate(req.clone())?;
+    let current = repo::get_product(pool(&state)?, actor.tenant_id, pid)
+        .await
+        .map_err(internal)?
+        .ok_or_else(not_found)?;
+    // AC-APR-003: perubahan harga (termasuk varian baru) tidak bisa melewati kebijakan price_change.
+    let price_changed = d.variants.iter().any(|v| {
+        v.id.is_none_or(|vid| {
+            current
+                .variants
+                .iter()
+                .find(|c| c.id == vid)
+                .is_none_or(|c| c.price != v.price || c.promo_price != v.promo_price)
+        })
+    });
+    if price_changed {
+        let gate = crate::approvals::gate(
+            &state,
+            &actor,
+            EntityType::PriceChange,
+            Some(pid),
+            "product.update",
+            serde_json::json!({ "product_id": pid, "input": &req }),
+            &format!("Ubah harga {}", current.name),
+            (Some(id.as_str()), Some(&ip)),
+        )
+        .await?;
+        if let Gate::Pending(aid) = gate {
+            return Ok(crate::approvals::pending_response(aid, &id));
+        }
+    }
+    let p = apply_update(&state, &actor, pid, req, (Some(id.as_str()), Some(&ip))).await?;
+    Ok(Json(SuccessEnvelope::new(p, &id)).into_response())
+}
+
+/// Terapkan perubahan produk (langsung atau oleh executor approval).
+pub(crate) async fn apply_update(
+    state: &AppState,
+    actor: &umkm_domain::rbac::Actor,
+    pid: Uuid,
+    req: ProductInputDto,
+    ctx: (Option<&str>, Option<&str>),
+) -> Result<ProductView, ApiError> {
     let d = validate(req)?;
-    let p = repo::update_product(
-        pool(&state)?,
-        &actor,
-        pid,
-        &d,
-        (Some(id.as_str()), Some(&ip)),
-    )
-    .await
-    .map_err(repo_err)?;
-    Ok(Json(SuccessEnvelope::new(view(p), &id)))
+    let p = repo::update_product(pool(state)?, actor, pid, &d, ctx)
+        .await
+        .map_err(repo_err)?;
+    Ok(view(p))
 }
 
 /// Aktifkan (`products.update`) atau arsipkan (`products.archive`). AC-CAT-001.

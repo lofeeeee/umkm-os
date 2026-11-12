@@ -1,0 +1,63 @@
+P4-2 — Reusable approval engine (PRD.md §4.9, FR-APR-001..003)
+Tanggal: 2026-11-12
+
+Artefak
+- crates/domain/src/approvals.rs  EntityType (6: order, refund, stock_adjustment, price_change, ai_response,
+  business_config), Step {role_ids, user_ids} (kosong = siapa pun dengan approvals.decide), validate_policy
+  (1..=5 langkah, ≤20 penyetuju/langkah, timeout 1..=720 jam), check_decision (langkah aktif saja; penugasan langsung
+  atau lewat delegasi; pemohon tidak boleh menyetujui — termasuk lewat delegasi dari pemohon; penyetuju tidak boleh
+  memutus dua langkah; tolak wajib alasan).
+- migrations/0020_approvals.{up,down}.sql  approval_policies, approval_requests (langkah disalin saat dibuat; satu
+  permintaan tertunda per entity+aksi), approval_decisions (append-only: REVOKE UPDATE, DELETE; indeks unik satu
+  keputusan approve/reject per langkah), approval_delegations (≤ 90 hari); RLS 4 tabel (rls.rs: 38);
+  app.expire_approvals SECURITY DEFINER (worker, tiap 15 detik).
+- crates/infrastructure/src/approval_repo.rs  put_policy (role/user penyetuju harus milik tenant), create, decide
+  (FOR UPDATE; timeout dihormati walau job belum jalan), mark_executed (sekali), cancel (hanya pemohon), delegasi.
+  Outbox approval.requested / approval.decided (notifikasi P4-4). Audit approval.*.
+- apps/api/src/approvals.rs  kebijakan (baca approvals.read, ubah tenant.update), daftar/detail, approve/reject
+  (approvals.decide), cancel, delegasi; gate() + execute().
+- Anti-bypass (AC-APR-003): endpoint langsung memanggil gate() sebelum menerapkan perubahan:
+  POST /inventory/{v}/movements (stock_adjustment), POST /orders/{id}/refunds (refund), PUT /commerce/settings
+  (business_config), PUT /products/{id} bila harga berubah/varian baru (price_change), POST /orders/{id}/approve|reject
+  (order). Kebijakan aktif → 202 {approval_request_id}, perubahan TIDAK diterapkan. Setelah langkah terakhir,
+  executor menerapkan sebagai pemohon dengan hak pemohon SAAT ITU; gagal → execution_error tercatat.
+  ai_response: permintaan dapat dibuat; executor menyusul P5.
+
+Hasil
+- fmt/clippy -D warnings bersih; cargo test --workspace --locked --no-fail-fast: 322 lulus, 0 gagal (approval_http 5,
+  domain approvals 3). migration run → revert 0 → run DB kosong: exit 0.
+
+Cakupan AC (semua Verified)
+- AC-APR-001: tanpa kebijakan → NoPolicy; dengan kebijakan, permintaan dibuat untuk ke-6 tipe entity.
+- AC-APR-002: langkah 2 sebelum langkah 1 → 409 wrong_step; tidak ditugaskan → 403 not_assigned; penyetuju langkah 1
+  tidak boleh memutus langkah 2; perubahan baru diterapkan setelah langkah terakhir (riwayat requested → approved →
+  approved → executed); timeout → expired (job) dan keputusan setelah batas 409; delegasi berlaku atas nama pemberi
+  (dicatat on_behalf) dan berhenti saat dicabut (hanya pemberi yang dapat mencabut); batal hanya oleh pemohon.
+- AC-APR-003: stok, harga (termasuk varian baru), pengaturan toko, refund, keputusan order → 202 tanpa perubahan;
+  perubahan non-harga produk tetap langsung; pemohon menyetujui sendiri 403 self_approval; tolak tanpa alasan 422;
+  ditolak → tidak diterapkan; hak pemohon dicabut sebelum persetujuan → eksekusi gagal tercatat, tidak diterapkan;
+  keputusan paralel pada langkah yang sama → 1 sukses + DB menolak keputusan kedua (23505); tenant lain 404;
+  kebijakan dengan role/user tenant lain 422.
+
+Catatan
+- Perilaku P3-8 (approval order bawaan + SoD) tetap; bila kebijakan "order" aktif, keputusan order masuk engine.
+
+Negative control (perubahan sementara, dikembalikan; test terkait GAGAL)
+== NEGCTL: langkah tidak harus berurutan
+    sequential_steps_assignment_and_execution
+test result: FAILED. 4 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.88s
+== NEGCTL: tanpa larangan menyetujui sendiri
+    direct_changes_cannot_bypass_required_approval
+test result: FAILED. 4 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.87s
+== NEGCTL: perubahan harga melewati approval
+    direct_changes_cannot_bypass_required_approval
+test result: FAILED. 4 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.86s
+== NEGCTL: delegasi dicabut tetap berlaku
+    timeout_delegation_cancel_and_isolation
+test result: FAILED. 4 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.76s
+== NEGCTL: eksekusi tanpa cek hak pemohon saat ini
+    execution_uses_requester_current_permissions
+test result: FAILED. 4 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.88s
+== NEGCTL: tanpa indeks unik keputusan per langkah
+    timeout_delegation_cancel_and_isolation
+test result: FAILED. 4 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.80s
