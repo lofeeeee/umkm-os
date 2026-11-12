@@ -3880,6 +3880,157 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
       security:
       - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/notifications:
+    get:
+      tags:
+      - notifications
+      summary: Notifikasi saya di toko ini (terbaru dulu) + jumlah belum dibaca.
+      operationId: list
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: unread
+        in: path
+        required: true
+        schema:
+          type: boolean
+      - name: limit
+        in: path
+        required: true
+        schema:
+          type:
+          - integer
+          - 'null'
+          format: int64
+      responses:
+        '200':
+          description: Notifikasi
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_NotificationList'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/notifications/read-all:
+    post:
+      tags:
+      - notifications
+      summary: Tandai semua dibaca.
+      operationId: read_all
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '204':
+          description: Dibaca
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/notifications/{notification_id}/read:
+    post:
+      tags:
+      - notifications
+      summary: Tandai satu notifikasi dibaca.
+      operationId: read_one
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: notification_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '204':
+          description: Dibaca
+        '404':
+          description: Bukan milik Anda
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
   /api/v1/tenants/{tenant_id}/orders:
     get:
       tags:
@@ -7038,6 +7189,33 @@ components:
           - string
           - 'null'
       additionalProperties: false
+    NotificationView:
+      type: object
+      required:
+      - id
+      - event_type
+      - title
+      - body
+      - read
+      - created_at
+      properties:
+        body:
+          type: string
+        created_at:
+          type: string
+        event_type:
+          type: string
+        id:
+          type: string
+          format: uuid
+        link:
+          type:
+          - string
+          - 'null'
+        read:
+          type: boolean
+        title:
+          type: string
     OptionDto:
       type: object
       required:
@@ -8163,6 +8341,30 @@ components:
           properties:
             revoked:
               type: boolean
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
+    SuccessEnvelope_NotificationList:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - items
+          - unread
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/NotificationView'
+            unread:
+              type: integer
+              format: int64
         meta:
           $ref: '#/components/schemas/Meta'
         success:
@@ -9924,6 +10126,8 @@ tags:
   description: Pengaturan checkout, order, pembayaran QRIS statis (PRD.md §4.7, ADR-0004)
 - name: approvals
   description: Approval engine multi-step (PRD.md §4.9, P4-2)
+- name: notifications
+  description: Notifikasi in-app (PRD.md §4.13, P4-4)
 - name: tickets
   description: 'Ticket support: lifecycle, assign, balasan, SLA (PRD.md §4.8, P4-3)'
 - name: team

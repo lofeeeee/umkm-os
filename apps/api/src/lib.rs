@@ -14,6 +14,7 @@ pub mod http_util;
 pub mod inventory;
 pub mod metrics_server;
 pub mod middleware;
+pub mod notifications;
 pub mod openapi;
 pub mod readiness;
 pub mod realtime;

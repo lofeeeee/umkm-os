@@ -200,18 +200,24 @@ pub async fn process_once(
             events::CUSTOMER_EMAIL_VERIFICATION_REQUESTED => {
                 handle_customer_verification(pool, sender, cfg, &ev).await
             }
-            // Kanal notifikasi staf (in-app/email) menyusul (NTF, D-08); sampai itu dicatat.
-            events::INVENTORY_LOW_STOCK
-            | events::ORDER_CREATED
-            | events::ORDER_STATUS_CHANGED
-            | events::PAYMENT_CLAIMED
-            | crate::approval_repo::APPROVAL_REQUESTED
-            | crate::approval_repo::APPROVAL_DECIDED
-            | crate::ticket_repo::TICKET_CREATED
-            | crate::ticket_repo::TICKET_ASSIGNED
-            | crate::ticket_repo::TICKET_CUSTOMER_REPLY => {
-                tracing::info!(event_id = %ev.id, tenant_id = ?ev.tenant_id, "low-stock event (log-only)");
-                Outcome::Done
+            // P4-4: notifikasi in-app per penerima (+ email customer; D-08 log-only).
+            k if crate::notification_repo::NOTIFIABLE.contains(&k) => {
+                match crate::notification_repo::deliver(
+                    pool,
+                    sender,
+                    ev.id,
+                    ev.tenant_id,
+                    k,
+                    &ev.payload,
+                )
+                .await
+                {
+                    Ok(_) => Outcome::Done,
+                    Err(e) => {
+                        let (class, retryable) = e.class();
+                        Outcome::Fail(class, retryable)
+                    }
+                }
             }
             _ => Outcome::Fail("unknown_event_type", false),
         };

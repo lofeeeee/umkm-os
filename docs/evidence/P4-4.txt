@@ -1,0 +1,47 @@
+P4-4 — Notifications + outbox delivery (PRD.md §4.13, FR-NTF-001..003)
+Tanggal: 2026-11-12
+
+Artefak
+- migrations/0022_notifications.{up,down}.sql  notifications (unik per tenant+user+event sumber; link hanya path
+  relatif), notification_deliveries (niat kirim email per event+penerima+kanal, ditulis sebelum kirim; status
+  pending/sent). RLS 2 tabel (rls.rs: 44).
+- crates/infrastructure/src/notification_repo.rs  aturan penerima per event, dihitung di tenant context event
+  (RLS) + hanya anggota aktif:
+  1 order baru → orders.approve; 2 order disetujui/ditolak → orders.approve (+ email customer untuk setiap
+  perubahan status yang relevan bagi pembeli: dibayar, disetujui, ditolak, siap diambil, dikirim, selesai, dibatalkan,
+  kedaluwarsa, refund); 3 ticket baru → tickets.assign; 4 ticket ditugaskan → assignee saja; 5 balasan pelanggan →
+  assignee (atau tickets.assign bila belum ada); 6 permintaan approval → penyetuju langkah pertama (approvals.decide +
+  penugasan), tanpa pemohon; keputusan akhir → pemohon; 7 stok menipis → inventory.adjust; 8 AI handover →
+  conversations.takeover; 9 status langganan → tenant.update. Ditambah: pembeli menandai sudah bayar → payments.verify.
+  Pemicu AI handover (P6) dan status langganan (P7) belum ada; aturan + uji memakai event outbox langsung.
+- outbox.rs: event NOTIFIABLE → notification_repo::deliver (gagal DB = retry; payload rusak = dead).
+- apps/api/src/notifications.rs  GET /tenants/{t}/notifications (+unread), POST …/{id}/read, POST …/read-all (hanya milik
+  pemanggil, di tenant path).
+- Kanal: in-app (DB) + email (adapter log-only, D-08). Realtime SSE untuk notifikasi = P4-6.
+
+Hasil
+- fmt/clippy -D warnings bersih; cargo test --workspace --locked --no-fail-fast: 331 lulus, 0 gagal (notification_http 2).
+  migration run → revert 0 → run DB kosong: exit 0.
+
+Cakupan AC (Verified)
+- AC-NTF-002: matriks 22 (event × penerima) tepat sesuai aturan; email status order ke customer tepat sekali per status.
+- AC-NTF-003: semua event diproses ulang (simulasi crash setelah kirim sebelum ack) → jumlah notifikasi tetap, email
+  terkirim tidak dikirim ulang; niat kirim tercatat tetapi belum terkirim (crash sebelum kirim) → terkirim tepat sekali.
+  Idempotency key provider = (event, hash penerima, kanal).
+- AC-NTF-001: anggota dua tenant menerima notifikasi toko A hanya di path toko A; owner toko B tidak menerima; event
+  bertenant A yang merujuk ticket toko B tidak menghasilkan notifikasi; tandai-baca milik orang lain / lewat tenant
+  lain → 404.
+
+Negative control (setiap mutasi diverifikasi diterapkan; test terkait GAGAL)
+== NEGCTL: tanpa idempotensi notifikasi
+    nine_events_one_notification_per_recipient
+test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.72s
+== NEGCTL: email terkirim dikirim ulang
+    nine_events_one_notification_per_recipient
+test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.76s
+== NEGCTL: ticket ditugaskan dikirim ke semua agen
+    nine_events_one_notification_per_recipient
+test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.72s
+== NEGCTL: pemohon approval ikut dinotifikasi
+    nine_events_one_notification_per_recipient
+test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.66s

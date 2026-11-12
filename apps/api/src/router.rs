@@ -24,7 +24,7 @@ use umkm_shared::{config::ServerSettings, http::RequestId};
 
 use crate::{
     AppState, approvals, auth, business, catalog, commerce, crm, customer_auth, health, inventory,
-    middleware, team, tenants, tickets, upload, website,
+    middleware, notifications, team, tenants, tickets, upload, website,
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -59,7 +59,8 @@ pub fn build_router(state: AppState, limits: HttpLimits) -> Router {
         .merge(commerce::routes())
         .merge(team::routes())
         .merge(approvals::routes())
-        .merge(tickets::routes());
+        .merge(tickets::routes())
+        .merge(notifications::routes());
     let metrics = state.metrics.clone();
     let cors = cors_layer(
         state

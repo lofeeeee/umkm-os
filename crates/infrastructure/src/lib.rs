@@ -13,6 +13,7 @@ pub mod crm_repo;
 pub mod customer_auth_repo;
 pub mod inventory_repo;
 pub mod metrics;
+pub mod notification_repo;
 pub mod onboarding_repo;
 pub mod outbox;
 pub mod payment_repo;

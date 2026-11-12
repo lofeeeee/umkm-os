@@ -15,8 +15,8 @@ use utoipa::{
 };
 
 use crate::{
-    approvals, auth, business, catalog, commerce, crm, customer_auth, health, inventory, team,
-    tenants, tickets, upload, website,
+    approvals, auth, business, catalog, commerce, crm, customer_auth, health, inventory,
+    notifications, team, tenants, tickets, upload, website,
 };
 
 #[derive(OpenApi)]
@@ -141,7 +141,10 @@ use crate::{
         tickets::customer_list,
         tickets::customer_reply,
         tickets::customer_attach,
-        tickets::customer_attachment
+        tickets::customer_attachment,
+        notifications::list,
+        notifications::read_one,
+        notifications::read_all
     ),
     components(schemas(ErrorEnvelope, ErrorBody, ErrorCode, Meta)),
     servers((url = "/", description = "Origin yang sama; root domain menunggu D-01")),
@@ -156,6 +159,7 @@ use crate::{
         (name = "catalog", description = "Produk, varian, kategori (PRD.md §4.5)"),
         (name = "commerce", description = "Pengaturan checkout, order, pembayaran QRIS statis (PRD.md §4.7, ADR-0004)"),
         (name = "approvals", description = "Approval engine multi-step (PRD.md §4.9, P4-2)"),
+        (name = "notifications", description = "Notifikasi in-app (PRD.md §4.13, P4-4)"),
         (name = "tickets", description = "Ticket support: lifecycle, assign, balasan, SLA (PRD.md §4.8, P4-3)"),
         (name = "team", description = "Anggota, role kustom, undangan (PRD.md §3, P4-1)"),
         (name = "crm", description = "Customer, tag, catatan internal, hapus/export (PRD.md §4.6, ADR-0005)"),

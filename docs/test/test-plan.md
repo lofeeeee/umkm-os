@@ -123,9 +123,9 @@ Perintah gate P2: `cargo fmt --check && cargo clippy --workspace -- -D warnings 
 | TC-CNV-002 | AC-CNV-002 | lihat §2 | ditetapkan saat task | Planned |
 | TC-CNV-003 | AC-CNV-003 | lihat §2 | ditetapkan saat task | Planned |
 | TC-CNV-004 | AC-CNV-004 | lihat §2 | ditetapkan saat task | Planned |
-| TC-NTF-001 | AC-NTF-001 | lihat §2 | ditetapkan saat task | Planned |
-| TC-NTF-002 | AC-NTF-002 | lihat §2 | ditetapkan saat task | Planned |
-| TC-NTF-003 | AC-NTF-003 | lihat §2 | ditetapkan saat task | Planned |
+| TC-NTF-001 | AC-NTF-001 | Integration+Workflow | `apps/api/tests/notification_http.rs` | Verified |
+| TC-NTF-002 | AC-NTF-002 | Integration+Workflow | `apps/api/tests/notification_http.rs` | Verified |
+| TC-NTF-003 | AC-NTF-003 | Integration+Workflow | `apps/api/tests/notification_http.rs` | Verified |
 | TC-ANL-001 | AC-ANL-001 | lihat §2 | ditetapkan saat task | Planned |
 | TC-ANL-002 | AC-ANL-002 | lihat §2 | ditetapkan saat task | Planned |
 | TC-SUB-001 | AC-SUB-001 | lihat §2 | ditetapkan saat task | Planned |

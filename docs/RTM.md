@@ -246,9 +246,9 @@ Arah balik: TC → AC lewat nomor yang sama (Test Plan §4); AC → FR lewat FSD
 | FR-CNV-002 | AC-CNV-002 | TC-CNV-002 | ditetapkan di OpenAPI saat task | ADR-0006 (D-04) | — | Planned |
 | FR-CNV-003 | AC-CNV-003 | TC-CNV-003 | ditetapkan di OpenAPI saat task | ADR-0006 (D-04) | — | Planned |
 | FR-CNV-004 | AC-CNV-004 | TC-CNV-004 | ditetapkan di OpenAPI saat task | ADR-0006 (D-04) | — | Planned |
-| FR-NTF-001 | AC-NTF-001 | TC-NTF-001 | ditetapkan di OpenAPI saat task | ADR-0010 (D-08) | — | Planned |
-| FR-NTF-002 | AC-NTF-002 | TC-NTF-002 | ditetapkan di OpenAPI saat task | ADR-0010 (D-08) | — | Planned |
-| FR-NTF-003 | AC-NTF-003 | TC-NTF-003 | ditetapkan di OpenAPI saat task | ADR-0010 (D-08) | — | Planned |
+| FR-NTF-001 | AC-NTF-001 | TC-NTF-001 | GET /tenants/{tenant_id}/notifications | ADR-0010 (D-08) | `docs/evidence/P4-4.txt` | Verified (email nyata menunggu D-08) |
+| FR-NTF-002 | AC-NTF-002 | TC-NTF-002 | worker: notification_repo::deliver | ADR-0010 (D-08) | `docs/evidence/P4-4.txt` | Verified (email nyata menunggu D-08) |
+| FR-NTF-003 | AC-NTF-003 | TC-NTF-003 | worker: outbox + notification_deliveries | ADR-0010 (D-08) | `docs/evidence/P4-4.txt` | Verified (email nyata menunggu D-08) |
 | FR-ANL-001 | AC-ANL-001 | TC-ANL-001 | ditetapkan di OpenAPI saat task | — | — | Planned |
 | FR-ANL-002 | AC-ANL-002 | TC-ANL-002 | ditetapkan di OpenAPI saat task | — | — | Planned |
 | FR-SUB-001 | AC-SUB-001 | TC-SUB-001 | ditetapkan di OpenAPI saat task | D-10 | — | Planned |
