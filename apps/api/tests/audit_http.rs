@@ -458,6 +458,37 @@ async fn every_available_prd_category_is_audited(pool: PgPool) {
     )
     .await;
 
+    // AI provider/config/key (P5)
+    let p = call(
+        &a,
+        Method::POST,
+        format!("{base}/ai/providers"),
+        &o,
+        Some(json!({"name": "BYOK", "source": "byok", "provider_type": "openai",
+            "base_url": "https://api.openai.com/v1", "model": "gpt-4o-mini", "api_key": "sk-audit-SECRET-123456"})),
+    )
+    .await;
+    let pid = p.json()["data"]["id"].as_str().unwrap().to_owned();
+    call(
+        &a,
+        Method::PATCH,
+        format!("{base}/ai/providers/{pid}"),
+        &o,
+        Some(json!({"api_key": "sk-audit-ROTATED-654321"})),
+    )
+    .await;
+    call(
+        &a,
+        Method::PUT,
+        format!("{base}/ai/config"),
+        &o,
+        Some(json!({"enabled": false, "mode": "hybrid", "primary_provider_id": pid, "fallback_provider_id": null,
+            "temperature": 0.3, "max_output_tokens": 512, "timeout_ms": 20000, "system_prompt": "", "welcome_message": "",
+            "fallback_message": "Kami teruskan.", "allowed_topics": [], "restricted_topics": [], "handover_policy": {},
+            "operating_schedule": {}, "monthly_token_budget": null})),
+    )
+    .await;
+
     // --- cakupan
     let actions: Vec<String> = sqlx::query_scalar("SELECT DISTINCT action FROM audit_logs WHERE tenant_id = $1 OR tenant_id IS NULL OR actor_user_id = $2")
         .bind(t).bind(o.user).fetch_all(&a.owner).await.unwrap();
@@ -477,10 +508,7 @@ async fn every_available_prd_category_is_audited(pool: PgPool) {
         }
         covered += 1;
     }
-    assert_eq!(
-        covered, 8,
-        "8 dari 10 kategori aktif (AI P5, platform admin P7)"
-    );
+    assert_eq!(covered, 9, "9 dari 10 kategori aktif (platform admin P7)");
     assert!(actions.len() >= 25, "{} jenis event", actions.len());
 
     // API: hanya audit.read; filter awalan; tenant lain tidak terlihat
@@ -564,6 +592,8 @@ async fn every_available_prd_category_is_audited(pool: PgPool) {
         "sari@x.id",
         "baru@x.id",
         &o.csrf,
+        "sk-audit-SECRET-123456",
+        "sk-audit-ROTATED-654321",
     ] {
         assert!(!dump.contains(secret), "rahasia bocor ke audit: {secret}");
     }

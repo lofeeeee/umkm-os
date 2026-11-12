@@ -71,7 +71,11 @@ pub const PRD_CATEGORIES: [(&str, &[&str], Option<&str>); 10] = [
         &["ticket.assigned", "ticket.closed"],
         None,
     ),
-    ("AI provider/config/key changes", &[], Some("P5")),
+    (
+        "AI provider/config/key changes",
+        &["ai.provider_created", "ai.key_rotated", "ai.config_updated"],
+        None,
+    ),
     (
         "Chat handover/approval",
         &["approval.approved", "approval.rejected"],
