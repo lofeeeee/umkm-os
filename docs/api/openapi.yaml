@@ -1816,6 +1816,196 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
       security:
       - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/ai/knowledge:
+    get:
+      tags:
+      - ai
+      operationId: list_knowledge
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Dokumen pengetahuan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_Vec_DocumentView'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+    post:
+      tags:
+      - ai
+      summary: Tambah dokumen; diindeks worker di latar (status `pending` → `indexed`).
+      operationId: create_knowledge
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentInput'
+        required: true
+      responses:
+        '201':
+          description: Dibuat (menunggu indeks)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_String'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/ai/knowledge/{document_id}:
+    delete:
+      tags:
+      - ai
+      operationId: delete_knowledge
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: document_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '204':
+          description: Dihapus beserta chunk
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/ai/knowledge/{document_id}/reindex:
+    post:
+      tags:
+      - ai
+      operationId: reindex_knowledge
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: document_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '202':
+          description: Dijadwalkan ulang untuk diindeks
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
   /api/v1/tenants/{tenant_id}/ai/providers:
     get:
       tags:
@@ -2026,6 +2216,64 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
       security:
       - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/ai/test:
+    post:
+      tags:
+      - ai
+      summary: Uji coba chatbot oleh admin (tidak butuh chatbot aktif; dicatat purpose `test`, dihitung kuota).
+      operationId: test_turn
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TestInput'
+        required: true
+      responses:
+        '200':
+          description: Hasil satu giliran
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_TestResult'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: Provider utama belum diatur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
   /api/v1/tenants/{tenant_id}/ai/tools:
     put:
       tags:
@@ -2051,6 +2299,51 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SuccessEnvelope_Vec_ToolState'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/ai/usage:
+    get:
+      tags:
+      - ai
+      operationId: usage
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Pemakaian token bulan ini
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_UsageView'
         '405':
           description: Method tidak diizinkan
           content:
@@ -7545,6 +7838,17 @@ components:
           type: string
           format: uuid
       additionalProperties: false
+    DocumentInput:
+      type: object
+      required:
+      - title
+      - body
+      properties:
+        body:
+          type: string
+        title:
+          type: string
+      additionalProperties: false
     ErrorBody:
       type: object
       description: |-
@@ -9917,6 +10221,19 @@ components:
           $ref: '#/components/schemas/Meta'
         success:
           type: boolean
+    SuccessEnvelope_String:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: string
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
     SuccessEnvelope_TemplatePreview:
       type: object
       required:
@@ -9979,6 +10296,56 @@ components:
               type: string
             status:
               type: string
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
+    SuccessEnvelope_TestResult:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - run_id
+          - decision
+          - status
+          - tool_calls
+          - prompt_tokens
+          - completion_tokens
+          properties:
+            completion_tokens:
+              type: integer
+              format: int32
+              minimum: 0
+            decision:
+              type: string
+              description: '`send_auto` | `draft_for_admin` | `handover` | `human_queue`'
+            error_code:
+              type:
+              - string
+              - 'null'
+            prompt_tokens:
+              type: integer
+              format: int32
+              minimum: 0
+            reply:
+              type:
+              - string
+              - 'null'
+            run_id:
+              type: string
+              format: uuid
+            status:
+              type: string
+              description: '`ok` | `blocked` | `error` | `timeout` | `quota_exceeded` | `circuit_open`'
+            tool_calls:
+              type: array
+              items:
+                $ref: '#/components/schemas/ToolCallView'
         meta:
           $ref: '#/components/schemas/Meta'
         success:
@@ -10157,6 +10524,43 @@ components:
           $ref: '#/components/schemas/Meta'
         success:
           type: boolean
+    SuccessEnvelope_UsageView:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - platform_tokens
+          - byok_tokens
+          properties:
+            byok_budget:
+              type:
+              - integer
+              - 'null'
+              format: int64
+            byok_tokens:
+              type: integer
+              format: int64
+              minimum: 0
+            platform_quota:
+              type:
+              - integer
+              - 'null'
+              format: int64
+              minimum: 0
+            platform_tokens:
+              type: integer
+              format: int64
+              description: Token bulan berjalan (zona Asia/Jakarta)
+              minimum: 0
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
     SuccessEnvelope_Value:
       type: object
       required:
@@ -10233,6 +10637,45 @@ components:
               to_user:
                 type: string
                 format: uuid
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
+    SuccessEnvelope_Vec_DocumentView:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            required:
+            - id
+            - title
+            - status
+            - chunk_count
+            - updated_at
+            properties:
+              chunk_count:
+                type: integer
+                format: int32
+              error_code:
+                type:
+                - string
+                - 'null'
+              id:
+                type: string
+                format: uuid
+              status:
+                type: string
+                description: '`pending` | `indexed` | `failed` | `disabled`'
+              title:
+                type: string
+              updated_at:
+                type: string
         meta:
           $ref: '#/components/schemas/Meta'
         success:
@@ -10768,6 +11211,14 @@ components:
           format: uuid
         slug:
           type: string
+    TestInput:
+      type: object
+      required:
+      - message
+      properties:
+        message:
+          type: string
+      additionalProperties: false
     TicketInput:
       type: object
       required:
@@ -10901,6 +11352,16 @@ components:
           items:
             type: string
         updated_at:
+          type: string
+    ToolCallView:
+      type: object
+      required:
+      - name
+      - status
+      properties:
+        name:
+          type: string
+        status:
           type: string
     ToolState:
       type: object

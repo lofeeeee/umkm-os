@@ -31,3 +31,15 @@ Kontrol negatif (mutasi runtime.rs; dua target pertama ditolak harness karena fo
 - M3 timeout config diabaikan     -> breaker_opens..._slow_provider GAGAL
 - M4 chatbot nonaktif diabaikan   -> human_only_and_disabled GAGAL
 - Dipulihkan: 4/4 lulus.
+
+Tambahan (wiring API & worker)
+- AiService memiliki AiRuntime (bootstrap & harness); AiRuntime::new: klien tenant & operator berbagi semaphore.
+- Endpoint: POST /ai/test (ai_config.manage; uji coba admin, purpose test), GET /ai/usage (ai_config.read),
+  GET/POST /ai/knowledge, DELETE /ai/knowledge/{id}, POST /ai/knowledge/{id}/reindex. OpenAPI diperbarui.
+- migrations/0025_knowledge_queue: app.pending_knowledge(batch) SECURITY DEFINER (hanya pasangan id, attempts < 5).
+- Worker: setiap 15 s AiRuntime::index_pending(10) — embedding lewat provider utama tenant (SSRF guard); tenant tanpa
+  provider embedding → failed/no_embedding_provider.
+- Uji: ai_runtime worker_indexes_pending... (indexed vs failed, tidak diproses ulang, potongan masuk KONTEKS jawaban
+  berikutnya); ai_http test_turn_usage_and_knowledge_endpoints (409 tanpa provider; provider tak terjangkau → 200 handover
+  bukan 5xx; Manager 403 untuk uji & tulis; kuota terlihat; validasi 422; reindex 202; hapus 204 lalu 404).
+- Mutasi: index_pending tidak menandai gagal → worker_indexes... GAGAL; dipulihkan 5/5.

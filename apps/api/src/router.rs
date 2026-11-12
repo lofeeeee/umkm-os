@@ -62,7 +62,8 @@ pub fn build_router(state: AppState, limits: HttpLimits) -> Router {
         .merge(tickets::routes())
         .merge(notifications::routes())
         .merge(audit::routes())
-        .merge(ai::routes());
+        .merge(ai::routes())
+        .merge(ai::routes_runtime());
     let metrics = state.metrics.clone();
     let cors = cors_layer(
         state

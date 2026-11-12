@@ -45,7 +45,7 @@ async fn run() -> Result<(), BoxError> {
     }
     let secrets = Secrets::from_env()?;
     // Fail-closed: KEK dibutuhkan job rotasi/penggunaan rahasia AI (P5-2).
-    let _keyring = umkm_infrastructure::crypto::Keyring::parse(secrets.data_kek.expose())?;
+    let keyring = umkm_infrastructure::crypto::Keyring::parse(secrets.data_kek.expose())?;
     let pool = umkm_database::connect_lazy(&secrets.database_url, &settings.database)?;
     let role = umkm_database::app_role::ensure_rls_enforced(
         &pool,
@@ -110,6 +110,19 @@ async fn run() -> Result<(), BoxError> {
         tracing::warn!("realtime publisher disabled");
     }
 
+    // P5-7: pengindeksan basis pengetahuan (embedding lewat provider tenant, SSRF guard).
+    let ai = umkm_infrastructure::ai::runtime::AiRuntime::new(
+        pool.clone(),
+        keyring,
+        settings
+            .ai
+            .platform
+            .enabled
+            .then(|| settings.ai.platform.clone()),
+        secrets.platform_ai_api_key.clone(),
+        settings.ai.max_concurrency,
+    );
+
     let mut stop = stop_rx;
     let shutdown = shutdown_signal();
     tokio::pin!(shutdown);
@@ -133,6 +146,13 @@ async fn run() -> Result<(), BoxError> {
                 Ok(n) if n > 0 => tracing::info!(released = n, "reservations expired"),
                 Ok(_) => {}
                 Err(e) => tracing::error!(error = %e, "reservation expiry failed"),
+            }
+            match ai.index_pending(10).await {
+                Ok((ok, failed)) if ok + failed > 0 => {
+                    tracing::info!(indexed = ok, failed, "knowledge indexed")
+                }
+                Ok(_) => {}
+                Err(e) => tracing::error!(error = %e, "knowledge indexing failed"),
             }
             next_expire = tokio::time::Instant::now() + expire_every;
         }

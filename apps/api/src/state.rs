@@ -37,7 +37,31 @@ pub struct AiService {
     /// `Some` hanya bila provider platform diaktifkan operator.
     pub platform: Option<umkm_shared::config::PlatformAiSettings>,
     pub platform_key: Option<umkm_shared::config::SecretString>,
-    pub max_concurrency: usize,
+    pub runtime: Arc<umkm_infrastructure::ai::runtime::AiRuntime>,
+}
+
+impl AiService {
+    pub fn new(
+        pool: sqlx::PgPool,
+        keyring: umkm_infrastructure::crypto::Keyring,
+        platform: Option<umkm_shared::config::PlatformAiSettings>,
+        platform_key: Option<umkm_shared::config::SecretString>,
+        max_concurrency: usize,
+    ) -> Self {
+        let runtime = Arc::new(umkm_infrastructure::ai::runtime::AiRuntime::new(
+            pool,
+            keyring.clone(),
+            platform.clone(),
+            platform_key.clone(),
+            max_concurrency,
+        ));
+        Self {
+            keyring,
+            platform,
+            platform_key,
+            runtime,
+        }
+    }
 }
 
 /// Storage lokal + penanda URL (ADR-0009).

@@ -460,3 +460,170 @@ async fn platform_provider_permissions_isolation_and_tools(pool: PgPool) {
     .await;
     assert_eq!((r.status, draft(&r.json()["data"])), (200, json!(true)));
 }
+
+#[sqlx::test(migrator = "MIGRATOR")]
+async fn test_turn_usage_and_knowledge_endpoints(pool: PgPool) {
+    let a = app(&pool).await;
+    let t = tenant(&pool, "toko-ai").await;
+    let owner = member(&pool, t, "Owner").await;
+    let manager = member(&pool, t, "Manager").await;
+    // Tanpa provider utama → 409 jelas.
+    let r = call(
+        &a,
+        &owner,
+        Method::POST,
+        t,
+        "/test",
+        Some(json!({"message": "halo"})),
+    )
+    .await;
+    assert_eq!(
+        (r.status, r.json()["error"]["details"]["reason"].as_str()),
+        (409, Some("ai_not_configured")),
+        "{}",
+        r.json()
+    );
+    let p = call(
+        &a,
+        &owner,
+        Method::POST,
+        t,
+        "/providers",
+        Some(json!({"name": "P", "source": "platform", "model": "platform-small"})),
+    )
+    .await;
+    let pid = p.json()["data"]["id"].as_str().unwrap().to_owned();
+    assert_eq!(
+        call(
+            &a,
+            &owner,
+            Method::PUT,
+            t,
+            "/config",
+            Some(config(json!({"primary_provider_id": pid})))
+        )
+        .await
+        .status,
+        200
+    );
+    // Endpoint platform uji tidak dapat dihubungi (DNS) → giliran tetap selesai cepat sebagai handover, bukan 5xx.
+    let r = call(
+        &a,
+        &owner,
+        Method::POST,
+        t,
+        "/test",
+        Some(json!({"message": "ada kopi?"})),
+    )
+    .await;
+    assert_eq!(r.status, 200, "{}", r.json());
+    let d = &r.json()["data"];
+    assert_eq!(
+        (d["decision"].as_str(), d["status"].as_str()),
+        (Some("handover"), Some("error")),
+        "{d}"
+    );
+    assert_eq!(d["reply"], "Kami teruskan ke tim.");
+    assert_eq!(
+        call(
+            &a,
+            &manager,
+            Method::POST,
+            t,
+            "/test",
+            Some(json!({"message": "x"}))
+        )
+        .await
+        .status,
+        403
+    );
+    let u = call(&a, &manager, Method::GET, t, "/usage", None).await;
+    assert_eq!(
+        (u.status, u.json()["data"]["platform_quota"].as_u64()),
+        (200, Some(200_000))
+    );
+    let runs: i64 = sqlx::query_scalar("SELECT count(*) FROM ai_runs WHERE purpose = 'test'")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(runs, 1);
+    // Basis pengetahuan.
+    assert_eq!(
+        call(
+            &a,
+            &owner,
+            Method::POST,
+            t,
+            "/knowledge",
+            Some(json!({"title": " ", "body": "x"}))
+        )
+        .await
+        .status,
+        422
+    );
+    let r = call(
+        &a,
+        &owner,
+        Method::POST,
+        t,
+        "/knowledge",
+        Some(json!({"title": "Ongkir", "body": "Gratis di atas 100rb."})),
+    )
+    .await;
+    assert_eq!(r.status, 201);
+    let doc = r.json()["data"].as_str().unwrap().to_owned();
+    let list = call(&a, &manager, Method::GET, t, "/knowledge", None).await;
+    assert_eq!(list.json()["data"][0]["status"], "pending");
+    assert_eq!(
+        call(
+            &a,
+            &manager,
+            Method::POST,
+            t,
+            "/knowledge",
+            Some(json!({"title": "x", "body": "y"}))
+        )
+        .await
+        .status,
+        403
+    );
+    assert_eq!(
+        call(
+            &a,
+            &owner,
+            Method::POST,
+            t,
+            &format!("/knowledge/{doc}/reindex"),
+            None
+        )
+        .await
+        .status,
+        202
+    );
+    assert_eq!(
+        call(
+            &a,
+            &owner,
+            Method::DELETE,
+            t,
+            &format!("/knowledge/{doc}"),
+            None
+        )
+        .await
+        .status,
+        204
+    );
+    assert_eq!(
+        call(
+            &a,
+            &owner,
+            Method::DELETE,
+            t,
+            &format!("/knowledge/{doc}"),
+            None
+        )
+        .await
+        .status,
+        404
+    );
+}

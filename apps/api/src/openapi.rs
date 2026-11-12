@@ -152,7 +152,13 @@ use crate::{
         ai::delete_provider,
         ai::get_config,
         ai::put_config,
-        ai::put_tools
+        ai::put_tools,
+        ai::test_turn,
+        ai::usage,
+        ai::list_knowledge,
+        ai::create_knowledge,
+        ai::delete_knowledge,
+        ai::reindex_knowledge
     ),
     components(schemas(ErrorEnvelope, ErrorBody, ErrorCode, Meta)),
     servers((url = "/", description = "Origin yang sama; root domain menunggu D-01")),

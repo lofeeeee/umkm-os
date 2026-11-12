@@ -354,3 +354,73 @@ async fn human_only_and_disabled_chatbot(pool: PgPool) {
         .unwrap();
     assert_eq!(p, "test");
 }
+
+#[sqlx::test(migrator = "MIGRATOR")]
+async fn worker_indexes_pending_knowledge_and_answers_use_it(pool: PgPool) {
+    let (port, seen) = provider().await;
+    let rt = runtime(app_pool(&pool).await, port, "ok", 1_000_000);
+    let t = setup(&pool, "hybrid", true, 10_000).await;
+    sqlx::query("INSERT INTO knowledge_documents (tenant_id, title, body) VALUES ($1, 'Pengiriman', 'Pengiriman ke Bandung memakan 2 hari kerja.')")
+        .bind(t.as_uuid())
+        .execute(&pool)
+        .await
+        .unwrap();
+    // Tenant tanpa provider: dokumennya gagal dengan kode jelas, tidak menghentikan antrean.
+    let lonely: Uuid = sqlx::query_scalar(
+        "INSERT INTO tenants (name, slug) VALUES ('X', 'tanpa-ai') RETURNING id",
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    sqlx::query(
+        "INSERT INTO knowledge_documents (tenant_id, title, body) VALUES ($1, 'Doc', 'Isi')",
+    )
+    .bind(lonely)
+    .execute(&pool)
+    .await
+    .unwrap();
+    assert_eq!(rt.index_pending(10).await.unwrap(), (1, 1));
+    let st: Vec<(String, Option<String>, i32)> = sqlx::query_as(
+        "SELECT status, error_code, chunk_count FROM knowledge_documents ORDER BY title DESC",
+    )
+    .fetch_all(&pool)
+    .await
+    .unwrap();
+    assert_eq!(
+        st,
+        vec![
+            ("indexed".into(), None, 1),
+            ("failed".into(), Some("no_embedding_provider".into()), 0)
+        ]
+    );
+    assert_eq!(
+        rt.index_pending(10).await.unwrap(),
+        (0, 0),
+        "tidak diproses ulang"
+    );
+    // Pertanyaan berikutnya mendapat potongan itu sebagai KONTEKS di system prompt.
+    seen.bodies.lock().unwrap().clear();
+    rt.answer(
+        t,
+        "Kopi Senja",
+        ask("berapa lama kirim ke bandung?"),
+        "chat",
+    )
+    .await
+    .unwrap();
+    let sys = seen
+        .bodies
+        .lock()
+        .unwrap()
+        .iter()
+        .find_map(|b| {
+            b["messages"]
+                .as_array()
+                .map(|m| m[0]["content"].as_str().unwrap().to_owned())
+        })
+        .unwrap();
+    assert!(
+        sys.contains("<<<KONTEKS") && sys.contains("2 hari kerja"),
+        "{sys}"
+    );
+}

@@ -116,6 +116,33 @@ fn canary() -> String {
 }
 
 impl AiRuntime {
+    /// Runtime proses: klien tenant & operator berbagi satu batas konkurensi.
+    pub fn new(
+        pool: PgPool,
+        keyring: Keyring,
+        platform: Option<PlatformAiSettings>,
+        platform_key: Option<SecretString>,
+        max_concurrency: usize,
+    ) -> Self {
+        let tenant_egress = Egress::new(
+            crate::http_client::EgressPolicy::tenant(Duration::from_secs(60)),
+            crate::http_client::Resolver::System,
+            max_concurrency,
+        );
+        let operator_egress = tenant_egress.with_policy(
+            crate::http_client::EgressPolicy::operator(Duration::from_secs(60)),
+        );
+        Self {
+            pool,
+            keyring,
+            platform,
+            platform_key,
+            tenant_egress,
+            operator_egress,
+            breaker: Arc::new(CircuitBreaker::new(BREAKER_THRESHOLD, BREAKER_COOLDOWN)),
+        }
+    }
+
     async fn build(
         &self,
         t: TenantId,
@@ -169,6 +196,55 @@ impl AiRuntime {
                 (p.provider_type == "openai").then(|| BYOK_OPENAI_EMBEDDING.to_owned())
             }
         }
+    }
+
+    /// Indeks dokumen pengetahuan tertunda (worker). Embedding memakai provider utama tenant.
+    /// Kembali (berhasil, gagal).
+    pub async fn index_pending(&self, batch: i32) -> Result<(usize, usize), sqlx::Error> {
+        let (mut ok, mut failed) = (0, 0);
+        for (t, doc) in crate::rag::pending(&self.pool, batch).await? {
+            let provider = match ai_repo::get_config(&self.pool, t).await {
+                Ok(cfg) => ai_repo::list_providers(&self.pool, t)
+                    .await
+                    .ok()
+                    .and_then(|ps| {
+                        ps.into_iter()
+                            .find(|p| Some(p.id) == cfg.primary_provider_id && p.status == "active")
+                    }),
+                Err(_) => None,
+            };
+            let Some((p, model)) = provider.and_then(|p| self.embedding_model(&p).map(|m| (p, m)))
+            else {
+                crate::rag::mark_failed(&self.pool, t, doc, "no_embedding_provider").await?;
+                failed += 1;
+                continue;
+            };
+            let llm = match self.build(t, &p, Duration::from_secs(30)).await {
+                Ok(l) => l,
+                Err(_) => {
+                    crate::rag::mark_failed(&self.pool, t, doc, "provider_unavailable").await?;
+                    failed += 1;
+                    continue;
+                }
+            };
+            match crate::rag::index_document(&self.pool, t, doc, &llm, &model).await {
+                Ok(_) => ok += 1,
+                Err(_) => failed += 1,
+            }
+        }
+        Ok((ok, failed))
+    }
+
+    /// Nama usaha untuk system prompt (profil bisnis; fallback nama tenant).
+    pub async fn business_name(&self, t: TenantId) -> Result<String, sqlx::Error> {
+        let mut tx = tenant_tx(&self.pool, t).await?;
+        let n: Option<String> = sqlx::query_scalar(
+            "SELECT coalesce((SELECT name FROM business_profiles), (SELECT name FROM tenants))",
+        )
+        .fetch_one(&mut *tx)
+        .await?;
+        tx.commit().await?;
+        Ok(n.unwrap_or_default())
     }
 
     /// Pemakaian token bulan berjalan (zona Asia/Jakarta) per sumber.

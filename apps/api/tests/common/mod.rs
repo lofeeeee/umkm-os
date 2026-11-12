@@ -90,6 +90,7 @@ pub async fn app(pool: &PgPool) -> TestApp {
         trust_forwarded_for: false,
     };
     let signer = UrlSigner::new(SecretString::new(SIGNING_KEY), 3600);
+    let app_db_ai = app_db.clone();
     let state = AppState::default()
         .with_auth(Arc::new(svc))
         .with_db(app_db.clone())
@@ -103,18 +104,19 @@ pub async fn app(pool: &PgPool) -> TestApp {
             ),
             signer: signer.clone(),
         }))
-        .with_ai(Arc::new(AiService {
-            keyring: umkm_infrastructure::crypto::Keyring::parse(TEST_KEK).unwrap(),
-            platform: Some(umkm_shared::config::PlatformAiSettings {
+        .with_ai(Arc::new(AiService::new(
+            app_db_ai,
+            umkm_infrastructure::crypto::Keyring::parse(TEST_KEK).unwrap(),
+            Some(umkm_shared::config::PlatformAiSettings {
                 enabled: true,
                 base_url: "https://llm.platform.test/v1".into(),
                 models: vec!["platform-small".into(), "platform-large".into()],
                 embedding_model: "platform-embed".into(),
                 ..Default::default()
             }),
-            platform_key: None,
-            max_concurrency: 4,
-        }));
+            None,
+            4,
+        )));
     TestApp {
         router: build_router(state.clone(), LIMITS),
         state,

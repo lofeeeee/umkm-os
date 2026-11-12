@@ -99,16 +99,17 @@ pub async fn serve() -> Result<(), BoxError> {
     });
     // Fail-closed: KEK tidak valid -> proses tidak start (nilai tidak pernah dicetak).
     let keyring = umkm_infrastructure::crypto::Keyring::parse(secrets.data_kek.expose())?;
-    let ai = Arc::new(crate::state::AiService {
+    let ai = Arc::new(crate::state::AiService::new(
+        pool.clone(),
         keyring,
-        platform: settings
+        settings
             .ai
             .platform
             .enabled
             .then(|| settings.ai.platform.clone()),
-        platform_key: secrets.platform_ai_api_key.clone(),
-        max_concurrency: settings.ai.max_concurrency,
-    });
+        secrets.platform_ai_api_key.clone(),
+        settings.ai.max_concurrency,
+    ));
     let mut state = AppState::new(vec![
         Arc::new(readiness::Postgres(pool.clone())),
         Arc::new(readiness::Redis(redis)),

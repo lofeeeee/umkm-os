@@ -661,3 +661,275 @@ pub fn routes() -> Router<AppState> {
         .route(&format!("{t}/config"), get(get_config).put(put_config))
         .route(&format!("{t}/tools"), put(put_tools))
 }
+
+// ------------------------------------------------------------ uji coba, pemakaian, basis pengetahuan
+
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
+pub struct TestInput {
+    pub message: String,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct ToolCallView {
+    pub name: String,
+    pub status: String,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct TestResult {
+    pub run_id: Uuid,
+    /// `send_auto` | `draft_for_admin` | `handover` | `human_queue`
+    pub decision: String,
+    pub reply: Option<String>,
+    /// `ok` | `blocked` | `error` | `timeout` | `quota_exceeded` | `circuit_open`
+    pub status: String,
+    pub error_code: Option<String>,
+    pub tool_calls: Vec<ToolCallView>,
+    pub prompt_tokens: u32,
+    pub completion_tokens: u32,
+}
+
+/// Uji coba chatbot oleh admin (tidak butuh chatbot aktif; dicatat purpose `test`, dihitung kuota).
+#[utoipa::path(
+    post, path = "/api/v1/tenants/{tenant_id}/ai/test", tag = "ai",
+    params(("tenant_id" = Uuid, Path)), request_body = TestInput,
+    responses(
+        (status = 200, description = "Hasil satu giliran", body = SuccessEnvelope<TestResult>),
+        (status = 409, description = "Provider utama belum diatur", body = umkm_shared::http::ErrorEnvelope)
+    )
+)]
+pub async fn test_turn(
+    State(state): State<AppState>,
+    ReqId(id): ReqId,
+    Member(actor): Member,
+    Json(req): Json<TestInput>,
+) -> Ok<TestResult> {
+    actor.require("ai_config.manage")?;
+    let s = svc(&state)?;
+    let rt = &s.runtime;
+    let name = rt.business_name(actor.tenant_id).await.map_err(internal)?;
+    let input = umkm_application::ai::orchestrator::TurnInput {
+        message: req.message,
+        history: vec![],
+        customer: None,
+    };
+    let r = rt
+        .answer(actor.tenant_id, &name, input, "test")
+        .await
+        .map_err(|e| match e {
+            umkm_infrastructure::ai::runtime::AiRunError::NotConfigured => {
+                conflict("ai_not_configured", "Pilih provider utama terlebih dahulu")
+            }
+            e => internal(e),
+        })?;
+    let o = r.outcome;
+    Ok(Json(SuccessEnvelope::new(
+        TestResult {
+            run_id: r.run_id,
+            decision: umkm_infrastructure::ai::runtime::decision_str(o.decision).into(),
+            reply: o.reply,
+            status: o.status.into(),
+            error_code: o.error_code.map(str::to_owned),
+            tool_calls: o
+                .tool_calls
+                .into_iter()
+                .map(|c| ToolCallView {
+                    name: c.name,
+                    status: c.status.into(),
+                })
+                .collect(),
+            prompt_tokens: o.usage.prompt_tokens,
+            completion_tokens: o.usage.completion_tokens,
+        },
+        &id,
+    )))
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct UsageView {
+    /// Token bulan berjalan (zona Asia/Jakarta)
+    pub platform_tokens: u64,
+    pub byok_tokens: u64,
+    pub platform_quota: Option<u64>,
+    pub byok_budget: Option<i64>,
+}
+
+#[utoipa::path(
+    get, path = "/api/v1/tenants/{tenant_id}/ai/usage", tag = "ai",
+    params(("tenant_id" = Uuid, Path)),
+    responses((status = 200, description = "Pemakaian token bulan ini", body = SuccessEnvelope<UsageView>))
+)]
+pub async fn usage(
+    State(state): State<AppState>,
+    ReqId(id): ReqId,
+    Member(actor): Member,
+) -> Ok<UsageView> {
+    actor.require("ai_config.read")?;
+    let s = svc(&state)?;
+    let t = actor.tenant_id;
+    let cfg = repo::get_config(pool(&state)?, t).await.map_err(repo_err)?;
+    Ok(Json(SuccessEnvelope::new(
+        UsageView {
+            platform_tokens: s
+                .runtime
+                .month_usage(t, ProviderSource::Platform)
+                .await
+                .map_err(internal)?,
+            byok_tokens: s
+                .runtime
+                .month_usage(t, ProviderSource::Byok)
+                .await
+                .map_err(internal)?,
+            platform_quota: s.platform.as_ref().map(|p| p.monthly_quota),
+            byok_budget: cfg.monthly_token_budget,
+        },
+        &id,
+    )))
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct DocumentView {
+    pub id: Uuid,
+    pub title: String,
+    /// `pending` | `indexed` | `failed` | `disabled`
+    pub status: String,
+    pub chunk_count: i32,
+    pub error_code: Option<String>,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
+pub struct DocumentInput {
+    pub title: String,
+    pub body: String,
+}
+
+fn rag_err(e: umkm_infrastructure::rag::RagError) -> ApiError {
+    use umkm_infrastructure::rag::RagError as E;
+    match e {
+        E::NotFound => not_found(),
+        E::LimitReached => conflict("knowledge_limit", "Batas dokumen pengetahuan tercapai"),
+        e => internal(e),
+    }
+}
+
+#[utoipa::path(
+    get, path = "/api/v1/tenants/{tenant_id}/ai/knowledge", tag = "ai",
+    params(("tenant_id" = Uuid, Path)),
+    responses((status = 200, description = "Dokumen pengetahuan", body = SuccessEnvelope<Vec<DocumentView>>))
+)]
+pub async fn list_knowledge(
+    State(state): State<AppState>,
+    ReqId(id): ReqId,
+    Member(actor): Member,
+) -> Ok<Vec<DocumentView>> {
+    actor.require("ai_config.read")?;
+    let rows = umkm_infrastructure::rag::list_documents(pool(&state)?, actor.tenant_id)
+        .await
+        .map_err(rag_err)?;
+    Ok(Json(SuccessEnvelope::new(
+        rows.into_iter()
+            .map(|d| DocumentView {
+                id: d.id,
+                title: d.title,
+                status: d.status,
+                chunk_count: d.chunk_count,
+                error_code: d.error_code,
+                updated_at: d.updated_at,
+            })
+            .collect(),
+        &id,
+    )))
+}
+
+/// Tambah dokumen; diindeks worker di latar (status `pending` → `indexed`).
+#[utoipa::path(
+    post, path = "/api/v1/tenants/{tenant_id}/ai/knowledge", tag = "ai",
+    params(("tenant_id" = Uuid, Path)), request_body = DocumentInput,
+    responses((status = 201, description = "Dibuat (menunggu indeks)", body = SuccessEnvelope<Uuid>))
+)]
+pub async fn create_knowledge(
+    State(state): State<AppState>,
+    ReqId(id): ReqId,
+    ClientIp(ip): ClientIp,
+    Member(actor): Member,
+    Json(req): Json<DocumentInput>,
+) -> Result<(StatusCode, Json<SuccessEnvelope<Uuid>>), ApiError> {
+    actor.require("ai_config.manage")?;
+    umkm_domain::ai::knowledge::validate(&req.title, &req.body).map_err(|e| match e {
+        umkm_domain::ai::knowledge::KnowledgeError::Title => one("title", "invalid"),
+        umkm_domain::ai::knowledge::KnowledgeError::Body => one("body", "invalid"),
+    })?;
+    let doc = umkm_infrastructure::rag::create_document(
+        pool(&state)?,
+        &actor,
+        &req.title,
+        &req.body,
+        (Some(id.as_str()), Some(&ip)),
+    )
+    .await
+    .map_err(rag_err)?;
+    Ok((StatusCode::CREATED, Json(SuccessEnvelope::new(doc, &id))))
+}
+
+#[utoipa::path(
+    delete, path = "/api/v1/tenants/{tenant_id}/ai/knowledge/{document_id}", tag = "ai",
+    params(("tenant_id" = Uuid, Path), ("document_id" = Uuid, Path)),
+    responses((status = 204, description = "Dihapus beserta chunk"))
+)]
+pub async fn delete_knowledge(
+    State(state): State<AppState>,
+    ReqId(id): ReqId,
+    ClientIp(ip): ClientIp,
+    Member(actor): Member,
+    Path((_, doc)): Path<(Uuid, Uuid)>,
+) -> Result<StatusCode, ApiError> {
+    actor.require("ai_config.manage")?;
+    umkm_infrastructure::rag::delete_document(
+        pool(&state)?,
+        &actor,
+        doc,
+        (Some(id.as_str()), Some(&ip)),
+    )
+    .await
+    .map_err(rag_err)?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+#[utoipa::path(
+    post, path = "/api/v1/tenants/{tenant_id}/ai/knowledge/{document_id}/reindex", tag = "ai",
+    params(("tenant_id" = Uuid, Path), ("document_id" = Uuid, Path)),
+    responses((status = 202, description = "Dijadwalkan ulang untuk diindeks"))
+)]
+pub async fn reindex_knowledge(
+    State(state): State<AppState>,
+    Member(actor): Member,
+    Path((_, doc)): Path<(Uuid, Uuid)>,
+) -> Result<StatusCode, ApiError> {
+    actor.require("ai_config.manage")?;
+    umkm_infrastructure::rag::mark_pending(pool(&state)?, actor.tenant_id, doc)
+        .await
+        .map_err(rag_err)?;
+    Ok(StatusCode::ACCEPTED)
+}
+
+pub fn routes_runtime() -> Router<AppState> {
+    let t = "/api/v1/tenants/{tenant_id}/ai";
+    Router::new()
+        .route(&format!("{t}/test"), axum::routing::post(test_turn))
+        .route(&format!("{t}/usage"), get(usage))
+        .route(
+            &format!("{t}/knowledge"),
+            get(list_knowledge).post(create_knowledge),
+        )
+        .route(
+            &format!("{t}/knowledge/{{document_id}}"),
+            axum::routing::delete(delete_knowledge),
+        )
+        .route(
+            &format!("{t}/knowledge/{{document_id}}/reindex"),
+            axum::routing::post(reindex_knowledge),
+        )
+}

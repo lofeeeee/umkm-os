@@ -166,6 +166,38 @@ pub async fn delete_document(
     Ok(())
 }
 
+/// Antrean lintas tenant (fungsi SECURITY DEFINER; hanya id).
+pub async fn pending(pool: &PgPool, batch: i32) -> Result<Vec<(TenantId, Uuid)>, sqlx::Error> {
+    let rows: Vec<(Uuid, Uuid)> =
+        sqlx::query_as("SELECT tenant_id, document_id FROM app.pending_knowledge($1)")
+            .bind(batch)
+            .fetch_all(pool)
+            .await?;
+    Ok(rows
+        .into_iter()
+        .map(|(t, d)| (TenantId::from_uuid(t), d))
+        .collect())
+}
+
+/// Gagal sebelum embedding (mis. tenant tanpa provider embedding).
+pub async fn mark_failed(
+    pool: &PgPool,
+    t: TenantId,
+    id: Uuid,
+    code: &str,
+) -> Result<(), sqlx::Error> {
+    let mut tx = tenant_tx(pool, t).await?;
+    sqlx::query(
+        "UPDATE knowledge_documents SET status = 'failed', error_code = $2, attempts = attempts + 1, updated_at = now()
+         WHERE id = $1",
+    )
+    .bind(id)
+    .bind(code)
+    .execute(&mut *tx)
+    .await?;
+    tx.commit().await
+}
+
 /// Tandai dokumen untuk diindeks ulang (mis. setelah ganti model embedding).
 pub async fn mark_pending(pool: &PgPool, t: TenantId, id: Uuid) -> Result<(), RagError> {
     let mut tx = tenant_tx(pool, t).await?;
