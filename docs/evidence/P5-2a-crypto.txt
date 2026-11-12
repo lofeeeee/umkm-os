@@ -1,0 +1,32 @@
+P5-2 (bagian 1) — Envelope encryption + master key (PRD.md §6.7, ADR-0011)
+Tanggal: 2026-11-12
+
+Artefak
+- crates/infrastructure/src/crypto.rs  Keyring berversi (UMKM_DATA_KEK = v<n>:<base64 32 byte>[,...]),
+  seal/open/rewrap XChaCha20-Poly1305: DEK acak per rahasia, DEK dibungkus KEK; AAD mengikat ke konteks
+  (tenant/baris); Debug Keyring/Sealed/Secret tidak memuat nilai; Secret di-nol-kan saat drop; mask() 4 char terakhir.
+- crates/shared/src/config.rs  DATA_KEK_VAR wajib (fail-closed seperti FILE_SIGNING_KEY); Debug Secrets teredaksi.
+- API bootstrap & worker mem-parse Keyring saat start: format salah -> proses berhenti (nilai tidak dicetak).
+  AppState.keyring (None -> endpoint rahasia AI 503).
+- docker-compose (&app-env, api + worker), .env.example (DATA_KEK contoh lokal), Dockerfile runtime + ca-certificates.
+- Dependency baru (docs/architecture/dependency-review.md): chacha20poly1305 0.11.0, reqwest 0.13.5 (rustls-no-provider),
+  rustls 0.23.46 (ring), webpki-root-certs dipin 1.0.11 (1.0.12 < 2 minggu); deny.toml: pengecualian CDLA-Permissive-2.0
+  khusus webpki-root-certs. cargo deny: advisories/bans/licenses/sources ok.
+
+Uji
+- crypto::tests (4): parsing keyring (6 input buruk ditolak, termasuk kunci nol & versi ganda), seal/open terikat AAD,
+  ciphertext acak per seal, tamper ditolak, rotasi v1->v2 rewrap tanpa mengubah ciphertext data, keyring tanpa v1
+  menolak data lama (UnknownKek), masking.
+- config: DATA_KEK hilang -> MissingVar; Debug Secrets tidak memuat KEK.
+- cargo clippy -D warnings OK; cargo test --workspace: 340 passed, 0 failed.
+
+Kontrol negatif (mutasi, target diverifikasi ada; file dipulihkan + touch sebelum build berikutnya)
+- M1 AAD dikosongkan saat seal  -> seal_open_bound_to_context & rotation GAGAL (tertangkap)
+- M2 rewrap mempertahankan versi lama -> rotation_rewraps_without_touching_data GAGAL (tertangkap)
+- M3 kunci all-zero diterima -> keyring_parsing GAGAL (tertangkap)
+- Setelah pemulihan: 4/4 lulus.
+
+Catatan
+- Run penuh pertama: 3 uji realtime_http gagal karena jendela waktu 3–5 s saat beban; lulus 3/3 terisolasi dan 340/340
+  pada run penuh ulang. Tidak ada proses dev tersisa. Dicatat sebagai uji flaky (follow-up).
+- Penyimpanan kredensial AI (tabel + endpoint masked/rotasi/disable) menyusul di P5-1/P5-2 bagian 2.

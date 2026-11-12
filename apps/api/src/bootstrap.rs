@@ -97,6 +97,10 @@ pub async fn serve() -> Result<(), BoxError> {
         allowed_origins: settings.http.cors_allowed_origins.clone(),
         trust_forwarded_for: settings.http.trust_forwarded_for,
     });
+    // Fail-closed: KEK tidak valid -> proses tidak start (nilai tidak pernah dicetak).
+    let keyring = Arc::new(umkm_infrastructure::crypto::Keyring::parse(
+        secrets.data_kek.expose(),
+    )?);
     let mut state = AppState::new(vec![
         Arc::new(readiness::Postgres(pool.clone())),
         Arc::new(readiness::Redis(redis)),
@@ -104,6 +108,7 @@ pub async fn serve() -> Result<(), BoxError> {
     .with_metrics(metrics.clone())
     .with_db(pool.clone())
     .with_rt_publisher(rt_publisher)
+    .with_keyring(keyring)
     .with_files(Arc::new(crate::state::FileService {
         store: PgObjectStorage::new(
             pool.clone(),

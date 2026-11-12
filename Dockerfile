@@ -12,6 +12,8 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
  && cp target/release/umkm-api target/release/umkm-worker /out/
 
 FROM debian:bookworm-slim AS runtime
+# Sertifikat CA untuk HTTPS keluar ke provider AI (P5, ADR-0011).
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/*
 RUN useradd --system --uid 10001 --no-create-home --shell /usr/sbin/nologin umkm
 COPY config /app/config
 ENV UMKM_CONFIG_DIR=/app/config

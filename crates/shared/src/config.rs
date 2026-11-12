@@ -19,6 +19,8 @@ pub const REDIS_URL_VAR: &str = "UMKM_REDIS_URL";
 /// Kunci HMAC signed URL file (ADR-0009); minimal 32 byte.
 pub const FILE_SIGNING_KEY_VAR: &str = "UMKM_FILE_SIGNING_KEY";
 pub const FILE_SIGNING_KEY_MIN_LEN: usize = 32;
+/// Master key envelope encryption (P5-2, ADR-0011): `v1:<base64 32 byte>[,v2:...]`.
+pub const DATA_KEK_VAR: &str = "UMKM_DATA_KEK";
 /// Override `tenancy.root_domain` (Compose meneruskan nilai yang sama dengan Caddy).
 pub const ROOT_DOMAIN_VAR: &str = "UMKM_ROOT_DOMAIN";
 
@@ -387,6 +389,7 @@ pub struct Secrets {
     pub database_url: SecretString,
     pub redis_url: SecretString,
     pub file_signing_key: SecretString,
+    pub data_kek: SecretString,
 }
 
 impl Secrets {
@@ -410,10 +413,13 @@ impl Secrets {
                 "{FILE_SIGNING_KEY_VAR} minimal {FILE_SIGNING_KEY_MIN_LEN} byte"
             )));
         }
+        // Format & panjang divalidasi saat Keyring dibangun (infrastructure::crypto); fail-closed.
+        let data_kek = get(DATA_KEK_VAR)?;
         Ok(Self {
             database_url,
             redis_url,
             file_signing_key,
+            data_kek,
         })
     }
 }
@@ -607,12 +613,16 @@ log_format = "json"
             DATABASE_URL_VAR => Some("postgres://user:hunter2@db/app".into()),
             REDIS_URL_VAR => Some("redis://:topsecret@redis:6379".into()),
             FILE_SIGNING_KEY_VAR => Some("signing-key-0123456789-abcdefghijkl".into()),
+            DATA_KEK_VAR => Some("v1:a2VrLXJhaGFzaWEta2VrLXJhaGFzaWEta2VrLXJhaGE=".into()),
             _ => None,
         })
         .unwrap();
         let dbg = format!("{s:?}");
         assert!(
-            !dbg.contains("hunter2") && !dbg.contains("topsecret") && !dbg.contains("signing-key"),
+            !dbg.contains("hunter2")
+                && !dbg.contains("topsecret")
+                && !dbg.contains("signing-key")
+                && !dbg.contains("a2VrLXJh"),
             "{dbg}"
         );
         assert_eq!(s.database_url.expose(), "postgres://user:hunter2@db/app");
@@ -628,6 +638,17 @@ log_format = "json"
         let err =
             Secrets::from_lookup(|k| (k != FILE_SIGNING_KEY_VAR).then(|| "x".into())).unwrap_err();
         assert!(matches!(err, ConfigError::MissingVar(FILE_SIGNING_KEY_VAR)));
+        let err = Secrets::from_lookup(|k| {
+            (k != DATA_KEK_VAR).then(|| {
+                if k == FILE_SIGNING_KEY_VAR {
+                    "signing-key-0123456789-abcdefghijkl".into()
+                } else {
+                    "x".into()
+                }
+            })
+        })
+        .unwrap_err();
+        assert!(matches!(err, ConfigError::MissingVar(DATA_KEK_VAR)));
     }
 
     #[test]

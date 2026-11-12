@@ -10,6 +10,7 @@ pub mod business_repo;
 pub mod catalog_repo;
 pub mod commerce_repo;
 pub mod crm_repo;
+pub mod crypto;
 pub mod customer_auth_repo;
 pub mod inventory_repo;
 pub mod metrics;

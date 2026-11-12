@@ -44,6 +44,8 @@ async fn run() -> Result<(), BoxError> {
         LogFormat::Pretty => fmt().with_env_filter(filter).init(),
     }
     let secrets = Secrets::from_env()?;
+    // Fail-closed: KEK dibutuhkan job rotasi/penggunaan rahasia AI (P5-2).
+    let _keyring = umkm_infrastructure::crypto::Keyring::parse(secrets.data_kek.expose())?;
     let pool = umkm_database::connect_lazy(&secrets.database_url, &settings.database)?;
     let role = umkm_database::app_role::ensure_rls_enforced(
         &pool,

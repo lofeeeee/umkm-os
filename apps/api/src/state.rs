@@ -27,6 +27,8 @@ pub struct AppState {
     pub files: Option<Arc<FileService>>,
     /// Fan-out realtime lintas instance (P4-6). `None` = hub lokal saja.
     pub rt_publisher: Option<umkm_infrastructure::realtime::RtPublisher>,
+    /// Master key envelope encryption (P5-2, ADR-0011). `None` -> endpoint rahasia AI 503.
+    pub keyring: Option<Arc<umkm_infrastructure::crypto::Keyring>>,
 }
 
 /// Storage lokal + penanda URL (ADR-0009).
@@ -45,6 +47,7 @@ impl AppState {
             realtime: Default::default(),
             files: None,
             rt_publisher: None,
+            keyring: None,
         }
     }
 
@@ -55,6 +58,11 @@ impl AppState {
 
     pub fn with_rt_publisher(mut self, p: umkm_infrastructure::realtime::RtPublisher) -> Self {
         self.rt_publisher = Some(p);
+        self
+    }
+
+    pub fn with_keyring(mut self, k: Arc<umkm_infrastructure::crypto::Keyring>) -> Self {
+        self.keyring = Some(k);
         self
     }
 

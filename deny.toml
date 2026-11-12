@@ -16,6 +16,11 @@ allow = [
 confidence-threshold = 0.9
 unused-allowed-license = "allow"
 
+# CDLA-Permissive-2.0: lisensi DATA permisif untuk bundel sertifikat CA Mozilla; hanya untuk crate ini (P5-3).
+[[licenses.exceptions]]
+allow = ["CDLA-Permissive-2.0"]
+crate = "webpki-root-certs"
+
 
 [licenses.private]
 ignore = true
