@@ -77,10 +77,10 @@ Perintah gate P2: `cargo fmt --check && cargo clippy --workspace -- -D warnings 
 | TC-FILE-004 | AC-FILE-004 | Security+Integration | `apps/api/tests/upload_http.rs`, `crates/infrastructure/src/storage.rs` | Verified |
 | TC-FILE-005 | AC-FILE-005 | Security+Integration | `apps/api/tests/upload_http.rs` | Verified |
 | TC-FILE-006 | AC-FILE-006 | Security+Integration | `apps/api/tests/upload_http.rs`, `crates/infrastructure/tests/rls.rs` | Verified |
-| TC-CAT-001 | AC-CAT-001 | lihat §2 | ditetapkan saat task | Planned |
-| TC-CAT-002 | AC-CAT-002 | lihat §2 | ditetapkan saat task | Planned |
-| TC-CAT-003 | AC-CAT-003 | lihat §2 | ditetapkan saat task | Planned |
-| TC-CAT-004 | AC-CAT-004 | lihat §2 | ditetapkan saat task | Planned |
+| TC-CAT-001 | AC-CAT-001 | Unit+Integration | `apps/api/tests/catalog_http.rs` | Verified |
+| TC-CAT-002 | AC-CAT-002 | Unit+Integration | `apps/api/tests/catalog_http.rs` | Verified |
+| TC-CAT-003 | AC-CAT-003 | Unit+Integration | `apps/api/tests/catalog_http.rs` | Verified |
+| TC-CAT-004 | AC-CAT-004 | Unit+Integration | `apps/api/tests/catalog_http.rs` | Verified |
 | TC-INV-001 | AC-INV-001 | lihat §2 | ditetapkan saat task | Planned |
 | TC-INV-002 | AC-INV-002 | lihat §2 | ditetapkan saat task | Planned |
 | TC-INV-003 | AC-INV-003 | lihat §2 | ditetapkan saat task | Planned |

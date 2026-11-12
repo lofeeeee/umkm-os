@@ -200,10 +200,10 @@ Arah balik: TC → AC lewat nomor yang sama (Test Plan §4); AC → FR lewat FSD
 | FR-FILE-002 | AC-FILE-003 | TC-FILE-003 | POST /api/v1/tenants/{tenant_id}/uploads | ADR-0009 | `docs/evidence/P2-6.txt` | Verified |
 | FR-FILE-003 | AC-FILE-004, AC-FILE-005 | TC-FILE-004, TC-FILE-005 | GET /files/{object_id} | ADR-0009 | `docs/evidence/P2-6.txt` | Verified |
 | FR-FILE-004 | AC-FILE-006 | TC-FILE-006 | GET /files/{object_id} | ADR-0009 | `docs/evidence/P2-6.txt` | Verified |
-| FR-CAT-001 | AC-CAT-001 | TC-CAT-001 | ditetapkan di OpenAPI saat task | — | — | Planned |
-| FR-CAT-002 | AC-CAT-002 | TC-CAT-002 | ditetapkan di OpenAPI saat task | — | — | Planned |
-| FR-CAT-003 | AC-CAT-003 | TC-CAT-003 | ditetapkan di OpenAPI saat task | — | — | Planned |
-| FR-CAT-004 | AC-CAT-004 | TC-CAT-004 | ditetapkan di OpenAPI saat task | — | — | Planned |
+| FR-CAT-001 | AC-CAT-001 | TC-CAT-001 | /api/v1/tenants/{tenant_id}/products, /products/{id}/status, /api/v1/public/products | — | `docs/evidence/P3-1.txt` | Verified |
+| FR-CAT-002 | AC-CAT-002 | TC-CAT-002 | /api/v1/tenants/{tenant_id}/categories | — | `docs/evidence/P3-1.txt` | Verified |
+| FR-CAT-003 | AC-CAT-003 | TC-CAT-003 | POST/PUT /api/v1/tenants/{tenant_id}/products | — | `docs/evidence/P3-1.txt` | Verified |
+| FR-CAT-004 | AC-CAT-004 | TC-CAT-004 | POST/PUT /api/v1/tenants/{tenant_id}/products | — | `docs/evidence/P3-1.txt` | Verified |
 | FR-INV-001 | AC-INV-001 | TC-INV-001 | ditetapkan di OpenAPI saat task | — | — | Planned |
 | FR-INV-002 | AC-INV-002 | TC-INV-002 | ditetapkan di OpenAPI saat task | — | — | Planned |
 | FR-INV-003 | AC-INV-003 | TC-INV-003 | ditetapkan di OpenAPI saat task | — | — | Planned |

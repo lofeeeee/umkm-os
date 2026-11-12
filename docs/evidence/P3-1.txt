@@ -1,0 +1,64 @@
+P3-1 — Catalog (produk, varian, kategori, foto) (PRD.md §4.5)
+Tanggal: 2026-11-12
+
+Artefak
+- migrations/0013_catalog.{up,down}.sql  (BUILD_PLAN menyebut 0009; nomor bergeser)
+  product_categories (maks 2 tingkat; composite FK parent tenant yang sama; trigger depth +
+  advisory lock per tenant menserialkan perubahan hierarki; nama unik per induk, case-insensitive),
+  products (status draft/active/archived, slug unik per tenant, kategori ON DELETE SET NULL (category_id)),
+  product_variants (SKU unik per tenant, DEFERRABLE agar tukar SKU dalam satu simpan boleh;
+  NUMERIC(14,2), CHECK 0..1e9, promo < harga), product_images (composite FK ke stored_objects,
+  RESTRICT). RLS ENABLE+FORCE 4 tabel; tests/rls.rs TENANT_TABLES diperbarui (19).
+- crates/domain/src/catalog.rs  Money (sen i64, parse desimal ketat, tanpa f64), ProductStatus +
+  transisi, slugify/normalize_sku, validate_product (opsi ≤3×20, varian ≤100 mengikuti opsi,
+  kombinasi unik, promo < harga, foto ≤10 unik).
+- crates/infrastructure/src/catalog_repo.rs  + pgx.rs (helper tx/sqlstate). Audit product.created/
+  updated/status_changed, category.changed. set_status FOR UPDATE. SKU yang bentrok dicari ulang
+  setelah rollback (PostgreSQL menghilangkan nilai key dari DETAIL pada tabel ber-RLS).
+- apps/api/src/catalog.rs  /api/v1/tenants/{t}/categories[/{id}], /products[/{id}], /products/{id}/status;
+  publik (Host) /api/v1/public/products[/{slug}], /api/v1/public/categories — hanya active, varian aktif,
+  tanpa SKU/status, foto signed URL, Cache-Control public max-age=60 + Vary Host.
+  Permission: products.read/create/update/archive. apps/api/src/http_util.rs helper bersama P3.
+- OpenAPI diregenerasi (tag catalog).
+
+Hasil
+- cargo fmt --check OK; clippy --workspace --all-targets -D warnings bersih; cargo deny OK.
+- cargo test --workspace --locked: 266 lulus, 0 gagal (catalog_http 9, domain catalog 7).
+- migration run -> revert 0 -> run pada database kosong: exit 0.
+
+Cakupan AC (semua Verified)
+- AC-CAT-001 draft/archived tidak tampil publik (daftar + detail); hanya draft→active, active→archived,
+  archived→active (lainnya 409/422); 6 transisi paralel -> tepat 1 berhasil.
+- AC-CAT-002 parent tenant lain ditolak; tingkat ketiga & siklus ditolak; reparent paralel A↔B ->
+  paling banyak 1 berhasil, 0 siklus; induk berisi anak tidak dapat dihapus.
+- AC-CAT-003 SKU duplikat di tenant sama 409 sku_taken (+ SKU); tenant lain boleh SKU/slug sama.
+- AC-CAT-004 promo ≥ harga, negatif, eksponen, > 1e9 -> 422 berpath; INSERT langsung sebagai role
+  aplikasi melewati Rust -> CHECK 23514.
+- Isolasi: tenant B tidak dapat GET/PUT/status produk A (404), tidak dapat memakai varian/foto/kategori A;
+  Host tenant B tidak melihat produk A; RBAC Viewer/Support/Catalog Manager sesuai preset.
+
+Negative control (perubahan sementara, dikembalikan; test terkait GAGAL)
+== NEGCTL: set_status tanpa FOR UPDATE
+    concurrent_status_change_applies_once
+concurrent_status_change_applies_once --- FAILED
+test result: FAILED. 8 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.05s
+== NEGCTL: trigger kategori tanpa advisory lock
+    concurrent_reparenting_cannot_create_cycle
+concurrent_reparenting_cannot_create_cycle --- FAILED
+test result: FAILED. 8 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.95s
+== NEGCTL: katalog publik tanpa filter active
+    lifecycle_status_and_public_visibility
+lifecycle_status_and_public_visibility --- FAILED
+test result: FAILED. 8 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.91s
+== NEGCTL: detail publik tanpa filter active
+    lifecycle_status_and_public_visibility
+lifecycle_status_and_public_visibility --- FAILED
+test result: FAILED. 8 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.89s
+== NEGCTL: tanpa CHECK promo di DB
+    invalid_prices_rejected_by_api_and_database
+invalid_prices_rejected_by_api_and_database --- FAILED
+test result: FAILED. 8 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.15s
+== NEGCTL: pencarian tanpa escape %
+    inactive_variants_hidden_publicly_and_search_works
+inactive_variants_hidden_publicly_and_search_works --- FAILED
+test result: FAILED. 8 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.94s

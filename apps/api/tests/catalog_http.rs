@@ -213,6 +213,7 @@ async fn sku_unique_per_tenant(pool: PgPool) {
     .await;
     assert_eq!(r.status, 409, "{}", r.json());
     assert_eq!(r.json()["error"]["details"]["reason"], "sku_taken");
+    assert_eq!(r.json()["error"]["details"]["sku"], "X-1");
     // slug sama di tenant yang sama juga bentrok
     let r = json(
         &a.router,

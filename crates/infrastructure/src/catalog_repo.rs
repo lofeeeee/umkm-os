@@ -99,25 +99,13 @@ struct OptionJson {
     values: Vec<String>,
 }
 
-fn map_write(e: sqlx::Error, draft: Option<&ProductDraft>) -> CatalogError {
+fn map_write(e: sqlx::Error, _draft: Option<&ProductDraft>) -> CatalogError {
     match violation(&e) {
         Some((s, c)) if s == "23505" && c == "uq_products_slug" => CatalogError::SlugTaken,
+        // Detail key (nilai SKU) dihilangkan PostgreSQL pada tabel ber-RLS;
+        // SKU yang bentrok dicari ulang oleh `resolve_sku`.
         Some((s, c)) if s == "23505" && c == "uq_product_variants_sku" => {
-            // Constraint deferred: SKU yang bentrok dicari dari detail error.
-            let detail = e
-                .as_database_error()
-                .map(|d| d.downcast_ref::<sqlx::postgres::PgDatabaseError>())
-                .and_then(|d| d.detail().map(str::to_owned))
-                .unwrap_or_default();
-            let sku = draft
-                .and_then(|d| {
-                    d.variants
-                        .iter()
-                        .find(|v| detail.contains(&format!(", {})", v.sku)))
-                })
-                .map(|v| v.sku.clone())
-                .unwrap_or_default();
-            CatalogError::SkuTaken(sku)
+            CatalogError::SkuTaken(String::new())
         }
         Some((s, c)) if s == "23503" && c == "fk_products_category" => {
             CatalogError::InvalidCategory
@@ -563,6 +551,16 @@ pub async fn create_product(
     d: &ProductDraft,
     ctx: Ctx<'_>,
 ) -> Result<Product, CatalogError> {
+    let r = create_inner(pool, actor, d, ctx).await;
+    resolve_sku(pool, actor.tenant_id, None, d, r).await
+}
+
+async fn create_inner(
+    pool: &PgPool,
+    actor: &Actor,
+    d: &ProductDraft,
+    ctx: Ctx<'_>,
+) -> Result<Product, CatalogError> {
     let t = actor.tenant_id;
     let mut tx = tenant_tx(pool, t).await?;
     let id: Uuid = sqlx::query_scalar(
@@ -600,6 +598,17 @@ pub async fn create_product(
 /// Ganti isi produk (status tidak berubah). Varian tanpa `id` = baru; varian lama yang
 /// tidak dikirim dihapus (ditolak bila masih dirujuk stok/transaksi).
 pub async fn update_product(
+    pool: &PgPool,
+    actor: &Actor,
+    id: Uuid,
+    d: &ProductDraft,
+    ctx: Ctx<'_>,
+) -> Result<Product, CatalogError> {
+    let r = update_inner(pool, actor, id, d, ctx).await;
+    resolve_sku(pool, actor.tenant_id, Some(id), d, r).await
+}
+
+async fn update_inner(
     pool: &PgPool,
     actor: &Actor,
     id: Uuid,
@@ -644,6 +653,35 @@ pub async fn update_product(
         .ok_or(CatalogError::NotFound)?;
     commit(tx, d).await?;
     Ok(p)
+}
+
+/// Isi SKU yang bentrok (milik produk lain di tenant yang sama) setelah transaksi gagal.
+async fn resolve_sku(
+    pool: &PgPool,
+    t: TenantId,
+    product_id: Option<Uuid>,
+    d: &ProductDraft,
+    r: Result<Product, CatalogError>,
+) -> Result<Product, CatalogError> {
+    match r {
+        Err(CatalogError::SkuTaken(s)) if s.is_empty() => {
+            let skus: Vec<&str> = d.variants.iter().map(|v| v.sku.as_str()).collect();
+            let mut tx = tenant_tx(pool, t).await?;
+            let found: Option<String> = sqlx::query_scalar(
+                "SELECT sku FROM product_variants
+                 WHERE tenant_id = $1 AND sku = ANY($2) AND ($3::uuid IS NULL OR product_id <> $3)
+                 ORDER BY sku LIMIT 1",
+            )
+            .bind(t.as_uuid())
+            .bind(&skus)
+            .bind(product_id)
+            .fetch_optional(&mut *tx)
+            .await?;
+            tx.commit().await?;
+            Err(CatalogError::SkuTaken(found.unwrap_or_default()))
+        }
+        other => other,
+    }
 }
 
 /// AC-CAT-001. Row lock agar dua transisi paralel tidak sama-sama lolos.
