@@ -1,8 +1,8 @@
 # Requirements Traceability Matrix — UMKM Business OS
 
-**Status:** **register satu arah, draft**. Ini bukan RTM dua arah final dan bukan bukti implementasi.
+**Status:** **final dua arah** (artefak #6, 2026-11-12). §1–§7 = register ID PRD (AUTH/TEN/BR/NFR). §8 = rantai `FR → AC → TC → API → ADR → Evidence` untuk `PRD.md §4.3`–`§4.15`, diturunkan dari FSD `docs/requirements/02-FSD.md` dan Test Plan `docs/test/test-plan.md`.
 **Sumber:** `PRD.md` v1.0; rencana `BUILD_PLAN.md`; keputusan `OPEN_DECISIONS.md`.
-**Yang belum ada:** `FR-...`, `AC-...`, `TC-...`, `API-...`, dan `Evidence-...` stabil. Semuanya dibuat pada FSD/Test Plan/RTM final (`BUILD_PLAN.md §7` artefak #3/#5/#6). Karena itu klaim "dua arah, tanpa orphan" **tidak** dibuat di sini.
+**Penjaga:** `scripts/check-rtm.py` (CI job `lint`, fail-closed): setiap FR FSD tepat satu baris §8; setiap AC FSD tercakup; setiap TC ada di Test Plan dan menunjuk AC yang ada; tidak ada ID orphan; status `Verified` wajib menunjuk evidence + lokasi uji yang ada.
 
 ## Cara baca
 
@@ -170,3 +170,85 @@ PY
 ```
 
 **Cara lulus:** `missing = 0`, `wrong-width = 0`, `empty = 0`, **exit code `0`**. Negative control wajib: tambah satu `|` pada salinan temp, buktikan `exit 1`, pulihkan, buktikan `exit 0`.
+
+---
+
+## 8. RTM dua arah: FR → AC → TC → API → ADR → Evidence
+
+Arah balik: TC → AC lewat nomor yang sama (Test Plan §4); AC → FR lewat FSD; Evidence → task lewat nama file. API final dirujuk ke `docs/api/openapi.yaml` saat task selesai.
+
+| FR | AC | TC | API | ADR | Evidence | Status |
+|---|---|---|---|---|---|---|
+| FR-WEB-001 | AC-WEB-001, AC-WEB-002 | TC-WEB-001, TC-WEB-002 | GET /api/v1/tenants/{tenant_id}/website/templates; GET /api/v1/tenants/{tenant_id}/website/templates/{key}/preview | ADR-0007, ADR-0014 | `docs/evidence/P2-2.txt` | Planned |
+| FR-WEB-002 | AC-WEB-003 | TC-WEB-003 | PUT /api/v1/tenants/{tenant_id}/website | ADR-0007, ADR-0014 | `docs/evidence/P2-2.txt` | Planned |
+| FR-WEB-003 | AC-WEB-004, AC-WEB-005, AC-WEB-006 | TC-WEB-004, TC-WEB-005, TC-WEB-006 | PUT /api/v1/tenants/{tenant_id}/website/pages/{slug}/draft | ADR-0007, ADR-0014 | `docs/evidence/P2-1.txt` | Planned |
+| FR-WEB-004 | AC-WEB-007, AC-WEB-008 | TC-WEB-007, TC-WEB-008 | PUT /api/v1/tenants/{tenant_id}/website/pages/{slug}/draft | ADR-0007, ADR-0014 | `docs/evidence/P2-3.txt` | Planned |
+| FR-WEB-005 | AC-WEB-009 | TC-WEB-009 | PUT /api/v1/tenants/{tenant_id}/website/pages/{slug}/draft | ADR-0007, ADR-0014 | `docs/evidence/P2-3.txt` | Planned |
+| FR-WEB-006 | AC-WEB-010 | TC-WEB-010 | GET/PUT /api/v1/tenants/{tenant_id}/website/pages/{slug}/draft | ADR-0007, ADR-0014 | `docs/evidence/P2-4.txt` | Planned |
+| FR-WEB-007 | AC-WEB-011 | TC-WEB-011 | GET /api/v1/tenants/{tenant_id}/website/pages/{slug}/draft | ADR-0007, ADR-0014 | `docs/evidence/P2-4.txt` | Planned |
+| FR-WEB-008 | AC-WEB-012, AC-WEB-013 | TC-WEB-012, TC-WEB-013 | POST /api/v1/tenants/{tenant_id}/website/pages/{slug}/publish; GET /api/v1/tenants/{tenant_id}/website/pages/{slug}/versions | ADR-0007, ADR-0014 | `docs/evidence/P2-4.txt` | Planned |
+| FR-WEB-009 | AC-WEB-014 | TC-WEB-014 | POST /api/v1/tenants/{tenant_id}/website/pages/{slug}/rollback | ADR-0007, ADR-0014 | `docs/evidence/P2-4.txt` | Planned |
+| FR-WEB-010 | AC-WEB-015, AC-WEB-016, AC-WEB-017 | TC-WEB-015, TC-WEB-016, TC-WEB-017 | GET /api/v1/public/site (Host) | ADR-0007, ADR-0014 | `docs/evidence/P2-7.txt` | Planned |
+| FR-WEB-011 | AC-WEB-005, AC-WEB-018 | TC-WEB-005, TC-WEB-018 | GET /api/v1/public/site (Host) | ADR-0007, ADR-0014 | `docs/evidence/P2-1.txt` | Planned |
+| FR-BIZ-001 | AC-BIZ-001, AC-BIZ-002 | TC-BIZ-001, TC-BIZ-002 | GET/PUT /api/v1/tenants/{tenant_id}/business/profile | — | `docs/evidence/P2-5.txt` | Planned |
+| FR-BIZ-002 | AC-BIZ-003 | TC-BIZ-003 | PUT /api/v1/tenants/{tenant_id}/business/addresses | — | `docs/evidence/P2-5.txt` | Planned |
+| FR-BIZ-003 | AC-BIZ-004 | TC-BIZ-004 | PUT /api/v1/tenants/{tenant_id}/business/hours | — | `docs/evidence/P2-5.txt` | Planned |
+| FR-BIZ-004 | AC-BIZ-005 | TC-BIZ-005 | PUT /api/v1/tenants/{tenant_id}/business/hour-exceptions | — | `docs/evidence/P2-5.txt` | Planned |
+| FR-BIZ-005 | AC-BIZ-006 | TC-BIZ-006 | GET /api/v1/tenants/{tenant_id}/business/status | — | `docs/evidence/P2-5.txt` | Planned |
+| FR-BIZ-006 | AC-BIZ-007 | TC-BIZ-007 | GET/PUT /api/v1/tenants/{tenant_id}/business/profile | — | `docs/evidence/P2-5.txt` | Planned |
+| FR-FILE-001 | AC-FILE-001, AC-FILE-002 | TC-FILE-001, TC-FILE-002 | POST /api/v1/tenants/{tenant_id}/uploads | ADR-0009 | `docs/evidence/P2-6.txt` | Planned |
+| FR-FILE-002 | AC-FILE-003 | TC-FILE-003 | POST /api/v1/tenants/{tenant_id}/uploads | ADR-0009 | `docs/evidence/P2-6.txt` | Planned |
+| FR-FILE-003 | AC-FILE-004, AC-FILE-005 | TC-FILE-004, TC-FILE-005 | GET /files/{object_id} | ADR-0009 | `docs/evidence/P2-6.txt` | Planned |
+| FR-FILE-004 | AC-FILE-006 | TC-FILE-006 | GET /files/{object_id} | ADR-0009 | `docs/evidence/P2-6.txt` | Planned |
+| FR-CAT-001 | AC-CAT-001 | TC-CAT-001 | ditetapkan di OpenAPI saat task | — | — | Planned |
+| FR-CAT-002 | AC-CAT-002 | TC-CAT-002 | ditetapkan di OpenAPI saat task | — | — | Planned |
+| FR-CAT-003 | AC-CAT-003 | TC-CAT-003 | ditetapkan di OpenAPI saat task | — | — | Planned |
+| FR-CAT-004 | AC-CAT-004 | TC-CAT-004 | ditetapkan di OpenAPI saat task | — | — | Planned |
+| FR-INV-001 | AC-INV-001 | TC-INV-001 | ditetapkan di OpenAPI saat task | — | — | Planned |
+| FR-INV-002 | AC-INV-002 | TC-INV-002 | ditetapkan di OpenAPI saat task | — | — | Planned |
+| FR-INV-003 | AC-INV-003 | TC-INV-003 | ditetapkan di OpenAPI saat task | — | — | Planned |
+| FR-INV-004 | AC-INV-004 | TC-INV-004 | ditetapkan di OpenAPI saat task | — | — | Planned |
+| FR-INV-005 | AC-INV-005 | TC-INV-005 | ditetapkan di OpenAPI saat task | — | — | Planned |
+| FR-CRM-001 | AC-CRM-001 | TC-CRM-001 | ditetapkan di OpenAPI saat task | ADR-0005 (D-03) | — | Blocked by decision |
+| FR-CRM-002 | AC-CRM-002 | TC-CRM-002 | ditetapkan di OpenAPI saat task | ADR-0005 (D-03) | — | Planned |
+| FR-CRM-003 | AC-CRM-003 | TC-CRM-003 | ditetapkan di OpenAPI saat task | ADR-0005 (D-03) | — | Planned |
+| FR-CRM-004 | AC-CRM-004 | TC-CRM-004 | ditetapkan di OpenAPI saat task | ADR-0005 (D-03) | — | Planned |
+| FR-CRM-005 | AC-CRM-005 | TC-CRM-005 | ditetapkan di OpenAPI saat task | ADR-0005 (D-03) | — | Blocked by decision |
+| FR-CRM-006 | AC-CRM-006 | TC-CRM-006 | ditetapkan di OpenAPI saat task | ADR-0005 (D-03) | — | Planned |
+| FR-ORD-001 | AC-ORD-001 | TC-ORD-001 | ditetapkan di OpenAPI saat task | ADR-0004 (D-02) | — | Planned |
+| FR-ORD-002 | AC-ORD-002 | TC-ORD-002 | ditetapkan di OpenAPI saat task | ADR-0004 (D-02) | — | Planned |
+| FR-ORD-003 | AC-ORD-003 | TC-ORD-003 | ditetapkan di OpenAPI saat task | ADR-0004 (D-02) | — | Planned |
+| FR-ORD-004 | AC-ORD-004 | TC-ORD-004 | ditetapkan di OpenAPI saat task | ADR-0004 (D-02) | — | Planned |
+| FR-ORD-005 | AC-ORD-005 | TC-ORD-005 | ditetapkan di OpenAPI saat task | ADR-0004 (D-02) | — | Planned |
+| FR-ORD-006 | AC-ORD-006 | TC-ORD-006 | ditetapkan di OpenAPI saat task | ADR-0004 (D-02) | — | Planned |
+| FR-ORD-007 | AC-ORD-007 | TC-ORD-007 | ditetapkan di OpenAPI saat task | ADR-0004 (D-02) | — | Blocked by decision |
+| FR-ORD-008 | AC-ORD-008 | TC-ORD-008 | ditetapkan di OpenAPI saat task | ADR-0004 (D-02) | — | Planned |
+| FR-ORD-009 | AC-ORD-009 | TC-ORD-009 | ditetapkan di OpenAPI saat task | ADR-0004 (D-02) | — | Planned |
+| FR-TKT-001 | AC-TKT-001 | TC-TKT-001 | ditetapkan di OpenAPI saat task | — | — | Planned |
+| FR-TKT-002 | AC-TKT-002 | TC-TKT-002 | ditetapkan di OpenAPI saat task | — | — | Planned |
+| FR-TKT-003 | AC-TKT-003 | TC-TKT-003 | ditetapkan di OpenAPI saat task | — | — | Planned |
+| FR-TKT-004 | AC-TKT-004 | TC-TKT-004 | ditetapkan di OpenAPI saat task | — | — | Planned |
+| FR-TKT-005 | AC-TKT-005 | TC-TKT-005 | ditetapkan di OpenAPI saat task | — | — | Planned |
+| FR-TKT-006 | AC-TKT-006 | TC-TKT-006 | ditetapkan di OpenAPI saat task | — | — | Planned |
+| FR-APR-001 | AC-APR-001 | TC-APR-001 | ditetapkan di OpenAPI saat task | — | — | Planned |
+| FR-APR-002 | AC-APR-002 | TC-APR-002 | ditetapkan di OpenAPI saat task | — | — | Planned |
+| FR-APR-003 | AC-APR-003 | TC-APR-003 | ditetapkan di OpenAPI saat task | — | — | Planned |
+| FR-AIC-001 | AC-AIC-001 | TC-AIC-001 | ditetapkan di OpenAPI saat task | ADR-0011 (D-09) | — | Planned |
+| FR-AIC-002 | AC-AIC-002 | TC-AIC-002 | ditetapkan di OpenAPI saat task | ADR-0011 (D-09) | — | Planned |
+| FR-AIC-003 | AC-AIC-003 | TC-AIC-003 | ditetapkan di OpenAPI saat task | ADR-0011 (D-09) | — | Planned |
+| FR-AIC-004 | AC-AIC-004 | TC-AIC-004 | ditetapkan di OpenAPI saat task | ADR-0011 (D-09) | — | Planned |
+| FR-AIO-001 | AC-AIO-001 | TC-AIO-001 | ditetapkan di OpenAPI saat task | — | — | Planned |
+| FR-AIO-002 | AC-AIO-002 | TC-AIO-002 | ditetapkan di OpenAPI saat task | — | — | Planned |
+| FR-AIO-003 | AC-AIO-003 | TC-AIO-003 | ditetapkan di OpenAPI saat task | — | — | Planned |
+| FR-AIO-004 | AC-AIO-004 | TC-AIO-004 | ditetapkan di OpenAPI saat task | — | — | Planned |
+| FR-CNV-001 | AC-CNV-001 | TC-CNV-001 | ditetapkan di OpenAPI saat task | ADR-0006 (D-04) | — | Planned |
+| FR-CNV-002 | AC-CNV-002 | TC-CNV-002 | ditetapkan di OpenAPI saat task | ADR-0006 (D-04) | — | Planned |
+| FR-CNV-003 | AC-CNV-003 | TC-CNV-003 | ditetapkan di OpenAPI saat task | ADR-0006 (D-04) | — | Planned |
+| FR-CNV-004 | AC-CNV-004 | TC-CNV-004 | ditetapkan di OpenAPI saat task | ADR-0006 (D-04) | — | Planned |
+| FR-NTF-001 | AC-NTF-001 | TC-NTF-001 | ditetapkan di OpenAPI saat task | ADR-0010 (D-08) | — | Planned |
+| FR-NTF-002 | AC-NTF-002 | TC-NTF-002 | ditetapkan di OpenAPI saat task | ADR-0010 (D-08) | — | Planned |
+| FR-NTF-003 | AC-NTF-003 | TC-NTF-003 | ditetapkan di OpenAPI saat task | ADR-0010 (D-08) | — | Planned |
+| FR-ANL-001 | AC-ANL-001 | TC-ANL-001 | ditetapkan di OpenAPI saat task | — | — | Planned |
+| FR-ANL-002 | AC-ANL-002 | TC-ANL-002 | ditetapkan di OpenAPI saat task | — | — | Planned |
+| FR-SUB-001 | AC-SUB-001 | TC-SUB-001 | ditetapkan di OpenAPI saat task | D-10 | — | Planned |
+| FR-SUB-002 | AC-SUB-002 | TC-SUB-002 | ditetapkan di OpenAPI saat task | D-10 | — | Planned |

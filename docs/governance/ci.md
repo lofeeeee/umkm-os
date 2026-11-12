@@ -4,7 +4,7 @@ Workflow: `.github/workflows/ci.yml`.
 
 | Job | Isi |
 |---|---|
-| `lint` | `cargo fmt --check`, `cargo clippy -D warnings`, `scripts/check-domain-boundary.sh`, `scripts/check-ci-needs.sh` |
+| `lint` | `cargo fmt --check`, `cargo clippy -D warnings`, `scripts/check-domain-boundary.sh`, `scripts/check-ci-needs.sh`, `scripts/check-rtm.py` (RTM dua arah) |
 | `test` | Postgres pgvector:pg16 service; migration up/down/up via `sqlx-cli`; `cargo test --workspace --locked` |
 | `supply-chain` | `cargo deny check` (advisory RustSec, lisensi, sumber) |
 | `containers` | `docker compose config -q`, `docker build` target `api` + `worker` |

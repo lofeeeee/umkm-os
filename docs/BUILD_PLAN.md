@@ -292,10 +292,10 @@ Semua status awal `MENUNGGU`; lihat `OPEN_DECISIONS.md`.
 |---|---|---|---|---|
 | 1 | Product decision log + 14 ADR | `docs/decisions/` | MADR 4.0.0 append-only | `MENUNGGU` |
 | 2 | Design doc + C4 + STRIDE + rollback | `docs/architecture/` | `PRD.md §7.2`, `PRD.md §6`, observability | Planned |
-| 3 | FSD dengan `FR-...`/`AC-...` | `docs/requirements/02-FSD.md` | menurunkan `PRD.md §4.3`–`PRD.md §4.15` | Planned |
+| 3 | FSD dengan `FR-...`/`AC-...` | `docs/requirements/02-FSD.md` | menurunkan `PRD.md §4.3`–`PRD.md §4.15` | Done 2026-11-12 (73 FR / 83 AC) |
 | 4 | OpenAPI 3.x | `docs/api/openapi.yaml` | envelope, error, pagination | Planned |
-| 5 | Test Plan + Exit Criteria | `docs/test/` | 10 layer `PRD.md §13.1`, 9 isolasi `PRD.md §13.2` | Planned |
-| 6 | **RTM dua arah final** | `docs/RTM.md` | `FR → AC → TC → API → ADR → Evidence` + CI guard fail-closed | Planned |
+| 5 | Test Plan + Exit Criteria | `docs/test/` | 10 layer `PRD.md §13.1`, 9 isolasi `PRD.md §13.2` | Done 2026-11-12 (`docs/test/test-plan.md`) |
+| 6 | **RTM dua arah final** | `docs/RTM.md` | `FR → AC → TC → API → ADR → Evidence` + CI guard fail-closed | Done 2026-11-12 (`scripts/check-rtm.py`) |
 | 7 | Repository governance | `README.md`, `CODEOWNERS`, `CHANGELOG.md`, `docs/governance/` | canonical path | Planned |
 | 8 | UI/UX spec | `docs/architecture/ui-ux-spec.md` | state matrix | Planned |
 | 9 | V1.0 checklist 30 butir | `docs/governance/v1-release-checklist.md` | Lampiran A | Planned |

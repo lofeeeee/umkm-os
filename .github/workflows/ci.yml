@@ -34,6 +34,7 @@ jobs:
       - run: cargo clippy --workspace --all-targets --locked -- -D warnings
       - run: scripts/check-domain-boundary.sh
       - run: scripts/check-ci-needs.sh
+      - run: python3 scripts/check-rtm.py
 
   test:
     name: unit + integration (PostgreSQL + Redis)
