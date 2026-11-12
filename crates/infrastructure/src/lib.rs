@@ -2,6 +2,7 @@
 //!
 //! Batas lapisan: `docs/decisions/0013-batas-crate-workspace.md`.
 
+pub mod ai;
 pub mod approval_repo;
 pub mod audit_repo;
 pub mod auth;

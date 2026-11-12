@@ -1,0 +1,29 @@
+P5-4 — Adapter OpenAI-compatible + capability registry (PRD.md §8.1, AC-AIC-002)
+Tanggal: 2026-11-12
+
+Artefak
+- crates/application/src/ai/llm.rs: port LlmPort (capabilities/chat/embed) + tipe ternormalisasi ChatRequest/ChatMessage/
+  ToolSpec/ToolCall/ChatResponse/Usage, LlmError dengan code() stabil & is_transient() (untuk fallback/circuit breaker).
+- crates/infrastructure/src/ai/provider_adapter.rs: OpenAiCompatible (OpenAI/OpenRouter/Groq/Together/vLLM/Ollama/custom)
+  lewat Egress (SSRF guard). chat_body menegakkan capability: tanpa chat → Unsupported; tanpa tool_calling → field tools/
+  tool_choice tidak dikirim DAN riwayat role tool / tool_calls dibuang; stream=false. parse_chat defensif: tipe salah →
+  InvalidResponse, konten dipotong 8000 char, ≤5 tool call, nama ≤64, argumen ≤4000 byte; tool call diabaikan tanpa
+  capability; usage None bila tidak dilaporkan. Error HTTP dinormalkan (401/403, 429, 4xx, 5xx); embed: capability wajib,
+  ≤64 input, diurutkan per index, dimensi konsisten ≤4096. ApiKey tanpa Debug nilai, ditimpa saat drop (tanpa unsafe).
+- Capability default per jenis: domain Capabilities::defaults_for (custom = chat saja; groq tanpa embeddings).
+- Streaming: tercatat sebagai capability, belum dipakai (balasan utuh; P6 menentukan kanal).
+
+Uji
+- unit (2): matriks capability pada body (penuh vs chat-only vs tanpa chat), parsing defensif (6 kasus).
+- tests/provider_adapter.rs terhadap provider tiruan HTTP lokal (3): body yang DITERIMA provider memuat tools hanya untuk
+  capability tool_calling (AC-AIC-002), Bearer terkirim, max_tokens/stream benar; 401/429/502/non-JSON dinormalkan;
+  embedding diurutkan per index; embed tanpa capability Unsupported; endpoint tenant http://127.0.0.1 diblokir
+  Network("scheme_not_allowed") tanpa request sampai; Debug adapter tidak memuat kunci.
+
+Kontrol negatif (mutasi; harness menolak target ambigu — M2 diulang dengan konteks unik)
+- M1 tools dikirim tanpa cek capability     -> unit capability_matrix & capability_matrix_on_the_wire GAGAL
+- M2 tool call diparse tanpa cek capability -> unit parsing & on_the_wire GAGAL (sebelum if digabung jadi let-chain oleh clippy)
+- M3 401/403 tidak dipetakan Unauthorized  -> errors_are_normalized... GAGAL
+- Dipulihkan: 3/3 lulus.
+
+RTM: AC-AIC-002 → Verified oleh uji di atas.
