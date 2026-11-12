@@ -1,0 +1,16 @@
+P5-UI — Halaman Asisten AI (PRD.md §4.10–4.11)
+Tanggal: 2026-11-12
+
+Artefak: frontend/src/app/ai/page.tsx (menu "Asisten AI" untuk ai_config.read): provider (platform: pilih model operator;
+BYOK: jenis, endpoint HTTPS, kunci password-field — tampil hanya ••••xxxx; aktif/nonaktif, ganti kunci, hapus), pengaturan
+chatbot (aktif, mode 4 dengan Hybrid disarankan, utama/cadangan, temperature/maks token/timeout, panduan, sambutan, pesan
+pengalihan, topik dilayani/terlarang, budget BYOK), 10 tool, basis pengetahuan (tambah, status proses, proses ulang, hapus),
+uji coba (keputusan, jawaban, tool, token; memuat ulang pemakaian), pemakaian token bulan ini. Pesan error kode P5 di api.ts.
+frontend/e2e/mock-llm.py: provider OpenAI-compatible tiruan (stdlib, 127.0.0.1) untuk E2E lokal.
+
+Hasil (stack nyata: Caddy + API + worker + PostgreSQL/pgvector + Redis; provider platform → mock "trusted internal"):
+- e2e/ai.spec.ts lulus: tambah provider platform → set utama → temperature 3 ditolak dengan pesan field → dokumen
+  pengetahuan "sedang diproses" lalu "siap (1 bagian)" oleh worker → uji "Jam berapa toko buka?": model meminta tool jam
+  buka, backend mengeksekusi, "Dikirim otomatis" + "Jam buka (ok)" → topik terlarang "politik" → "Dialihkan ke staf" →
+  pemakaian bulan ini > 0; tanpa error CSP/JS. Suite penuh Playwright 8/8 (shop, ops, dashboard, responsive ×4, ai).
+- Ditemukan & diperbaiki saat E2E: pemakaian tidak diperbarui setelah uji coba (TestConsole kini memuat ulang data).

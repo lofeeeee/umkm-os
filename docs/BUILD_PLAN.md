@@ -213,6 +213,8 @@ Prefix `/api/v1`; envelope sukses/gagal; `meta.request_id`; cursor pagination; r
 
 ### Phase 5 — AI platform
 
+**Status:** Gate P5 lulus 2026-11-12 (`docs/evidence/phase-5-ai.txt`). Percakapan & consent per percakapan di Phase 6.
+
 **Blokir:** D-09, D-11 untuk retention conversation/knowledge, D-12 consent AI.
 
 | Task | Requirement | File | Uji |

@@ -133,6 +133,16 @@ export const ERROR_TEXT: Record<string, string> = {
   invalid_reference: "rujukan bukan milik toko ini",
   use_assign_endpoint: "gunakan pilihan penugasan",
   weak_password: "password minimal 8 karakter dan tidak sama dengan email",
+  // P5
+  invalid_api_key: "kunci API tidak valid (8–512 karakter, tanpa spasi)",
+  scheme_not_allowed: "endpoint wajib HTTPS",
+  forbidden_address: "alamat jaringan internal/lokal tidak diizinkan",
+  forbidden_host: "host lokal/internal tidak diizinkan",
+  userinfo_in_url: "URL tidak boleh memuat nama pengguna/kata sandi",
+  model_not_offered: "model tidak tersedia di AI platform",
+  provider_not_available: "provider tidak ada atau nonaktif",
+  same_as_primary: "harus berbeda dari provider utama",
+  platform_fields_not_allowed: "AI platform tidak memakai URL/kunci sendiri",
 };
 
 export function describe(e: unknown): string {

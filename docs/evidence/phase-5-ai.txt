@@ -1,0 +1,43 @@
+Gate P5 — AI platform (BUILD_PLAN.md Phase 5; Test Plan §3)
+Tanggal: 2026-11-12. Gate E: D-09 DISETUJUI (platform + BYOK, ADR-0011), D-12 consent AI DISETUJUI bersyarat.
+
+Perintah gate (sama dengan Gate P2–P4):
+  cargo fmt --all --check && cargo clippy --workspace --all-targets --locked -- -D warnings &&
+  cargo test --workspace --locked && python3 scripts/check-rtm.py && cargo deny check &&
+  scripts/check-domain-boundary.sh && scripts/check-ci-needs.sh && docker compose --env-file .env.example config -q &&
+  (cd frontend && npm run lint && npm run typecheck && npm test && npm run build)
+Output:
+  rust tests passed=391 failed=0
+  check-rtm: OK — 74 FR, 84 AC, 84 TC
+  advisories ok, bans ok, licenses ok, sources ok
+  OK: umkm-domain bebas dari axum/sqlx/reqwest/tokio/hyper/tower/redis
+  OK: ci-gate mengagregasi 6 job
+        Tests  22 passed (22)
+  csp.mjs: 20 hash inline script dari 19 halaman -> out/csp.caddy
+  GATE_EXIT=0
+Ditambah: migration run → revert 0 → run exit 0; Playwright 8/8 di stack nyata (P5-UI.txt).
+(Run pertama gagal di cargo fmt untuk satu uji consent; diformat lalu diulang → exit 0.)
+
+Task & bukti: P5-1, P5-2a-crypto, P5-2b, P5-3, P5-4, P5-5 (+P5-6), P5-7, P5-8, P5-UI. P5-9 (matriks mode) di P5-1/P5-5.
+Migration: 0023_ai, 0024_knowledge (pgvector), 0025_knowledge_queue.
+RTM Verified: TC-AIC-001..004, TC-AIO-001..004.
+Audit: kategori "AI provider/config/key changes" aktif → 9 dari 10 kategori PRD §6.9 (platform admin P7).
+
+Exit criteria
+- Kunci AI terenkripsi envelope, masked, tidak di respons/log/audit/DB terbaca, rotasi & nonaktif ........ YA
+- SSRF 9 kontrol (private IP, metadata, DNS campuran, rebinding/pinning, redirect, ukuran, timeout) ............ YA
+- Capability registry: tool tidak dikirim ke provider tanpa tool calling ........................................ YA
+- Guardrail menolak input → provider tidak dipanggil; prompt injection tidak mencapai tool tak diizinkan ......... YA
+- Tool: parameter invalid / di luar izin / pelanggan tak terverifikasi ditolak backend .............................. YA
+- RAG: tenant A tidak menerima chunk tenant B ..................................................................... YA
+- Provider timeout/gagal → API tetap hidup (timeout config, breaker, handover) ................................... YA
+- Mode Auto/Assisted/Hybrid/Human Only (Human Only tidak pernah mengirim / memanggil provider) .................. YA
+
+Tetap terbuka (tidak diklaim)
+- Percakapan/kanal chat & penyimpanan consent per percakapan: Phase 6 (teks consent placeholder siap, D-12 bersyarat).
+- Retensi 30 hari percakapan (D-11) berlaku di tabel percakapan P6; ai_runs/ai_tool_calls belum dipurge (metering).
+- Provider platform nonaktif di config sampai operator memilih base_url/model; harga & kuota final menunggu D-10.
+- Embedding BYOK hanya untuk jenis openai (text-embedding-3-small); jenis lain tanpa retrieval sampai dapat dipilih.
+- Rotasi KEK: fungsi rewrap tersedia; job rotasi massal belum ada.
+- Breaker in-memory per proses; image Docker dengan ca-certificates belum dibangun lokal (dicek job CI containers).
+- MFA (AUTH-011/012) menunggu keputusan pemilik; uji flaky realtime_http (timing) dan identity_schema tetap dicatat.
