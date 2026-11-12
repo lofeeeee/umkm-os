@@ -188,6 +188,13 @@ mod tests {
     }
 
     #[test]
+    fn handover_phrase_promised_in_consent_notice_is_honoured() {
+        // Teks consent menjanjikan frasa ini; guardrail harus mengalihkannya ke manusia.
+        assert!(umkm_domain::ai::consent::TEXT.contains("bicara dengan admin"));
+        assert_eq!(check_input("Bicara dengan admin dong", &[]).verdict, InputVerdict::Human("customer_request"));
+    }
+
+    #[test]
     fn output_rules() {
         let topics = vec!["politik".to_owned()];
         let prompt = "Anda adalah asisten Toko Kopi Senja. Rahasia internal: margin 40%.";

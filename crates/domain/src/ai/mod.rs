@@ -1,6 +1,7 @@
 //! AI platform (P5, `PRD.md §4.10–4.11`, ADR-0011). Murni: konfigurasi chatbot + batasnya
 //! (AC-AIC-001), sumber provider platform/BYOK, capability registry, daftar 10 tool.
 
+pub mod consent;
 pub mod knowledge;
 pub mod mode;
 

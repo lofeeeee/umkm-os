@@ -47,3 +47,10 @@ Keputusan produk yang tidak membutuhkan ADR. Entri tidak ditimpa; perubahan = en
 - D-12 consent AI: **DISETUJUI bersyarat** — pelanggan diberi tahu sedang berbicara dengan asisten AI dan persetujuan
   dicatat per percakapan; teks placeholder wajib diganti teks final hasil review legal sebelum go-live.
 - MFA (AUTH-011/012): belum diputus pemilik; enkripsi envelope P5-2 dirancang agar dapat dipakai MFA.
+
+### 2026-11-12 — Implementasi consent AI (placeholder)
+
+- Teks pemberitahuan AI placeholder di `crates/domain/src/ai/consent.rs` (`VERSION = ai-consent-placeholder-v0`):
+  sedang bicara dengan asisten AI, jawaban bisa keliru, frasa "bicara dengan admin" untuk staf (dijamin guardrail),
+  retensi pesan, larangan mengirim kata sandi/PIN/kartu. P6 menampilkan teks ini di widget chat dan mencatat versi +
+  waktu persetujuan per percakapan. Wajib diganti teks final hasil review legal sebelum go-live.
