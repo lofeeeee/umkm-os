@@ -5,6 +5,7 @@
 pub mod audit_repo;
 pub mod auth;
 pub mod auth_repo;
+pub mod business_repo;
 pub mod metrics;
 pub mod onboarding_repo;
 pub mod outbox;

@@ -1,0 +1,48 @@
+P2-5 — Business profile / hours / address (PRD.md §4.4)
+Tanggal: 2026-11-12
+
+Artefak
+- migrations/0012_business.{up,down}.sql  (BUILD_PLAN menyebut 0008; nomor bergeser)
+  business_profiles + description, logo/cover (composite FK ke stored_objects tenant yang sama,
+  ON DELETE RESTRICT), phone, email, whatsapp, socials jsonb, timezone (default Asia/Jakarta),
+  pickup/delivery + catatan. business_addresses (maks 10, koordinat berpasangan & berbatas),
+  business_hours (ISO 1..7, unik per hari, open<>close; close<open = lewat tengah malam),
+  business_hour_exceptions (tutup XOR jam khusus, unik per tanggal). RLS ENABLE+FORCE 3 tabel baru.
+- crates/domain/src/business.rs   Minute/Span/WeeklyHours/DayOverride + status_at (murni, overnight,
+  spillover Minggu->Senin, exception hari ini & kemarin); validasi email, telepon E.164, social https,
+  koordinat, teks polos.
+- crates/infrastructure/src/business_repo.rs  load/update/replace_* dalam tx tenant + audit
+  business.updated; timezone dicek ke pg_timezone_names; waktu lokal = (instant AT TIME ZONE tz) di
+  PostgreSQL (tanpa crate timezone baru); status(at_utc) dapat diuji dengan instan tetap.
+- apps/api/src/business.rs  GET/PUT profile, PUT addresses|hours|hour-exceptions, GET status.
+  Baca tenant.read, ubah tenant.update. DTO deny_unknown_fields. 422 details.errors=[{path,code}]
+  (apps/api/src/validation.rs, dipakai ulang P2-3).
+- storage: DELETE objek yang dipakai logo/cover -> FK 23503 -> 409.
+- OpenAPI diregenerasi (tag business); Redocly: valid.
+
+Hasil
+- fmt/clippy -D warnings bersih; cargo test --workspace --locked: 0 biner gagal.
+- business_http 8 lulus; domain business 6 lulus. migration run -> revert 0 -> run: exit 0 (12/12).
+
+Cakupan AC (semua Verified)
+- AC-BIZ-001 Owner menyimpan + audit; Manager 403; Viewer boleh baca.
+- AC-BIZ-002 email/telepon/social javascript:/logo URL/nama kosong -> 422 dengan path; field asing 422;
+  timezone tak dikenal 422; logo objek tenant lain ditolak.
+- AC-BIZ-003 latitude 91, koordinat tanpa pasangan, alamat kosong -> 422; alamat tanpa koordinat diterima.
+- AC-BIZ-004 open==close, hari ganda, hari 8, jam 25:00 -> 422; overnight diterima.
+- AC-BIZ-005 exception tutup mengalahkan jam reguler (domain + repo); libur kemarin memutus overnight.
+- AC-BIZ-006 Asia/Jakarta 08–17: 09:30Z buka (16:30), 10:30Z tutup, 00:30Z tutup; ganti ke Asia/Jayapura
+  mengubah hasil; timezone tak valid ditolak.
+- AC-BIZ-007 pickup/delivery + catatan tersimpan & dikembalikan.
+- Isolasi: tenant B GET/PUT/status pada path A -> 404; data A utuh.
+
+Catatan desain: AC-BIZ-004 diperjelas di FSD — "jam tutup < jam buka" = lewat tengah malam (diterima),
+open == close ditolak. Kolom exception memakai open_time/close_time, bukan hours_json (PRD §5.4 "kolom
+penting"), agar bentuk dijaga CHECK.
+
+Negative control (dilemahkan -> gagal -> dipulihkan)
+- NC1 FK logo non-komposit                 -> logo_must_be_an_object_of_the_same_tenant GAGAL
+- NC2 spillover overnight dimatikan        -> 2 tes domain GAGAL
+- NC3 exception diabaikan                  -> status_follows_tenant_timezone_and_exceptions GAGAL
+- NC4 RLS business_addresses tidak dipasang -> every_tenant_table_has_forced_rls GAGAL
+- NC5 put_profile tanpa require(tenant.update) -> owner_updates_profile_and_it_is_audited GAGAL

@@ -190,12 +190,12 @@ Arah balik: TC → AC lewat nomor yang sama (Test Plan §4); AC → FR lewat FSD
 | FR-WEB-009 | AC-WEB-014 | TC-WEB-014 | POST /api/v1/tenants/{tenant_id}/website/pages/{slug}/rollback | ADR-0007, ADR-0014 | `docs/evidence/P2-4.txt` | Planned |
 | FR-WEB-010 | AC-WEB-015, AC-WEB-016, AC-WEB-017 | TC-WEB-015, TC-WEB-016, TC-WEB-017 | GET /api/v1/public/site (Host) | ADR-0007, ADR-0014 | `docs/evidence/P2-7.txt` | Planned |
 | FR-WEB-011 | AC-WEB-005, AC-WEB-018 | TC-WEB-005, TC-WEB-018 | GET /api/v1/public/site (Host) | ADR-0007, ADR-0014 | `docs/evidence/P2-1.txt` | Planned |
-| FR-BIZ-001 | AC-BIZ-001, AC-BIZ-002 | TC-BIZ-001, TC-BIZ-002 | GET/PUT /api/v1/tenants/{tenant_id}/business/profile | — | `docs/evidence/P2-5.txt` | Planned |
-| FR-BIZ-002 | AC-BIZ-003 | TC-BIZ-003 | PUT /api/v1/tenants/{tenant_id}/business/addresses | — | `docs/evidence/P2-5.txt` | Planned |
-| FR-BIZ-003 | AC-BIZ-004 | TC-BIZ-004 | PUT /api/v1/tenants/{tenant_id}/business/hours | — | `docs/evidence/P2-5.txt` | Planned |
-| FR-BIZ-004 | AC-BIZ-005 | TC-BIZ-005 | PUT /api/v1/tenants/{tenant_id}/business/hour-exceptions | — | `docs/evidence/P2-5.txt` | Planned |
-| FR-BIZ-005 | AC-BIZ-006 | TC-BIZ-006 | GET /api/v1/tenants/{tenant_id}/business/status | — | `docs/evidence/P2-5.txt` | Planned |
-| FR-BIZ-006 | AC-BIZ-007 | TC-BIZ-007 | GET/PUT /api/v1/tenants/{tenant_id}/business/profile | — | `docs/evidence/P2-5.txt` | Planned |
+| FR-BIZ-001 | AC-BIZ-001, AC-BIZ-002 | TC-BIZ-001, TC-BIZ-002 | GET/PUT /api/v1/tenants/{tenant_id}/business/profile | — | `docs/evidence/P2-5.txt` | Verified |
+| FR-BIZ-002 | AC-BIZ-003 | TC-BIZ-003 | PUT /api/v1/tenants/{tenant_id}/business/addresses | — | `docs/evidence/P2-5.txt` | Verified |
+| FR-BIZ-003 | AC-BIZ-004 | TC-BIZ-004 | PUT /api/v1/tenants/{tenant_id}/business/hours | — | `docs/evidence/P2-5.txt` | Verified |
+| FR-BIZ-004 | AC-BIZ-005 | TC-BIZ-005 | PUT /api/v1/tenants/{tenant_id}/business/hour-exceptions | — | `docs/evidence/P2-5.txt` | Verified |
+| FR-BIZ-005 | AC-BIZ-006 | TC-BIZ-006 | GET /api/v1/tenants/{tenant_id}/business/status | — | `docs/evidence/P2-5.txt` | Verified |
+| FR-BIZ-006 | AC-BIZ-007 | TC-BIZ-007 | GET/PUT /api/v1/tenants/{tenant_id}/business/profile | — | `docs/evidence/P2-5.txt` | Verified |
 | FR-FILE-001 | AC-FILE-001, AC-FILE-002 | TC-FILE-001, TC-FILE-002 | POST /api/v1/tenants/{tenant_id}/uploads | ADR-0009 | `docs/evidence/P2-6.txt` | Verified |
 | FR-FILE-002 | AC-FILE-003 | TC-FILE-003 | POST /api/v1/tenants/{tenant_id}/uploads | ADR-0009 | `docs/evidence/P2-6.txt` | Verified |
 | FR-FILE-003 | AC-FILE-004, AC-FILE-005 | TC-FILE-004, TC-FILE-005 | GET /files/{object_id} | ADR-0009 | `docs/evidence/P2-6.txt` | Verified |

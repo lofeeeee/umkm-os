@@ -227,12 +227,19 @@ impl ObjectStorage for PgObjectStorage {
         if in_use {
             return Err(StorageError::InUse);
         }
-        let n = sqlx::query("DELETE FROM stored_objects WHERE tenant_id = $1 AND id = $2")
+        // FK RESTRICT (logo/cover business profile, P2-5) -> 23503 = masih dipakai.
+        let n = match sqlx::query("DELETE FROM stored_objects WHERE tenant_id = $1 AND id = $2")
             .bind(actor.tenant_id.as_uuid())
             .bind(id)
             .execute(&mut *tx)
-            .await?
-            .rows_affected();
+            .await
+        {
+            Ok(r) => r.rows_affected(),
+            Err(e) if e.as_database_error().and_then(|d| d.code()).as_deref() == Some("23503") => {
+                return Err(StorageError::InUse);
+            }
+            Err(e) => return Err(e.into()),
+        };
         if n == 1 {
             crate::audit_repo::record(
                 &mut *tx,

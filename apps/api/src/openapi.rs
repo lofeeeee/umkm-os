@@ -14,7 +14,7 @@ use utoipa::{
     },
 };
 
-use crate::{auth, health, tenants, upload};
+use crate::{auth, business, health, tenants, upload};
 
 #[derive(OpenApi)]
 #[openapi(
@@ -39,7 +39,13 @@ use crate::{auth, health, tenants, upload};
         upload::upload,
         upload::list_uploads,
         upload::delete_upload,
-        upload::serve_file
+        upload::serve_file,
+        business::get_profile,
+        business::put_profile,
+        business::put_addresses,
+        business::put_hours,
+        business::put_exceptions,
+        business::get_status
     ),
     components(schemas(ErrorEnvelope, ErrorBody, ErrorCode, Meta)),
     servers((url = "/", description = "Origin yang sama; root domain menunggu D-01")),
@@ -48,6 +54,7 @@ use crate::{auth, health, tenants, upload};
         (name = "ops", description = "Liveness/readiness untuk orchestrator"),
         (name = "auth", description = "Registrasi, login, sesi (cookie HttpOnly + CSRF, ADR-0015)"),
         (name = "tenants", description = "Tenant milik pemanggil; tenant_id di path diverifikasi terhadap membership"),
+        (name = "business", description = "Profil, alamat, jam operasional tenant (PRD.md §4.4)"),
         (name = "files", description = "Upload gambar tenant + signed URL ber-expiry (ADR-0009)")
     )
 )]

@@ -1,0 +1,20 @@
+DROP TABLE IF EXISTS business_hour_exceptions;
+DROP TABLE IF EXISTS business_hours;
+DROP TABLE IF EXISTS business_addresses;
+ALTER TABLE business_profiles
+    DROP CONSTRAINT IF EXISTS fk_business_profiles_cover,
+    DROP CONSTRAINT IF EXISTS fk_business_profiles_logo,
+    DROP CONSTRAINT IF EXISTS ck_business_profiles_note,
+    DROP CONSTRAINT IF EXISTS ck_business_profiles_socials,
+    DROP CONSTRAINT IF EXISTS ck_business_profiles_description,
+    DROP COLUMN IF EXISTS fulfillment_note,
+    DROP COLUMN IF EXISTS delivery_available,
+    DROP COLUMN IF EXISTS pickup_available,
+    DROP COLUMN IF EXISTS timezone,
+    DROP COLUMN IF EXISTS socials,
+    DROP COLUMN IF EXISTS whatsapp,
+    DROP COLUMN IF EXISTS email,
+    DROP COLUMN IF EXISTS phone,
+    DROP COLUMN IF EXISTS cover_object_id,
+    DROP COLUMN IF EXISTS logo_object_id,
+    DROP COLUMN IF EXISTS description;

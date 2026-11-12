@@ -64,13 +64,13 @@ Perintah gate P2: `cargo fmt --check && cargo clippy --workspace -- -D warnings 
 | TC-WEB-016 | AC-WEB-016 | Unit+Integration+Contract | ditetapkan saat task | Planned |
 | TC-WEB-017 | AC-WEB-017 | Unit+Integration+Contract | ditetapkan saat task | Planned |
 | TC-WEB-018 | AC-WEB-018 | Unit+Integration+Contract | ditetapkan saat task | Planned |
-| TC-BIZ-001 | AC-BIZ-001 | Unit+Integration | ditetapkan saat task | Planned |
-| TC-BIZ-002 | AC-BIZ-002 | Unit+Integration | ditetapkan saat task | Planned |
-| TC-BIZ-003 | AC-BIZ-003 | Unit+Integration | ditetapkan saat task | Planned |
-| TC-BIZ-004 | AC-BIZ-004 | Unit+Integration | ditetapkan saat task | Planned |
-| TC-BIZ-005 | AC-BIZ-005 | Unit+Integration | ditetapkan saat task | Planned |
-| TC-BIZ-006 | AC-BIZ-006 | Unit+Integration | ditetapkan saat task | Planned |
-| TC-BIZ-007 | AC-BIZ-007 | Unit+Integration | ditetapkan saat task | Planned |
+| TC-BIZ-001 | AC-BIZ-001 | Unit+Integration | `apps/api/tests/business_http.rs` | Verified |
+| TC-BIZ-002 | AC-BIZ-002 | Unit+Integration | `apps/api/tests/business_http.rs` | Verified |
+| TC-BIZ-003 | AC-BIZ-003 | Unit+Integration | `apps/api/tests/business_http.rs`, `crates/domain/src/business.rs` | Verified |
+| TC-BIZ-004 | AC-BIZ-004 | Unit+Integration | `apps/api/tests/business_http.rs` | Verified |
+| TC-BIZ-005 | AC-BIZ-005 | Unit+Integration | `apps/api/tests/business_http.rs`, `crates/domain/src/business.rs` | Verified |
+| TC-BIZ-006 | AC-BIZ-006 | Unit+Integration | `apps/api/tests/business_http.rs`, `crates/domain/src/business.rs` | Verified |
+| TC-BIZ-007 | AC-BIZ-007 | Unit+Integration | `apps/api/tests/business_http.rs` | Verified |
 | TC-FILE-001 | AC-FILE-001 | Security+Integration | `apps/api/tests/upload_http.rs` | Verified |
 | TC-FILE-002 | AC-FILE-002 | Security+Integration | `apps/api/tests/upload_http.rs`, `crates/domain/src/storage.rs` | Verified |
 | TC-FILE-003 | AC-FILE-003 | Security+Integration | `apps/api/tests/upload_http.rs` | Verified |

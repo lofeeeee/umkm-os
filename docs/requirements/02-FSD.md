@@ -62,7 +62,7 @@ Status keputusan per 2026-11-12: D-05, ADR-0014 `DISETUJUI`; D-07 `DISETUJUI` se
 | AC-BIZ-001 | Given `tenant.update`, When profil diubah dengan data valid, Then tersimpan dan audit `business.update` tercatat; tanpa permission → ditolak |
 | AC-BIZ-002 | Given email/telepon/URL social tidak valid, When disimpan, Then `422 VALIDATION_FAILED`; logo/cover hanya `asset:<uuid>` milik tenant |
 | AC-BIZ-003 | Given latitude ∉ [-90,90] atau longitude ∉ [-180,180], When disimpan, Then ditolak; alamat tanpa koordinat diterima |
-| AC-BIZ-004 | Given jam buka ≥ jam tutup pada hari yang tidak melewati tengah malam, When disimpan, Then ditolak; maksimal satu baris per `day_of_week` |
+| AC-BIZ-004 | Given jam buka = jam tutup, format bukan `HH:MM`, atau `day_of_week` ∉ 1..7, When disimpan, Then ditolak; maksimal satu baris per `day_of_week`; jam tutup < jam buka = tutup lewat tengah malam (diterima) |
 | AC-BIZ-005 | Given exception tanggal D `is_closed=true`, When status dihitung pada D, Then tutup meski jam reguler buka |
 | AC-BIZ-006 | Given timezone `Asia/Jakarta` dan jam 08:00–17:00, When waktu UTC 09:30 (16:30 WIB), Then `open`; UTC 10:30 → `closed`; timezone tidak valid ditolak |
 | AC-BIZ-007 | Given `pickup_available`/`delivery_available` + catatan, When dibaca publik, Then dikembalikan apa adanya |
