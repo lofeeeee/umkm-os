@@ -24,6 +24,7 @@ pub mod retention;
 pub mod storage;
 pub mod team_repo;
 pub mod tenant_repo;
+pub mod ticket_repo;
 pub mod website_repo;
 
 /// Nama crate, dipakai untuk smoke test wiring workspace.

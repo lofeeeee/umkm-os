@@ -1099,6 +1099,270 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
       security:
       - sessionCookie: []
+  /api/v1/public/orders/current/tickets:
+    get:
+      tags:
+      - public
+      summary: Ticket pesanan ini beserta balasan publik.
+      operationId: customer_list
+      parameters:
+      - name: X-Order-Token
+        in: header
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Ticket
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_Vec_PublicTicket'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+    post:
+      tags:
+      - public
+      summary: Customer melaporkan masalah pesanan (AC-TKT-001 sumber `order`).
+      operationId: customer_create
+      parameters:
+      - name: X-Order-Token
+        in: header
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerTicketInput'
+        required: true
+      responses:
+        '201':
+          description: Dibuat
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_PublicTicket'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/public/orders/current/tickets/{ticket_id}/attachments:
+    post:
+      tags:
+      - public
+      summary: Lampiran dari customer (selalu publik).
+      operationId: customer_attach
+      parameters:
+      - name: X-Order-Token
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: ticket_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          image/png:
+            schema:
+              type: array
+              items:
+                type: integer
+                format: int32
+                minimum: 0
+        required: true
+      responses:
+        '201':
+          description: Tersimpan
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/public/orders/current/tickets/{ticket_id}/attachments/{attachment_id}:
+    get:
+      tags:
+      - public
+      summary: Unduh lampiran publik (customer).
+      operationId: customer_attachment
+      parameters:
+      - name: X-Order-Token
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: ticket_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: attachment_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Gambar
+          content:
+            image/png: {}
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/public/orders/current/tickets/{ticket_id}/messages:
+    post:
+      tags:
+      - public
+      summary: Balasan customer (WAITING_CUSTOMER → IN_PROGRESS; reopen sesuai kebijakan).
+      operationId: customer_reply
+      parameters:
+      - name: X-Order-Token
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: ticket_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerMessageInput'
+        required: true
+      responses:
+        '201':
+          description: Terkirim
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_PublicTicket'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
   /api/v1/public/products:
     get:
       tags:
@@ -4714,6 +4978,579 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
       security:
       - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/tickets:
+    get:
+      tags:
+      - tickets
+      summary: Daftar ticket (filter, pencarian kode/subjek).
+      operationId: list
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: status
+        in: path
+        required: true
+        schema:
+          type:
+          - string
+          - 'null'
+      - name: assignee_user_id
+        in: path
+        required: true
+        schema:
+          type:
+          - string
+          - 'null'
+          format: uuid
+      - name: priority
+        in: path
+        required: true
+        schema:
+          type:
+          - string
+          - 'null'
+      - name: tag
+        in: path
+        required: true
+        schema:
+          type:
+          - string
+          - 'null'
+      - name: q
+        in: path
+        required: true
+        schema:
+          type:
+          - string
+          - 'null'
+      - name: customer_id
+        in: path
+        required: true
+        schema:
+          type:
+          - string
+          - 'null'
+          format: uuid
+      - name: order_id
+        in: path
+        required: true
+        schema:
+          type:
+          - string
+          - 'null'
+          format: uuid
+      - name: limit
+        in: path
+        required: true
+        schema:
+          type:
+          - integer
+          - 'null'
+          format: int64
+      - name: offset
+        in: path
+        required: true
+        schema:
+          type:
+          - integer
+          - 'null'
+          format: int64
+      responses:
+        '200':
+          description: Ticket
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_TicketList'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+    post:
+      tags:
+      - tickets
+      summary: Ticket manual oleh staf (AC-TKT-001 sumber `manual`).
+      operationId: create
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TicketInput'
+        required: true
+      responses:
+        '201':
+          description: Dibuat
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_TicketView'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/tickets/{ticket_id}:
+    get:
+      tags:
+      - tickets
+      summary: Detail + pesan (termasuk catatan internal) + lampiran + riwayat.
+      operationId: get_one
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: ticket_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Ticket
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_TicketView'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+    patch:
+      tags:
+      - tickets
+      summary: Ubah prioritas / tag.
+      operationId: update_meta
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: ticket_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MetaInput'
+        required: true
+      responses:
+        '200':
+          description: Tersimpan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_TicketView'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/tickets/{ticket_id}/assign:
+    post:
+      tags:
+      - tickets
+      summary: Assign / reassign / lepas (AC-TKT-003).
+      operationId: assign
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: ticket_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignInput'
+        required: true
+      responses:
+        '200':
+          description: Tersimpan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_TicketView'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/tickets/{ticket_id}/attachments:
+    post:
+      tags:
+      - tickets
+      summary: Lampiran gambar (`?internal=true` untuk internal).
+      operationId: add_attachment
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: ticket_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: internal
+        in: path
+        required: true
+        schema:
+          type: boolean
+      requestBody:
+        content:
+          image/png:
+            schema:
+              type: array
+              items:
+                type: integer
+                format: int32
+                minimum: 0
+        required: true
+      responses:
+        '201':
+          description: Tersimpan
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/tickets/{ticket_id}/attachments/{attachment_id}:
+    get:
+      tags:
+      - tickets
+      summary: Unduh lampiran (staf).
+      operationId: get_attachment
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: ticket_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: attachment_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Gambar
+          content:
+            image/png: {}
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/tickets/{ticket_id}/messages:
+    post:
+      tags:
+      - tickets
+      summary: Balasan publik atau catatan internal (AC-TKT-004).
+      operationId: add_message
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: ticket_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MessageInput'
+        required: true
+      responses:
+        '201':
+          description: Terkirim
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_TicketView'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/tickets/{ticket_id}/status:
+    post:
+      tags:
+      - tickets
+      summary: Ubah status (AC-TKT-002). RESOLVED/CLOSED butuh `tickets.close`; reopen sesuai kebijakan.
+      operationId: set_status
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: ticket_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StatusInput'
+        required: true
+      responses:
+        '200':
+          description: Status berubah
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_TicketView'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: Transisi tidak diizinkan / reopen kedaluwarsa
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
   /api/v1/tenants/{tenant_id}/uploads:
     get:
       tags:
@@ -5621,6 +6458,39 @@ components:
           - string
           - 'null'
       additionalProperties: false
+    AssignInput:
+      type: object
+      properties:
+        assignee_user_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+      additionalProperties: false
+    AttachmentView:
+      type: object
+      required:
+      - id
+      - visibility
+      - content_type
+      - byte_size
+      - uploaded_by
+      - created_at
+      properties:
+        byte_size:
+          type: integer
+          format: int32
+        content_type:
+          type: string
+        created_at:
+          type: string
+        id:
+          type: string
+          format: uuid
+        uploaded_by:
+          type: string
+        visibility:
+          type: string
     BusinessView:
       type: object
       required:
@@ -5779,6 +6649,14 @@ components:
         password:
           type: string
       additionalProperties: false
+    CustomerMessageInput:
+      type: object
+      required:
+      - body
+      properties:
+        body:
+          type: string
+      additionalProperties: false
     CustomerRegister:
       type: object
       required:
@@ -5831,6 +6709,18 @@ components:
           type: array
           items:
             type: string
+    CustomerTicketInput:
+      type: object
+      required:
+      - subject
+      properties:
+        description:
+          type:
+          - string
+          - 'null'
+        subject:
+          type: string
+      additionalProperties: false
     CustomerVerify:
       type: object
       required:
@@ -5942,6 +6832,27 @@ components:
           $ref: '#/components/schemas/Meta'
         success:
           type: boolean
+    EventView:
+      type: object
+      required:
+      - kind
+      - data
+      - actor_type
+      - created_at
+      properties:
+        actor_type:
+          type: string
+        actor_user_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        created_at:
+          type: string
+        data:
+          type: object
+        kind:
+          type: string
     ExceptionDto:
       type: object
       required:
@@ -6049,6 +6960,43 @@ components:
           - 'null'
           description: '`active` | `suspended` | `removed`'
       additionalProperties: false
+    MessageInput:
+      type: object
+      required:
+      - body
+      properties:
+        body:
+          type: string
+        internal:
+          type: boolean
+          description: 'Catatan internal: tidak pernah terlihat customer (AC-TKT-004)'
+      additionalProperties: false
+    MessageView:
+      type: object
+      required:
+      - id
+      - visibility
+      - author_type
+      - body
+      - created_at
+      properties:
+        author_type:
+          type: string
+        author_user_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        body:
+          type: string
+        created_at:
+          type: string
+        id:
+          type: string
+          format: uuid
+        visibility:
+          type: string
+          description: '`public` | `internal`'
     Meta:
       type: object
       required:
@@ -6056,6 +7004,20 @@ components:
       properties:
         request_id:
           type: string
+    MetaInput:
+      type: object
+      properties:
+        priority:
+          type:
+          - string
+          - 'null'
+        tags:
+          type:
+          - array
+          - 'null'
+          items:
+            type: string
+      additionalProperties: false
     MovementInput:
       type: object
       required:
@@ -6797,7 +7759,6 @@ components:
           - 'null'
         status:
           type: string
-          description: '`PROCESSING` | `READY_FOR_PICKUP` | `SHIPPED` | `COMPLETED` | `CANCELLED`'
       additionalProperties: false
     StatusView:
       type: object
@@ -7582,6 +8543,48 @@ components:
           $ref: '#/components/schemas/Meta'
         success:
           type: boolean
+    SuccessEnvelope_PublicTicket:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          description: 'Bentuk untuk customer: tanpa assignee, tag, SLA internal, riwayat, catatan internal.'
+          required:
+          - id
+          - code
+          - subject
+          - status
+          - created_at
+          - messages
+          - attachments
+          properties:
+            attachments:
+              type: array
+              items:
+                $ref: '#/components/schemas/AttachmentView'
+            code:
+              type: string
+            created_at:
+              type: string
+            id:
+              type: string
+              format: uuid
+            messages:
+              type: array
+              items:
+                $ref: '#/components/schemas/MessageView'
+            status:
+              type: string
+            subject:
+              type: string
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
     SuccessEnvelope_Published:
       type: object
       required:
@@ -7984,6 +8987,142 @@ components:
           $ref: '#/components/schemas/Meta'
         success:
           type: boolean
+    SuccessEnvelope_TicketList:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - items
+          - total
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/TicketView'
+            total:
+              type: integer
+              format: int64
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
+    SuccessEnvelope_TicketView:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - id
+          - code
+          - source
+          - subject
+          - priority
+          - status
+          - tags
+          - first_response_due_at
+          - resolution_due_at
+          - sla_first_response_breached
+          - sla_resolution_breached
+          - reopen_count
+          - created_at
+          - updated_at
+          - messages
+          - attachments
+          - events
+          properties:
+            assignee_user_id:
+              type:
+              - string
+              - 'null'
+              format: uuid
+            attachments:
+              type: array
+              items:
+                $ref: '#/components/schemas/AttachmentView'
+            closed_at:
+              type:
+              - string
+              - 'null'
+            code:
+              type: string
+            conversation_id:
+              type:
+              - string
+              - 'null'
+              format: uuid
+            created_at:
+              type: string
+            customer_id:
+              type:
+              - string
+              - 'null'
+              format: uuid
+            description:
+              type:
+              - string
+              - 'null'
+            events:
+              type: array
+              items:
+                $ref: '#/components/schemas/EventView'
+            first_responded_at:
+              type:
+              - string
+              - 'null'
+            first_response_due_at:
+              type: string
+            id:
+              type: string
+              format: uuid
+            messages:
+              type: array
+              items:
+                $ref: '#/components/schemas/MessageView'
+            order_id:
+              type:
+              - string
+              - 'null'
+              format: uuid
+            priority:
+              type: string
+            reopen_count:
+              type: integer
+              format: int32
+            resolution_due_at:
+              type: string
+            resolved_at:
+              type:
+              - string
+              - 'null'
+            sla_first_response_breached:
+              type: boolean
+            sla_resolution_breached:
+              type: boolean
+            source:
+              type: string
+            status:
+              type: string
+            subject:
+              type: string
+            tags:
+              type: array
+              items:
+                type: string
+            updated_at:
+              type: string
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
     SuccessEnvelope_UploadView:
       type: object
       required:
@@ -8291,6 +9430,50 @@ components:
           $ref: '#/components/schemas/Meta'
         success:
           type: boolean
+    SuccessEnvelope_Vec_PublicTicket:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            description: 'Bentuk untuk customer: tanpa assignee, tag, SLA internal, riwayat, catatan internal.'
+            required:
+            - id
+            - code
+            - subject
+            - status
+            - created_at
+            - messages
+            - attachments
+            properties:
+              attachments:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AttachmentView'
+              code:
+                type: string
+              created_at:
+                type: string
+              id:
+                type: string
+                format: uuid
+              messages:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MessageView'
+              status:
+                type: string
+              subject:
+                type: string
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
     SuccessEnvelope_Vec_RoleView:
       type: object
       required:
@@ -8508,6 +9691,140 @@ components:
           format: uuid
         slug:
           type: string
+    TicketInput:
+      type: object
+      required:
+      - subject
+      properties:
+        assignee_user_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        customer_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        description:
+          type:
+          - string
+          - 'null'
+        order_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        priority:
+          type: string
+        subject:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+      additionalProperties: false
+    TicketView:
+      type: object
+      required:
+      - id
+      - code
+      - source
+      - subject
+      - priority
+      - status
+      - tags
+      - first_response_due_at
+      - resolution_due_at
+      - sla_first_response_breached
+      - sla_resolution_breached
+      - reopen_count
+      - created_at
+      - updated_at
+      - messages
+      - attachments
+      - events
+      properties:
+        assignee_user_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        attachments:
+          type: array
+          items:
+            $ref: '#/components/schemas/AttachmentView'
+        closed_at:
+          type:
+          - string
+          - 'null'
+        code:
+          type: string
+        conversation_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        created_at:
+          type: string
+        customer_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        description:
+          type:
+          - string
+          - 'null'
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/EventView'
+        first_responded_at:
+          type:
+          - string
+          - 'null'
+        first_response_due_at:
+          type: string
+        id:
+          type: string
+          format: uuid
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/MessageView'
+        order_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        priority:
+          type: string
+        reopen_count:
+          type: integer
+          format: int32
+        resolution_due_at:
+          type: string
+        resolved_at:
+          type:
+          - string
+          - 'null'
+        sla_first_response_breached:
+          type: boolean
+        sla_resolution_breached:
+          type: boolean
+        source:
+          type: string
+        status:
+          type: string
+        subject:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        updated_at:
+          type: string
     UpdateTenantRequest:
       type: object
       required:
@@ -8607,6 +9924,8 @@ tags:
   description: Pengaturan checkout, order, pembayaran QRIS statis (PRD.md §4.7, ADR-0004)
 - name: approvals
   description: Approval engine multi-step (PRD.md §4.9, P4-2)
+- name: tickets
+  description: 'Ticket support: lifecycle, assign, balasan, SLA (PRD.md §4.8, P4-3)'
 - name: team
   description: Anggota, role kustom, undangan (PRD.md §3, P4-1)
 - name: crm

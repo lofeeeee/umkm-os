@@ -1,0 +1,52 @@
+P4-3 — Ticket lifecycle (PRD.md §4.8, FR-TKT-001..005)
+Tanggal: 2026-11-12
+
+Artefak
+- crates/domain/src/tickets.rs  TicketStatus 7 status + can_transition (reopen RESOLVED/CLOSED → IN_PROGRESS),
+  can_reopen (CLOSED hanya ≤ 7 hari), Priority + target SLA default (respons pertama / resolusi:
+  urgent 1j/4j, high 4j/24j, normal 24j/72j, low 72j/168j), Source (chat/order/manual/system), normalize_tags.
+- migrations/0021_tickets.{up,down}.sql  tickets (kode TKT-…, rujukan customer/order composite FK tenant sama,
+  source=order wajib order_id, source=chat wajib conversation_id; resolved_at ⇔ RESOLVED/CLOSED; closed_at ⇔ CLOSED),
+  trigger assignee wajib anggota aktif tenant, trigger transisi (cermin domain) + status awal, ticket_messages
+  (public/internal; customer tidak bisa internal), ticket_attachments (gambar diperiksa isi, terpisah dari
+  stored_objects), ticket_events (riwayat). REVOKE UPDATE/DELETE events & messages, DELETE tickets. RLS 4 tabel (rls.rs: 42).
+- crates/infrastructure/src/ticket_repo.rs  create (semua sumber), list/get dengan Scope (All / AssignedTo agen /
+  CustomerOrder publik saja), assign (OPEN ↔ ASSIGNED), set_status (reopen + jendela), update_meta, staff_message
+  (balasan publik pertama mengisi first_responded_at), customer_message (WAITING_CUSTOMER/RESOLVED/CLOSED →
+  IN_PROGRESS sesuai kebijakan), lampiran. Outbox ticket.created / ticket.assigned / ticket.customer_reply
+  (notifikasi P4-4). Audit ticket.created/assigned/resolved/closed/reopened/status_changed.
+- apps/api/src/tickets.rs  staf: /tenants/{t}/tickets (list/filter/cari, buat manual, detail, assign, status, prioritas/tag,
+  pesan, lampiran); customer via X-Order-Token: buat ticket masalah pesanan, lihat, balas, lampiran publik.
+  Object-level: tanpa tickets.assign hanya ticket yang ditugaskan (Support Agent); RESOLVED/CLOSED butuh tickets.close.
+
+Hasil
+- fmt/clippy -D warnings bersih; cargo test --workspace --locked --no-fail-fast: 329 lulus, 0 gagal (ticket_http 4,
+  domain tickets 3). migration run → revert 0 → run DB kosong: exit 0.
+
+Cakupan AC (Verified)
+- AC-TKT-001: order (customer), manual (staf), system, chat (repo; 1 conversation → 2 ticket); rujukan order tenant lain
+  ditolak; chat tanpa conversation ditolak.
+- AC-TKT-002: IN_PROGRESS → CLOSED 409; resolved_at terisi saat RESOLVED, dikosongkan saat reopen; paritas DB 49 kombinasi.
+- AC-TKT-003: assignee tenant lain 422; agen tidak melihat ticket orang lain (404) dan tidak bisa assign (403).
+- AC-TKT-004: catatan internal, lampiran internal, riwayat, assignee tidak pernah ada di respons customer; lampiran
+  internal 404 untuk customer walau id diketahui; DB menolak pesan internal dari customer.
+- AC-TKT-005: riwayat 10 event berurutan; reopen ≤ 7 hari boleh, > 7 hari 409 reopen_expired; SLA respons pertama hanya
+  oleh balasan publik; pelanggaran SLA resolusi terdeteksi; pencarian kode/subjek, filter tag/status.
+- AC-TKT-006 (ticket ≠ conversation) tetap P6-5.
+
+Negative control (perubahan sementara, setiap mutasi diverifikasi diterapkan; test terkait GAGAL)
+== NEGCTL: pesan internal ikut ke customer
+    internal_notes_never_reach_customer
+test result: FAILED. 3 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.66s
+== NEGCTL: agen melihat semua ticket
+    lifecycle_assignment_history_and_sla
+test result: FAILED. 3 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.69s
+== NEGCTL: reopen tanpa jendela waktu
+    lifecycle_assignment_history_and_sla
+test result: FAILED. 3 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.68s
+== NEGCTL: DB mengizinkan IN_PROGRESS → CLOSED
+    db_ticket_transitions_match_domain
+test result: FAILED. 3 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.75s
+== NEGCTL: assignee bukan anggota diterima
+    lifecycle_assignment_history_and_sla
+test result: FAILED. 3 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.69s

@@ -225,11 +225,11 @@ Arah balik: TC → AC lewat nomor yang sama (Test Plan §4); AC → FR lewat FSD
 | FR-ORD-008 | AC-ORD-008 | TC-ORD-008 | POST /tenants/{tenant_id}/orders/{id}/refunds | ADR-0004 (D-02) | `docs/evidence/P3-7.txt` | Verified |
 | FR-ORD-009 | AC-ORD-009 | TC-ORD-009 | GET /api/v1/public/orders/current (X-Order-Token) | ADR-0004 (D-02) | `docs/evidence/P3-5.txt` | Verified |
 | FR-ORD-010 | AC-ORD-010 | TC-ORD-010 | POST /api/v1/public/checkout | D-12 (product-decision-log) | `docs/evidence/P3-5.txt` | Verified |
-| FR-TKT-001 | AC-TKT-001 | TC-TKT-001 | ditetapkan di OpenAPI saat task | — | — | Planned |
-| FR-TKT-002 | AC-TKT-002 | TC-TKT-002 | ditetapkan di OpenAPI saat task | — | — | Planned |
-| FR-TKT-003 | AC-TKT-003 | TC-TKT-003 | ditetapkan di OpenAPI saat task | — | — | Planned |
-| FR-TKT-004 | AC-TKT-004 | TC-TKT-004 | ditetapkan di OpenAPI saat task | — | — | Planned |
-| FR-TKT-005 | AC-TKT-005 | TC-TKT-005 | ditetapkan di OpenAPI saat task | — | — | Planned |
+| FR-TKT-001 | AC-TKT-001 | TC-TKT-001 | POST /tenants/{tenant_id}/tickets, POST /public/orders/current/tickets | — | `docs/evidence/P4-3.txt` | Verified |
+| FR-TKT-002 | AC-TKT-002 | TC-TKT-002 | POST /tickets/{id}/status | — | `docs/evidence/P4-3.txt` | Verified |
+| FR-TKT-003 | AC-TKT-003 | TC-TKT-003 | POST /tickets/{id}/assign, PATCH /tickets/{id} | — | `docs/evidence/P4-3.txt` | Verified |
+| FR-TKT-004 | AC-TKT-004 | TC-TKT-004 | POST /tickets/{id}/messages, /attachments | — | `docs/evidence/P4-3.txt` | Verified |
+| FR-TKT-005 | AC-TKT-005 | TC-TKT-005 | GET /tickets (filter/q), GET /tickets/{id} (events, SLA) | — | `docs/evidence/P4-3.txt` | Verified |
 | FR-TKT-006 | AC-TKT-006 | TC-TKT-006 | ditetapkan di OpenAPI saat task | — | — | Planned |
 | FR-APR-001 | AC-APR-001 | TC-APR-001 | /tenants/{tenant_id}/approval-policies, /approvals | — | `docs/evidence/P4-2.txt` | Verified |
 | FR-APR-002 | AC-APR-002 | TC-APR-002 | POST /approvals/{id}/approve, /reject, /cancel, /approval-delegations | — | `docs/evidence/P4-2.txt` | Verified |

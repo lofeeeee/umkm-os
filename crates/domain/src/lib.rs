@@ -14,6 +14,7 @@ pub mod rbac;
 pub mod storage;
 pub mod team;
 pub mod tenant;
+pub mod tickets;
 pub mod website;
 
 /// Nama crate, dipakai untuk smoke test wiring workspace.

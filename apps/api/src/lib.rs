@@ -22,6 +22,7 @@ pub mod session;
 pub mod state;
 pub mod team;
 pub mod tenants;
+pub mod tickets;
 pub mod upload;
 pub mod validation;
 pub mod website;

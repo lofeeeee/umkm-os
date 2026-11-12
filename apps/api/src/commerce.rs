@@ -415,7 +415,7 @@ pub fn order_token(state: &AppState, t: TenantId, order: Uuid) -> Result<String,
 }
 
 /// Origin wajib situs toko itu sendiri (sama dengan akun customer).
-fn check_shop_origin(state: &AppState, h: &HeaderMap) -> Result<(), ApiError> {
+pub(crate) fn check_shop_origin(state: &AppState, h: &HeaderMap) -> Result<(), ApiError> {
     let Some(origin) = h.get(header::ORIGIN).and_then(|o| o.to_str().ok()) else {
         return Ok(());
     };
@@ -433,7 +433,7 @@ fn check_shop_origin(state: &AppState, h: &HeaderMap) -> Result<(), ApiError> {
     }
 }
 
-async fn rate_limit(state: &AppState, ip: &str) -> Result<(), ApiError> {
+pub(crate) async fn rate_limit(state: &AppState, ip: &str) -> Result<(), ApiError> {
     let a = auth(state)?;
     match a.limiter.check(&rate_rules::CHECKOUT_PER_IP, ip).await {
         Ok(d) if d.allowed => Ok(()),
