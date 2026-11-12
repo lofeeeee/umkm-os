@@ -23,7 +23,11 @@ use axum::{
 use futures_util::{Stream, stream};
 use serde::Serialize;
 use tokio::sync::broadcast;
-use umkm_infrastructure::rbac_repo;
+use umkm_infrastructure::{
+    rbac_repo,
+    realtime::RtMessage,
+    redis::{KeyNamespace, RedisClient},
+};
 use umkm_shared::{http::ErrorCode, ids::TenantId};
 
 use crate::{ApiError, AppState, session::Member};
@@ -32,8 +36,81 @@ use crate::{ApiError, AppState, session::Member};
 pub struct TenantEvent {
     #[serde(skip)]
     pub tenant_id: TenantId,
-    pub kind: &'static str,
+    pub kind: String,
     pub data: serde_json::Value,
+    /// Hanya untuk pengguna ini (notifikasi pribadi); `None` = semua anggota yang berhak.
+    #[serde(skip)]
+    pub user_id: Option<uuid::Uuid>,
+    /// Hanya untuk anggota yang memiliki permission ini (dicek ulang per event).
+    #[serde(skip)]
+    pub permission: Option<String>,
+}
+
+impl TenantEvent {
+    pub fn tenant(tenant_id: TenantId, kind: &str, data: serde_json::Value) -> Self {
+        Self {
+            tenant_id,
+            kind: kind.to_owned(),
+            data,
+            user_id: None,
+            permission: None,
+        }
+    }
+}
+
+impl From<RtMessage> for TenantEvent {
+    fn from(m: RtMessage) -> Self {
+        Self {
+            tenant_id: TenantId::from_uuid(m.tenant_id),
+            kind: m.kind,
+            data: m.data,
+            user_id: m.user_id,
+            permission: m.permission,
+        }
+    }
+}
+
+/// Kirim event: lewat Redis bila tersedia (semua instance, termasuk diri sendiri, menerimanya
+/// lewat bridge), selain itu langsung ke hub lokal.
+pub async fn emit(state: &AppState, ev: TenantEvent) {
+    match &state.rt_publisher {
+        Some(p) => {
+            let m = RtMessage {
+                tenant_id: *ev.tenant_id.as_uuid(),
+                kind: ev.kind,
+                data: ev.data,
+                user_id: ev.user_id,
+                permission: ev.permission,
+            };
+            if let Err(e) = p.publish(&m).await {
+                tracing::warn!(error = %e, "realtime publish failed");
+            }
+        }
+        None => state.realtime.publish(ev),
+    }
+}
+
+/// Bridge Redis → hub lokal; menyambung ulang bila koneksi putus.
+pub fn spawn_bridge(
+    hub: RealtimeHub,
+    client: Arc<RedisClient>,
+    ns: KeyNamespace,
+) -> tokio::task::JoinHandle<()> {
+    tokio::spawn(async move {
+        loop {
+            match umkm_infrastructure::realtime::subscribe(&client, &ns).await {
+                Ok(s) => {
+                    futures_util::pin_mut!(s);
+                    while let Some(m) = futures_util::StreamExt::next(&mut s).await {
+                        hub.publish(m.into());
+                    }
+                    tracing::warn!("realtime bridge disconnected; reconnecting");
+                }
+                Err(e) => tracing::warn!(error = %e, "realtime bridge subscribe failed"),
+            }
+            tokio::time::sleep(Duration::from_secs(1)).await;
+        }
+    })
 }
 
 #[derive(Clone)]
@@ -119,12 +196,23 @@ pub async fn tenant_events(
                     if ev.tenant_id != tenant {
                         continue;
                     }
-                    // TenantGuard 2: otorisasi dicek ulang per event (PRD.md §7.5).
-                    match rbac_repo::load_actor(&pool, user, tenant).await {
-                        Ok(Some(a)) if a.has("tenant.read") => {}
-                        _ => return None, // membership dicabut/DB error -> tutup stream
+                    // TenantGuard 2: event pribadi hanya untuk penerimanya.
+                    if ev.user_id.is_some_and(|u| u != user) {
+                        continue;
                     }
-                    let event = Event::default().event(ev.kind).json_data(&ev.data).ok()?;
+                    // TenantGuard 3: otorisasi dicek ulang per event (PRD.md §7.5).
+                    let actor = match rbac_repo::load_actor(&pool, user, tenant).await {
+                        Ok(Some(a)) if a.has("tenant.read") => a,
+                        _ => return None, // membership dicabut/DB error -> tutup stream
+                    };
+                    // TenantGuard 4: event ber-permission hanya untuk yang berhak saat ini.
+                    if ev.permission.as_deref().is_some_and(|p| !actor.has(p)) {
+                        continue;
+                    }
+                    let event = Event::default()
+                        .event(ev.kind.clone())
+                        .json_data(&ev.data)
+                        .ok()?;
                     return Some((Ok(event), (rx, guard, pool)));
                 }
                 // Tertinggal: lewati event yang hilang (klien dapat refetch state).

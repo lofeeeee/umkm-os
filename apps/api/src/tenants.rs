@@ -155,11 +155,15 @@ pub async fn update_tenant(
         .await
         .map_err(internal)?;
     // Event realtime untuk tenant ini saja (P1-10).
-    state.realtime.publish(crate::realtime::TenantEvent {
-        tenant_id: actor.tenant_id,
-        kind: "tenant.updated",
-        data: serde_json::json!({ "tenant_id": actor.tenant_id.as_uuid(), "name": name }),
-    });
+    crate::realtime::emit(
+        &state,
+        crate::realtime::TenantEvent::tenant(
+            actor.tenant_id,
+            "tenant.updated",
+            serde_json::json!({ "tenant_id": actor.tenant_id.as_uuid(), "name": name }),
+        ),
+    )
+    .await;
     tracing::info!(user_id = %actor.user_id, tenant_id = %actor.tenant_id, "tenant renamed");
     Ok(Json(SuccessEnvelope::new(view(&state, &actor).await?, &id)))
 }

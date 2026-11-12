@@ -1,0 +1,43 @@
+P4-6 — SSE TenantGuard penuh + fan-out lintas instance (PRD.md §7.5, §6.3)
+Tanggal: 2026-11-12
+
+Artefak
+- crates/infrastructure/src/realtime.rs  RtMessage (tenant_id, kind, data objek, user_id?, permission?) dengan validasi
+  (kind [a-z_.] ≤60, permission harus dikenal, payload ≤ 8 KiB, field asing ditolak); RtPublisher (PUBLISH ke kanal
+  {prefix}:platform:rt:events ber-namespace lingkungan); subscribe (hanya pesan valid). Tanpa dependency baru
+  (redis tokio-comp sudah ada; futures-util workspace).
+- apps/api/src/realtime.rs  TenantEvent + user_id/permission; emit() lewat Redis bila tersedia (semua instance
+  termasuk asal menerima sekali lewat bridge), selain itu hub lokal; spawn_bridge (Redis → hub, sambung ulang).
+  TenantGuard per event: (1) tenant stream, (2) penerima pribadi, (3) membership + tenant.read dimuat ulang,
+  (4) permission event dicek terhadap hak SAAT INI.
+- Worker: process_once_with(..., publisher) → per notifikasi: event pribadi notification.created ke penerima +
+  siaran ringan (id event) dibatasi permission baca (orders/tickets/approvals/inventory/conversations).
+  Gagal publish dicatat, tidak menggagalkan event (DB tetap sumber kebenaran).
+- bootstrap API: publisher + bridge dipasang saat start.
+
+Hasil
+- fmt/clippy -D warnings bersih; cargo deny OK; cargo test --workspace --locked --no-fail-fast: 336 lulus, 0 gagal
+  (realtime_http 3, regresi isolasi P1-10 tenancy 4 tetap lulus).
+
+Cakupan
+- Dua instance (hub terpisah) lewat Redis: perubahan di instance 1 diterima pelanggan di instance 2 dan instance asal tepat
+  sekali; tenant B tidak menerima; B tidak dapat berlangganan stream A (404).
+- Worker: assignee menerima notifikasi pribadi; agen lain hanya siaran ticket.* (tanpa isi pribadi); Catalog Manager
+  (tanpa tickets.read) tidak menerima apa pun.
+- Pesan bus rusak (bukan JSON, kind tidak valid, permission tak dikenal, field asing) dibuang; event ber-permission
+  berhenti diteruskan begitu hak penerima dicabut (tanpa menutup stream); membership dicabut menutup stream (P1-10).
+
+Negative control (setiap mutasi diverifikasi diterapkan; test terkait GAGAL)
+== NEGCTL: notifikasi pribadi ke semua anggota
+    worker_notifications_reach_only_recipient_and_permitted_members
+test result: FAILED. 2 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.82s
+== NEGCTL: event ber-permission tanpa cek hak
+    malformed_bus_messages_are_dropped_and_permission_rechecked
+    worker_notifications_reach_only_recipient_and_permitted_members
+test result: FAILED. 1 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.85s
+== NEGCTL: tanpa filter tenant di stream
+    events_fan_out_across_instances_only_within_tenant
+test result: FAILED. 2 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 6.68s
+== NEGCTL: pesan bus tanpa validasi
+    malformed_bus_messages_are_dropped_and_permission_rechecked
+test result: FAILED. 2 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 6.68s

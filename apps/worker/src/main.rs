@@ -11,7 +11,7 @@ use tracing_subscriber::{EnvFilter, fmt};
 use umkm_domain::auth::AuthPolicy;
 use umkm_infrastructure::{
     metrics::{CONTENT_TYPE, Metrics},
-    outbox::{LogEmailSender, WorkerConfig, process_once},
+    outbox::{LogEmailSender, WorkerConfig, process_once_with},
     retention::{RetentionPolicy, purge_job},
 };
 use umkm_shared::config::{LogFormat, Secrets, Settings};
@@ -98,6 +98,16 @@ async fn run() -> Result<(), BoxError> {
     let expire_every = Duration::from_secs(15);
     let mut next_expire = tokio::time::Instant::now();
 
+    // P4-6: notifikasi realtime lewat Redis pub/sub (best-effort; DB tetap sumber kebenaran).
+    let rt = (|| {
+        let c = umkm_infrastructure::redis::RedisClient::open(&secrets.redis_url).ok()?;
+        let ns = umkm_infrastructure::redis::KeyNamespace::new(&settings.redis.key_prefix).ok()?;
+        umkm_infrastructure::realtime::RtPublisher::new(&c, &ns).ok()
+    })();
+    if rt.is_none() {
+        tracing::warn!("realtime publisher disabled");
+    }
+
     let mut stop = stop_rx;
     let shutdown = shutdown_signal();
     tokio::pin!(shutdown);
@@ -124,7 +134,7 @@ async fn run() -> Result<(), BoxError> {
             }
             next_expire = tokio::time::Instant::now() + expire_every;
         }
-        match process_once(&pool, &sender, &cfg, &metrics).await {
+        match process_once_with(&pool, &sender, &cfg, &metrics, rt.as_ref()).await {
             Ok(t) if t.claimed > 0 => {
                 tracing::info!(
                     claimed = t.claimed,

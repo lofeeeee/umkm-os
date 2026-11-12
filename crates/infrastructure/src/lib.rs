@@ -20,6 +20,7 @@ pub mod payment_repo;
 pub(crate) mod pgx;
 pub mod rate_limit;
 pub mod rbac_repo;
+pub mod realtime;
 pub mod redis;
 pub mod retention;
 pub mod storage;

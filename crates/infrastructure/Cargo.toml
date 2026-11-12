@@ -13,6 +13,7 @@ workspace = true
 umkm-domain.workspace = true
 umkm-application.workspace = true
 tokio.workspace = true
+futures-util.workspace = true
 umkm-shared.workspace = true
 umkm-database.workspace = true
 thiserror.workspace = true

@@ -141,6 +141,11 @@ pub enum RedisError {
 }
 
 impl RedisClient {
+    /// Klien mentah untuk koneksi khusus (pub/sub realtime).
+    pub fn raw(&self) -> &::redis::Client {
+        &self.0
+    }
+
     pub fn open(url: &umkm_shared::config::SecretString) -> Result<Self, RedisError> {
         ::redis::Client::open(url.expose())
             .map(Self)

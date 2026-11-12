@@ -25,6 +25,8 @@ pub struct AppState {
     pub realtime: crate::realtime::RealtimeHub,
     /// Object storage + signed URL (P2-6, ADR-0009). `None` -> endpoint file 503.
     pub files: Option<Arc<FileService>>,
+    /// Fan-out realtime lintas instance (P4-6). `None` = hub lokal saja.
+    pub rt_publisher: Option<umkm_infrastructure::realtime::RtPublisher>,
 }
 
 /// Storage lokal + penanda URL (ADR-0009).
@@ -42,11 +44,17 @@ impl AppState {
             db: None,
             realtime: Default::default(),
             files: None,
+            rt_publisher: None,
         }
     }
 
     pub fn with_files(mut self, files: Arc<FileService>) -> Self {
         self.files = Some(files);
+        self
+    }
+
+    pub fn with_rt_publisher(mut self, p: umkm_infrastructure::realtime::RtPublisher) -> Self {
+        self.rt_publisher = Some(p);
         self
     }
 

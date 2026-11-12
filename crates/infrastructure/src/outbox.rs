@@ -179,6 +179,18 @@ pub async fn process_once(
     cfg: &WorkerConfig,
     metrics: &Metrics,
 ) -> Result<Tick, sqlx::Error> {
+    process_once_with(pool, sender, cfg, metrics, None).await
+}
+
+/// Seperti [`process_once`], plus fan-out realtime notifikasi lewat Redis (P4-6). Gagal publish
+/// tidak menggagalkan event: status tahan lama ada di DB, realtime hanya percepatan.
+pub async fn process_once_with(
+    pool: &PgPool,
+    sender: &impl EmailSender,
+    cfg: &WorkerConfig,
+    metrics: &Metrics,
+    publisher: Option<&crate::realtime::RtPublisher>,
+) -> Result<Tick, sqlx::Error> {
     let batch = claim(pool, &cfg.worker_id, cfg.batch, cfg.lease).await?;
     let mut tick = Tick {
         claimed: batch.len(),
@@ -212,7 +224,12 @@ pub async fn process_once(
                 )
                 .await
                 {
-                    Ok(_) => Outcome::Done,
+                    Ok(d) => {
+                        if let Some(p) = publisher {
+                            publish_delivered(p, k, &ev, &d).await;
+                        }
+                        Outcome::Done
+                    }
                     Err(e) => {
                         let (class, retryable) = e.class();
                         Outcome::Fail(class, retryable)
@@ -511,5 +528,39 @@ impl EmailSender for CapturingEmailSender {
         }
         self.sent.lock().expect("lock").push(msg.clone());
         Ok(())
+    }
+}
+
+async fn publish_delivered(
+    p: &crate::realtime::RtPublisher,
+    kind: &str,
+    ev: &Claimed,
+    d: &crate::notification_repo::Delivered,
+) {
+    use crate::realtime::RtMessage;
+    let tenant = *d.tenant.as_uuid();
+    let mut msgs: Vec<RtMessage> = d
+        .recipients
+        .iter()
+        .map(|u| RtMessage {
+            tenant_id: tenant,
+            kind: "notification.created".into(),
+            data: serde_json::json!({ "event_type": kind, "title": d.title, "link": d.link }),
+            user_id: Some(*u),
+            permission: None,
+        })
+        .collect();
+    // Siaran ringan (id saja) untuk dashboard yang terbuka; dibatasi permission baca.
+    msgs.push(RtMessage {
+        tenant_id: tenant,
+        kind: kind.to_owned(),
+        data: serde_json::json!({ "event_id": ev.id }),
+        user_id: None,
+        permission: Some(crate::notification_repo::broadcast_permission(kind).to_owned()),
+    });
+    for m in msgs {
+        if let Err(e) = p.publish(&m).await {
+            tracing::warn!(error = %e, "realtime publish failed");
+        }
     }
 }

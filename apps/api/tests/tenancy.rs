@@ -302,8 +302,10 @@ async fn t7_sse_stream_closes_when_membership_revoked(pool: PgPool) {
     // Masih anggota: event diterima
     hub.publish(umkm_api::realtime::TenantEvent {
         tenant_id: tenant,
-        kind: "tenant.updated",
+        kind: "tenant.updated".into(),
         data: json!({"n": 1}),
+        user_id: None,
+        permission: None,
     });
     assert!(
         next_frame(&mut stream, Duration::from_secs(5))
@@ -320,8 +322,10 @@ async fn t7_sse_stream_closes_when_membership_revoked(pool: PgPool) {
         .unwrap();
     hub.publish(umkm_api::realtime::TenantEvent {
         tenant_id: tenant,
-        kind: "tenant.updated",
+        kind: "tenant.updated".into(),
         data: json!({"n": 2}),
+        user_id: None,
+        permission: None,
     });
     assert_eq!(
         next_frame(&mut stream, Duration::from_secs(5)).await,

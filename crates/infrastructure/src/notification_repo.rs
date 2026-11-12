@@ -354,7 +354,7 @@ pub async fn deliver(
     tenant: Option<Uuid>,
     kind: &str,
     payload: &serde_json::Value,
-) -> Result<usize, DeliverError> {
+) -> Result<Delivered, DeliverError> {
     let t = TenantId::from_uuid(tenant.ok_or(DeliverError::InvalidPayload)?);
     let mut tx = tenant_tx(pool, t).await?;
     let (to, note, email) = plan(&mut tx, t, kind, payload).await?;
@@ -420,7 +420,38 @@ pub async fn deliver(
         .await?;
         tx.commit().await?;
     }
-    Ok(created)
+    let _ = created;
+    Ok(Delivered {
+        tenant: t,
+        recipients: if note.is_some() {
+            to.into_iter().collect()
+        } else {
+            vec![]
+        },
+        title: note.as_ref().map(|n| n.title.clone()),
+        link: note.and_then(|n| n.link),
+    })
+}
+
+/// Hasil pengiriman untuk fan-out realtime (P4-6).
+#[derive(Debug, Clone)]
+pub struct Delivered {
+    pub tenant: TenantId,
+    pub recipients: Vec<Uuid>,
+    pub title: Option<String>,
+    pub link: Option<String>,
+}
+
+/// Permission baca yang membatasi siaran tenant per jenis event.
+pub fn broadcast_permission(kind: &str) -> &'static str {
+    match kind {
+        k if k.starts_with("order.") || k.starts_with("payment.") => "orders.read",
+        k if k.starts_with("ticket.") => "tickets.read",
+        k if k.starts_with("approval.") => "approvals.read",
+        k if k.starts_with("inventory.") => "inventory.read",
+        AI_HANDOVER => "conversations.read",
+        _ => "tenant.update",
+    }
 }
 
 // ------------------------------------------------------------------ baca (pengguna)

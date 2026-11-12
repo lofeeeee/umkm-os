@@ -74,6 +74,10 @@ pub async fn serve() -> Result<(), BoxError> {
     .await?;
     tracing::info!(db_role = %role.name, rls_enforced = role.rls_enforced(), "database role verified");
     let redis = RedisClient::open(&secrets.redis_url)?;
+    // P4-6: fan-out realtime lintas instance lewat Redis pub/sub.
+    let rt_ns = KeyNamespace::new(&settings.redis.key_prefix)?;
+    let rt_publisher = umkm_infrastructure::realtime::RtPublisher::new(&redis, &rt_ns)?;
+    let rt_client = Arc::new(RedisClient::open(&secrets.redis_url)?);
     let metrics = Arc::new(Metrics::new());
     let limiter = RateLimiter::new(
         redis.connection_manager_lazy()?,
@@ -99,6 +103,7 @@ pub async fn serve() -> Result<(), BoxError> {
     ])
     .with_metrics(metrics.clone())
     .with_db(pool.clone())
+    .with_rt_publisher(rt_publisher)
     .with_files(Arc::new(crate::state::FileService {
         store: PgObjectStorage::new(
             pool.clone(),
@@ -132,6 +137,7 @@ pub async fn serve() -> Result<(), BoxError> {
     let addr: SocketAddr = format!("{}:{}", settings.server.host, settings.server.port).parse()?;
     let metrics_addr: SocketAddr =
         format!("{}:{}", settings.metrics.host, settings.metrics.port).parse()?;
+    let _bridge = crate::realtime::spawn_bridge(state.realtime.clone(), rt_client, rt_ns);
     let app = build_router(state, HttpLimits::from(&settings.server));
     let listener = TcpListener::bind(addr).await?;
     let metrics_listener = TcpListener::bind(metrics_addr).await?;
