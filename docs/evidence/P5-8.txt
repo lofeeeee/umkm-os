@@ -1,0 +1,33 @@
+P5-8 — Metering, kuota, circuit breaker, runtime AI, tool backend nyata (PRD.md §4.10, §4.15, §6.6; ADR-0011)
+Tanggal: 2026-11-12
+
+Artefak
+- crates/application/src/ai/usage.rs: estimasi token (≈4 char/token) bila provider tidak melapor; Limit (platform = kuota
+  operator wajib; BYOK = budget tenant opsional); giliran baru ditolak bila pemakaian bulan ini ≥ batas.
+- crates/infrastructure/src/ai/circuit_breaker.rs: per provider, 5 gagal sementara beruntun → terbuka 30 s → half-open
+  satu percobaan; hanya kegagalan sementara dihitung (bukan 401/400).
+- crates/infrastructure/src/ai/tool_backend.rs (P5-6 nyata): 10 tool membaca katalog/stok/jam/alamat/pesanan dalam
+  transaksi RLS tenant; pesanan hanya milik pelanggan terverifikasi (bukan milik = "tidak ditemukan"); stok >99 → "99+";
+  create_order_draft TIDAK menulis (hanya draft harga & ketersediaan; checkout tetap oleh pelanggan); search_faq via RAG.
+- crates/infrastructure/src/ai/runtime.rs AiRuntime::answer: config → provider aktif → breaker (utama terbuka → fallback
+  sebagai utama, atau circuit_open) → kuota (quota_exceeded tanpa memanggil provider) → adapter platform (operator/tenant
+  egress) atau BYOK (kunci dibuka per giliran) → retriever (model embedding platform / text-embedding-3-small untuk BYOK
+  openai) → orchestrator → update breaker → ai_runs + ai_tool_calls. Timeout per config tenant; semaphore konkurensi
+  dibagi (Egress::with_timeout). Kegagalan apa pun → handover dengan pesan fallback, bukan error ke pelanggan.
+  purpose chat butuh chatbot aktif; test (uji coba admin) tidak.
+
+Uji tests/ai_runtime.rs (provider tiruan lokal + PostgreSQL nyata, role aplikasi) 4 lulus:
+- jawaban berdasar katalog nyata: hasil search_products dari DB ("Kopi Gayo 250g", 85000) dikirim sebagai pesan tool;
+  ai_runs ok/send_auto/735 token/platform/chat; ai_tool_calls search_products ok; month_usage 735.
+- kuota 700: giliran kedua quota_exceeded + handover, provider tidak dipanggil.
+- provider 502 ×5 → setiap giliran error/upstream + handover; giliran ke-6 circuit_open tanpa panggilan.
+- provider lambat 3 s dengan timeout config 1 s → kembali < 2,8 s, status timeout, handover (API tidak tertahan).
+- Human Only → human_queue tanpa panggilan; chatbot nonaktif → Disabled untuk chat, purpose test tetap jalan.
+- unit: usage (1), breaker (1). clippy -D warnings OK.
+
+Kontrol negatif (mutasi runtime.rs; dua target pertama ditolak harness karena format berubah → diulang dengan teks persis)
+- M1 cek kuota dilewati          -> quota_exhausted... GAGAL
+- M2 breaker tidak mencatat gagal -> breaker_opens... GAGAL
+- M3 timeout config diabaikan     -> breaker_opens..._slow_provider GAGAL
+- M4 chatbot nonaktif diabaikan   -> human_only_and_disabled GAGAL
+- Dipulihkan: 4/4 lulus.

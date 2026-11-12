@@ -106,6 +106,13 @@ impl Egress {
         }
     }
 
+    /// Salinan dengan batas waktu total lain; semaphore konkurensi tetap DIBAGI.
+    pub fn with_timeout(&self, total: Duration) -> Self {
+        let mut c = self.clone();
+        c.policy.total_timeout = total;
+        c
+    }
+
     pub fn policy(&self) -> &EgressPolicy {
         &self.policy
     }
