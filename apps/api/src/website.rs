@@ -216,7 +216,7 @@ fn asset_ids(v: &Value, out: &mut BTreeSet<Uuid>) {
 }
 
 /// Signed path untuk aset yang BENAR-BENAR milik tenant (yang lain diabaikan).
-async fn signed_assets(
+pub(crate) async fn signed_assets(
     state: &AppState,
     t: TenantId,
     ids: BTreeSet<Uuid>,

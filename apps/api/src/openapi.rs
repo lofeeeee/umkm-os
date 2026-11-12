@@ -14,7 +14,7 @@ use utoipa::{
     },
 };
 
-use crate::{auth, business, health, tenants, upload, website};
+use crate::{auth, business, catalog, health, tenants, upload, website};
 
 #[derive(OpenApi)]
 #[openapi(
@@ -56,7 +56,19 @@ use crate::{auth, business, health, tenants, upload, website};
         website::list_versions,
         website::get_version,
         website::rollback,
-        website::public_site
+        website::public_site,
+        catalog::list_categories,
+        catalog::create_category,
+        catalog::update_category,
+        catalog::delete_category,
+        catalog::list_products,
+        catalog::create_product,
+        catalog::get_product,
+        catalog::update_product,
+        catalog::change_status,
+        catalog::public_products,
+        catalog::public_product,
+        catalog::public_categories
     ),
     components(schemas(ErrorEnvelope, ErrorBody, ErrorCode, Meta)),
     servers((url = "/", description = "Origin yang sama; root domain menunggu D-01")),
@@ -68,6 +80,7 @@ use crate::{auth, business, health, tenants, upload, website};
         (name = "website", description = "Template, draft, publish, rollback (ADR-0007, ADR-0014)"),
         (name = "public", description = "Situs publik tenant; tenant dari Host, tanpa sesi (ADR-0014)"),
         (name = "business", description = "Profil, alamat, jam operasional tenant (PRD.md §4.4)"),
+        (name = "catalog", description = "Produk, varian, kategori (PRD.md §4.5)"),
         (name = "files", description = "Upload gambar tenant + signed URL ber-expiry (ADR-0009)")
     )
 )]

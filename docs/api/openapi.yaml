@@ -313,6 +313,160 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
       security: []
+  /api/v1/public/categories:
+    get:
+      tags:
+      - public
+      summary: Kategori publik toko.
+      operationId: public_categories
+      responses:
+        '200':
+          description: Kategori
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_Vec_CategoryView'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/public/products:
+    get:
+      tags:
+      - public
+      summary: Katalog publik toko (tenant dari Host). Hanya produk `active` (AC-CAT-001).
+      operationId: public_products
+      parameters:
+      - name: category_id
+        in: path
+        required: true
+        schema:
+          type:
+          - string
+          - 'null'
+          format: uuid
+      - name: limit
+        in: path
+        required: true
+        schema:
+          type:
+          - integer
+          - 'null'
+          format: int64
+      - name: offset
+        in: path
+        required: true
+        schema:
+          type:
+          - integer
+          - 'null'
+          format: int64
+      responses:
+        '200':
+          description: Produk aktif
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_PublicProductList'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/public/products/{slug}:
+    get:
+      tags:
+      - public
+      summary: Satu produk publik berdasarkan slug.
+      operationId: public_product
+      parameters:
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Produk
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_PublicProduct'
+        '404':
+          description: Tidak ada / bukan active
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
   /api/v1/public/site:
     get:
       tags:
@@ -861,6 +1015,208 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
       security:
       - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/categories:
+    get:
+      tags:
+      - catalog
+      summary: Semua kategori + subkategori tenant.
+      operationId: list_categories
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Kategori
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_Vec_CategoryView'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+    post:
+      tags:
+      - catalog
+      summary: Buat kategori; `parent_id` = subkategori (maks 2 tingkat, AC-CAT-002).
+      operationId: create_category
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryInput'
+        required: true
+      responses:
+        '201':
+          description: Dibuat
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_CategoryView'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/categories/{category_id}:
+    put:
+      tags:
+      - catalog
+      summary: Ubah nama/induk/urutan kategori.
+      operationId: update_category
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: category_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryInput'
+        required: true
+      responses:
+        '200':
+          description: Tersimpan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_CategoryView'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+    delete:
+      tags:
+      - catalog
+      summary: Hapus kategori; produk di dalamnya menjadi tanpa kategori.
+      operationId: delete_category
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: category_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '204':
+          description: Dihapus
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
   /api/v1/tenants/{tenant_id}/events:
     get:
       tags:
@@ -926,6 +1282,329 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
         '503':
           description: Batas koneksi realtime tercapai
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/products:
+    get:
+      tags:
+      - catalog
+      summary: Daftar produk (filter status/kategori/pencarian).
+      operationId: list_products
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: status
+        in: path
+        description: '`draft` | `active` | `archived`'
+        required: true
+        schema:
+          type:
+          - string
+          - 'null'
+      - name: category_id
+        in: path
+        description: Termasuk subkategori langsung
+        required: true
+        schema:
+          type:
+          - string
+          - 'null'
+          format: uuid
+      - name: q
+        in: path
+        description: Cari nama atau SKU
+        required: true
+        schema:
+          type:
+          - string
+          - 'null'
+      - name: limit
+        in: path
+        required: true
+        schema:
+          type:
+          - integer
+          - 'null'
+          format: int64
+      - name: offset
+        in: path
+        required: true
+        schema:
+          type:
+          - integer
+          - 'null'
+          format: int64
+      responses:
+        '200':
+          description: Produk
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_ProductList'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+    post:
+      tags:
+      - catalog
+      summary: Buat produk (status awal `draft`).
+      operationId: create_product
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductInputDto'
+        required: true
+      responses:
+        '201':
+          description: Dibuat
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_ProductView'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: SKU/slug bentrok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '422':
+          description: Validasi gagal
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/products/{product_id}:
+    get:
+      tags:
+      - catalog
+      summary: Satu produk.
+      operationId: get_product
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: product_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Produk
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_ProductView'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+    put:
+      tags:
+      - catalog
+      summary: Ganti isi produk (status tidak berubah lewat endpoint ini).
+      operationId: update_product
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: product_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductInputDto'
+        required: true
+      responses:
+        '200':
+          description: Tersimpan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_ProductView'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/products/{product_id}/status:
+    post:
+      tags:
+      - catalog
+      summary: Aktifkan (`products.update`) atau arsipkan (`products.archive`). AC-CAT-001.
+      operationId: change_status
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: product_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StatusChange'
+        required: true
+      responses:
+        '200':
+          description: Status berubah
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_ProductView'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: Transisi tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
           content:
             application/json:
               schema:
@@ -1854,6 +2533,22 @@ components:
             $ref: '#/components/schemas/HoursDto'
         profile:
           $ref: '#/components/schemas/ProfileDto'
+    CategoryInput:
+      type: object
+      required:
+      - name
+      properties:
+        name:
+          type: string
+        parent_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        position:
+          type: integer
+          format: int32
+      additionalProperties: false
     CheckResult:
       type: object
       required:
@@ -1972,6 +2667,19 @@ components:
       properties:
         request_id:
           type: string
+    OptionDto:
+      type: object
+      required:
+      - name
+      - values
+      properties:
+        name:
+          type: string
+        values:
+          type: array
+          items:
+            type: string
+      additionalProperties: false
     PageView:
       type: object
       required:
@@ -1991,6 +2699,92 @@ components:
           type: string
         title:
           type: string
+    ProductInputDto:
+      type: object
+      required:
+      - name
+      - variants
+      properties:
+        available:
+          type: boolean
+        category_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        description:
+          type:
+          - string
+          - 'null'
+        images:
+          type: array
+          items:
+            type: string
+          description: '`asset:<uuid>` milik tenant, urutan tampil'
+        name:
+          type: string
+        options:
+          type: array
+          items:
+            $ref: '#/components/schemas/OptionDto'
+        slug:
+          type:
+          - string
+          - 'null'
+          description: Kosong = dibuat dari nama
+        variants:
+          type: array
+          items:
+            $ref: '#/components/schemas/VariantDto'
+      additionalProperties: false
+    ProductView:
+      type: object
+      required:
+      - id
+      - name
+      - slug
+      - status
+      - available
+      - options
+      - variants
+      - images
+      - updated_at
+      properties:
+        available:
+          type: boolean
+        category_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        description:
+          type:
+          - string
+          - 'null'
+        id:
+          type: string
+          format: uuid
+        images:
+          type: array
+          items:
+            type: string
+        name:
+          type: string
+        options:
+          type: array
+          items:
+            $ref: '#/components/schemas/OptionDto'
+        slug:
+          type: string
+        status:
+          type: string
+          description: '`draft` | `active` | `archived`'
+        updated_at:
+          type: string
+        variants:
+          type: array
+          items:
+            $ref: '#/components/schemas/VariantView'
     ProfileDto:
       type: object
       required:
@@ -2055,6 +2849,72 @@ components:
         version:
           type: integer
           format: int32
+    PublicProduct:
+      type: object
+      description: 'Produk publik: tanpa status/updated_at internal; gambar sebagai signed URL.'
+      required:
+      - id
+      - name
+      - slug
+      - available
+      - options
+      - variants
+      - images
+      properties:
+        available:
+          type: boolean
+        category_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        description:
+          type:
+          - string
+          - 'null'
+        id:
+          type: string
+          format: uuid
+        images:
+          type: array
+          items:
+            type: string
+          description: Signed URL (ADR-0009), urutan tampil
+        name:
+          type: string
+        options:
+          type: array
+          items:
+            $ref: '#/components/schemas/OptionDto'
+        slug:
+          type: string
+        variants:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicVariant'
+    PublicVariant:
+      type: object
+      required:
+      - id
+      - name
+      - option_values
+      - price
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        option_values:
+          type: array
+          items:
+            type: string
+        price:
+          type: string
+        promo_price:
+          type:
+          - string
+          - 'null'
     PublishRequest:
       type: object
       properties:
@@ -2131,6 +2991,15 @@ components:
         url:
           type: string
       additionalProperties: false
+    StatusChange:
+      type: object
+      required:
+      - status
+      properties:
+        status:
+          type: string
+          description: '`active` | `archived`'
+      additionalProperties: false
     StatusView:
       type: object
       required:
@@ -2174,6 +3043,37 @@ components:
                 $ref: '#/components/schemas/HoursDto'
             profile:
               $ref: '#/components/schemas/ProfileDto'
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
+    SuccessEnvelope_CategoryView:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - id
+          - name
+          - position
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
+            parent_id:
+              type:
+              - string
+              - 'null'
+              format: uuid
+            position:
+              type: integer
+              format: int32
         meta:
           $ref: '#/components/schemas/Meta'
         success:
@@ -2227,6 +3127,167 @@ components:
           properties:
             revoked:
               type: boolean
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
+    SuccessEnvelope_ProductList:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - items
+          - total
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/ProductView'
+            total:
+              type: integer
+              format: int64
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
+    SuccessEnvelope_ProductView:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - id
+          - name
+          - slug
+          - status
+          - available
+          - options
+          - variants
+          - images
+          - updated_at
+          properties:
+            available:
+              type: boolean
+            category_id:
+              type:
+              - string
+              - 'null'
+              format: uuid
+            description:
+              type:
+              - string
+              - 'null'
+            id:
+              type: string
+              format: uuid
+            images:
+              type: array
+              items:
+                type: string
+            name:
+              type: string
+            options:
+              type: array
+              items:
+                $ref: '#/components/schemas/OptionDto'
+            slug:
+              type: string
+            status:
+              type: string
+              description: '`draft` | `active` | `archived`'
+            updated_at:
+              type: string
+            variants:
+              type: array
+              items:
+                $ref: '#/components/schemas/VariantView'
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
+    SuccessEnvelope_PublicProduct:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          description: 'Produk publik: tanpa status/updated_at internal; gambar sebagai signed URL.'
+          required:
+          - id
+          - name
+          - slug
+          - available
+          - options
+          - variants
+          - images
+          properties:
+            available:
+              type: boolean
+            category_id:
+              type:
+              - string
+              - 'null'
+              format: uuid
+            description:
+              type:
+              - string
+              - 'null'
+            id:
+              type: string
+              format: uuid
+            images:
+              type: array
+              items:
+                type: string
+              description: Signed URL (ADR-0009), urutan tampil
+            name:
+              type: string
+            options:
+              type: array
+              items:
+                $ref: '#/components/schemas/OptionDto'
+            slug:
+              type: string
+            variants:
+              type: array
+              items:
+                $ref: '#/components/schemas/PublicVariant'
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
+    SuccessEnvelope_PublicProductList:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - items
+          - total
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/PublicProduct'
+            total:
+              type: integer
+              format: int64
         meta:
           $ref: '#/components/schemas/Meta'
         success:
@@ -2522,6 +3583,39 @@ components:
           $ref: '#/components/schemas/Meta'
         success:
           type: boolean
+    SuccessEnvelope_Vec_CategoryView:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            required:
+            - id
+            - name
+            - position
+            properties:
+              id:
+                type: string
+                format: uuid
+              name:
+                type: string
+              parent_id:
+                type:
+                - string
+                - 'null'
+                format: uuid
+              position:
+                type: integer
+                format: int32
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
     SuccessEnvelope_Vec_MembershipItem:
       type: object
       required:
@@ -2726,6 +3820,63 @@ components:
         name:
           type: string
       additionalProperties: false
+    VariantDto:
+      type: object
+      required:
+      - sku
+      - price
+      properties:
+        id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+          description: Kosong = varian baru
+        is_active:
+          type: boolean
+        option_values:
+          type: array
+          items:
+            type: string
+        price:
+          type: string
+          description: Desimal string, mis. `"15000"` / `"15000.50"`
+        promo_price:
+          type:
+          - string
+          - 'null'
+        sku:
+          type: string
+      additionalProperties: false
+    VariantView:
+      type: object
+      required:
+      - id
+      - sku
+      - name
+      - option_values
+      - price
+      - is_active
+      properties:
+        id:
+          type: string
+          format: uuid
+        is_active:
+          type: boolean
+        name:
+          type: string
+        option_values:
+          type: array
+          items:
+            type: string
+        price:
+          type: string
+        promo_price:
+          type:
+          - string
+          - 'null'
+        sku:
+          type: string
     VerifyEmailRequest:
       type: object
       required:
@@ -2754,5 +3905,7 @@ tags:
   description: Situs publik tenant; tenant dari Host, tanpa sesi (ADR-0014)
 - name: business
   description: Profil, alamat, jam operasional tenant (PRD.md §4.4)
+- name: catalog
+  description: Produk, varian, kategori (PRD.md §4.5)
 - name: files
   description: Upload gambar tenant + signed URL ber-expiry (ADR-0009)
