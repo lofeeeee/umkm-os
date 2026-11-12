@@ -1,0 +1,36 @@
+P5-1 — Tabel AI + model domain (PRD.md §4.10–4.11, §5.4; ADR-0011)
+Tanggal: 2026-11-12
+
+Artefak
+- migrations/0023_ai.{up,down}.sql: ai_providers (source platform|byok; platform => base_url NULL & type 'platform';
+  BYOK => https tanpa userinfo, ≤300), ai_provider_secrets (envelope: kek_version, wrapped_dek 72 byte, ciphertext),
+  chatbot_configs (16 parameter §4.10: mode default hybrid, provider utama/fallback, temperature 0–2, max tokens 16–4096,
+  timeout 1–60 s, prompt ≤4000, welcome/fallback ≤500, topik ≤30, handover/jadwal jsonb, budget token opsional;
+  aktif ⇒ provider utama kecuali human_only), chatbot_tools (10 nama tetap), ai_runs (metering: sumber, model, status,
+  decision, token, latensi), ai_tool_calls (nama tool tetap + 'unknown', args ringkas ≤2000 byte).
+  Semua FK komposit (tenant_id, id); RLS FORCE + tenant_isolation; ai_runs/ai_tool_calls append-only (REVOKE UPDATE/DELETE).
+  Tabel knowledge/pgvector menyusul P5-7; conversations P6.
+- crates/domain/src/ai/mod.rs: ProviderSource, PROVIDER_TYPES, Capabilities (+ default per jenis; custom = chat saja),
+  Tool ×10 + level (Read/ScopedRead/RestrictedWrite; create_order_draft nonaktif default), GenerationParams::validate,
+  validate_texts, validate_model. crates/domain/src/ai/mode.rs (P5-9): AiMode + decide() matriks 4×4.
+
+Uji
+- domain ai::* 6 lulus: batas temperature/max tokens/timeout termasuk NaN & tepat-batas; teks/topik/model;
+  registry tool; capability; matriks mode 4×4 lengkap; Human Only tidak pernah kirim/draft & tidak memanggil provider.
+- crates/infrastructure/tests/ai_schema.rs (role aplikasi, RLS aktif) 3 lulus:
+  config/rahasia/run yang merujuk provider tenant lain ditolak FK komposit; tenant B tidak melihat provider A;
+  12 nilai buruk ditolak constraint bernama (temperature, max tokens, timeout, mode, aktif tanpa provider, fallback kosong,
+  tool 'run_sql', BYOK http/IP privat, userinfo di URL, platform ber-URL, byok bertipe platform, model berspasi);
+  rahasia tersimpan hanya ciphertext (row_to_json tanpa plaintext), terbuka dengan AAD benar, gagal bila dipindah;
+  UPDATE/DELETE ai_runs ditolak (permission denied); tool bebas 'drop_tables' ditolak.
+- rls.rs: daftar tenant table 44 → 50; seluruh 9 uji lulus (FORCE RLS di semua tabel baru).
+- migration run → revert ke 22 → run → revert 0: exit 0. clippy -D warnings, domain boundary OK.
+
+Kontrol negatif (mutasi migration; target diverifikasi ada; dipulihkan + touch)
+- M1 FK chatbot → provider tanpa tenant_id   -> config_cannot_reference_another_tenants_provider GAGAL (tertangkap)
+- M2 hapus ck_chatbot_temperature            -> parameter_bounds... GAGAL "harus ditolak ... 2.01" (tertangkap)
+- M3 hapus REVOKE metering                   -> secret_is_envelope..._append_only GAGAL (tertangkap)
+- Dipulihkan: 3/3 lulus.
+
+RTM: AC-AIC-001/004 belum ditandai Verified — penolakan lewat API & "provider tidak dipanggil" diverifikasi saat
+endpoint (P5-2 bagian 2) dan orchestrator (P5-5) ada.
