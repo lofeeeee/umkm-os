@@ -83,3 +83,21 @@
   .s-gallery { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .s-cards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
+
+/* Grid produk (P3). */
+.s-products { display: grid; gap: 16px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.s-product {
+  display: flex; flex-direction: column; gap: 6px; text-decoration: none; color: var(--s-ink) !important;
+  background: var(--s-bg); border-radius: 12px; padding: 10px; box-shadow: 0 1px 3px rgb(0 0 0 / 0.08); min-width: 0;
+}
+.s-product img, .s-product-noimg { aspect-ratio: 1 / 1; width: 100%; object-fit: cover; border-radius: 8px; background: var(--s-soft); }
+.s-product-noimg { display: block; }
+.s-product-name { font-weight: 600; line-height: 1.3; }
+.s-product-price { color: var(--s-primary); font-weight: 700; }
+.s-product-price s { color: var(--s-muted); font-weight: 400; margin-right: 4px; }
+@container (min-width: 768px) {
+  .s-products { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@container (min-width: 1024px) {
+  .s-products { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}

@@ -32,7 +32,7 @@ export function setKey(o: Obj, f: Field, v: Json | undefined): Obj {
   return next;
 }
 
-function ImagePicker({ value, onChange, label }: { value: string | undefined; onChange: (v: string | undefined) => void; label: string }) {
+export function ImagePicker({ value, onChange, label }: { value: string | undefined; onChange: (v: string | undefined) => void; label: string }) {
   const a = useContext(Assets);
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);

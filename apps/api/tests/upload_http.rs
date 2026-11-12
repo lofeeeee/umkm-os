@@ -156,8 +156,11 @@ async fn permissions_follow_rbac(pool: PgPool) {
     let t = tenant(&pool, "toko-a").await;
     let viewer = member(&pool, t, "Viewer").await;
     let catalog = member(&pool, t, "Catalog Manager").await;
+    let support = member(&pool, t, "Support Agent").await;
     assert_eq!(upload(&a.router, t, &viewer, png()).await.status, 403);
-    assert_eq!(upload(&a.router, t, &catalog, png()).await.status, 403);
+    assert_eq!(upload(&a.router, t, &support, png()).await.status, 403);
+    // P3-1: pengelola katalog mengunggah foto produk (products.update)
+    assert_eq!(upload(&a.router, t, &catalog, png()).await.status, 201);
     // Viewer punya website.read -> boleh melihat daftar
     let r = json(
         &a.router,

@@ -375,7 +375,7 @@ Gate B: D-01, D-08, D-11, D-12 privacy/terms selesai
   -> FSD/AC/TC/API/RTM final + OpenAPI + Test Plan (setelah Gate B, sebelum P2+)
 
 Gate C: D-05, D-07, ADR-0014 -> P2   (DISETUJUI 2026-11-12; D-07 sementara lokal)
-Gate D: D-02, D-03, D-12 privacy/terms transaksi (P3) -> P3   (DISETUJUI 2026-11-12; QRIS statis ADR-0004, guest+linking ADR-0005)
+Gate D: D-02, D-03, D-12 privacy/terms transaksi (P3) -> P3   (DISETUJUI 2026-11-12; QRIS statis ADR-0004, guest+linking ADR-0005; Gate P3 lulus 2026-11-12, docs/evidence/phase-3-commerce.txt)
 Gate E: D-09, D-12 consent AI -> P5
 Gate F: D-04 -> P6
 Gate G: D-06, D-10, D-12 billing -> P7 (P7-4 conditional)

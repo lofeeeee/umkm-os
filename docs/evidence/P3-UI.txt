@@ -1,0 +1,42 @@
+P3-UI — Storefront + dashboard commerce (PRD.md §4.5–4.7, ADR-0004/0005/0014)
+Tanggal: 2026-11-12
+
+Artefak
+- frontend/src/shop/  api.ts (klien same-origin /_api/public, CSRF customer di memori, rupiah, status), cart.ts
+  (keranjang + token pesanan di localStorage, semua akses try/catch; harga hanya tampilan), route.ts (path toko),
+  views.tsx (produk + pilih varian, keranjang + checkout dengan Idempotency-Key yang dipertahankan untuk retry,
+  pesanan: QRIS toko + "Saya sudah membayar" + unggah bukti, akun customer login/daftar/riwayat, verifikasi email
+  via fragment #token, teks privacy/terms transaksi placeholder D-12), shop.css (mobile-first).
+- frontend/src/app/site/page.tsx  router shell tunggal (ADR-0014); grid produk diisi /_api/public/products.
+- frontend/src/renderer/Site.tsx  section product_grid merender produk (prop products; preview = placeholder).
+- Dashboard: /products (daftar, editor opsi/varian/foto, aktifkan/arsip, kategori), /inventory (stok, mutasi,
+  ambang, riwayat), /orders (detail, konfirmasi/tolak pembayaran, bukti bayar via sesi staf → object URL,
+  approval, status pemrosesan, refund), /customers (profil, tag, catatan internal, alamat, riwayat, export JSON,
+  minta hapus), /shop-settings (QRIS, nama penerima, checkout aktif, ongkir, batas bayar, approval, SoD).
+  Navigasi tampil sesuai permission.
+- ops/caddy/Caddyfile  /_api/public/customer/* dan /_api/public/checkout meneruskan Cookie (cookie host-only
+  customer, ADR-0005); endpoint publik lain tetap header_up -Cookie.
+- apps/api/src/upload.rs  upload/list/hapus gambar kini juga untuk products.update/products.read (foto produk,
+  Catalog Manager) dan tenant.update (QRIS); Support Agent/Viewer tetap 403 untuk upload.
+
+Temuan & perbaikan
+- crypto.randomUUID() tidak tersedia di origin non-HTTPS (dev *.umkm.test) dan dipanggil di luar try → tombol
+  checkout macet "Memproses…". Diganti crypto.getRandomValues + di dalam try (ditemukan oleh Playwright).
+- Caddy membuang semua Cookie untuk /_api/public/* (desain P2) → akun customer tidak akan pernah login lewat situs
+  toko. Diperbaiki hanya untuk path akun/checkout.
+- Catalog Manager tidak bisa mengunggah foto produk (upload butuh website.edit). Diperluas (uji diperbarui).
+
+Hasil
+- npm run lint / typecheck / test (22 lulus: routing, rupiah, keranjang, grid produk + escaping) / build: OK.
+- Stack nyata (Caddy + umkm-api role umkm_app tanpa BYPASSRLS + PostgreSQL + Redis), Playwright 6/6:
+  shop.spec (daftar → terbit → pickup → produk + promo → aktifkan → stok 5 → QRIS + checkout aktif; pembeli 375px:
+  grid Rp15.000 → produk → 2 item → keranjang Rp30.000 → checkout guest → halaman bayar QRIS (gambar termuat,
+  token di fragment, query kosong) → klaim; pemilik konfirmasi → Diproses; pembeli melihat Diproses; stok 3;
+  tanpa error CSP/JS; tanpa scroll horizontal), dashboard.spec, responsive 375/768/1024/1440.
+- smoke-adr0014.sh: SMOKE-OK. Cookie lewat Caddy: login customer → /customer/me 200; tanpa cookie 401;
+  cookie toko A ke host toko B 401.
+
+Tetap terbuka
+- Path toko (/produk, /keranjang, /pesanan, /akun, /kebijakan-privasi, /syarat-transaksi) menutupi halaman
+  website dengan slug sama; slug tersebut sebaiknya dicadangkan di validator halaman (follow-up).
+- Riwayat pesanan di akun customer belum menautkan ke halaman detail (detail via token di perangkat pemesan).

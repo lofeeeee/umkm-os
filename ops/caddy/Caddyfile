@@ -61,10 +61,18 @@ http://*.{$ROOT_DOMAIN} {
 	import csp_site
 	import static_cache
 	header X-Frame-Options DENY
+	# Akun customer toko (ADR-0005): cookie host-only __Host-umkm_cust milik subdomain ini
+	# diteruskan HANYA untuk endpoint akun customer & checkout. Cookie sesi staf host-only di
+	# api.{$ROOT_DOMAIN} (ADR-0015) tidak pernah dikirim browser ke host toko.
+	@customer path /_api/public/customer/* /_api/public/checkout
+	handle @customer {
+		uri replace /_api/public/ /api/v1/public/ 1
+		reverse_proxy api:8080
+	}
 	handle /_api/public/* {
 		uri replace /_api/public/ /api/v1/public/ 1
 		reverse_proxy api:8080 {
-			# Cookie apa pun dari browser tidak relevan untuk endpoint publik.
+			# Endpoint publik lain tidak memakai cookie (cache publik per Host).
 			header_up -Cookie
 		}
 	}

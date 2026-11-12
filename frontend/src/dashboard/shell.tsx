@@ -7,6 +7,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { api, ApiError, loadSession, setCsrf, tenantParam, type Session, type TenantView } from "@/lib/api";
 
 export function TopBar({ tenant }: { tenant?: TenantView | null }) {
+  const can = (p: string) => !!tenant?.my_permissions.includes(p);
   const router = useRouter();
   const q = tenant ? `?tenant=${tenant.id}` : "";
   async function logout() {
@@ -24,6 +25,11 @@ export function TopBar({ tenant }: { tenant?: TenantView | null }) {
         <Link href="/">Toko saya</Link>
         {tenant && <Link href={`/website${q}`}>Website</Link>}
         {tenant && <Link href={`/business${q}`}>Profil bisnis</Link>}
+        {can("products.read") && <Link href={`/products${q}`}>Produk</Link>}
+        {can("inventory.read") && <Link href={`/inventory${q}`}>Stok</Link>}
+        {can("orders.read") && <Link href={`/orders${q}`}>Pesanan</Link>}
+        {can("customers.read") && <Link href={`/customers${q}`}>Pelanggan</Link>}
+        {can("tenant.read") && <Link href={`/shop-settings${q}`}>Toko online</Link>}
         <button type="button" className="d-btn d-btn-sm" onClick={logout}>Keluar</button>
       </nav>
     </header>

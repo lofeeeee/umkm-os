@@ -94,7 +94,19 @@ fn storage_error(e: StorageError) -> ApiError {
     }
 }
 
-/// Upload gambar (AC-FILE-001/002). Butuh `website.edit`.
+/// Gambar dipakai website (website.*), foto produk (products.*, P3-1), logo/QRIS (tenant.update).
+fn require_any(actor: &umkm_domain::rbac::Actor, perms: &[&'static str]) -> Result<(), ApiError> {
+    match perms.iter().find(|p| actor.has(p)) {
+        Some(_) => Ok(()),
+        None => Err(actor
+            .require(perms[0])
+            .err()
+            .map(ApiError::from)
+            .unwrap_or_else(|| ApiError::new(ErrorCode::Forbidden))),
+    }
+}
+
+/// Upload gambar (AC-FILE-001/002). Butuh `website.edit`, `products.update`, atau `tenant.update`.
 #[utoipa::path(
     post, path = "/api/v1/tenants/{tenant_id}/uploads", tag = "files",
     params(("tenant_id" = Uuid, Path)),
@@ -113,7 +125,10 @@ pub async fn upload(
     Member(actor): Member,
     body: Bytes,
 ) -> Result<(StatusCode, Json<SuccessEnvelope<UploadView>>), ApiError> {
-    actor.require("website.edit")?;
+    require_any(
+        &actor,
+        &["website.edit", "products.update", "tenant.update"],
+    )?;
     let f = files(&state)?;
     let m = f
         .store
@@ -138,7 +153,7 @@ pub async fn list_uploads(
     ReqId(id): ReqId,
     Member(actor): Member,
 ) -> Result<Json<SuccessEnvelope<Vec<UploadView>>>, ApiError> {
-    actor.require("website.read")?;
+    require_any(&actor, &["website.read", "products.read"])?;
     let f = files(&state)?;
     let items = f
         .store
@@ -175,7 +190,10 @@ pub async fn delete_upload(
     Member(actor): Member,
     Path(p): Path<ObjectPath>,
 ) -> Result<StatusCode, ApiError> {
-    actor.require("website.edit")?;
+    require_any(
+        &actor,
+        &["website.edit", "products.update", "tenant.update"],
+    )?;
     let deleted = files(&state)?
         .store
         .delete(&actor, p.object_id, (Some(id.as_str()), Some(&ip)))

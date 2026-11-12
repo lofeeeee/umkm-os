@@ -1,0 +1,42 @@
+Gate P3 — Commerce (BUILD_PLAN.md Phase 3; Test Plan §3)
+Tanggal: 2026-11-12. Gate D (D-02 QRIS statis ADR-0004, D-03 guest + linking ADR-0005, D-12 transaksi bersyarat)
+DISETUJUI 2026-11-12.
+
+Perintah gate (satu baris, sama dengan Gate P2):
+  cargo fmt --all --check && cargo clippy --workspace --all-targets --locked -- -D warnings &&
+  cargo test --workspace --locked && python3 scripts/check-rtm.py && cargo deny check &&
+  scripts/check-domain-boundary.sh && scripts/check-ci-needs.sh && docker compose --env-file .env.example config -q &&
+  (cd frontend && npm run lint && npm run typecheck && npm test && npm run build)
+Output:
+  rust tests passed=307 failed=0
+  check-rtm: OK — 74 FR, 84 AC, 84 TC
+  advisories ok, bans ok, licenses ok, sources ok
+  OK: umkm-domain bebas dari axum/sqlx/reqwest/tokio/hyper/tower/redis
+  OK: ci-gate mengagregasi 6 job: ['containers', 'frontend', 'lint', 'supply-chain', 'test', 'workflow-lint']
+        Tests  22 passed (22)
+  csp.mjs: 14 hash inline script dari 13 halaman -> out/csp.caddy
+  GATE_EXIT=0
+Ditambah (stack nyata, P3-UI.txt): Playwright 6/6, smoke-adr0014.sh SMOKE-OK.
+
+Exit criteria (Test Plan §3, baris P3)
+- TC-CAT (4), TC-INV (5), TC-ORD (10) Verified .................................... YA
+- Cabang contingent setelah keputusan: CRM linking (TC-CRM-001/005), payment QRIS statis (TC-ORD-007) ... YA
+- Overselling fixture: stok 1 × 20 reservasi paralel → 1; stok 5 × 20 → 5; checkout HTTP stok 1 × 10 → 1 ... YA
+- Tabel P3 tercakup penjaga isolasi RLS (34 tabel tenant) ............................. YA
+- Paritas state machine domain ↔ trigger DB (338 kombinasi) ............................ YA
+- Perintah gate exit 0 ................................................................ YA
+
+Task & bukti: P3-1, P3-2, P3-3, P3-5, P3-6 (+ skema P3-4), P3-7, P3-8, P3-UI.
+Migration baru: 0013_catalog, 0014_inventory, 0015_customers, 0016_commerce, 0017_order_expiry, 0018_payments
+(run → revert 0 → run pada database kosong diverifikasi per task).
+
+Tetap terbuka (tidak diklaim)
+- D-08 email: verifikasi akun customer & notifikasi status order/low-stock/order baru lewat outbox log-only.
+- AC-CRM-003 bagian ticket/conversation menunggu P4/P6.
+- Benchmark checkout NFR (PRD §9) belum diukur; fixture di atas adalah kebenaran, bukan kinerja.
+- Order yang diklaim lalu lewat 48 jam kedaluwarsa dan tidak dapat dikonfirmasi (dana dikembalikan di luar platform).
+- Platform tidak men-decode isi QRIS; gambar ditampilkan apa adanya (ADR-0004).
+- Uji flaky: crates/database/tests/identity_schema.rs::updated_at_trigger_advances (jeda 10 ms) gagal sekali di
+  suite penuh; lulus terisolasi dan pada run ulang.
+- Slug path toko perlu dicadangkan di validator halaman website.
+- E2E Playwright & smoke belum di CI (butuh stack).

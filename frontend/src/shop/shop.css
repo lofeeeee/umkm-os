@@ -1,0 +1,71 @@
+/* Halaman toko (keranjang, produk, pesanan, akun). Mobile-first; tanpa scroll horizontal. */
+
+.shop {
+  --shop-primary: #2563eb;
+  --shop-ink: #111827;
+  --shop-muted: #6b7280;
+  --shop-soft: #f3f4f6;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: var(--shop-ink);
+  background: #fff;
+  min-height: 100vh;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+.shop *, .shop *::before, .shop *::after { box-sizing: border-box; }
+.shop a { color: var(--shop-primary); }
+.shop .s-muted { color: var(--shop-muted); }
+.shop .s-btn {
+  display: inline-block; background: var(--shop-primary); color: #fff; border: 0; cursor: pointer;
+  padding: 12px 20px; border-radius: 10px; font-weight: 600; min-height: 44px; font: inherit; text-decoration: none;
+}
+.shop .s-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.shop .d-link { background: none; border: 0; color: var(--shop-primary); padding: 8px 0; cursor: pointer; font: inherit; text-decoration: underline; }
+
+.shop-nav { display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--shop-soft); }
+.shop-nav-links { display: flex; gap: 16px; }
+.shop-nav a { text-decoration: none; padding: 6px 0; }
+.shop-main { max-width: 760px; margin: 0 auto; padding: 16px; }
+.shop-main h1 { font-size: 1.5rem; line-height: 1.25; margin: 8px 0 16px; }
+.shop-main h2 { font-size: 1.15rem; margin: 20px 0 8px; }
+
+.shop-field { display: grid; gap: 6px; margin: 0 0 14px; font-weight: 500; }
+.shop-field input, .shop-field select, .shop-field textarea {
+  font: inherit; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; width: 100%; min-height: 44px; background: #fff;
+}
+.shop-field textarea { min-height: 88px; }
+.shop-check { display: flex; gap: 10px; align-items: flex-start; margin: 0 0 12px; }
+.shop-check input { margin-top: 4px; width: 18px; height: 18px; flex: none; }
+.shop-form fieldset { border: 1px solid #e5e7eb; border-radius: 10px; padding: 12px; margin: 0 0 14px; }
+
+.shop-msg { padding: 10px 12px; border-radius: 8px; margin: 0 0 12px; }
+.shop-msg-error { background: #fef2f2; color: #991b1b; }
+.shop-msg-ok { background: #f0fdf4; color: #166534; }
+
+.shop-table { width: 100%; border-collapse: collapse; margin: 0 0 12px; }
+.shop-table th, .shop-table td { text-align: left; padding: 10px 6px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
+.shop-table input { width: 72px; font: inherit; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; }
+.shop-total { font-size: 1.1rem; }
+.shop-list { padding-left: 18px; }
+.shop-list li { margin: 6px 0; }
+
+.shop-product { display: grid; gap: 20px; }
+.shop-gallery { display: grid; gap: 8px; }
+.shop-gallery img { width: 100%; height: auto; border-radius: 12px; }
+.shop-price { font-size: 1.25rem; }
+.shop-price s { color: var(--shop-muted); font-size: 1rem; }
+
+.shop-status { display: inline-block; padding: 6px 14px; border-radius: 999px; background: var(--shop-soft); font-weight: 600; }
+.shop-status[data-status="COMPLETED"], .shop-status[data-status="PROCESSING"], .shop-status[data-status="READY_FOR_PICKUP"] { background: #dcfce7; color: #166534; }
+.shop-status[data-status="CANCELLED"], .shop-status[data-status="EXPIRED"], .shop-status[data-status="REJECTED"] { background: #fee2e2; color: #991b1b; }
+.shop-pay { border: 2px solid var(--shop-primary); border-radius: 12px; padding: 16px; margin: 16px 0; }
+.shop-qris { width: 100%; max-width: 320px; height: auto; display: block; margin: 8px auto; border-radius: 8px; }
+
+.shop-fab {
+  position: fixed; right: 16px; bottom: 16px; z-index: 10; background: #111827; color: #fff; text-decoration: none;
+  padding: 12px 18px; border-radius: 999px; font-weight: 600; box-shadow: 0 4px 12px rgb(0 0 0 / 0.2);
+}
+
+@media (min-width: 768px) {
+  .shop-product { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+}

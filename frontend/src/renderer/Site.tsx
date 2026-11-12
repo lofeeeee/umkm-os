@@ -15,6 +15,23 @@ export interface SiteProps {
   assetUrl: (ref: string) => string | undefined;
   /** Preview dashboard: section nonaktif tetap tampil dengan penanda. */
   preview?: boolean;
+  /** Produk aktif untuk section product_grid (situs publik). `undefined` = preview/placeholder. */
+  products?: GridProduct[];
+}
+
+/** Bentuk minimal produk publik untuk grid (gambar sudah URL absolut). */
+export interface GridProduct {
+  slug: string;
+  name: string;
+  image?: string;
+  price: string;
+  promo_price: string | null;
+  available: boolean;
+}
+
+function rp(v: string): string {
+  const [i, f = "00"] = v.split(".");
+  return `Rp${(i ?? "0").replace(/\B(?=(\d{3})+(?!\d))/g, ".")}${f === "00" ? "" : `,${f}`}`;
 }
 
 const DAYS = ["", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"];
@@ -109,14 +126,34 @@ function SectionBody({ s, props }: { s: Section; props: SiteProps }) {
           <Img r={d.image} alt="" assetUrl={assetUrl} className="s-media" />
         </div>
       );
-    case "product_grid":
-      // Katalog dibangun di Phase 3; sampai itu tampilkan keadaan kosong yang jujur.
+    case "product_grid": {
+      const limit = typeof d.limit === "number" ? d.limit : 8;
+      const items = (props.products ?? []).slice(0, limit);
       return (
         <div>
           <Title v={d.title} />
-          <p className="s-muted">Katalog produk segera hadir.</p>
+          {props.products === undefined && <p className="s-muted">Produk aktif toko tampil di sini.</p>}
+          {props.products !== undefined && items.length === 0 && <p className="s-muted">Belum ada produk.</p>}
+          <div className="s-products">
+            {items.map((p) => (
+              <a key={p.slug} className="s-product" href={`/produk/${p.slug}`}>
+                {p.image ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- static export, gambar bertanda tangan
+                  <img src={p.image} alt="" loading="lazy" />
+                ) : (
+                  <span className="s-product-noimg" aria-hidden="true" />
+                )}
+                <span className="s-product-name">{p.name}</span>
+                <span className="s-product-price">
+                  {p.promo_price ? <><s>{rp(p.price)}</s> {rp(p.promo_price)}</> : rp(p.price)}
+                </span>
+                {!p.available && <span className="s-muted">Stok habis</span>}
+              </a>
+            ))}
+          </div>
         </div>
       );
+    }
     case "promotion":
       return (
         <div className={`s-promo${hasImg(d.image, assetUrl) ? " has-media" : ""}`}>

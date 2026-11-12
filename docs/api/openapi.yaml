@@ -3592,7 +3592,7 @@ paths:
     post:
       tags:
       - files
-      summary: Upload gambar (AC-FILE-001/002). Butuh `website.edit`.
+      summary: Upload gambar (AC-FILE-001/002). Butuh `website.edit`, `products.update`, atau `tenant.update`.
       operationId: upload
       parameters:
       - name: tenant_id
