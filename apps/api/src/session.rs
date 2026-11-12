@@ -75,6 +75,27 @@ impl FromRequestParts<AppState> for SessionUser {
     }
 }
 
+/// Sesi opsional: tanpa cookie → `None`; ada cookie → wajib valid (CSRF untuk mutasi).
+impl axum::extract::OptionalFromRequestParts<AppState> for SessionUser {
+    type Rejection = ApiError;
+
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &AppState,
+    ) -> Result<Option<Self>, Self::Rejection> {
+        let has = state
+            .auth
+            .as_ref()
+            .is_some_and(|s| s.session_cookie(&parts.headers).is_some());
+        if !has {
+            return Ok(None);
+        }
+        <Self as FromRequestParts<AppState>>::from_request_parts(parts, state)
+            .await
+            .map(Some)
+    }
+}
+
 #[derive(Deserialize)]
 struct TenantPath {
     tenant_id: Uuid,

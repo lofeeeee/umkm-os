@@ -21,6 +21,7 @@ pub mod rbac_repo;
 pub mod redis;
 pub mod retention;
 pub mod storage;
+pub mod team_repo;
 pub mod tenant_repo;
 pub mod website_repo;
 

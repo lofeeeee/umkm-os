@@ -19,6 +19,7 @@ pub mod realtime;
 pub mod router;
 pub mod session;
 pub mod state;
+pub mod team;
 pub mod tenants;
 pub mod upload;
 pub mod validation;

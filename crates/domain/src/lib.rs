@@ -11,6 +11,7 @@ pub mod crm;
 pub mod inventory;
 pub mod rbac;
 pub mod storage;
+pub mod team;
 pub mod tenant;
 pub mod website;
 

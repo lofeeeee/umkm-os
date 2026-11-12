@@ -58,7 +58,7 @@ impl AuthService {
         }
     }
 
-    fn set_cookie(&self, token: &str) -> HeaderValue {
+    pub(crate) fn set_cookie(&self, token: &str) -> HeaderValue {
         let max_age = self.policy.session_ttl.as_secs();
         let secure = if self.secure_cookies { "; Secure" } else { "" };
         HeaderValue::from_str(&format!(

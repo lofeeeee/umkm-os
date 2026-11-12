@@ -15,8 +15,8 @@ use utoipa::{
 };
 
 use crate::{
-    auth, business, catalog, commerce, crm, customer_auth, health, inventory, tenants, upload,
-    website,
+    auth, business, catalog, commerce, crm, customer_auth, health, inventory, team, tenants,
+    upload, website,
 };
 
 #[derive(OpenApi)]
@@ -105,7 +105,18 @@ use crate::{
         commerce::create_refund,
         commerce::change_status,
         commerce::approve_order,
-        commerce::reject_order
+        commerce::reject_order,
+        team::permissions,
+        team::list_members,
+        team::update_member,
+        team::list_roles,
+        team::create_role,
+        team::update_role,
+        team::delete_role,
+        team::list_invitations,
+        team::invite,
+        team::revoke_invitation,
+        team::accept
     ),
     components(schemas(ErrorEnvelope, ErrorBody, ErrorCode, Meta)),
     servers((url = "/", description = "Origin yang sama; root domain menunggu D-01")),
@@ -119,6 +130,7 @@ use crate::{
         (name = "business", description = "Profil, alamat, jam operasional tenant (PRD.md §4.4)"),
         (name = "catalog", description = "Produk, varian, kategori (PRD.md §4.5)"),
         (name = "commerce", description = "Pengaturan checkout, order, pembayaran QRIS statis (PRD.md §4.7, ADR-0004)"),
+        (name = "team", description = "Anggota, role kustom, undangan (PRD.md §3, P4-1)"),
         (name = "crm", description = "Customer, tag, catatan internal, hapus/export (PRD.md §4.6, ADR-0005)"),
         (name = "inventory", description = "Stok, movement ledger, ambang low-stock (PRD.md §4.5)"),
         (name = "files", description = "Upload gambar tenant + signed URL ber-expiry (ADR-0009)")

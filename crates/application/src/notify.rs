@@ -118,6 +118,18 @@ pub fn verification_email(to: &str, verify_url_base: &str, token: &str) -> Email
     }
 }
 
+/// Undangan anggota tim (AUTH-009). Token dibuat worker; tautan ke dashboard.
+pub fn invitation_email(to: &str, app_base: &str, shop: &str, token: &str) -> EmailMessage {
+    EmailMessage {
+        to: to.to_owned(),
+        template: "team_invitation",
+        subject: format!("Undangan bergabung dengan {shop}"),
+        text_body: format!(
+            "Anda diundang mengelola {shop}. Terima undangan (berlaku 7 hari):\n{app_base}/invite#token={token}\n\nAbaikan email ini bila tidak merasa diundang."
+        ),
+    }
+}
+
 /// Email verifikasi akun customer: tautan ke situs toko itu sendiri (host-only).
 pub fn customer_verification_email(to: &str, shop_host: &str, token: &str) -> EmailMessage {
     EmailMessage {

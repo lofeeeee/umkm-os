@@ -1,0 +1,57 @@
+P4-1 — Multi-admin + permission management (PRD.md §3, §4.9; AUTH-009/010)
+Tanggal: 2026-11-12
+
+Artefak
+- crates/domain/src/team.rs  parse_permissions (hanya 37 permission dikenal), check_grant (anti-eskalasi: target ⊆
+  hak pelaku), validate_role_name, check_owner_remains (minimal satu Owner aktif).
+- migrations/0019_team.{up,down}.sql  app.find_invitation(token_hash) SECURITY DEFINER (lookup lintas tenant HANYA
+  lewat hash token; undangan aktif, belum kedaluwarsa, tenant aktif).
+- crates/infrastructure/src/team_repo.rs  anggota (list/update role-status), role kustom (save/delete; role sistem
+  terkunci; dipakai → 409), undangan (invite: cabut undangan tertunda lama, outbox team.invitation_requested tanpa
+  token; revoke; issue_invitation_token oleh worker; accept: user lama dengan email sama atau user baru + email
+  terverifikasi karena token = bukti inbox; sekali pakai). Perubahan diserialkan per tenant (advisory lock).
+  Audit: member.updated (before/after), role.changed, role.deleted, member.invited (hash email), member.invitation_revoked,
+  member.joined.
+- outbox: handler undangan → email team_invitation dengan tautan https://app.<root>/invite#token= (D-08: log-only).
+- apps/api/src/team.rs  GET /permissions; GET/PATCH /tenants/{t}/members[/{id}]; GET/POST/PUT/DELETE /tenants/{t}/roles;
+  GET/POST/DELETE /tenants/{t}/invitations; POST /invitations/accept (Origin + rate limit; sesi opsional lewat
+  OptionalFromRequestParts — ada cookie berarti wajib valid + CSRF).
+
+Hasil
+- fmt/clippy -D warnings bersih; cargo test --workspace --locked --no-fail-fast: 314 lulus, 0 gagal (team_http 4,
+  domain team 3). migration run → revert 0 → run DB kosong: exit 0.
+
+Cakupan
+- Anti-eskalasi: pelaku dengan role kustom (members.manage) tidak dapat membuat role berisi audit.read, menyentuh Owner,
+  memberi role Owner, mengubah Manager, menaikkan hak role sendiri, atau mengundang dengan role Owner (403
+  permission_escalation); dalam batas haknya boleh; ubah diri sendiri 409.
+- Owner terakhir: menonaktifkan/menurunkan Owner aktif terakhir 409 last_owner; dua Owner saling menonaktifkan secara
+  paralel → selalu tersisa ≥ 1 Owner aktif.
+- Role kustom per tenant: nama ganda 409; permission tak dikenal 422; role sistem 409; role tenant A tidak terlihat /
+  tidak terpakai di tenant B (404); dipakai → 409; izin role berlaku (orders 200, products 403).
+- Anggota nonaktif kehilangan akses (404).
+- Undangan (AUTH-009/010 dengan adapter uji): email dinormalisasi; tautan dashboard; password lemah / sama dengan email
+  422; terima → cookie sesi, role sesuai, email terverifikasi; sekali pakai 404; sudah anggota 409; email login berbeda
+  403 email_mismatch; dicabut 404; kedaluwarsa 404; akun ada tanpa sesi 409 account_exists → login lalu terima 200;
+  audit tanpa email mentah.
+- Status RTM AUTH-009/010 tetap "Blocked by decision" untuk pengiriman email nyata (D-08).
+
+Belum di task ini
+- MFA TOTP (AUTH-011/012): butuh enkripsi rahasia (mfa_credentials.encrypted_secret, envelope encryption P5-2) →
+  dikerjakan sebagai P4-1b setelah komponen enkripsi.
+- Halaman dashboard tim (dibuat bersama UI Phase 4).
+
+Negative control (perubahan sementara, dikembalikan; test terkait GAGAL)
+== NEGCTL: tanpa anti-eskalasi
+    invitations_are_single_use_and_bound_to_email
+    permissions_cannot_be_escalated
+test result: FAILED. 2 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.66s
+== NEGCTL: tanpa penjaga Owner terakhir
+    last_active_owner_is_protected
+test result: FAILED. 3 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.70s
+== NEGCTL: undangan tanpa pencocokan email
+    invitations_are_single_use_and_bound_to_email
+test result: FAILED. 3 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.63s
+== NEGCTL: token undangan bisa dipakai ulang / dicabut / kedaluwarsa
+    invitations_are_single_use_and_bound_to_email
+test result: FAILED. 3 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.64s

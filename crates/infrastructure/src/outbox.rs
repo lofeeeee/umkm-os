@@ -194,6 +194,9 @@ pub async fn process_once(
                 handle_email_verification(pool, sender, cfg, &ev).await
             }
             events::TENANT_GUARD_PROBE => handle_tenant_guard_probe(pool, &ev).await,
+            crate::team_repo::INVITATION_REQUESTED => {
+                handle_invitation(pool, sender, cfg, &ev).await
+            }
             events::CUSTOMER_EMAIL_VERIFICATION_REQUESTED => {
                 handle_customer_verification(pool, sender, cfg, &ev).await
             }
@@ -297,6 +300,49 @@ async fn handle_email_verification(
     }
     match sender
         .send(&verification_email(&email, &cfg.verify_url_base, &token))
+        .await
+    {
+        Ok(()) => Outcome::Done,
+        Err(SendError { retryable, class }) => Outcome::Fail(class, retryable),
+    }
+}
+
+/// Undangan tim (AUTH-009): token dibuat saat kirim; lama tidak berlaku lagi.
+async fn handle_invitation(
+    pool: &PgPool,
+    sender: &impl EmailSender,
+    cfg: &WorkerConfig,
+    ev: &Claimed,
+) -> Outcome {
+    let (Some(tenant), Some(id)) = (
+        ev.tenant_id.map(umkm_shared::ids::TenantId::from_uuid),
+        ev.payload
+            .get("invitation_id")
+            .and_then(|v| v.as_str())
+            .and_then(|s| s.parse::<Uuid>().ok()),
+    ) else {
+        return Outcome::Fail("invalid_payload", false);
+    };
+    let Ok((token, hash)) = new_token() else {
+        return Outcome::Fail("rng_error", true);
+    };
+    let target = match crate::team_repo::issue_invitation_token(pool, tenant, id, hash).await {
+        Ok(t) => t,
+        Err(_) => return Outcome::Fail("db_error", true),
+    };
+    let Some((email, shop)) = target else {
+        return Outcome::Done; // dicabut / kedaluwarsa / diterima
+    };
+    // verify_url_base = https://app.<root>/verify-email → origin dashboard.
+    let app_base = cfg
+        .verify_url_base
+        .rsplit_once('/')
+        .map(|(b, _)| b)
+        .unwrap_or(&cfg.verify_url_base);
+    match sender
+        .send(&umkm_application::notify::invitation_email(
+            &email, app_base, &shop, &token,
+        ))
         .await
     {
         Ok(()) => Outcome::Done,
