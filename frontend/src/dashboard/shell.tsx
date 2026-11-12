@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 
+import { Bell } from "./bell";
 import { api, ApiError, loadSession, setCsrf, tenantParam, type Session, type TenantView } from "@/lib/api";
 
 export function TopBar({ tenant }: { tenant?: TenantView | null }) {
@@ -30,6 +31,11 @@ export function TopBar({ tenant }: { tenant?: TenantView | null }) {
         {can("orders.read") && <Link href={`/orders${q}`}>Pesanan</Link>}
         {can("customers.read") && <Link href={`/customers${q}`}>Pelanggan</Link>}
         {can("tenant.read") && <Link href={`/shop-settings${q}`}>Toko online</Link>}
+        {can("tickets.read") && <Link href={`/tickets${q}`}>Tiket</Link>}
+        {can("approvals.read") && <Link href={`/approvals${q}`}>Persetujuan</Link>}
+        {can("members.read") && <Link href={`/team${q}`}>Tim</Link>}
+        {can("audit.read") && <Link href={`/audit${q}`}>Audit</Link>}
+        {tenant && <Bell tenantId={tenant.id} />}
         <button type="button" className="d-btn d-btn-sm" onClick={logout}>Keluar</button>
       </nav>
     </header>

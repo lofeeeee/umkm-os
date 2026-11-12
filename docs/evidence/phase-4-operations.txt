@@ -1,0 +1,36 @@
+Gate P4 — Operations (BUILD_PLAN.md Phase 4; Test Plan §3)
+Tanggal: 2026-11-12. Tidak ada keputusan produk yang memblokir Phase 4.
+
+Perintah gate (sama dengan Gate P2/P3):
+  cargo fmt --all --check && cargo clippy --workspace --all-targets --locked -- -D warnings &&
+  cargo test --workspace --locked && python3 scripts/check-rtm.py && cargo deny check &&
+  scripts/check-domain-boundary.sh && scripts/check-ci-needs.sh && docker compose --env-file .env.example config -q &&
+  (cd frontend && npm run lint && npm run typecheck && npm test && npm run build)
+Output:
+  rust tests passed=336 failed=0
+  check-rtm: OK — 74 FR, 84 AC, 84 TC
+  advisories ok, bans ok, licenses ok, sources ok
+  OK: umkm-domain bebas dari axum/sqlx/reqwest/tokio/hyper/tower/redis
+  OK: ci-gate mengagregasi 6 job
+        Tests  22 passed (22)
+  csp.mjs: 19 hash inline script dari 18 halaman -> out/csp.caddy
+  GATE_EXIT=0
+Ditambah (stack nyata, P4-UI.txt): Playwright 7/7, smoke-adr0014.sh SMOKE-OK. migration run → revert 0 → run: exit 0.
+
+Exit criteria (Test Plan §3, baris P4)
+- TC-TKT-001..005 Verified (TC-TKT-006 milik P6-5) ............................. YA
+- TC-APR-001..003 Verified ...................................................... YA
+- TC-NTF-001..003 Verified (email nyata menunggu D-08; adapter log-only) ........ YA
+- Audit ≥ 10 event: ≥ 25 jenis aksi; 8 dari 10 kategori PRD §6.9 (AI P5, platform admin P7) ... YA
+- Regresi isolasi realtime P1-10 tetap lulus + TenantGuard lintas instance (P4-6) ...... YA
+
+Task & bukti: P4-1, P4-2, P4-3, P4-4, P4-5, P4-6, P4-UI.
+Migration baru: 0019_team, 0020_approvals, 0021_tickets, 0022_notifications.
+
+Tetap terbuka (tidak diklaim)
+- MFA TOTP (AUTH-011 platform super admin, AUTH-012 owner mewajibkan MFA admin) — butuh enkripsi rahasia + crate
+  baru (TOTP/AEAD); perlu keputusan sebelum dibangun (lihat laporan).
+- D-08 email: undangan, verifikasi, notifikasi email masih log-only (AUTH-009/010 end-to-end Blocked by decision).
+- AI handover (P6) & status langganan (P7): aturan penerima + uji sudah ada; pemicu menyusul.
+- Kategori audit AI provider (P5) dan akses platform admin (P7).
+- Navigasi dashboard mobile; E2E/smoke belum di CI; uji flaky identity_schema::updated_at_trigger_advances (dicatat P3).

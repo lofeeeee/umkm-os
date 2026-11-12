@@ -200,6 +200,8 @@ Prefix `/api/v1`; envelope sukses/gagal; `meta.request_id`; cursor pagination; r
 
 ### Phase 4 — Operations
 
+**Status:** Gate P4 lulus 2026-11-12 (`docs/evidence/phase-4-operations.txt`). MFA (AUTH-011/012) belum — menunggu keputusan enkripsi/dependency.
+
 | Task | Requirement | File | Uji |
 |---|---|---|---|
 | P4-1 Multi-admin + permission management | `PRD.md §3`, `PRD.md §4.9` | `apps/api/src/team/`, `crates/application/src/authz.rs` | permission matrix； bukti: `docs/evidence/<task>.txt`|

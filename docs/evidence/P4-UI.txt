@@ -1,0 +1,30 @@
+P4-UI — Dashboard operasional + bantuan pesanan (PRD.md §3, §4.8, §4.9, §4.13, §6.9)
+Tanggal: 2026-11-12
+
+Artefak (frontend/)
+- src/dashboard/bell.tsx  lonceng notifikasi: daftar + jumlah belum dibaca, tandai baca; EventSource ke
+  /api/v1/tenants/{t}/events (withCredentials) — event notification.created memicu muat ulang (API = sumber kebenaran).
+- src/app/team  anggota (ubah role, nonaktifkan, keluarkan), undangan (buat/cabut), role kustom (izin yang tidak dimiliki
+  pelaku dinonaktifkan di UI; server tetap menolak eskalasi).
+- src/app/approvals  antrean (filter status), riwayat keputusan, setujui/tolak langkah aktif, batalkan milik sendiri,
+  kebijakan 6 jenis (aktif + role langkah 1/2), delegasi.
+- src/app/tickets  daftar/filter/cari, buat tiket, detail: assign, prioritas, status sesuai izin, balasan publik vs catatan
+  internal (ditandai), lampiran, status SLA.
+- src/app/audit  audit log dengan filter awalan aksi + paginasi (hanya audit.read).
+- src/app/invite  terima undangan (token di fragment; akun baru atau akun yang sedang login).
+- src/shop/views.tsx  halaman pesanan pembeli: "Ada masalah dengan pesanan?" — buat tiket, lihat & balas balasan toko.
+- Navigasi dashboard menampilkan menu sesuai permission.
+
+Hasil
+- npm run lint / typecheck / test (22) / build: OK (18 halaman, CSP hash diperbarui).
+- Stack nyata (Caddy + API + worker + PostgreSQL + Redis, role umkm_app), Playwright 7/7:
+  ops.spec: daftar → tab A membuka Pesanan (lonceng tanpa angka) → tab B membuat tiket → lonceng tab A menjadi
+  "Notifikasi (1)" TANPA reload (outbox → worker → notifikasi → Redis → bridge API → SSE) dan berisi "Ticket baru" →
+  catatan internal + balasan publik → Selesai → role kustom Kasir (1 izin) → audit memuat ticket.created & role.changed;
+  tanpa error CSP/JS. shop.spec, dashboard.spec, responsive (375/768/1024/1440) tetap lulus. smoke-adr0014: SMOKE-OK.
+- Catatan lokal: worker & API memakai port metrics 9090 di config/development.toml; dijalankan berdampingan lokal dengan
+  salinan config (port 9091) untuk worker. Di compose keduanya berada di container berbeda.
+
+Tetap terbuka
+- Navigasi dashboard di layar 375px membungkus menjadi beberapa baris (fungsional, perlu menu ringkas).
+- E2E & smoke belum di CI (butuh stack berjalan).

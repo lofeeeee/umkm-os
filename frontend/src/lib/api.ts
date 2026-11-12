@@ -126,6 +126,13 @@ export const ERROR_TEXT: Record<string, string> = {
   invalid_status: "status tidak valid",
   too_many: "terlalu banyak",
   duplicate: "ganda",
+  // P4
+  invalid_policy: "kebijakan tidak valid",
+  not_a_member: "bukan anggota aktif toko",
+  unknown_permission: "izin tidak dikenal",
+  invalid_reference: "rujukan bukan milik toko ini",
+  use_assign_endpoint: "gunakan pilihan penugasan",
+  weak_password: "password minimal 8 karakter dan tidak sama dengan email",
 };
 
 export function describe(e: unknown): string {

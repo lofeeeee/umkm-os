@@ -413,7 +413,58 @@ export function OrderPage() {
       <p className="shop-total">Total: <strong>{rupiah(order.total)}</strong></p>
       <p className="s-muted">{order.fulfillment === "delivery" ? `Dikirim ke: ${order.delivery_address ?? ""}` : "Ambil di toko"}</p>
       <button className="d-link" onClick={() => token && load(token)}>Perbarui status</button>
+      <OrderTickets token={token} />
     </Shell>
+  );
+}
+
+interface PublicTicket { id: string; code: string; subject: string; status: string; messages: { id: string; author_type: string; body: string; created_at: string }[] }
+
+const TICKET_STATUS: Record<string, string> = {
+  OPEN: "Diterima", ASSIGNED: "Diterima", IN_PROGRESS: "Sedang ditangani", WAITING_CUSTOMER: "Menunggu balasan Anda",
+  WAITING_INTERNAL: "Sedang ditangani", RESOLVED: "Selesai", CLOSED: "Ditutup",
+};
+
+/** Laporan masalah pesanan (P4-3): tiket hanya dengan balasan publik toko. */
+function OrderTickets({ token }: { token: string }) {
+  const [items, setItems] = useState<PublicTicket[]>([]);
+  const [form, setForm] = useState({ subject: "", description: "" });
+  const [reply, setReply] = useState<Record<string, string>>({});
+  const [err, setErr] = useState<string | null>(null);
+  const h = { "x-order-token": token };
+  const load = useCallback(
+    () => shopApi<PublicTicket[]>("GET", "/orders/current/tickets", undefined, { "x-order-token": token }).then(setItems, () => setItems([])),
+    [token],
+  );
+  useEffect(() => { void load(); }, [load]);
+  async function run(f: () => Promise<unknown>) {
+    setErr(null);
+    try { await f(); await load(); } catch (e) { setErr(explain(e)); }
+  }
+  return (
+    <section aria-label="Bantuan pesanan">
+      <h2>Ada masalah dengan pesanan?</h2>
+      <Msg kind="error">{err}</Msg>
+      {items.map((t) => (
+        <div key={t.id} className="shop-pay">
+          <strong>{t.subject}</strong> <span className="s-muted">({t.code} · {TICKET_STATUS[t.status] ?? t.status})</span>
+          <ul className="shop-list">
+            {t.messages.map((m) => <li key={m.id}><strong>{m.author_type === "customer" ? "Anda" : "Toko"}:</strong> {m.body}</li>)}
+          </ul>
+          <label className="shop-field">Balas<textarea maxLength={5000} value={reply[t.id] ?? ""} onChange={(e) => setReply({ ...reply, [t.id]: e.target.value })} /></label>
+          <button className="s-btn" disabled={!(reply[t.id] ?? "").trim()} onClick={() => run(async () => {
+            await shopApi("POST", `/orders/current/tickets/${t.id}/messages`, { json: { body: reply[t.id] } }, h);
+            setReply({ ...reply, [t.id]: "" });
+          })}>Kirim balasan</button>
+        </div>
+      ))}
+      <label className="shop-field">Judul masalah<input maxLength={200} value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} /></label>
+      <label className="shop-field">Ceritakan masalahnya<textarea maxLength={5000} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></label>
+      <button className="s-btn" disabled={!form.subject.trim()} onClick={() => run(async () => {
+        await shopApi("POST", "/orders/current/tickets", { json: { subject: form.subject, description: form.description || null } }, h);
+        setForm({ subject: "", description: "" });
+      })}>Laporkan masalah</button>
+    </section>
   );
 }
 
