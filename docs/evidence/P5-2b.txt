@@ -16,4 +16,8 @@ Uji: apps/api/tests/ai_http.rs (4) lulus — kunci tidak muncul di respons creat
 dibuka kembali hanya dengan KEK+AAD (kunci terbaru setelah rotasi); 6 URL tidak aman → 422 dengan kode SSRF; 12 nilai
 config di luar batas → 422 per field (AC-AIC-001), tepat-batas diterima; Manager baca saja (403 ubah); tenant lain 404 /
 provider_not_available; provider dipakai → 409; tool tak dikenal 422. config tests (19) lulus; clippy, check-rtm OK.
-Kontrol negatif mutasi untuk bagian ini BELUM dijalankan (batas penggunaan sesi) — lakukan sebelum Gate P5.
+Kontrol negatif (mutasi apps/api/src/ai.rs; target diverifikasi unik; dipulihkan + touch)
+- M1 validasi URL saat simpan memakai kebijakan operator (http/privat) -> unsafe_endpoints... GAGAL
+- M2 GenerationParams::validate diabaikan (DB tetap menolak → 500, bukan 422 per field) -> config_bounds... GAGAL
+- M3 PUT config hanya butuh ai_config.read -> platform_provider_permissions... GAGAL (Manager dapat mengubah)
+- Dipulihkan: 4/4 lulus. RTM: TC-AIC-001 & TC-AIC-003 Verified.

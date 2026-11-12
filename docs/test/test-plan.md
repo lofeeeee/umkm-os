@@ -111,9 +111,9 @@ Perintah gate P2: `cargo fmt --check && cargo clippy --workspace -- -D warnings 
 | TC-APR-001 | AC-APR-001 | Unit+Integration+Workflow | `apps/api/tests/approval_http.rs` | Verified |
 | TC-APR-002 | AC-APR-002 | Unit+Integration+Workflow | `apps/api/tests/approval_http.rs` | Verified |
 | TC-APR-003 | AC-APR-003 | Unit+Integration+Workflow | `apps/api/tests/approval_http.rs` | Verified |
-| TC-AIC-001 | AC-AIC-001 | lihat §2 | ditetapkan saat task | Planned |
+| TC-AIC-001 | AC-AIC-001 | Unit+Integration | `crates/domain/src/ai/mod.rs`, `crates/infrastructure/tests/ai_schema.rs`, `apps/api/tests/ai_http.rs` | Verified |
 | TC-AIC-002 | AC-AIC-002 | Unit+Integration | `crates/infrastructure/src/ai/provider_adapter.rs`, `crates/infrastructure/tests/provider_adapter.rs` | Verified |
-| TC-AIC-003 | AC-AIC-003 | lihat §2 | ditetapkan saat task | Planned |
+| TC-AIC-003 | AC-AIC-003 | Unit+Integration | `crates/infrastructure/src/crypto.rs`, `apps/api/tests/ai_http.rs` | Verified |
 | TC-AIC-004 | AC-AIC-004 | lihat §2 | ditetapkan saat task | Planned |
 | TC-AIO-001 | AC-AIO-001 | lihat §2 | ditetapkan saat task | Planned |
 | TC-AIO-002 | AC-AIO-002 | lihat §2 | ditetapkan saat task | Planned |
