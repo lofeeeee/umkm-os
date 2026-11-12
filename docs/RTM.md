@@ -237,10 +237,10 @@ Arah balik: TC → AC lewat nomor yang sama (Test Plan §4); AC → FR lewat FSD
 | FR-AIC-001 | AC-AIC-001 | TC-AIC-001 | PUT /tenants/{tenant_id}/ai/config | ADR-0011 (D-09) | `docs/evidence/P5-1.txt`, `docs/evidence/P5-2b.txt` | Verified |
 | FR-AIC-002 | AC-AIC-002 | TC-AIC-002 | internal (adapter provider) | ADR-0011 (D-09) | `docs/evidence/P5-4.txt` | Verified |
 | FR-AIC-003 | AC-AIC-003 | TC-AIC-003 | GET/POST/PATCH /tenants/{tenant_id}/ai/providers | ADR-0011 (D-09) | `docs/evidence/P5-2a-crypto.txt`, `docs/evidence/P5-2b.txt` | Verified |
-| FR-AIC-004 | AC-AIC-004 | TC-AIC-004 | ditetapkan di OpenAPI saat task | ADR-0011 (D-09) | — | Planned |
-| FR-AIO-001 | AC-AIO-001 | TC-AIO-001 | ditetapkan di OpenAPI saat task | — | — | Planned |
-| FR-AIO-002 | AC-AIO-002 | TC-AIO-002 | ditetapkan di OpenAPI saat task | — | — | Planned |
-| FR-AIO-003 | AC-AIO-003 | TC-AIO-003 | ditetapkan di OpenAPI saat task | — | — | Planned |
+| FR-AIC-004 | AC-AIC-004 | TC-AIC-004 | internal (orchestrator) | ADR-0011 (D-09) | `docs/evidence/P5-1.txt`, `docs/evidence/P5-5.txt` | Verified |
+| FR-AIO-001 | AC-AIO-001 | TC-AIO-001 | internal (orchestrator) | — | `docs/evidence/P5-5.txt` | Verified |
+| FR-AIO-002 | AC-AIO-002 | TC-AIO-002 | internal (orchestrator) | — | `docs/evidence/P5-5.txt` | Verified |
+| FR-AIO-003 | AC-AIO-003 | TC-AIO-003 | internal (orchestrator) | — | `docs/evidence/P5-5.txt` | Verified |
 | FR-AIO-004 | AC-AIO-004 | TC-AIO-004 | ditetapkan di OpenAPI saat task | — | — | Planned |
 | FR-CNV-001 | AC-CNV-001 | TC-CNV-001 | ditetapkan di OpenAPI saat task | ADR-0006 (D-04) | — | Planned |
 | FR-CNV-002 | AC-CNV-002 | TC-CNV-002 | ditetapkan di OpenAPI saat task | ADR-0006 (D-04) | — | Planned |
