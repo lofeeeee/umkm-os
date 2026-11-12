@@ -1,0 +1,44 @@
+P2-4 — Draft / Preview / Publish / Rollback (PRD.md §4.3, §13.3; ADR-0014)
+Tanggal: 2026-11-12. Bagian API; UI preview mobile/desktop (FR-WEB-007) menyusul di frontend.
+
+Artefak
+- crates/infrastructure/src/website_repo.rs: save_draft (FOR UPDATE + draft_revision optimistic, audit
+  website.draft_saved), publish (dalam SATU transaksi: kunci halaman, validasi ulang draft, INSERT versi
+  immutable max+1, pindah pointer, status website 'published', audit website.publish), list_versions,
+  get_version, rollback (versi harus milik halaman yang sama; audit website.rollback from/to),
+  published_content (HANYA lewat pointer terbit).
+- crates/application/src/website/editor.rs: check_document (skema + template = template website),
+  check_assets (setiap asset:<uuid> milik tenant).
+- apps/api/src/website.rs: GET/PUT draft (draft memberi signed URL aset untuk preview), POST publish
+  {revision?}, GET versions, GET versions/{n}, POST rollback {version}; GET /api/v1/public/site
+  (HostTenant, buang section nonaktif, Cache-Control public max-age=60, Vary Host).
+- apps/api/src/validation.rs: 422 details.errors=[{path,code}].
+
+Cakupan AC (apps/api/tests/website_http.rs)
+- AC-WEB-004/005 Verified (HTTP): dokumen valid tersimpan; field HTML/theme salah/template lain -> 422 per
+  path dan draft + revisi TIDAK berubah.
+- AC-WEB-007 urutan tersimpan; AC-WEB-008 section enabled=false tidak dikirim ke publik.
+- AC-WEB-009 aset tenant lain / tidak ada -> 422 asset_not_found; aset sendiri diterima.
+- AC-WEB-010 simpan ulang menggantikan draft; revisi basi -> 409 + current_revision.
+- AC-WEB-011 setelah v1 terbit, edit draft: draft berubah, publik tetap v1.
+- AC-WEB-012 Owner publish v1, v2; Manager 403; 2 audit website.publish. Publish dengan revisi basi -> 409.
+- AC-WEB-013 (P2-1) versi immutable di DB.
+- AC-WEB-014 rollback ke v1: publik v1, v2 tetap ada, is_current benar; versi 9 -> 404; Manager 403; audit.
+- AC-WEB-015 host aktif + terbit -> 200; belum terbit -> 404.
+- AC-WEB-016 host tak dikenal / domain asing / domain suspended -> 404; slug traversal -> 404.
+- Isolasi: tenant B GET draft/versions, POST publish/rollback lewat path A -> 404; publik A/B terpisah;
+  signed URL aset publik hanya untuk objek milik tenant dan dapat diambil.
+- Draft tidak valid yang sudah ada di DB tidak dapat dipublish (0 versi).
+
+Negative control (dilemahkan -> gagal -> dipulihkan)
+- NC1 situs publik membaca draft_content           -> preview_publish_rollback_and_public_site GAGAL
+- NC2 section nonaktif tidak dibuang               -> preview_publish_rollback_and_public_site GAGAL
+- NC3 publish tanpa validasi (pra-cek + di tx)     -> invalid_draft_already_in_db_cannot_be_published GAGAL
+      Catatan jujur: menghapus HANYA validasi di dalam transaksi tidak tertangkap tes (pra-cek sudah
+      menolak). Validasi di tx menjaga jendela antara pra-cek dan penguncian baris; tidak ada tes khusus.
+- NC4 cek revisi draft dimatikan                   -> draft_edits_are_validated... GAGAL
+- NC5 kepemilikan aset tidak dicek                 -> assets_must_belong_to_the_tenant GAGAL
+- NC6 publish tanpa require(website.publish)       -> preview_publish_rollback_and_public_site GAGAL
+
+Hasil: website_http 9 lulus; application editor 2 lulus; cargo test --workspace --locked 0 biner gagal;
+clippy -D warnings, fmt, cargo deny, check-domain-boundary, check-rtm: ok.

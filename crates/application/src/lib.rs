@@ -4,6 +4,7 @@
 
 pub mod notify;
 pub mod onboarding;
+pub mod website;
 
 /// Nama crate, dipakai untuk smoke test wiring workspace.
 pub const CRATE: &str = "umkm-application";

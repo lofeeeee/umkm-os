@@ -1,0 +1,17 @@
+P2-2 — Template catalog + preview + versioning (PRD.md §4.3; ADR-0007)
+Tanggal: 2026-11-12. Bagian API; galeri template di dashboard menyusul bersama frontend (P2-3/P2-7).
+
+Artefak
+- crates/infrastructure/src/website_repo.rs: list_templates (versi aktif terbaru per key), find_template,
+  select_template (website + halaman home; ganti template = reset DRAFT home, versi terbit tidak disentuh;
+  audit website.template_selected), state.
+- apps/api/src/website.rs: GET .../website/templates, GET .../templates/{key}/preview, GET/PUT .../website.
+- OpenAPI diregenerasi (tag website, public); Redocly valid.
+
+Cakupan AC
+- AC-WEB-001 Verified: Viewer melihat 2 template aktif (website_http::templates_are_listed_and_previewed...).
+- AC-WEB-002 Verified: preview mengembalikan konten; 0 baris tenant_websites; key tak ada -> 404.
+- AC-WEB-003 Verified (P2-1): template v2 tidak memindahkan website v1.
+- Pilih template: Viewer 403, key tak dikenal 422, Owner -> draft home = konten template.
+
+Hasil: website_http 9 lulus; cargo test --workspace --locked 0 biner gagal; clippy/fmt/deny/boundary ok.

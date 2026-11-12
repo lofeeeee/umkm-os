@@ -15,6 +15,7 @@ pub mod redis;
 pub mod retention;
 pub mod storage;
 pub mod tenant_repo;
+pub mod website_repo;
 
 /// Nama crate, dipakai untuk smoke test wiring workspace.
 pub const CRATE: &str = "umkm-infrastructure";

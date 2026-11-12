@@ -14,7 +14,7 @@ use utoipa::{
     },
 };
 
-use crate::{auth, business, health, tenants, upload};
+use crate::{auth, business, health, tenants, upload, website};
 
 #[derive(OpenApi)]
 #[openapi(
@@ -45,7 +45,18 @@ use crate::{auth, business, health, tenants, upload};
         business::put_addresses,
         business::put_hours,
         business::put_exceptions,
-        business::get_status
+        business::get_status,
+        website::list_templates,
+        website::preview_template,
+        website::get_website,
+        website::select_template,
+        website::get_draft,
+        website::save_draft,
+        website::publish,
+        website::list_versions,
+        website::get_version,
+        website::rollback,
+        website::public_site
     ),
     components(schemas(ErrorEnvelope, ErrorBody, ErrorCode, Meta)),
     servers((url = "/", description = "Origin yang sama; root domain menunggu D-01")),
@@ -54,6 +65,8 @@ use crate::{auth, business, health, tenants, upload};
         (name = "ops", description = "Liveness/readiness untuk orchestrator"),
         (name = "auth", description = "Registrasi, login, sesi (cookie HttpOnly + CSRF, ADR-0015)"),
         (name = "tenants", description = "Tenant milik pemanggil; tenant_id di path diverifikasi terhadap membership"),
+        (name = "website", description = "Template, draft, publish, rollback (ADR-0007, ADR-0014)"),
+        (name = "public", description = "Situs publik tenant; tenant dari Host, tanpa sesi (ADR-0014)"),
         (name = "business", description = "Profil, alamat, jam operasional tenant (PRD.md §4.4)"),
         (name = "files", description = "Upload gambar tenant + signed URL ber-expiry (ADR-0009)")
     )
@@ -102,7 +115,8 @@ impl Modify for CommonErrors {
 /// `security: []`. Skema auth tenant/admin ditambahkan di P1.
 struct PublicOps;
 
-const PUBLIC_PATHS: [&str; 6] = [
+const PUBLIC_PATHS: [&str; 7] = [
+    "/api/v1/public/site",
     "/files/{object_id}",
     "/healthz",
     "/readyz",

@@ -313,6 +313,57 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
       security: []
+  /api/v1/public/site:
+    get:
+      tags:
+      - public
+      summary: Situs publik tenant dari Host (ADR-0014). Tanpa sesi; cache publik 60 detik.
+      operationId: public_site
+      parameters:
+      - name: page
+        in: query
+        description: Slug halaman, default `home`
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Versi terbit + data bisnis
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_PublicSite'
+        '404':
+          description: Host tidak dikenal/nonaktif atau belum terbit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security: []
   /api/v1/tenants:
     get:
       tags:
@@ -1049,6 +1100,565 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
       security:
       - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/website:
+    get:
+      tags:
+      - website
+      summary: Status website tenant (template + halaman).
+      operationId: get_website
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Website
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_WebsiteView'
+        '404':
+          description: Belum memilih template
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+    put:
+      tags:
+      - website
+      summary: Pilih template. Draft `home` direset ke konten template; versi terbit tidak berubah.
+      operationId: select_template
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SelectTemplate'
+        required: true
+      responses:
+        '200':
+          description: Template terpilih
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_WebsiteView'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/website/pages/{slug}/draft:
+    get:
+      tags:
+      - website
+      summary: Draft halaman (untuk editor dan preview di dashboard; AC-WEB-010/011).
+      operationId: get_draft
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Draft
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_DraftView'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+    put:
+      tags:
+      - website
+      summary: Simpan draft tervalidasi (AC-WEB-004/005/007/009/010). 409 bila revisi basi.
+      operationId: save_draft
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveDraft'
+        required: true
+      responses:
+        '200':
+          description: Tersimpan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_SavedDraft'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: Revisi basi
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '422':
+          description: Dokumen tidak valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/website/pages/{slug}/publish:
+    post:
+      tags:
+      - website
+      summary: Terbitkan draft sebagai versi immutable baru (AC-WEB-012). Butuh `website.publish`.
+      operationId: publish
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PublishRequest'
+        required: true
+      responses:
+        '200':
+          description: Versi baru
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_Published'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: Draft berubah sejak revisi
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '422':
+          description: Draft tidak valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/website/pages/{slug}/rollback:
+    post:
+      tags:
+      - website
+      summary: Kembalikan publik ke versi terpilih (AC-WEB-014). Butuh `website.publish`.
+      operationId: rollback
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RollbackRequest'
+        required: true
+      responses:
+        '200':
+          description: Versi aktif
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_Published'
+        '404':
+          description: Versi tidak ada untuk halaman ini
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/website/pages/{slug}/versions:
+    get:
+      tags:
+      - website
+      summary: Riwayat versi terbit (terbaru dulu).
+      operationId: list_versions
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Versi
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_Vec_VersionView'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/website/pages/{slug}/versions/{version}:
+    get:
+      tags:
+      - website
+      summary: Isi satu versi terbit (preview sebelum rollback).
+      operationId: get_version
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: version
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int32
+      responses:
+        '200':
+          description: Konten versi
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_DraftView'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/website/templates:
+    get:
+      tags:
+      - website
+      summary: Katalog template aktif (versi terbaru per key; AC-WEB-001).
+      operationId: list_templates
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Template aktif
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_Vec_TemplateView'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/website/templates/{key}/preview:
+    get:
+      tags:
+      - website
+      summary: Konten contoh template; tidak membuat/mengubah website tenant (AC-WEB-002).
+      operationId: preview_template
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: key
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Konten default template
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_TemplatePreview'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
   /files/{object_id}:
     get:
       tags:
@@ -1222,6 +1832,28 @@ components:
           - 'null'
           format: double
       additionalProperties: false
+    BusinessView:
+      type: object
+      required:
+      - profile
+      - addresses
+      - hours
+      - exceptions
+      properties:
+        addresses:
+          type: array
+          items:
+            $ref: '#/components/schemas/AddressDto'
+        exceptions:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExceptionDto'
+        hours:
+          type: array
+          items:
+            $ref: '#/components/schemas/HoursDto'
+        profile:
+          $ref: '#/components/schemas/ProfileDto'
     CheckResult:
       type: object
       required:
@@ -1340,6 +1972,25 @@ components:
       properties:
         request_id:
           type: string
+    PageView:
+      type: object
+      required:
+      - slug
+      - title
+      - draft_revision
+      properties:
+        draft_revision:
+          type: integer
+          format: int32
+        published_version:
+          type:
+          - integer
+          - 'null'
+          format: int32
+        slug:
+          type: string
+        title:
+          type: string
     ProfileDto:
       type: object
       required:
@@ -1389,6 +2040,31 @@ components:
           - string
           - 'null'
       additionalProperties: false
+    PublicPage:
+      type: object
+      required:
+      - slug
+      - version
+      - content
+      properties:
+        content:
+          type: object
+          description: Hanya section `enabled = true`.
+        slug:
+          type: string
+        version:
+          type: integer
+          format: int32
+    PublishRequest:
+      type: object
+      properties:
+        revision:
+          type:
+          - integer
+          - 'null'
+          format: int32
+          description: Bila diisi, publish gagal 409 jika draft sudah berubah sejak revisi ini.
+      additionalProperties: false
     RegisterRequest:
       type: object
       required:
@@ -1414,6 +2090,36 @@ components:
           - 'null'
           description: Kosong = dibuat otomatis dari nama bisnis.
       additionalProperties: false
+    RollbackRequest:
+      type: object
+      required:
+      - version
+      properties:
+        version:
+          type: integer
+          format: int32
+      additionalProperties: false
+    SaveDraft:
+      type: object
+      required:
+      - content
+      - base_revision
+      properties:
+        base_revision:
+          type: integer
+          format: int32
+          description: Revisi draft yang diedit (optimistic concurrency).
+        content:
+          type: object
+      additionalProperties: false
+    SelectTemplate:
+      type: object
+      required:
+      - template_key
+      properties:
+        template_key:
+          type: string
+      additionalProperties: false
     SocialDto:
       type: object
       required:
@@ -1425,6 +2131,20 @@ components:
         url:
           type: string
       additionalProperties: false
+    StatusView:
+      type: object
+      required:
+      - status
+      - timezone
+      - local_time
+      properties:
+        local_time:
+          type: string
+        status:
+          type: string
+          description: '`open` | `closed`'
+        timezone:
+          type: string
     SuccessEnvelope_BusinessView:
       type: object
       required:
@@ -1458,6 +2178,41 @@ components:
           $ref: '#/components/schemas/Meta'
         success:
           type: boolean
+    SuccessEnvelope_DraftView:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - content
+          - revision
+          - assets
+          properties:
+            assets:
+              type: object
+              description: '`asset:<uuid>` -> signed path (relatif ke origin API), untuk preview.'
+              additionalProperties:
+                type: string
+              propertyNames:
+                type: string
+            content:
+              type: object
+            published_version:
+              type:
+              - integer
+              - 'null'
+              format: int32
+            revision:
+              type: integer
+              format: int32
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
     SuccessEnvelope_LogoutResponse:
       type: object
       required:
@@ -1472,6 +2227,56 @@ components:
           properties:
             revoked:
               type: boolean
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
+    SuccessEnvelope_PublicSite:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - page
+          - business
+          - status
+          - assets
+          properties:
+            assets:
+              type: object
+              additionalProperties:
+                type: string
+              propertyNames:
+                type: string
+            business:
+              $ref: '#/components/schemas/BusinessView'
+            page:
+              $ref: '#/components/schemas/PublicPage'
+            status:
+              $ref: '#/components/schemas/StatusView'
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
+    SuccessEnvelope_Published:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - version
+          properties:
+            version:
+              type: integer
+              format: int32
         meta:
           $ref: '#/components/schemas/Meta'
         success:
@@ -1521,6 +2326,25 @@ components:
             user_id:
               type: string
               format: uuid
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
+    SuccessEnvelope_SavedDraft:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - revision
+          properties:
+            revision:
+              type: integer
+              format: int32
         meta:
           $ref: '#/components/schemas/Meta'
         success:
@@ -1590,6 +2414,31 @@ components:
               description: '`open` | `closed`'
             timezone:
               type: string
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
+    SuccessEnvelope_TemplatePreview:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - key
+          - version
+          - content
+          properties:
+            content:
+              type: object
+            key:
+              type: string
+            version:
+              type: integer
+              format: int32
         meta:
           $ref: '#/components/schemas/Meta'
         success:
@@ -1703,6 +2552,36 @@ components:
           $ref: '#/components/schemas/Meta'
         success:
           type: boolean
+    SuccessEnvelope_Vec_TemplateView:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            required:
+            - key
+            - version
+            - name
+            - category
+            properties:
+              category:
+                type: string
+              key:
+                type: string
+              name:
+                type: string
+              version:
+                type: integer
+                format: int32
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
     SuccessEnvelope_Vec_UploadView:
       type: object
       required:
@@ -1743,6 +2622,39 @@ components:
           $ref: '#/components/schemas/Meta'
         success:
           type: boolean
+    SuccessEnvelope_Vec_VersionView:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            required:
+            - version
+            - created_at_unix
+            - is_current
+            properties:
+              created_at_unix:
+                type: integer
+                format: int64
+              is_current:
+                type: boolean
+              published_by:
+                type:
+                - string
+                - 'null'
+                format: uuid
+              version:
+                type: integer
+                format: int32
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
     SuccessEnvelope_VerifyEmailResponse:
       type: object
       required:
@@ -1757,6 +2669,37 @@ components:
           properties:
             verified:
               type: boolean
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
+    SuccessEnvelope_WebsiteView:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - template_key
+          - template_version
+          - status
+          - pages
+          properties:
+            pages:
+              type: array
+              items:
+                $ref: '#/components/schemas/PageView'
+            status:
+              type: string
+              description: '`draft` | `published`'
+            template_key:
+              type: string
+            template_version:
+              type: integer
+              format: int32
         meta:
           $ref: '#/components/schemas/Meta'
         success:
@@ -1805,6 +2748,10 @@ tags:
   description: Registrasi, login, sesi (cookie HttpOnly + CSRF, ADR-0015)
 - name: tenants
   description: Tenant milik pemanggil; tenant_id di path diverifikasi terhadap membership
+- name: website
+  description: Template, draft, publish, rollback (ADR-0007, ADR-0014)
+- name: public
+  description: Situs publik tenant; tenant dari Host, tanpa sesi (ADR-0014)
 - name: business
   description: Profil, alamat, jam operasional tenant (PRD.md §4.4)
 - name: files
