@@ -1715,6 +1715,368 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
       security:
       - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/ai/config:
+    get:
+      tags:
+      - ai
+      operationId: get_config
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Konfigurasi chatbot (default bila belum diatur)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_ConfigView'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+    put:
+      tags:
+      - ai
+      operationId: put_config
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfigBody'
+        required: true
+      responses:
+        '200':
+          description: Tersimpan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_ConfigView'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '422':
+          description: Nilai di luar batas (AC-AIC-001)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/ai/providers:
+    get:
+      tags:
+      - ai
+      operationId: list_providers
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Provider (kunci tidak pernah dikembalikan)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_Vec_ProviderView'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+    post:
+      tags:
+      - ai
+      operationId: create_provider
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProviderInput'
+        required: true
+      responses:
+        '201':
+          description: Dibuat
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_ProviderView'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: Nama dipakai
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/ai/providers/{provider_id}:
+    delete:
+      tags:
+      - ai
+      operationId: delete_provider
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: provider_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '204':
+          description: Dihapus beserta kunci
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: Dipakai chatbot aktif
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+    patch:
+      tags:
+      - ai
+      operationId: update_provider
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: provider_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProviderPatchInput'
+        required: true
+      responses:
+        '200':
+          description: Diperbarui (rotasi kunci / nonaktifkan)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_ProviderView'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/ai/tools:
+    put:
+      tags:
+      - ai
+      operationId: put_tools
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ToolsInput'
+        required: true
+      responses:
+        '200':
+          description: Status tool
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_Vec_ToolState'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
   /api/v1/tenants/{tenant_id}/approval-delegations:
     get:
       tags:
@@ -6812,6 +7174,39 @@ components:
             $ref: '#/components/schemas/HoursDto'
         profile:
           $ref: '#/components/schemas/ProfileDto'
+    CapabilitiesInput:
+      type: object
+      properties:
+        chat:
+          type: boolean
+        embeddings:
+          type: boolean
+        streaming:
+          type: boolean
+        tool_calling:
+          type: boolean
+        usage_reporting:
+          type: boolean
+      additionalProperties: false
+    CapabilitiesView:
+      type: object
+      required:
+      - chat
+      - streaming
+      - tool_calling
+      - usage_reporting
+      - embeddings
+      properties:
+        chat:
+          type: boolean
+        embeddings:
+          type: boolean
+        streaming:
+          type: boolean
+        tool_calling:
+          type: boolean
+        usage_reporting:
+          type: boolean
     CategoryInput:
       type: object
       required:
@@ -6898,6 +7293,72 @@ components:
           - string
           - 'null'
           description: Mis. nama pemilik akun pembayar / 4 digit terakhir (opsional, ≤120)
+      additionalProperties: false
+    ConfigBody:
+      type: object
+      required:
+      - enabled
+      - mode
+      - temperature
+      - max_output_tokens
+      - timeout_ms
+      - system_prompt
+      - welcome_message
+      - fallback_message
+      - allowed_topics
+      - restricted_topics
+      - handover_policy
+      - operating_schedule
+      properties:
+        allowed_topics:
+          type: array
+          items:
+            type: string
+        enabled:
+          type: boolean
+        fallback_message:
+          type: string
+        fallback_provider_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        handover_policy:
+          type: object
+        max_output_tokens:
+          type: integer
+          format: int32
+          minimum: 0
+        mode:
+          type: string
+          description: '`auto` | `assisted` | `hybrid` | `human_only` (default hybrid)'
+        monthly_token_budget:
+          type:
+          - integer
+          - 'null'
+          format: int64
+        operating_schedule:
+          type: object
+        primary_provider_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        restricted_topics:
+          type: array
+          items:
+            type: string
+        system_prompt:
+          type: string
+        temperature:
+          type: number
+          format: double
+        timeout_ms:
+          type: integer
+          format: int32
+          minimum: 0
+        welcome_message:
+          type: string
       additionalProperties: false
     ConfirmInput:
       type: object
@@ -7533,6 +7994,25 @@ components:
           type:
           - string
           - 'null'
+    PlatformView:
+      type: object
+      required:
+      - available
+      - models
+      properties:
+        available:
+          type: boolean
+        models:
+          type: array
+          items:
+            type: string
+        monthly_quota:
+          type:
+          - integer
+          - 'null'
+          format: int64
+          description: Kuota bulanan per tenant (token)
+          minimum: 0
     PolicyDto:
       type: object
       required:
@@ -7683,6 +8163,66 @@ components:
           type: string
           description: Timezone IANA, mis. `Asia/Jakarta`
         whatsapp:
+          type:
+          - string
+          - 'null'
+      additionalProperties: false
+    ProviderInput:
+      type: object
+      required:
+      - name
+      - source
+      - model
+      properties:
+        api_key:
+          type:
+          - string
+          - 'null'
+          description: 'BYOK: kunci API (tidak pernah dikembalikan)'
+        base_url:
+          type:
+          - string
+          - 'null'
+          description: 'BYOK: endpoint OpenAI-compatible HTTPS publik'
+        capabilities:
+          oneOf:
+          - $ref: '#/components/schemas/CapabilitiesInput'
+            description: 'BYOK: override capability registry; default menurut provider_type'
+          - type: 'null'
+        model:
+          type: string
+        name:
+          type: string
+        provider_type:
+          type:
+          - string
+          - 'null'
+          description: 'BYOK: `openai` | `openrouter` | `groq` | `together` | `custom`'
+        source:
+          type: string
+          description: '`platform` | `byok`'
+      additionalProperties: false
+    ProviderPatchInput:
+      type: object
+      properties:
+        active:
+          type:
+          - boolean
+          - 'null'
+        api_key:
+          type:
+          - string
+          - 'null'
+          description: 'BYOK: rotasi kunci'
+        capabilities:
+          oneOf:
+          - $ref: '#/components/schemas/CapabilitiesInput'
+          - type: 'null'
+        model:
+          type:
+          - string
+          - 'null'
+        name:
           type:
           - string
           - 'null'
@@ -8310,6 +8850,32 @@ components:
           $ref: '#/components/schemas/Meta'
         success:
           type: boolean
+    SuccessEnvelope_ConfigView:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - config
+          - tools
+          - platform
+          properties:
+            config:
+              $ref: '#/components/schemas/ConfigBody'
+            platform:
+              $ref: '#/components/schemas/PlatformView'
+            tools:
+              type: array
+              items:
+                $ref: '#/components/schemas/ToolState'
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
     SuccessEnvelope_CustomerList:
       type: object
       required:
@@ -8747,6 +9313,62 @@ components:
               type: array
               items:
                 $ref: '#/components/schemas/VariantView'
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
+    SuccessEnvelope_ProviderView:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          description: 'Provider tanpa kunci: hanya `key_hint` masked (AC-AIC-003).'
+          required:
+          - id
+          - name
+          - source
+          - provider_type
+          - model
+          - status
+          - capabilities
+          - has_key
+          - updated_at
+          properties:
+            base_url:
+              type:
+              - string
+              - 'null'
+              description: '`null` untuk provider platform (URL milik operator tidak diungkap).'
+            capabilities:
+              $ref: '#/components/schemas/CapabilitiesView'
+            has_key:
+              type: boolean
+            id:
+              type: string
+              format: uuid
+            key_hint:
+              type:
+              - string
+              - 'null'
+              description: Contoh `••••abcd`; `null` bila tanpa kunci.
+            model:
+              type: string
+            name:
+              type: string
+            provider_type:
+              type: string
+            source:
+              type: string
+              description: '`platform` | `byok`'
+            status:
+              type: string
+              description: '`active` | `disabled`'
+            updated_at:
+              type: string
         meta:
           $ref: '#/components/schemas/Meta'
         success:
@@ -9804,6 +10426,64 @@ components:
           $ref: '#/components/schemas/Meta'
         success:
           type: boolean
+    SuccessEnvelope_Vec_ProviderView:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            description: 'Provider tanpa kunci: hanya `key_hint` masked (AC-AIC-003).'
+            required:
+            - id
+            - name
+            - source
+            - provider_type
+            - model
+            - status
+            - capabilities
+            - has_key
+            - updated_at
+            properties:
+              base_url:
+                type:
+                - string
+                - 'null'
+                description: '`null` untuk provider platform (URL milik operator tidak diungkap).'
+              capabilities:
+                $ref: '#/components/schemas/CapabilitiesView'
+              has_key:
+                type: boolean
+              id:
+                type: string
+                format: uuid
+              key_hint:
+                type:
+                - string
+                - 'null'
+                description: Contoh `••••abcd`; `null` bila tanpa kunci.
+              model:
+                type: string
+              name:
+                type: string
+              provider_type:
+                type: string
+              source:
+                type: string
+                description: '`platform` | `byok`'
+              status:
+                type: string
+                description: '`active` | `disabled`'
+              updated_at:
+                type: string
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
     SuccessEnvelope_Vec_PublicTicket:
       type: object
       required:
@@ -9925,6 +10605,29 @@ components:
               version:
                 type: integer
                 format: int32
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
+    SuccessEnvelope_Vec_ToolState:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            required:
+            - name
+            - enabled
+            properties:
+              enabled:
+                type: boolean
+              name:
+                type: string
         meta:
           $ref: '#/components/schemas/Meta'
         success:
@@ -10199,6 +10902,26 @@ components:
             type: string
         updated_at:
           type: string
+    ToolState:
+      type: object
+      required:
+      - name
+      - enabled
+      properties:
+        enabled:
+          type: boolean
+        name:
+          type: string
+    ToolsInput:
+      type: object
+      required:
+      - tools
+      properties:
+        tools:
+          type: array
+          items:
+            $ref: '#/components/schemas/ToolState'
+      additionalProperties: false
     UpdateTenantRequest:
       type: object
       required:
@@ -10300,6 +11023,8 @@ tags:
   description: Approval engine multi-step (PRD.md §4.9, P4-2)
 - name: audit
   description: Audit log append-only (PRD.md §6.9, P4-5)
+- name: ai
+  description: 'Pengaturan AI: provider platform/BYOK, kunci masked, konfigurasi chatbot (PRD.md §4.10, ADR-0011)'
 - name: notifications
   description: Notifikasi in-app (PRD.md §4.13, P4-4)
 - name: tickets

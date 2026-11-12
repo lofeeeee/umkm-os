@@ -27,8 +27,17 @@ pub struct AppState {
     pub files: Option<Arc<FileService>>,
     /// Fan-out realtime lintas instance (P4-6). `None` = hub lokal saja.
     pub rt_publisher: Option<umkm_infrastructure::realtime::RtPublisher>,
-    /// Master key envelope encryption (P5-2, ADR-0011). `None` -> endpoint rahasia AI 503.
-    pub keyring: Option<Arc<umkm_infrastructure::crypto::Keyring>>,
+    /// AI (P5, ADR-0011): master key + provider platform. `None` -> endpoint AI 503.
+    pub ai: Option<Arc<AiService>>,
+}
+
+/// Rahasia & konfigurasi AI tingkat proses.
+pub struct AiService {
+    pub keyring: umkm_infrastructure::crypto::Keyring,
+    /// `Some` hanya bila provider platform diaktifkan operator.
+    pub platform: Option<umkm_shared::config::PlatformAiSettings>,
+    pub platform_key: Option<umkm_shared::config::SecretString>,
+    pub max_concurrency: usize,
 }
 
 /// Storage lokal + penanda URL (ADR-0009).
@@ -47,7 +56,7 @@ impl AppState {
             realtime: Default::default(),
             files: None,
             rt_publisher: None,
-            keyring: None,
+            ai: None,
         }
     }
 
@@ -61,8 +70,8 @@ impl AppState {
         self
     }
 
-    pub fn with_keyring(mut self, k: Arc<umkm_infrastructure::crypto::Keyring>) -> Self {
-        self.keyring = Some(k);
+    pub fn with_ai(mut self, ai: Arc<AiService>) -> Self {
+        self.ai = Some(ai);
         self
     }
 

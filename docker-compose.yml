@@ -23,6 +23,8 @@ x-app: &app
     UMKM_FILE_SIGNING_KEY: ${FILE_SIGNING_KEY:?FILE_SIGNING_KEY wajib}
     # Envelope encryption rahasia AI/MFA (ADR-0011); lihat .env.example.
     UMKM_DATA_KEK: ${DATA_KEK:?DATA_KEK wajib}
+    # Opsional: kunci provider AI platform (ADR-0011).
+    UMKM_PLATFORM_AI_API_KEY: ${PLATFORM_AI_API_KEY:-}
     RUST_LOG: ${RUST_LOG:-info}
     # Satu sumber kebenaran dengan Caddy (ADR-0001).
     UMKM_ROOT_DOMAIN: ${ROOT_DOMAIN:?ROOT_DOMAIN wajib}

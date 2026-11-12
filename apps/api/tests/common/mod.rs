@@ -17,7 +17,7 @@ use umkm_api::{
     AppState, HttpLimits,
     auth::{AuthService, csrf_token},
     build_router,
-    state::FileService,
+    state::{AiService, FileService},
 };
 use umkm_application::onboarding::LegalVersions;
 use umkm_domain::auth::AuthPolicy;
@@ -34,6 +34,8 @@ use uuid::Uuid;
 pub const MAX_OBJECT: usize = 64 * 1024;
 pub const MAX_OBJECTS: i64 = 5;
 pub const SIGNING_KEY: &str = "test-signing-key-0123456789-abcdefghijklmnop";
+/// KEK uji envelope encryption (32 byte).
+pub const TEST_KEK: &str = "v1:a2VrLXJhaGFzaWEta2VrLXJhaGFzaWEta2VrLXJhaGE=";
 
 pub const LIMITS: HttpLimits = HttpLimits {
     request_timeout: Duration::from_secs(30),
@@ -100,6 +102,18 @@ pub async fn app(pool: &PgPool) -> TestApp {
                 },
             ),
             signer: signer.clone(),
+        }))
+        .with_ai(Arc::new(AiService {
+            keyring: umkm_infrastructure::crypto::Keyring::parse(TEST_KEK).unwrap(),
+            platform: Some(umkm_shared::config::PlatformAiSettings {
+                enabled: true,
+                base_url: "https://llm.platform.test/v1".into(),
+                models: vec!["platform-small".into(), "platform-large".into()],
+                embedding_model: "platform-embed".into(),
+                ..Default::default()
+            }),
+            platform_key: None,
+            max_concurrency: 4,
         }));
     TestApp {
         router: build_router(state.clone(), LIMITS),

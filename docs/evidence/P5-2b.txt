@@ -1,0 +1,19 @@
+P5-2 (bagian 2) — API provider AI & konfigurasi chatbot (PRD.md §4.10, AC-AIC-001/003, ADR-0011)
+Tanggal: 2026-11-12
+
+Artefak
+- crates/infrastructure/src/ai_repo.rs: provider CRUD; kunci BYOK disegel envelope (AAD ai_provider|tenant|id) di transaksi
+  yang sama; hanya key_hint masked keluar; rotasi/nonaktif; hapus ditolak bila dipakai chatbot aktif; config (default
+  Hybrid) + tool; audit ai.provider_created/updated/key_rotated/deleted, ai.config_updated (tanpa isi prompt), ai.tools_updated.
+- apps/api/src/ai.rs: GET/POST /ai/providers, PATCH/DELETE /ai/providers/{id}, GET/PUT /ai/config, PUT /ai/tools.
+  BYOK: provider_type terdaftar, base_url lewat ssrf::validate_url (kontrol 1–3 saat simpan; 4–8 setiap panggilan), kunci
+  ASCII 8–512. Platform: tanpa URL/kunci/capability dari tenant, model harus ditawarkan operator.
+- Config [ai] + [ai.platform] (default nonaktif), secret opsional UMKM_PLATFORM_AI_API_KEY; field kuota bernama
+  monthly_quota (pemindai rahasia config menolak kata "token" — guard tidak dilemahkan).
+- AppState.ai (AiService: keyring + platform); OpenAPI diperbarui.
+
+Uji: apps/api/tests/ai_http.rs (4) lulus — kunci tidak muncul di respons create/list/patch, audit, maupun kolom DB;
+dibuka kembali hanya dengan KEK+AAD (kunci terbaru setelah rotasi); 6 URL tidak aman → 422 dengan kode SSRF; 12 nilai
+config di luar batas → 422 per field (AC-AIC-001), tepat-batas diterima; Manager baca saja (403 ubah); tenant lain 404 /
+provider_not_available; provider dipakai → 409; tool tak dikenal 422. config tests (19) lulus; clippy, check-rtm OK.
+Kontrol negatif mutasi untuk bagian ini BELUM dijalankan (batas penggunaan sesi) — lakukan sebelum Gate P5.

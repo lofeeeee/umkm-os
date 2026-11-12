@@ -21,6 +21,8 @@ pub const FILE_SIGNING_KEY_VAR: &str = "UMKM_FILE_SIGNING_KEY";
 pub const FILE_SIGNING_KEY_MIN_LEN: usize = 32;
 /// Master key envelope encryption (P5-2, ADR-0011): `v1:<base64 32 byte>[,v2:...]`.
 pub const DATA_KEK_VAR: &str = "UMKM_DATA_KEK";
+/// Kunci provider AI platform (ADR-0011); opsional (endpoint internal tanpa kunci).
+pub const PLATFORM_AI_KEY_VAR: &str = "UMKM_PLATFORM_AI_API_KEY";
 /// Override `tenancy.root_domain` (Compose meneruskan nilai yang sama dengan Caddy).
 pub const ROOT_DOMAIN_VAR: &str = "UMKM_ROOT_DOMAIN";
 
@@ -100,6 +102,9 @@ pub struct Settings {
     pub tenancy: TenancySettings,
     pub storage: StorageSettings,
     pub observability: ObservabilitySettings,
+    /// P5 AI (ADR-0011). Tanpa section = AI platform nonaktif.
+    #[serde(default)]
+    pub ai: AiSettings,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -184,6 +189,57 @@ pub struct StorageSettings {
     pub max_objects_per_tenant: i64,
     /// Masa berlaku signed URL; ADR-0009: maksimal 3600.
     pub signed_url_ttl_secs: u64,
+}
+
+/// AI (ADR-0011): batas klien keluar + provider platform yang didaftarkan operator.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields, default)]
+pub struct AiSettings {
+    /// Permintaan bersamaan maksimum ke provider per proses (SSRF guard kontrol 7).
+    pub max_concurrency: usize,
+    pub platform: PlatformAiSettings,
+}
+
+impl Default for AiSettings {
+    fn default() -> Self {
+        Self {
+            max_concurrency: 8,
+            platform: PlatformAiSettings::default(),
+        }
+    }
+}
+
+/// Provider AI milik platform. Kunci di secret `UMKM_PLATFORM_AI_API_KEY` (opsional untuk endpoint internal).
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields, default)]
+pub struct PlatformAiSettings {
+    pub enabled: bool,
+    /// Endpoint OpenAI-compatible, mis. `https://api.openai.com/v1` atau vLLM internal.
+    pub base_url: String,
+    /// Model yang boleh dipilih tenant; elemen pertama = default.
+    pub models: Vec<String>,
+    pub embedding_model: String,
+    pub tool_calling: bool,
+    pub embeddings: bool,
+    /// Kuota token bulanan per tenant (prompt + completion). Angka final mengikuti D-10.
+    pub monthly_quota: u64,
+    /// Endpoint jaringan internal tepercaya (http/IP privat; `PRD.md §6.5` #9). Hanya untuk operator.
+    pub trusted_internal: bool,
+}
+
+impl Default for PlatformAiSettings {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            base_url: String::new(),
+            models: vec![],
+            embedding_model: String::new(),
+            tool_calling: true,
+            embeddings: true,
+            monthly_quota: 200_000,
+            trusted_internal: false,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
@@ -351,6 +407,28 @@ impl Settings {
         if d != ROOT_DOMAIN_PLACEHOLDER && !hostname_ok {
             return invalid("tenancy.root_domain bukan hostname huruf kecil yang valid");
         }
+        let ai = &self.ai;
+        if ai.max_concurrency == 0 {
+            return invalid("ai.max_concurrency harus > 0");
+        }
+        if ai.platform.enabled {
+            let p = &ai.platform;
+            let https = p.base_url.starts_with("https://");
+            if !(https || (p.trusted_internal && p.base_url.starts_with("http://"))) {
+                return invalid(
+                    "ai.platform.base_url harus https (http hanya bila trusted_internal)",
+                );
+            }
+            if p.models.is_empty() || p.models.iter().any(|m| m.trim().is_empty()) {
+                return invalid("ai.platform.models wajib berisi minimal satu model");
+            }
+            if p.monthly_quota == 0 {
+                return invalid("ai.platform.monthly_quota harus > 0");
+            }
+            if p.embeddings && p.embedding_model.trim().is_empty() {
+                return invalid("ai.platform.embedding_model wajib bila embeddings = true");
+            }
+        }
         if self.environment == Environment::Production
             && self.tenancy.root_domain == ROOT_DOMAIN_PLACEHOLDER
         {
@@ -390,6 +468,7 @@ pub struct Secrets {
     pub redis_url: SecretString,
     pub file_signing_key: SecretString,
     pub data_kek: SecretString,
+    pub platform_ai_api_key: Option<SecretString>,
 }
 
 impl Secrets {
@@ -415,11 +494,15 @@ impl Secrets {
         }
         // Format & panjang divalidasi saat Keyring dibangun (infrastructure::crypto); fail-closed.
         let data_kek = get(DATA_KEK_VAR)?;
+        let platform_ai_api_key = lookup(PLATFORM_AI_KEY_VAR)
+            .filter(|v| !v.trim().is_empty())
+            .map(SecretString::new);
         Ok(Self {
             database_url,
             redis_url,
             file_signing_key,
             data_kek,
+            platform_ai_api_key,
         })
     }
 }
@@ -481,6 +564,30 @@ log_format = "json"
         s.validate().unwrap();
         assert_eq!(s.environment, Environment::Production);
         assert_eq!(s.observability.log_format, LogFormat::Json);
+    }
+
+    #[test]
+    fn ai_platform_is_off_by_default_and_validated_when_on() {
+        let s = Settings::parse(VALID).unwrap();
+        assert!(!s.ai.platform.enabled && s.ai.max_concurrency > 0);
+        let on = |body: &str| {
+            let s = Settings::parse(&format!("{VALID}\n[ai.platform]\nenabled = true\n{body}"))
+                .unwrap();
+            s.validate()
+        };
+        on("base_url = \"https://api.example.test/v1\"\nmodels = [\"m1\"]\nembedding_model = \"e1\"").unwrap();
+        for bad in [
+            "base_url = \"http://10.0.0.5/v1\"\nmodels = [\"m1\"]\nembedding_model = \"e\"",
+            "base_url = \"https://api.example.test/v1\"\nmodels = []\nembedding_model = \"e\"",
+            "base_url = \"https://api.example.test/v1\"\nmodels = [\"m\"]\nembedding_model = \"\"",
+            "base_url = \"https://api.example.test/v1\"\nmodels = [\"m\"]\nembedding_model = \"e\"\nmonthly_quota = 0",
+        ] {
+            assert!(on(bad).is_err(), "{bad}");
+        }
+        // Endpoint internal hanya dengan trusted_internal (kontrol 9).
+        on("base_url = \"http://10.0.0.5/v1\"\nmodels = [\"m1\"]\nembedding_model = \"e\"\ntrusted_internal = true").unwrap();
+        // Kunci tidak boleh ditulis di file konfigurasi.
+        assert!(Settings::parse(&format!("{VALID}\n[ai.platform]\napi_key = \"sk-x\"")).is_err());
     }
 
     #[test]

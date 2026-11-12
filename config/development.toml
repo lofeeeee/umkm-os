@@ -70,3 +70,17 @@ signed_url_ttl_secs = 3600
 
 [observability]
 log_format = "pretty"
+
+[ai]
+# Batas permintaan bersamaan ke provider AI per proses (SSRF guard, ADR-0011).
+max_concurrency = 8
+
+[ai.platform]
+# Provider AI milik platform (ADR-0011). Aktifkan setelah base_url/model disepakati;
+# kunci di secret UMKM_PLATFORM_AI_API_KEY, tidak pernah di file ini.
+enabled = false
+base_url = ""
+models = []
+embedding_model = ""
+# Kuota bulanan per tenant dalam satuan token (prompt + completion); angka final mengikuti D-10.
+monthly_quota = 200000
