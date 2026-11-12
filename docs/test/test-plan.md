@@ -95,7 +95,7 @@ Perintah gate P2: `cargo fmt --check && cargo clippy --workspace -- -D warnings 
 | TC-ORD-001 | AC-ORD-001 | lihat §2 | ditetapkan saat task | Planned |
 | TC-ORD-002 | AC-ORD-002 | lihat §2 | ditetapkan saat task | Planned |
 | TC-ORD-003 | AC-ORD-003 | lihat §2 | ditetapkan saat task | Planned |
-| TC-ORD-004 | AC-ORD-004 | lihat §2 | ditetapkan saat task | Planned |
+| TC-ORD-004 | AC-ORD-004 | Unit+Integration | `crates/infrastructure/tests/commerce_schema.rs` | Verified |
 | TC-ORD-005 | AC-ORD-005 | lihat §2 | ditetapkan saat task | Planned |
 | TC-ORD-006 | AC-ORD-006 | lihat §2 | ditetapkan saat task | Planned |
 | TC-ORD-007 | AC-ORD-007 | lihat §2 | ditetapkan saat task | Planned |

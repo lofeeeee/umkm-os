@@ -18,7 +18,7 @@ use umkm_shared::ids::TenantId;
 use uuid::Uuid;
 
 /// Tabel milik tenant yang WAJIB ber-RLS (selain yang di allowlist katalog).
-const TENANT_TABLES: [&str; 27] = [
+const TENANT_TABLES: [&str; 33] = [
     "audit_logs",
     "tenants",
     "tenant_memberships",
@@ -43,6 +43,12 @@ const TENANT_TABLES: [&str; 27] = [
     "customer_addresses",
     "customer_sessions",
     "customer_tokens",
+    "commerce_settings",
+    "orders",
+    "order_items",
+    "order_events",
+    "payments",
+    "refunds",
     "business_addresses",
     "business_hours",
     "business_hour_exceptions",

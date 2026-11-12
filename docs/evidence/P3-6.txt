@@ -1,0 +1,52 @@
+P3-6 — Order state machine 13 status (PRD.md §4.7, FR-ORD-004) + P3-4 skema commerce
+Tanggal: 2026-11-12
+
+Desain (crates/domain/src/commerce/state.rs, diagram di doc comment)
+- Alur QRIS statis (ADR-0004): checkout → AWAITING_PAYMENT → (verifikasi staf) PAID → PROCESSING
+  atau, bila toko mewajibkan approval, PAID → APPROVAL_PENDING → APPROVED | REJECTED. PROCESSING →
+  READY_FOR_PICKUP (pickup) | SHIPPED (delivery) → COMPLETED. Order dibayar keluar hanya lewat REFUNDED.
+  AWAITING_PAYMENT → CANCELLED | EXPIRED. PENDING = order dibuat staf (belum ditagih) → AWAITING_PAYMENT |
+  CANCELLED. CANCELLED/EXPIRED/REFUNDED terminal. Total 21 edge.
+- Urutan approval setelah PAID mengikuti urutan status PRD §4.7 (PAID sebelum APPROVAL_PENDING);
+  REJECTED → REFUNDED.
+- manual_target(): status yang boleh diminta staf lewat endpoint status umum (sisanya punya aliran
+  sendiri: pembayaran P3-7, approval P3-8, refund P3-7, expiry job).
+- crates/domain/src/commerce/pricing.rs  normalize_cart (gabung varian, 1..=999 per baris, ≤50 baris),
+  quote dari harga katalog server + ongkir (P3-5).
+
+P3-4 skema (migrations/0016_commerce.{up,down}.sql; BUILD_PLAN menyebut 0011)
+- commerce_settings (QRIS objek tenant + nama penerima; checkout_enabled hanya bila QRIS diatur; ongkir;
+  order_approval_required; TTL reservasi 15..1440 menit), orders (kode unik, idempotency unik per tenant,
+  hash token akses, hash request, snapshot kontak, persetujuan privacy/terms D-12, total = subtotal +
+  ongkir), order_items (snapshot nama/SKU/harga; line_total = harga × qty; FK RESTRICT ke varian),
+  order_events, payments (satu per order; confirmed ⇔ amount_received; rejected ⇔ alasan), refunds.
+- app.order_transition_allowed + trigger BEFORE UPDATE (cermin domain), trigger status awal
+  PENDING/AWAITING_PAYMENT, total/fulfillment/customer order tidak dapat diubah.
+- order_items, order_events, refunds: REVOKE UPDATE, DELETE; orders, payments: REVOKE DELETE.
+- RLS ENABLE+FORCE 6 tabel (rls.rs: 33). app.purge_customers kini juga mengosongkan snapshot kontak order.
+
+Hasil
+- fmt/clippy -D warnings bersih; cargo test --workspace --locked lulus semua (lihat P3-5 untuk total
+  terbaru); domain commerce 5, commerce_schema 3. migration run -> revert 0 -> run DB kosong: exit 0.
+
+Cakupan AC
+- AC-ORD-004 Verified: domain 13×13 hanya 21 edge, tanpa self-loop, terminal tanpa keluar; contoh invalid
+  (COMPLETED→PENDING, AWAITING_PAYMENT→PROCESSING, PAID→CANCELLED, pickup→SHIPPED) ditolak domain dan
+  trigger DB (23514); paritas domain ↔ DB 338 kombinasi.
+- AC-ORD-003 (sebagian di sini): UPDATE/DELETE order_items sebagai role aplikasi 42501; pembuktian
+  perubahan katalog tidak mengubah order ada di P3-5.
+
+Negative control (perubahan sementara, dikembalikan; test terkait GAGAL)
+== NEGCTL: DB mengizinkan PAID -> CANCELLED (paritas)
+    db_transition_table_matches_domain
+    trigger_rejects_invalid_transitions_and_mutations
+test result: FAILED. 1 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.46s
+== NEGCTL: domain mengabaikan fulfillment
+    db_transition_table_matches_domain
+test result: FAILED. 2 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.46s
+== NEGCTL: snapshot tanpa REVOKE
+    trigger_rejects_invalid_transitions_and_mutations
+test result: FAILED. 2 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.52s
+== NEGCTL: tanpa trigger transisi
+    trigger_rejects_invalid_transitions_and_mutations
+test result: FAILED. 2 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.52s

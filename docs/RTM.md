@@ -218,7 +218,7 @@ Arah balik: TC → AC lewat nomor yang sama (Test Plan §4); AC → FR lewat FSD
 | FR-ORD-001 | AC-ORD-001 | TC-ORD-001 | ditetapkan di OpenAPI saat task | ADR-0004 (D-02) | — | Planned |
 | FR-ORD-002 | AC-ORD-002 | TC-ORD-002 | ditetapkan di OpenAPI saat task | ADR-0004 (D-02) | — | Planned |
 | FR-ORD-003 | AC-ORD-003 | TC-ORD-003 | ditetapkan di OpenAPI saat task | ADR-0004 (D-02) | — | Planned |
-| FR-ORD-004 | AC-ORD-004 | TC-ORD-004 | ditetapkan di OpenAPI saat task | ADR-0004 (D-02) | — | Planned |
+| FR-ORD-004 | AC-ORD-004 | TC-ORD-004 | internal: OrderStatus::can_transition + trg_orders_transition | ADR-0004 (D-02) | `docs/evidence/P3-6.txt` | Verified |
 | FR-ORD-005 | AC-ORD-005 | TC-ORD-005 | ditetapkan di OpenAPI saat task | ADR-0004 (D-02) | — | Planned |
 | FR-ORD-006 | AC-ORD-006 | TC-ORD-006 | ditetapkan di OpenAPI saat task | ADR-0004 (D-02) | — | Planned |
 | FR-ORD-007 | AC-ORD-007 | TC-ORD-007 | ditetapkan di OpenAPI saat task | ADR-0004 (D-02) | — | Planned |
