@@ -127,9 +127,9 @@
 | D-02 | lihat `OPEN_DECISIONS.md` | lihat `BUILD_PLAN.md §6` | MENUNGGU |
 | D-03 | lihat `OPEN_DECISIONS.md` | lihat `BUILD_PLAN.md §6` | MENUNGGU |
 | D-04 | lihat `OPEN_DECISIONS.md` | lihat `BUILD_PLAN.md §6` | MENUNGGU |
-| D-05 | lihat `OPEN_DECISIONS.md` | lihat `BUILD_PLAN.md §6` | MENUNGGU |
+| D-05 | lihat `OPEN_DECISIONS.md` | lihat `BUILD_PLAN.md §6` | DISETUJUI |
 | D-06 | lihat `OPEN_DECISIONS.md` | lihat `BUILD_PLAN.md §6` | MENUNGGU |
-| D-07 | lihat `OPEN_DECISIONS.md` | lihat `BUILD_PLAN.md §6` | MENUNGGU |
+| D-07 | lihat `OPEN_DECISIONS.md` | lihat `BUILD_PLAN.md §6` | DISETUJUI sementara (lokal) |
 | D-08 | lihat `OPEN_DECISIONS.md` | lihat `BUILD_PLAN.md §6` | MENUNGGU |
 | D-09 | lihat `OPEN_DECISIONS.md` | lihat `BUILD_PLAN.md §6` | MENUNGGU |
 | D-10 | lihat `OPEN_DECISIONS.md` | lihat `BUILD_PLAN.md §6` | MENUNGGU |

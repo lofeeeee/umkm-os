@@ -374,7 +374,7 @@ Gate B: D-01, D-08, D-11, D-12 privacy/terms selesai
   -> P1-1..P1-10 -> Gate isolasi riil
   -> FSD/AC/TC/API/RTM final + OpenAPI + Test Plan (setelah Gate B, sebelum P2+)
 
-Gate C: D-05, D-07, ADR-0014 -> P2
+Gate C: D-05, D-07, ADR-0014 -> P2   (DISETUJUI 2026-11-12; D-07 sementara lokal)
 Gate D: D-02, D-03, D-12 privacy/terms transaksi (P3) -> P3
 Gate E: D-09, D-12 consent AI -> P5
 Gate F: D-04 -> P6
