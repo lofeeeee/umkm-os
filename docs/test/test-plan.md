@@ -52,18 +52,18 @@ Perintah gate P2: `cargo fmt --check && cargo clippy --workspace -- -D warnings 
 | TC-WEB-004 | AC-WEB-004 | Unit+Integration+Contract | `apps/api/tests/website_http.rs`, `crates/domain/src/website/schema.rs` | Verified |
 | TC-WEB-005 | AC-WEB-005 | Unit+Integration+Contract | `apps/api/tests/website_http.rs`, `crates/domain/src/website/schema.rs` | Verified |
 | TC-WEB-006 | AC-WEB-006 | Unit+Integration+Contract | `crates/domain/tests/website_fuzz.rs` | Verified |
-| TC-WEB-007 | AC-WEB-007 | Unit+Integration+Contract | `apps/api/tests/website_http.rs` | Verified |
-| TC-WEB-008 | AC-WEB-008 | Unit+Integration+Contract | `apps/api/tests/website_http.rs` | Verified |
+| TC-WEB-007 | AC-WEB-007 | Unit+Integration+Contract | `apps/api/tests/website_http.rs`, `frontend/src/renderer/Site.test.tsx` | Verified |
+| TC-WEB-008 | AC-WEB-008 | Unit+Integration+Contract | `apps/api/tests/website_http.rs`, `frontend/src/renderer/Site.test.tsx` | Verified |
 | TC-WEB-009 | AC-WEB-009 | Unit+Integration+Contract | `apps/api/tests/website_http.rs`, `crates/application/src/website/editor.rs` | Verified |
 | TC-WEB-010 | AC-WEB-010 | Unit+Integration+Contract | `apps/api/tests/website_http.rs` | Verified |
-| TC-WEB-011 | AC-WEB-011 | Unit+Integration+Contract | `apps/api/tests/website_http.rs` | Verified |
+| TC-WEB-011 | AC-WEB-011 | Unit+Integration+Contract | `apps/api/tests/website_http.rs`, `frontend/e2e/dashboard.spec.ts` | Verified |
 | TC-WEB-012 | AC-WEB-012 | Unit+Integration+Contract | `apps/api/tests/website_http.rs` | Verified |
 | TC-WEB-013 | AC-WEB-013 | Unit+Integration+Contract | `crates/infrastructure/tests/website_schema.rs` | Verified |
 | TC-WEB-014 | AC-WEB-014 | Unit+Integration+Contract | `apps/api/tests/website_http.rs` | Verified |
 | TC-WEB-015 | AC-WEB-015 | Unit+Integration+Contract | `apps/api/tests/website_http.rs` | Verified |
 | TC-WEB-016 | AC-WEB-016 | Unit+Integration+Contract | `apps/api/tests/website_http.rs` | Verified |
-| TC-WEB-017 | AC-WEB-017 | Unit+Integration+Contract | ditetapkan saat task | Planned |
-| TC-WEB-018 | AC-WEB-018 | Unit+Integration+Contract | ditetapkan saat task | Planned |
+| TC-WEB-017 | AC-WEB-017 | E2E (browser) | `frontend/e2e/responsive.spec.ts` | Verified |
+| TC-WEB-018 | AC-WEB-018 | Unit + E2E + Security | `frontend/src/renderer/Site.test.tsx`, `frontend/e2e/dashboard.spec.ts`, `scripts/smoke-adr0014.sh` | Verified |
 | TC-BIZ-001 | AC-BIZ-001 | Unit+Integration | `apps/api/tests/business_http.rs` | Verified |
 | TC-BIZ-002 | AC-BIZ-002 | Unit+Integration | `apps/api/tests/business_http.rs` | Verified |
 | TC-BIZ-003 | AC-BIZ-003 | Unit+Integration | `apps/api/tests/business_http.rs`, `crates/domain/src/business.rs` | Verified |

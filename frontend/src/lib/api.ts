@@ -1,0 +1,117 @@
+// Klien API dashboard (ADR-0015): cookie sesi HttpOnly (dikirim browser) + header CSRF.
+// Token CSRF tidak disimpan di storage persisten; diambil ulang dari GET /auth/session.
+
+export const API_ORIGIN = (process.env.NEXT_PUBLIC_API_ORIGIN ?? "").replace(/\/$/, "");
+
+export interface FieldErr { path: string; code: string }
+
+export class ApiError extends Error {
+  constructor(
+    public status: number,
+    public code: string,
+    message: string,
+    public details: unknown,
+  ) {
+    super(message);
+  }
+  get fieldErrors(): FieldErr[] {
+    const d = this.details as { errors?: FieldErr[] } | null;
+    return Array.isArray(d?.errors) ? d.errors : [];
+  }
+}
+
+let csrf: string | null = null;
+
+export function setCsrf(token: string | null) {
+  csrf = token;
+}
+
+type Body = { json: unknown } | { bytes: Blob } | undefined;
+
+export async function api<T>(method: string, path: string, body?: Body): Promise<T> {
+  const headers: Record<string, string> = {};
+  let payload: BodyInit | undefined;
+  if (body && "json" in body) {
+    headers["content-type"] = "application/json";
+    payload = JSON.stringify(body.json);
+  } else if (body && "bytes" in body) {
+    headers["content-type"] = "application/octet-stream";
+    payload = body.bytes;
+  }
+  if (method !== "GET" && csrf) headers["x-csrf-token"] = csrf;
+  const res = await fetch(`${API_ORIGIN}${path}`, { method, headers, body: payload, credentials: "include" });
+  if (res.status === 204) return undefined as T;
+  const data = await res.json().catch(() => null);
+  if (!res.ok || !data?.success) {
+    const e = data?.error ?? {};
+    throw new ApiError(res.status, e.code ?? "UNKNOWN", e.message ?? `HTTP ${res.status}`, e.details ?? null);
+  }
+  return data.data as T;
+}
+
+export interface Session { user_id: string; session_id: string; csrf_token: string }
+export interface Membership { tenant_id: string; name: string; slug: string; role: string }
+export interface TenantView {
+  id: string; name: string; slug: string; status: string;
+  primary_hostname: string | null; my_role: string; my_permissions: string[];
+}
+
+/** Sesi aktif atau null (401). */
+export async function loadSession(): Promise<Session | null> {
+  try {
+    const s = await api<Session>("GET", "/api/v1/auth/session");
+    setCsrf(s.csrf_token);
+    return s;
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 401) return null;
+    throw e;
+  }
+}
+
+/** URL absolut untuk signed path dari API (`/files/...`). */
+export function apiUrl(path: string): string {
+  return `${API_ORIGIN}${path}`;
+}
+
+export function tenantParam(): string | null {
+  if (typeof window === "undefined") return null;
+  const t = new URLSearchParams(window.location.search).get("tenant");
+  return t && /^[0-9a-f-]{36}$/.test(t) ? t : null;
+}
+
+export const ERROR_TEXT: Record<string, string> = {
+  required: "wajib diisi",
+  too_long: "terlalu panjang",
+  unsafe_url: "tautan tidak aman / tidak valid",
+  invalid_asset_ref: "gambar tidak valid",
+  asset_not_found: "gambar tidak ditemukan",
+  invalid_color: "warna harus #RRGGBB",
+  invalid_font_preset: "font tidak dikenal",
+  unknown_field: "field tidak dikenal",
+  duplicate_id: "id ganda",
+  out_of_range: "di luar rentang",
+  invalid_length: "jumlah item tidak valid",
+  invalid_email: "email tidak valid",
+  invalid_phone: "nomor tidak valid (8–15 digit)",
+  invalid_timezone: "timezone tidak dikenal",
+  invalid_time: "format jam HH:MM",
+  open_equals_close: "jam buka sama dengan jam tutup",
+  duplicate_day: "hari ganda",
+  invalid_date: "format tanggal YYYY-MM-DD",
+  closed_xor_hours: "pilih tutup ATAU isi jam",
+  invalid_or_duplicate_date: "tanggal tidak valid atau ganda",
+  template_mismatch: "template tidak sesuai website",
+  latitude_longitude_pair: "isi latitude dan longitude bersamaan",
+  control_character: "karakter tidak diizinkan",
+};
+
+export function describe(e: unknown): string {
+  if (e instanceof ApiError) {
+    const f = e.fieldErrors;
+    if (f.length) return f.map((x) => `${x.path || "dokumen"}: ${ERROR_TEXT[x.code] ?? x.code}`).join("; ");
+    if (e.status === 403) return "Anda tidak punya izin untuk aksi ini.";
+    if (e.status === 409) return e.message;
+    return e.message;
+  }
+  return "Tidak dapat menghubungi server.";
+}

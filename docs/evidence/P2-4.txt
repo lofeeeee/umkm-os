@@ -42,3 +42,7 @@ Negative control (dilemahkan -> gagal -> dipulihkan)
 
 Hasil: website_http 9 lulus; application editor 2 lulus; cargo test --workspace --locked 0 biner gagal;
 clippy -D warnings, fmt, cargo deny, check-domain-boundary, check-rtm: ok.
+
+Tambahan 2026-11-12 (frontend): FR-WEB-007 preview ponsel/desktop di dashboard — Verified lewat
+frontend/e2e/dashboard.spec.ts (lebar preview tepat 375 px; preview menampilkan draft sementara publik
+tetap versi terbit) dan frontend/src/renderer/Site.test.tsx (section nonaktif hanya tampil di preview).

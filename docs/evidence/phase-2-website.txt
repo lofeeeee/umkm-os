@@ -1,0 +1,41 @@
+Gate P2 — Website builder (BUILD_PLAN.md Phase 2; Test Plan §3)
+Tanggal: 2026-11-12. Gate C (D-05, D-07 sementara, ADR-0014) DISETUJUI 2026-11-12.
+
+Perintah gate (satu baris, docs/test/test-plan.md §3):
+  cargo fmt --all --check && cargo clippy --workspace --all-targets --locked -- -D warnings &&
+  cargo test --workspace --locked && python3 scripts/check-rtm.py && cargo deny check &&
+  scripts/check-domain-boundary.sh && scripts/check-ci-needs.sh && docker compose --env-file .env.example config -q &&
+  (cd frontend && npm run lint && npm run typecheck && npm test && npm run build)
+Output:
+  rust tests passed=250 failed=0
+  check-rtm: OK — 73 FR, 83 AC, 83 TC
+  advisories ok, bans ok, licenses ok, sources ok
+  OK: umkm-domain bebas dari axum/sqlx/reqwest/tokio/hyper/tower/redis
+  OK: ci-gate mengagregasi 6 job: ['containers', 'frontend', 'lint', 'supply-chain', 'test', 'workflow-lint']
+        Tests  15 passed (15)
+  csp.mjs: 9 hash inline script dari 8 halaman -> out/csp.caddy
+  GATE_EXIT=0
+Run pertama gagal (exit 1) karena cargo fmt pada tes kontrak baru; diperbaiki lalu diulang.
+
+Ditambah (butuh stack berjalan, lihat P2-7.txt): scripts/smoke-adr0014.sh 18/18 PASS; Playwright 5/5.
+
+Exit criteria (Test Plan §3, baris P2)
+- Semua TC-WEB (18), TC-BIZ (7), TC-FILE (6) Verified ............................ YA
+- 5 skenario Website PRD.md §13.3 (pilih template, edit draft, preview tidak mengubah terbit,
+  publish versi baru, rollback) ................................................... YA (website_http, e2e)
+- Tabel P2 tercakup penjaga isolasi (RLS katalog: 15 tabel tenant; policy t4) ......... YA
+- Fuzz validator >= 10.000 input tanpa panic ......................................... YA (20.000)
+- Frontend lint/typecheck/test lulus ................................................ YA
+- Perintah gate exit 0 .............................................................. YA
+
+Task & bukti: P2-1.txt, P2-2.txt, P2-3.txt, P2-4.txt, P2-5.txt, P2-6.txt, P2-7.txt.
+Migration baru: 0010_website, 0011_storage, 0012_business (up/down/up diverifikasi per task).
+
+Tetap terbuka (tidak diklaim)
+- NFR-003/004 (TTFB p95, dashboard p95): belum diukur; butuh env + dataset + threshold yang disetujui (P8-2).
+- TLS produksi: menunggu provider DNS (ADR-0001). Sampai itu cookie __Host-/Secure tidak berlaku di http.
+- D-07 bagian provider: file di PostgreSQL (ADR-0009); off-site backup & RPO 15 menit belum ada.
+- Grid produk menampilkan "Katalog produk segera hadir" sampai Phase 3 (katalog).
+- Header template berisi placeholder "Nama Toko" sampai pemilik mengubahnya (perbaikan seed = migration baru).
+- E2E Playwright & smoke belum di CI (butuh stack); CI menjalankan lint/typecheck/unit/build/caddy validate.
+- ESLint 9 (deprecated) dan 1 advisory moderate dev-only (dependency-review.md §Frontend).

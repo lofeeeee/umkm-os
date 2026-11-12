@@ -1,0 +1,26 @@
+P2-3 — Editor section-based (D-05 DISETUJUI, ADR-0007; PRD.md §4.3)
+Tanggal: 2026-11-12
+
+Artefak
+- Server: apps/api/src/website.rs + crates/application/src/website/editor.rs (lihat P2-4.txt).
+- frontend/src/app/website/page.tsx: pemilih template (preview + pakai), editor tema (warna #RRGGBB,
+  preset font), daftar section (urutkan naik/turun, aktif/nonaktif, ubah field, tambah 11 tipe, hapus),
+  pemilih/unggah gambar (asset:<uuid>), simpan draft (base_revision; 409 -> pesan muat ulang), terbitkan,
+  riwayat versi (lihat, kembalikan), preview Ponsel 375 px / Desktop dengan renderer YANG SAMA dengan publik.
+  Tombol dimatikan sesuai my_permissions (website.edit / website.publish); server tetap penegak utama.
+- frontend/src/dashboard/editor/fields.tsx: form generik dari spesifikasi field per tipe.
+- frontend/src/renderer/sections.ts + section-defaults.json: spesifikasi field + default section baru.
+- crates/domain/tests/frontend_contract.rs: KONTRAK lintas bahasa — default section editor harus lolos
+  validator Rust. Pada run pertama menemukan bug nyata: default Gallery (0 gambar) ditolak validator (min 1)
+  -> editor akan membuat draft yang tidak bisa disimpan. Perbaikan: gallery boleh 0 gambar (aman; hanya judul).
+
+Cakupan AC
+- AC-WEB-007 urutan: API (website_http) + renderer (Site.test.tsx "urutan section mengikuti array").
+- AC-WEB-008 section nonaktif: tidak dikirim API publik + tidak dirender; di preview tampil berpenanda.
+- AC-WEB-009 tema/aset: API 422; editor membatasi input (color picker, select preset, pemilih aset tenant).
+- Alur browser nyata (frontend/e2e/dashboard.spec.ts, Chromium, stack Caddy+API+PostgreSQL+RLS):
+  login -> Kelola website -> ubah judul hero (berisi <script>) -> preview berubah -> Ponsel = 375 px ->
+  Simpan draft -> publik (konteks lain) masih versi lama -> Terbitkan -> pengunjung baru melihat judul baru
+  sebagai teks literal, 0 elemen <script> di section, 0 pelanggaran CSP / pageerror.
+
+Hasil: vitest 15/15; ESLint + tsc bersih; Playwright 5/5 (2 run berturut-turut); domain contract 1/1.

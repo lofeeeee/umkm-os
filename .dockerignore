@@ -5,3 +5,8 @@ docs/
 .env.*
 !.env.example
 rust-toolchain.toml
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/test-results/
+frontend/playwright-report/

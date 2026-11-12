@@ -12,7 +12,9 @@ body_limit_bytes = 2162688
 
 [http]
 # CORS allowlist dashboard (ADR-0015). Tanpa wildcard; production wajib https.
-cors_allowed_origins = ["http://localhost:3000"]
+# app.umkm.test: e2e lokal. *.localhost TIDAK satu "site" (tanpa entri PSL) sehingga cookie SameSite=Lax
+# dari api.localhost ditolak browser; umkm.test satu site seperti ryasai.my.id di produksi.
+cors_allowed_origins = ["http://localhost:3000", "http://app.umkm.test"]
 # true hanya bila API berada di belakang Caddy (Caddy membuang XFF dari klien).
 trust_forwarded_for = false
 

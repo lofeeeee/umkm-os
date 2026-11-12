@@ -28,3 +28,18 @@ CMD ["serve"]
 FROM runtime AS worker
 COPY --from=build /out/umkm-worker /usr/local/bin/umkm-worker
 ENTRYPOINT ["umkm-worker"]
+
+# ---------------------------------------------------------------- frontend (ADR-0014)
+# Static export Next.js; tidak ada Node di image produksi. CSP hash skrip inline dibuat saat build.
+FROM node:22-bookworm-slim AS frontend-build
+WORKDIR /fe
+COPY frontend/package.json frontend/package-lock.json frontend/.npmrc ./
+RUN npm ci --no-audit
+COPY frontend/ ./
+ARG PUBLIC_API_ORIGIN
+ENV NEXT_PUBLIC_API_ORIGIN=${PUBLIC_API_ORIGIN} NEXT_TELEMETRY_DISABLED=1
+RUN test -n "$PUBLIC_API_ORIGIN" || { echo "build-arg PUBLIC_API_ORIGIN wajib"; exit 1; }; npm run build
+
+FROM caddy:2.10-alpine AS web
+COPY --from=frontend-build /fe/out /srv/www
+COPY ops/caddy/Caddyfile /etc/caddy/Caddyfile

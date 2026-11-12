@@ -108,6 +108,7 @@ jobs:
       - run: docker build --target api -t umkm-os/api:ci .
       - run: docker build --target worker -t umkm-os/worker:ci .
       - run: docker build -f ops/backup/Dockerfile -t umkm-os/backup:ci .
+      - run: docker build --target web --build-arg PUBLIC_API_ORIGIN=https://api.ryasai.my.id -t umkm-os/web:ci .
       - name: shellcheck
         run: docker run --rm -v "$PWD:/mnt" -w /mnt koalaman/shellcheck:v0.11.0 scripts/*.sh ops/backup/*.sh
 
@@ -121,10 +122,36 @@ jobs:
           persist-credentials: false
       - run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.12 -color
 
+  frontend:
+    name: frontend lint + typecheck + test + build + Caddy
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # Node di dalam container (tanpa action pihak ketiga); versi dipin di frontend/package.json (exact).
+      - name: lint, typecheck, unit test, audit, static export (ADR-0014)
+        run: |
+          docker run --rm -v "$PWD:/w" -w /w/frontend -e NEXT_TELEMETRY_DISABLED=1 \
+            -e NEXT_PUBLIC_API_ORIGIN=https://api.ryasai.my.id node:22-bookworm-slim sh -euc '
+              npm ci --no-audit
+              npm ls >/dev/null
+              npm audit --audit-level=high --omit=optional
+              npm run lint
+              npm run typecheck
+              npm test
+              npm run build'
+      - name: Caddyfile valid dengan hasil build (CSP hash)
+        run: |
+          docker run --rm -e ROOT_DOMAIN=ryasai.my.id -e PUBLIC_API_ORIGIN=https://api.ryasai.my.id \
+            -v "$PWD/frontend/out:/srv/www:ro" -v "$PWD/ops/caddy/Caddyfile:/etc/caddy/Caddyfile:ro" \
+            caddy:2.10-alpine caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+
   ci-gate:
     name: ci-gate
     if: always()
-    needs: [lint, test, supply-chain, containers, workflow-lint]
+    needs: [lint, test, supply-chain, containers, workflow-lint, frontend]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:

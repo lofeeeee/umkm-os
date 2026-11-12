@@ -1,0 +1,85 @@
+/* Renderer situs tenant. Container query (bukan media query) agar preview mobile di
+   dashboard (lebar 375) berperilaku persis seperti layar ponsel. */
+
+.site {
+  container-type: inline-size;
+  --s-ink: #111827;
+  --s-muted: #6b7280;
+  --s-bg: #ffffff;
+  --s-soft: #f3f4f6;
+  font-family: var(--s-font);
+  color: var(--s-ink);
+  background: var(--s-bg);
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.site *, .site *::before, .site *::after { box-sizing: border-box; }
+.site img { max-width: 100%; height: auto; display: block; border-radius: 12px; }
+.site a { color: var(--s-primary); }
+
+.s { position: relative; padding: 40px 16px; }
+.s:nth-child(even) { background: var(--s-soft); }
+.s-inner { max-width: 1080px; margin: 0 auto; }
+.s-title { font-size: 1.5rem; margin: 0 0 16px; line-height: 1.25; }
+.s-muted { color: var(--s-muted); }
+.s-lead { font-size: 1.125rem; color: var(--s-muted); margin: 0 0 24px; }
+.s-plain { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+
+.s-btn {
+  display: inline-block; background: var(--s-primary); color: #fff !important; text-decoration: none;
+  padding: 12px 20px; border-radius: 10px; font-weight: 600; min-height: 44px;
+}
+.s-btn:focus-visible, .site a:focus-visible { outline: 3px solid var(--s-ink); outline-offset: 2px; }
+
+.s-headbar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
+.s.s--header { padding: 16px; background: var(--s-bg) !important; border-bottom: 1px solid var(--s-soft); }
+.s-brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.125rem; }
+.s-logo { width: 40px; height: 40px; object-fit: cover; border-radius: 8px; }
+.s-nav { display: flex; flex-wrap: wrap; gap: 16px; }
+.s-nav a { text-decoration: none; padding: 8px 0; }
+
+.s-hero, .s-split, .s-promo { display: grid; gap: 24px; align-items: center; }
+.s-hero h1 { font-size: 2rem; line-height: 1.15; margin: 0 0 12px; max-width: 22ch; }
+.s-hero-img, .s-media { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; }
+.s-promo { border-left: 6px solid var(--s-primary); padding-left: 16px; }
+
+.s-gallery { display: grid; gap: 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.s-gallery figure { margin: 0; }
+.s-gallery img { aspect-ratio: 1; object-fit: cover; width: 100%; }
+.s-gallery figcaption { font-size: 0.875rem; color: var(--s-muted); margin-top: 4px; }
+
+.s-cards { display: grid; gap: 16px; }
+.s-card { margin: 0; padding: 20px; background: var(--s-bg); border-radius: 12px; box-shadow: 0 1px 3px rgb(0 0 0 / 0.08); }
+.s-card cite { color: var(--s-muted); font-style: normal; font-weight: 600; }
+
+.s-hours { border-collapse: collapse; width: 100%; max-width: 420px; }
+.s-hours th, .s-hours td { text-align: left; padding: 8px 0; border-bottom: 1px solid #e5e7eb; }
+.s-hours th { font-weight: 500; width: 40%; }
+.s-status { display: inline-block; padding: 4px 12px; border-radius: 999px; font-weight: 600; font-size: 0.875rem; }
+.s-status-open { background: #dcfce7; color: #166534; }
+.s-status-closed { background: #fee2e2; color: #991b1b; }
+
+.s-contact, .s-social { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; }
+.s-social { margin-top: 16px; text-transform: capitalize; }
+
+.s.s--footer { padding: 24px 16px; background: var(--s-ink) !important; color: #e5e7eb; }
+.s-foot { display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; }
+.s-foot .s-muted { color: #9ca3af; }
+
+.s-disabled { opacity: 0.45; }
+.s-disabled-badge {
+  position: absolute; top: 8px; right: 8px; background: #111827; color: #fff; font-size: 0.75rem;
+  padding: 2px 8px; border-radius: 6px; z-index: 1;
+}
+
+@container (min-width: 768px) {
+  .s { padding: 64px 24px; }
+  .s-hero.has-media, .s-split.has-media, .s-promo.has-media { grid-template-columns: 1fr 1fr; }
+  .s-hero h1 { font-size: 2.75rem; }
+  .s-gallery { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .s-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@container (min-width: 1024px) {
+  .s-gallery { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .s-cards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}

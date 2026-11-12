@@ -25,5 +25,28 @@ Setiap dependency eksternal dicatat di sini **sebelum** ditambahkan ke `Cargo.to
 | base64 | 0.22.1 | MIT OR Apache-2.0 | 1.48 | infrastructure | Encoding token base64url | P1-2 |
 | futures-util | 0.3.34 | MIT OR Apache-2.0 | 1.71 | api | Stream SSE (`stream::unfold`); sudah transitif lewat axum, `default-features = false` + `std` | P1-10 |
 | sqlx | 0.9.0 | MIT OR Apache-2.0 | 1.94 | database | DB access + migration `PRD.md §7.1`; `default-features = false`, hanya postgres/tokio/macros/migrate/uuid + `json` (P2-1: kolom `jsonb` website, memakai serde_json yang sudah ada) | P0-4, P2-1 |
+| hmac | 0.13.0 | MIT OR Apache-2.0 | 1.85 | infrastructure | HMAC-SHA256 signed URL file (ADR-0009), verifikasi konstan-waktu; sudah ada di Cargo.lock lewat sqlx-postgres (RustCrypto) | P2-6 |
 
 Kriteria: maintained aktif, tanpa advisory RustSec terbuka, lisensi permisif (MIT/Apache-2.0/BSD/ISC/Unicode/Zlib/BSL-1.0), MSRV ≤ `rust-version` workspace (1.94; dinaikkan dari 1.85 di P0-4 untuk sqlx 0.9.0, rilis 2026-05-21).
+
+## Frontend (npm) — ADR-0014, P2-3/P2-7
+
+Versi dipin **exact** (`.npmrc save-exact`), dipilih sebagai rilis stabil tertinggi yang terbit ≥ 2 minggu sebelum 2026-11-12 (≤ 2026-10-29). Tidak ada Node di image produksi (target `web` = Caddy + `out/`).
+
+| Paket | Versi | Lisensi | Peran | Alasan / catatan |
+|---|---|---|---|---|
+| next | 16.4.3 | MIT | build | Static export `PRD.md §9.2`; tidak dijalankan sebagai server |
+| react, react-dom | 19.3.1 | MIT | runtime browser | UI |
+| typescript | 6.0.3 | Apache-2.0 | dev | 7.x (port native) dihindari: build Next memakai API JS TypeScript |
+| eslint | 9.39.5 | MIT | dev | `eslint-config-next` 16.4.3 belum mendukung ESLint 10. npm menandai 9.x deprecated → naikkan saat config Next mendukung 10 |
+| eslint-config-next | 16.4.3 | MIT | dev | Aturan Next/React hooks; + `react/no-danger` & larangan `dangerouslySetInnerHTML` |
+| vitest | 4.1.12 | MIT | dev | Unit test renderer (`renderToStaticMarkup`, tanpa DOM). 5.x memicu crash resolver npm 10 |
+| @vitejs/plugin-react | 6.1.2 | MIT | dev | JSX untuk vitest |
+| @playwright/test | 1.64.1 | Apache-2.0 | dev | Uji browser responsif + alur editor terhadap stack nyata |
+| @types/react, @types/react-dom | 19.3.0 | MIT | dev | Tipe |
+| @types/node | 26.6.6 | MIT | dev | Tipe |
+
+Catatan:
+- `.npmrc legacy-peer-deps=true`: npm 10.9.8 crash (`edgesOut` null) saat menelusuri optional peer `vitest@*` → `@vitest/browser-playwright`. Konflik peer tetap diperiksa: CI menjalankan `npm ls` (gagal bila ada peer invalid/missing).
+- jsdom & @testing-library/react tidak dipakai (rantai optional peer `@napi-rs/canvas` memicu crash yang sama; render ke string lebih ketat untuk uji escaping).
+- `npm audit --audit-level=high`: lulus. Ada 1 advisory **moderate** (minimatch ReDoS, GHSA-g3hv-75wg-m249) di rantai dev `typescript-eslint` ← `eslint-config-next`; hanya tooling lint dengan pola glob milik repo, tidak masuk build/produksi. Perbaikan menunggu `eslint-config-next` yang memakai typescript-eslint > 8.72.2.

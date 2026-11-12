@@ -182,14 +182,14 @@ Arah balik: TC → AC lewat nomor yang sama (Test Plan §4); AC → FR lewat FSD
 | FR-WEB-001 | AC-WEB-001, AC-WEB-002 | TC-WEB-001, TC-WEB-002 | GET /api/v1/tenants/{tenant_id}/website/templates; GET /api/v1/tenants/{tenant_id}/website/templates/{key}/preview | ADR-0007, ADR-0014 | `docs/evidence/P2-2.txt` | Verified |
 | FR-WEB-002 | AC-WEB-003 | TC-WEB-003 | PUT /api/v1/tenants/{tenant_id}/website | ADR-0007, ADR-0014 | `docs/evidence/P2-2.txt` | Verified |
 | FR-WEB-003 | AC-WEB-004, AC-WEB-005, AC-WEB-006 | TC-WEB-004, TC-WEB-005, TC-WEB-006 | PUT /api/v1/tenants/{tenant_id}/website/pages/{slug}/draft | ADR-0007, ADR-0014 | `docs/evidence/P2-1.txt` | Verified |
-| FR-WEB-004 | AC-WEB-007, AC-WEB-008 | TC-WEB-007, TC-WEB-008 | PUT /api/v1/tenants/{tenant_id}/website/pages/{slug}/draft | ADR-0007, ADR-0014 | `docs/evidence/P2-3.txt` | Planned |
-| FR-WEB-005 | AC-WEB-009 | TC-WEB-009 | PUT /api/v1/tenants/{tenant_id}/website/pages/{slug}/draft | ADR-0007, ADR-0014 | `docs/evidence/P2-3.txt` | Planned |
+| FR-WEB-004 | AC-WEB-007, AC-WEB-008 | TC-WEB-007, TC-WEB-008 | PUT /api/v1/tenants/{tenant_id}/website/pages/{slug}/draft | ADR-0007, ADR-0014 | `docs/evidence/P2-3.txt` | Verified |
+| FR-WEB-005 | AC-WEB-009 | TC-WEB-009 | PUT /api/v1/tenants/{tenant_id}/website/pages/{slug}/draft | ADR-0007, ADR-0014 | `docs/evidence/P2-3.txt` | Verified |
 | FR-WEB-006 | AC-WEB-010 | TC-WEB-010 | GET/PUT /api/v1/tenants/{tenant_id}/website/pages/{slug}/draft | ADR-0007, ADR-0014 | `docs/evidence/P2-4.txt` | Verified |
-| FR-WEB-007 | AC-WEB-011 | TC-WEB-011 | GET /api/v1/tenants/{tenant_id}/website/pages/{slug}/draft | ADR-0007, ADR-0014 | `docs/evidence/P2-4.txt` | Planned |
+| FR-WEB-007 | AC-WEB-011 | TC-WEB-011 | GET /api/v1/tenants/{tenant_id}/website/pages/{slug}/draft | ADR-0007, ADR-0014 | `docs/evidence/P2-4.txt` | Verified |
 | FR-WEB-008 | AC-WEB-012, AC-WEB-013 | TC-WEB-012, TC-WEB-013 | POST /api/v1/tenants/{tenant_id}/website/pages/{slug}/publish; GET /api/v1/tenants/{tenant_id}/website/pages/{slug}/versions | ADR-0007, ADR-0014 | `docs/evidence/P2-4.txt` | Verified |
 | FR-WEB-009 | AC-WEB-014 | TC-WEB-014 | POST /api/v1/tenants/{tenant_id}/website/pages/{slug}/rollback | ADR-0007, ADR-0014 | `docs/evidence/P2-4.txt` | Verified |
-| FR-WEB-010 | AC-WEB-015, AC-WEB-016, AC-WEB-017 | TC-WEB-015, TC-WEB-016, TC-WEB-017 | GET /api/v1/public/site (Host) | ADR-0007, ADR-0014 | `docs/evidence/P2-7.txt` | Planned |
-| FR-WEB-011 | AC-WEB-005, AC-WEB-018 | TC-WEB-005, TC-WEB-018 | GET /api/v1/public/site (Host) | ADR-0007, ADR-0014 | `docs/evidence/P2-1.txt` | Planned |
+| FR-WEB-010 | AC-WEB-015, AC-WEB-016, AC-WEB-017 | TC-WEB-015, TC-WEB-016, TC-WEB-017 | GET /api/v1/public/site (Host) | ADR-0007, ADR-0014 | `docs/evidence/P2-7.txt` | Verified |
+| FR-WEB-011 | AC-WEB-005, AC-WEB-018 | TC-WEB-005, TC-WEB-018 | GET /api/v1/public/site (Host) | ADR-0007, ADR-0014 | `docs/evidence/P2-1.txt` | Verified |
 | FR-BIZ-001 | AC-BIZ-001, AC-BIZ-002 | TC-BIZ-001, TC-BIZ-002 | GET/PUT /api/v1/tenants/{tenant_id}/business/profile | — | `docs/evidence/P2-5.txt` | Verified |
 | FR-BIZ-002 | AC-BIZ-003 | TC-BIZ-003 | PUT /api/v1/tenants/{tenant_id}/business/addresses | — | `docs/evidence/P2-5.txt` | Verified |
 | FR-BIZ-003 | AC-BIZ-004 | TC-BIZ-004 | PUT /api/v1/tenants/{tenant_id}/business/hours | — | `docs/evidence/P2-5.txt` | Verified |

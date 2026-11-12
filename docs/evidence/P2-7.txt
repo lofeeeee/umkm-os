@@ -1,0 +1,59 @@
+P2-7 — Routing publik + halaman responsif (ADR-0014; PRD.md §4.3, §9.2, §9.7)
+Tanggal: 2026-11-12
+
+Artefak
+- frontend/ (Next.js 16.4.3, output: "export"): /site = shell situs tenant; /, /login, /register, /website,
+  /business = dashboard. Renderer frontend/src/renderer/Site.tsx (container query -> preview 375 = ponsel).
+- frontend/scripts/csp.mjs: hash SHA-256 setiap <script> inline hasil build -> out/csp.caddy. CSP tanpa
+  'unsafe-inline' untuk skrip (next export menyisipkan 3 skrip inline per halaman; 'self' saja akan
+  mematikan aplikasi).
+- ops/caddy/Caddyfile: app.{ROOT} = dashboard (renderer /site -> 404); {ROOT} -> redirect app;
+  *.{ROOT} = shell /site.html untuk semua path, /_next/* statis, HANYA /_api/public/* -> /api/v1/public/*
+  dengan Host asli dan tanpa Cookie. Cache: /_next/static immutable 1 th, HTML no-cache.
+- Dockerfile target `web` (Node build -> caddy:2.10-alpine + out/ + Caddyfile; tanpa Node di image);
+  compose caddy build target web, PUBLIC_API_ORIGIN (default http://api.${ROOT_DOMAIN} sampai TLS).
+- CI job `frontend` (+ build target web di job containers); check-ci-needs: 6 job di ci-gate.
+- scripts/smoke-adr0014.sh: 18 cek lewat Caddy terhadap stack nyata.
+
+Cara menjalankan bukti lokal (stack nyata)
+  eval "$(scripts/dev-db.sh up)"; buat login umkm_app (NOBYPASSRLS) seperti ops/postgres/init; sqlx migrate run
+  (cd frontend && NEXT_PUBLIC_API_ORIGIN=http://api.umkm.test npm run build)
+  UMKM_ENV=development UMKM_ROOT_DOMAIN=umkm.test UMKM_DATABASE_URL=postgres://umkm_app:...@127.0.0.1:55432/umkm_dev \
+    UMKM_REDIS_URL=$REDIS_URL UMKM_FILE_SIGNING_KEY=... target/debug/umkm-api serve
+  docker run --network host --add-host api:127.0.0.1 -e ROOT_DOMAIN=umkm.test -e PUBLIC_API_ORIGIN=http://api.umkm.test \
+    -v $PWD/frontend/out:/srv/www:ro -v $PWD/ops/caddy/Caddyfile:/etc/caddy/Caddyfile:ro caddy:2.10-alpine
+  DOM=umkm.test scripts/smoke-adr0014.sh <dir>      -> 18 PASS, SMOKE-OK
+  cd frontend && E2E_HOST_MAP=umkm.test SITE_URL=http://<slug>.umkm.test APP_URL=http://app.umkm.test \
+    E2E_EMAIL=<slug>@x.id E2E_PASSWORD=... npx playwright test      -> 5 passed
+
+Temuan
+- *.localhost TIDAK bisa dipakai untuk dashboard lokal: tanpa entri Public Suffix List, Chromium menganggap
+  app.localhost dan api.localhost site berbeda -> cookie sesi SameSite=Lax dari fetch lintas site ditolak
+  (login "berhasil" 200 tetapi sesi kosong). Produksi aman: my.id ada di PSL sehingga app.ryasai.my.id dan
+  api.ryasai.my.id satu site (ryasai.my.id). Lokal memakai umkm.test (config/development.toml CORS +
+  --host-resolver-rules Playwright). Didokumentasikan di README dan .env.example.
+- Layout desktop rusak di screenshot pertama: kelas section `s s-hero`/`s-contact` sama dengan kelas blok
+  di dalamnya -> seluruh section menjadi grid 2 kolom / flex. Diperbaiki (modifier `s--{type}`, kolom gambar
+  hanya bila ada gambar) + tes regresi "kelas section tidak bertabrakan".
+- Spesifikasi e2e awalnya saling bergantung (spesifikasi editor mengganti judul yang dicari spesifikasi
+  responsif); kini responsif membandingkan h1 dengan data API, editor memakai judul bermarkup.
+
+Cakupan AC
+- AC-WEB-015 Verified: host tenant -> shell + /_api/public/site versi terbit (smoke + website_http).
+- AC-WEB-016 Verified: host tak dikenal 404; X-Forwarded-Host diabaikan; /api/v1/* dan /_api/v1/* di host
+  tenant TIDAK diteruskan (mendapat shell HTML).
+- AC-WEB-017 Verified: Chromium 375/768/1024/1440 — semua section aktif terlihat dalam viewport, scroll
+  horizontal 0, screenshot di frontend/test-results/ (tidak di-commit).
+- AC-WEB-018 Verified: teks bermarkup tampil literal (unit + browser), 0 <script> di section, CSP hash
+  ketat aktif di host tenant & dashboard, 0 pelanggaran CSP di Chromium; tautan javascript:/data:/
+  protocol-relative tidak menjadi href (unit).
+- NFR-003/004 (TTFB p95 < 500 ms, dashboard p95 < 2 s): TIDAK diklaim. Butuh environment + dataset +
+  threshold yang disetujui (BUILD_PLAN P2-7, P8-2). Halaman statis 944 KB total untuk seluruh export.
+
+Negative control (dilemahkan -> gagal -> dipulihkan)
+- NC1 dangerouslySetInnerHTML di judul hero  -> ESLint 3 error + 2 tes vitest gagal
+- NC2 safeHref menerima javascript:           -> 2 tes vitest gagal
+- NC3 Caddy meneruskan semua /_api/*          -> smoke "FAIL leak application/json"
+- NC4 CSP tanpa hash (script-src 'self')     -> 4/4 tes responsif gagal (aplikasi tidak berjalan)
+- NC5 .s-inner min-width 600px               -> responsif 375 gagal (scroll horizontal), lebar lain lulus
+Pemulihan diverifikasi: smoke SMOKE-OK, Playwright lulus.

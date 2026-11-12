@@ -24,9 +24,57 @@ http://api.{$ROOT_DOMAIN} {
 	reverse_proxy api:8080
 }
 
-# Dashboard, marketing, dan tenant website: kontrak frontend contingent ADR-0014.
-# Tidak ada aset/endpoint publik yang direkayasa sebelum ADR itu DISETUJUI.
-http://{$ROOT_DOMAIN}, http://app.{$ROOT_DOMAIN}, http://*.{$ROOT_DOMAIN} {
+# CSP dengan hash skrip inline hasil build frontend (frontend/scripts/csp.mjs).
+import /srv/www/csp.caddy
+
+(static_cache) {
+	@hashed path /_next/static/*
+	header @hashed Cache-Control "public, max-age=31536000, immutable"
+	@html not path /_next/static/*
+	header @html Cache-Control "no-cache"
+}
+
+# ADR-0014: dashboard = build statis; data dari api.{$ROOT_DOMAIN} (cookie + CSRF, ADR-0015).
+http://app.{$ROOT_DOMAIN} {
 	import hardening
-	respond "Frontend belum tersedia (ADR-0014 MENUNGGU)" 503
+	import csp_app
+	import static_cache
+	header X-Frame-Options DENY
+	root * /srv/www
+	# Renderer situs tenant tidak dilayani di host dashboard.
+	@site path /site /site.html /site.txt
+	respond @site 404
+	try_files {path} {path}.html /404.html
+	file_server
+}
+
+# Marketing belum dalam lingkup Phase 2: arahkan ke dashboard.
+http://{$ROOT_DOMAIN} {
+	import hardening
+	redir http://app.{$ROOT_DOMAIN}{uri} 302
+}
+
+# ADR-0014: situs tenant. Tenant ditentukan API dari Host asli (P1-4); Caddy HANYA
+# meneruskan /_api/public/* ke /api/v1/public/* tanpa mengubah Host. Path lain = shell statis.
+http://*.{$ROOT_DOMAIN} {
+	import hardening
+	import csp_site
+	import static_cache
+	header X-Frame-Options DENY
+	handle /_api/public/* {
+		uri replace /_api/public/ /api/v1/public/ 1
+		reverse_proxy api:8080 {
+			# Cookie apa pun dari browser tidak relevan untuk endpoint publik.
+			header_up -Cookie
+		}
+	}
+	handle /_next/* {
+		root * /srv/www
+		file_server
+	}
+	handle {
+		root * /srv/www
+		rewrite * /site.html
+		file_server
+	}
 }

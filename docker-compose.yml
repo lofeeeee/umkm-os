@@ -27,7 +27,13 @@ x-app: &app
 
 services:
   caddy:
-    image: caddy:2.10-alpine
+    # Caddy + build statis frontend (Dockerfile target `web`, ADR-0014).
+    build:
+      context: .
+      target: web
+      args:
+        PUBLIC_API_ORIGIN: ${PUBLIC_API_ORIGIN:-http://api.${ROOT_DOMAIN}}
+    image: umkm-os/web:local
     restart: unless-stopped
     read_only: true
     cap_drop: [ALL]
@@ -38,8 +44,9 @@ services:
       - "${CADDY_HTTP_PORT:-80}:80"
     environment:
       ROOT_DOMAIN: ${ROOT_DOMAIN:?ROOT_DOMAIN wajib (placeholder sampai D-01)}
+      # Origin API untuk CSP (connect-src/img-src). http sampai TLS produksi aktif.
+      PUBLIC_API_ORIGIN: ${PUBLIC_API_ORIGIN:-http://api.${ROOT_DOMAIN}}
     volumes:
-      - ./ops/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
     networks: [edge]

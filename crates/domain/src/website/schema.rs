@@ -382,7 +382,7 @@ impl V {
             }
             "gallery" => {
                 self.text(m, p, "title", 120, false);
-                self.list(m, p, "images", (1, 24), |v, item, ip| {
+                self.list(m, p, "images", (0, 24), |v, item, ip| {
                     if let Some(n) = v.object(item, ip, &["asset", "caption"]) {
                         v.asset(n, ip, "asset", true);
                         v.text(n, ip, "caption", 120, false);

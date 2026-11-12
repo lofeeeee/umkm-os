@@ -7,8 +7,9 @@ Workflow: `.github/workflows/ci.yml`.
 | `lint` | `cargo fmt --check`, `cargo clippy -D warnings`, `scripts/check-domain-boundary.sh`, `scripts/check-ci-needs.sh`, `scripts/check-rtm.py` (RTM dua arah) |
 | `test` | Postgres pgvector:pg16 service; migration up/down/up via `sqlx-cli`; `cargo test --workspace --locked` |
 | `supply-chain` | `cargo deny check` (advisory RustSec, lisensi, sumber) |
-| `containers` | `docker compose config -q`, `docker build` target `api` + `worker` |
+| `containers` | `docker compose config -q`, `docker build` target `api` + `worker` + `web` (Caddy + frontend statis) |
 | `workflow-lint` | actionlint |
+| `frontend` | di container `node:22-bookworm-slim`: `npm ci`, `npm ls` (peer valid), `npm audit --audit-level=high`, ESLint, `tsc --noEmit`, vitest, static export + hash CSP; lalu `caddy validate` Caddyfile dengan `out/` |
 | `ci-gate` | `if: always()`; `scripts/ci-gate.sh` lulus hanya bila semua job `success` |
 
 ## Aturan fail-closed
@@ -27,4 +28,4 @@ Branch protection untuk `main`:
 3. Require branches to be up to date before merging.
 4. Do not allow bypassing the above settings.
 
-Belum dikerjakan (tahap berikutnya `PRD.md §14.2`): frontend tests (setelah ADR-0014), staging deploy, smoke test, production approval/deploy.
+Belum di CI (butuh stack berjalan): `frontend/e2e` (Playwright) dan `scripts/smoke-adr0014.sh` — dijalankan manual per gate, hasil di `docs/evidence/P2-7.txt`. Belum dikerjakan (`PRD.md §14.2`): staging deploy, smoke test otomatis, production approval/deploy.

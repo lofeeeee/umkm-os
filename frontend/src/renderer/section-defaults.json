@@ -1,0 +1,13 @@
+{
+  "header": { "title": "Nama Toko", "nav": [] },
+  "hero": { "title": "Judul utama", "subtitle": "Kalimat pendek tentang bisnis Anda" },
+  "about": { "title": "Tentang Kami", "body": "Ceritakan bisnis Anda di sini." },
+  "product_grid": { "title": "Produk", "limit": 8 },
+  "promotion": { "title": "Promo", "body": "Tulis promo Anda" },
+  "gallery": { "title": "Galeri", "images": [] },
+  "testimonials": { "title": "Kata Pelanggan", "items": [{ "name": "Pelanggan", "quote": "Pelayanannya ramah." }] },
+  "business_hours": { "title": "Jam Buka" },
+  "location": { "title": "Lokasi", "show_map": false },
+  "contact": { "title": "Hubungi Kami", "show_phone": true, "show_email": true, "show_whatsapp": true, "socials": [] },
+  "footer": { "text": "Terima kasih telah berkunjung" }
+}
