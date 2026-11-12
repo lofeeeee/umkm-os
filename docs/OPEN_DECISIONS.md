@@ -16,7 +16,7 @@
 | D-08 email provider | P1 verification/invitation/reset | Ditunda; adapter log-only |
 | D-11 retention | P1 purge/deletion | **DISETUJUI** |
 | D-12 privacy/terms registrasi | P1 | **DISETUJUI bersyarat** |
-| D-12 consent AI | P5 | Sebelum P5 |
+| D-12 consent AI | P5 | **DISETUJUI bersyarat** 2026-11-12 |
 | D-12 privacy/terms transaksi | P3 | **DISETUJUI bersyarat** 2026-11-12 |
 | D-12 legal billing | P7 | Sebelum P7 |
 | D-12 sign-off | Go-live | Go-live |
@@ -25,7 +25,7 @@
 | ADR-0014 frontend contract | P2 | **DISETUJUI** 2026-11-12 |
 | D-02 payment | P3 | **DISETUJUI** 2026-11-12 (QRIS statis) |
 | D-03 customer identity | P3/P6 | **DISETUJUI** 2026-11-12 (guest + linking) |
-| D-09 AI key policy | P5 | Sebelum P5 |
+| D-09 AI key policy | P5 | **DISETUJUI** 2026-11-12 (platform + BYOK) |
 | D-04 messaging channel | P6 | Sebelum P6 |
 | D-06 custom domain | P7 / status V1.0 | Sebelum P7 |
 | D-10 pricing | P7 | Sebelum P7 |
@@ -46,10 +46,10 @@
 | D-06 | Custom domain masuk MVP atau lanjutan | Fase lanjutan; P7-4 conditional/out-of-V1.0 | DNS ownership, TLS per domain, lifecycle anti-takeover | P7 / V1.0 scope | ADR-0008 | Product + Ops | MENUNGGU |
 | D-07 | Storage S3-compatible + biaya | Provider eksternal; bukan MinIO di VPS yang sama | budget 8 GB dan RPO dihitung ulang | P2 | ADR-0009 | Ops + Finance | **DISETUJUI sementara** 2026-11-12: "local database for now" → adapter PostgreSQL di belakang port provider-neutral (ADR-0009). Terbuka: provider eksternal + off-site backup |
 | D-08 | Email provider | Transactional email + SPF/DKIM/DMARC + sandbox; **outbox tetap provider-neutral** | tanpa ini AUTH-003/005/009/010 tidak bisa diuji end-to-end | P1 | ADR-0010 | Ops + Product | MENUNGGU — **ditunda** 2026-11-11 (product-decision-log); P1-6 memakai adapter log-only |
-| D-09 | AI provider BYOK/platform key/keduanya | BYOK dulu; platform key menyusul | cost metering/quota/liability lebih awal | P5 | ADR-0011 | Product + Finance + Legal | MENUNGGU |
+| D-09 | AI provider BYOK/platform key/keduanya | BYOK dulu; platform key menyusul | cost metering/quota/liability lebih awal | P5 | ADR-0011 | Product + Finance + Legal | **DISETUJUI** 2026-11-12: keduanya — provider platform (kuota token per tenant) atau kunci milik tenant (ADR-0011) |
 | D-10 | Subscription pricing/limit/cycle | Simpan limit di `plans.limits_json`; angka final menyusul | billing integration tertahan | P7 | Product decision log | Product + Finance | MENUNGGU |
 | D-11 | Retention conversation/audit/file/customer | Tetapkan angka sebelum P1 | purge/deletion/export tidak bisa Done | P1 | ADR-0012 | Legal + Ops | **DISETUJUI** 2026-11-11: percakapan 30 hari, audit 1 tahun, file/data pelanggan +30 hari setelah tenant tutup/permintaan hapus (ADR-0012) |
-| D-12 | Legal/compliance | Pecah: privacy/terms registrasi (P1), privacy/terms transaksi (P3), consent AI (P5), legal billing (P7), sign-off go-live | masing-masing gate tertahan bila belum `DISETUJUI` | P1/P3/P5/P7/Go-live | Legal decision log | Legal | Privacy/terms registrasi **DISETUJUI bersyarat** 2026-11-11; privacy/terms transaksi **DISETUJUI bersyarat** 2026-11-12 (placeholder; teks final sebelum go-live); bagian lain MENUNGGU |
+| D-12 | Legal/compliance | Pecah: privacy/terms registrasi (P1), privacy/terms transaksi (P3), consent AI (P5), legal billing (P7), sign-off go-live | masing-masing gate tertahan bila belum `DISETUJUI` | P1/P3/P5/P7/Go-live | Legal decision log | Legal | Privacy/terms registrasi **DISETUJUI bersyarat** 2026-11-11; privacy/terms transaksi **DISETUJUI bersyarat** 2026-11-12 (placeholder; teks final sebelum go-live); consent AI **DISETUJUI bersyarat** 2026-11-12 (placeholder); legal billing & sign-off MENUNGGU |
 
 ---
 
@@ -76,7 +76,7 @@ ADR-0002 dan ADR-0013 `DISETUJUI` 2026-11-11 (Gate A). Sisanya belum `DISETUJUI`
 | ADR-0008 | Custom domain lifecycle dan status V1.0 | D-06 / R-04 |
 | ADR-0009 | Object storage dan signed URL | D-07 — **DISETUJUI sementara 2026-11-12** |
 | ADR-0010 | Email provider dan outbox delivery | D-08 / R-02 |
-| ADR-0011 | AI credential ownership | D-09 |
+| ADR-0011 | AI credential ownership | D-09 — **DISETUJUI 2026-11-12** |
 | ADR-0012 | Retention dan purge policy | D-11 |
 | ADR-0013 | Batas crate workspace | `BUILD_PLAN.md §3.2` — **DISETUJUI 2026-11-11** (5 crate inti), `docs/decisions/0013-batas-crate-workspace.md` |
 | ADR-0014 | Kontrak frontend, Host/domain-registry, Caddy, API | R-01 — **DISETUJUI 2026-11-12**, `docs/decisions/0014-kontrak-frontend-host-caddy-api.md` |

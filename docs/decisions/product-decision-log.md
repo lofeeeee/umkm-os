@@ -38,3 +38,12 @@ Keputusan produk yang tidak membutuhkan ADR. Entri tidak ditimpa; perubahan = en
 - D-03: **DISETUJUI** — guest checkout + akun customer opsional; linking hanya setelah email terverifikasi (ADR-0005). Verifikasi email nyata tetap menunggu D-08.
 - D-12 privacy/terms transaksi: **DISETUJUI bersyarat** — checkout wajib menyetujui privacy + terms transaksi (versi + waktu disimpan di order); teks placeholder wajib diganti teks final hasil review legal sebelum go-live.
 - Perluasan preset permission (engineering, mengikuti pola role 2026-11-11): `payments.verify` (Owner, Manager), `payments.refund` (Owner), `customers.read` (Owner, Manager, Support Agent, Viewer), `customers.manage` (Owner, Manager). Total permission 33 → 37.
+
+## 2026-11-12 — Gate E: D-09, D-12 consent AI
+
+- Pemutus: Product owner ("1. Both, it can use platform as a provider or they bring one. 2. Sure").
+- D-09: **DISETUJUI** — tenant dapat memakai provider AI platform (biaya platform, dibatasi kuota token bulanan per
+  tenant) atau membawa kunci/endpoint sendiri (BYOK). Detail di ADR-0011.
+- D-12 consent AI: **DISETUJUI bersyarat** — pelanggan diberi tahu sedang berbicara dengan asisten AI dan persetujuan
+  dicatat per percakapan; teks placeholder wajib diganti teks final hasil review legal sebelum go-live.
+- MFA (AUTH-011/012): belum diputus pemilik; enkripsi envelope P5-2 dirancang agar dapat dipakai MFA.

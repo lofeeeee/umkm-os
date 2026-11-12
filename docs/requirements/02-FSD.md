@@ -193,7 +193,7 @@ Status keputusan per 2026-11-12: D-05, ADR-0014 `DISETUJUI`; D-07 `DISETUJUI` se
 | AC-APR-002 | Given 2 step, When step 2 di-approve sebelum step 1, Then ditolak; timeout → status expired |
 | AC-APR-003 | Given update status entity langsung tanpa approval yang disyaratkan, Then ditolak |
 
-## 9. AIC — AI provider & config (`PRD.md §4.10`) — **Contingent D-09**
+## 9. AIC — AI provider & config (`PRD.md §4.10`) — D-09 **DISETUJUI** (ADR-0011: platform + BYOK)
 
 | FR | Requirement | AC | Fase |
 |---|---|---|---|
