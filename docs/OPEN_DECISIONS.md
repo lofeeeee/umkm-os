@@ -1,6 +1,6 @@
 # Register Keputusan Gate 0 — UMKM Business OS
 
-**Status (2026-11-12):** D-01, D-02, D-03, D-05, D-11, ADR-0014 `DISETUJUI`; D-07 `DISETUJUI` sementara (adapter lokal); D-12 privacy/terms registrasi + transaksi `DISETUJUI` bersyarat; D-08 ditunda (tetap `MENUNGGU`). Sisanya `MENUNGGU`.
+**Status (2026-11-12):** D-01, D-02, D-03, D-04, D-05, D-09, D-11, ADR-0014 `DISETUJUI`; D-07 `DISETUJUI` sementara (adapter lokal); D-12 privacy/terms registrasi + transaksi `DISETUJUI` bersyarat; D-08 ditunda (tetap `MENUNGGU`). Sisanya `MENUNGGU`.
 **Sumber:** `PRD.md §20` — *Open Decisions — Must Be Resolved Before Implementation*.
 **Status vocabulary:** `MENUNGGU` / `DISETUJUI` / `DITOLAK`. `BUILD_PLAN.md` memakai vocabulary yang sama. Template MADR di dalam ADR boleh memakai `Proposed/Accepted/...` sebagai lifecycle dokumen, bukan status keputusan produk.
 **Aturan kontrak:** jika dua pembacaan sah mengubah perilaku, ini contract question untuk pemilik produk. Tidak ada perilaku yang diubah berdasarkan asumsi.
@@ -26,7 +26,7 @@
 | D-02 payment | P3 | **DISETUJUI** 2026-11-12 (QRIS statis) |
 | D-03 customer identity | P3/P6 | **DISETUJUI** 2026-11-12 (guest + linking) |
 | D-09 AI key policy | P5 | **DISETUJUI** 2026-11-12 (platform + BYOK) |
-| D-04 messaging channel | P6 | Sebelum P6 |
+| D-04 messaging channel | P6 | **DISETUJUI** 2026-11-12 (web chat; WhatsApp/Telegram menyusul) |
 | D-06 custom domain | P7 / status V1.0 | Sebelum P7 |
 | D-10 pricing | P7 | Sebelum P7 |
 
@@ -41,7 +41,7 @@
 | D-01 | Brand, root domain, format subdomain | `platform.id` hanya contoh; tetapkan root domain sebelum Caddy/TLS wildcard | sertifikat wildcard dan `tenant_domains.hostname` harus dimigrasi ulang | P0, P1 | ADR-0001 | Product + Ops | **DISETUJUI** 2026-11-11: `ryasai.my.id`, tenant `{slug}.ryasai.my.id` (ADR-0001). Terbuka: provider DNS untuk TLS wildcard |
 | D-02 | MVP payment manual/COD atau gateway | Manual transfer/COD + verified manual workflow; adapter tetap provider-neutral | provider/webhook/PCI masuk lebih awal | P3 | ADR-0004 | Product + Finance | **DISETUJUI** 2026-11-12: QRIS statis GoPay milik tenant + verifikasi manual oleh staf (ADR-0004). Gateway/QRIS dinamis = ADR baru |
 | D-03 | Customer identity guest/account/linking | Guest + account linking setelah verifikasi; cabang lain didokumentasikan | registered-only mengubah onboarding; guest-only membatasi `get_customer_orders` | P3, P6 | ADR-0005 | Product | **DISETUJUI** 2026-11-12: guest checkout + akun opsional, linking hanya setelah email terverifikasi (ADR-0005) |
-| D-04 | Messaging channel web chat/WhatsApp | Web chat dulu; WhatsApp lewat adapter fase lanjutan | butuh provider messaging, opt-in/consent, webhook | P6 | ADR-0006 | Product | MENUNGGU |
+| D-04 | Messaging channel web chat/WhatsApp | Web chat dulu; WhatsApp lewat adapter fase lanjutan | butuh provider messaging, opt-in/consent, webhook | P6 | ADR-0006 | Product | **DISETUJUI** 2026-11-12: web chat dulu; WhatsApp/Telegram lewat adapter fase lanjutan (ADR-0006) |
 | D-05 | Website builder section-based/canvas penuh | Section-based sebagai default usulan; R-03 tetap contract question | canvas penuh mengubah `content_json`, renderer, rollback | P2 | ADR-0007 | Product + Design | **DISETUJUI** 2026-11-12: section-based / stacked blocks (ADR-0007) |
 | D-06 | Custom domain masuk MVP atau lanjutan | Fase lanjutan; P7-4 conditional/out-of-V1.0 | DNS ownership, TLS per domain, lifecycle anti-takeover | P7 / V1.0 scope | ADR-0008 | Product + Ops | MENUNGGU |
 | D-07 | Storage S3-compatible + biaya | Provider eksternal; bukan MinIO di VPS yang sama | budget 8 GB dan RPO dihitung ulang | P2 | ADR-0009 | Ops + Finance | **DISETUJUI sementara** 2026-11-12: "local database for now" → adapter PostgreSQL di belakang port provider-neutral (ADR-0009). Terbuka: provider eksternal + off-site backup |

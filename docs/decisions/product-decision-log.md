@@ -54,3 +54,11 @@ Keputusan produk yang tidak membutuhkan ADR. Entri tidak ditimpa; perubahan = en
   sedang bicara dengan asisten AI, jawaban bisa keliru, frasa "bicara dengan admin" untuk staf (dijamin guardrail),
   retensi pesan, larangan mengirim kata sandi/PIN/kartu. P6 menampilkan teks ini di widget chat dan mencatat versi +
   waktu persetujuan per percakapan. Wajib diganti teks final hasil review legal sebelum go-live.
+
+## 2026-11-12 — Gate F: D-04, MFA
+
+- Pemutus: Product owner ("1. Whatsapp/telegram later, 2. sure").
+- D-04: **DISETUJUI** — web chat dulu; WhatsApp/Telegram lewat adapter fase lanjutan (ADR-0006).
+- MFA (AUTH-011/012): **DISETUJUI** — TOTP (RFC 6238, SHA-1, 6 digit, 30 detik, toleransi ±1 langkah) untuk akun
+  pengguna; rahasia TOTP dienkripsi envelope (ADR-0011); 10 kode pemulihan sekali pakai (hash disimpan). Owner dapat
+  mewajibkan MFA untuk anggota tenant dengan role admin (Owner/Manager); platform Super Admin wajib MFA.
