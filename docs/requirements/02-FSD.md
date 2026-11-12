@@ -111,27 +111,27 @@ Status keputusan per 2026-11-12: D-05, ADR-0014 `DISETUJUI`; D-07 `DISETUJUI` se
 | AC-INV-004 | Given policy default, When mutasi membuat stok < 0, Then ditolak |
 | AC-INV-005 | Given stok 1 dan N checkout paralel, Then tepat 1 berhasil (`PRD.md §13.3` Commerce) |
 
-## 5. CRM — Customer (`PRD.md §4.6`) — **Contingent D-03**
+## 5. CRM — Customer (`PRD.md §4.6`) — D-03 **DISETUJUI** (ADR-0005: guest + linking)
 
 | FR | Requirement | AC | Fase |
 |---|---|---|---|
-| FR-CRM-001 | Guest dan/atau registered customer | AC-CRM-001 (Contingent D-03) | P3-3 |
+| FR-CRM-001 | Guest checkout + akun customer opsional per tenant (ADR-0005) | AC-CRM-001 | P3-3 |
 | FR-CRM-002 | Profil nama/email/telepon, alamat | AC-CRM-002 | P3-3 |
 | FR-CRM-003 | Order history, conversation/ticket history | AC-CRM-003 | P3-3 |
 | FR-CRM-004 | Tags, internal notes, pencarian | AC-CRM-004 | P3-3 |
-| FR-CRM-005 | Account linking hanya setelah verifikasi | AC-CRM-005 (Contingent D-03) | P3-3 |
+| FR-CRM-005 | Account linking hanya setelah verifikasi | AC-CRM-005 | P3-3 |
 | FR-CRM-006 | Export/deletion mengikuti retention (ADR-0012) | AC-CRM-006 | P3-3 |
 
 | AC | Kriteria |
 |---|---|
-| AC-CRM-001 | Contingent D-03 — dirinci setelah keputusan guest/registered/linking |
+| AC-CRM-001 | Given guest checkout dengan email yang sama dengan customer lain, Then customer baru dibuat dan order lama customer lain tidak dapat dibaca; Given akun customer toko A, When login di toko B, Then ditolak (akun per tenant) |
 | AC-CRM-002 | Given customer tenant A, When tenant B mencari email yang sama, Then tidak ditemukan |
 | AC-CRM-003 | Given customer, Then history hanya memuat order/ticket tenant yang sama |
 | AC-CRM-004 | Given internal note, Then tidak pernah terlihat oleh customer |
-| AC-CRM-005 | Contingent D-03 — linking tanpa verifikasi ditolak |
+| AC-CRM-005 | Given akun belum terverifikasi, Then order guest beremail sama tidak terlihat; When email diverifikasi, Then customer guest tenant yang sama ditautkan dan tercatat di audit; customer tenant lain tidak ikut |
 | AC-CRM-006 | Given permintaan hapus, Then data customer di-purge +30 hari (ADR-0012) |
 
-## 6. ORD — Cart, checkout, order (`PRD.md §4.7`) — payment **Contingent D-02**
+## 6. ORD — Cart, checkout, order (`PRD.md §4.7`) — payment D-02 **DISETUJUI** (ADR-0004: QRIS statis + verifikasi manual)
 
 | FR | Requirement | AC | Fase |
 |---|---|---|---|
@@ -141,7 +141,8 @@ Status keputusan per 2026-11-12: D-05, ADR-0014 `DISETUJUI`; D-07 `DISETUJUI` se
 | FR-ORD-004 | 13 status, transisi eksplisit & tervalidasi | AC-ORD-004 | P3-6 |
 | FR-ORD-005 | Approval order dengan alasan rejection, actor, SoD, notifikasi | AC-ORD-005 | P3-8 |
 | FR-ORD-006 | Idempotency key checkout | AC-ORD-006 | P3-5 |
-| FR-ORD-007 | Payment adapter + webhook signature + dedup | AC-ORD-007 (Contingent D-02) | P3-7 |
+| FR-ORD-007 | Payment QRIS statis: pengaturan QRIS tenant, klaim pembeli, verifikasi manual idempoten (ADR-0004); webhook signature berlaku saat adapter gateway ditambahkan | AC-ORD-007 | P3-7 |
+| FR-ORD-010 | Checkout wajib menyetujui privacy/terms transaksi; versi + waktu disimpan di order (D-12) | AC-ORD-010 | P3-5 |
 | FR-ORD-008 | Refund audit trail | AC-ORD-008 | P3-7 |
 | FR-ORD-009 | Pickup/delivery bila tersedia; customer melihat status order | AC-ORD-009 | P3-5 |
 
@@ -153,7 +154,8 @@ Status keputusan per 2026-11-12: D-05, ADR-0014 `DISETUJUI`; D-07 `DISETUJUI` se
 | AC-ORD-004 | Given transisi tidak terdaftar (mis. COMPLETED→PENDING), Then ditolak |
 | AC-ORD-005 | Given SoD aktif, When pemohon meng-approve permintaannya sendiri, Then ditolak; reject tanpa alasan ditolak |
 | AC-ORD-006 | Given idempotency key sama dikirim dua kali, Then tepat 1 order |
-| AC-ORD-007 | Contingent D-02 — signature salah ditolak; event ganda diproses sekali |
+| AC-ORD-007 | Given konfirmasi payment dikirim dua kali/paralel, Then order PAID sekali dan satu audit konfirmasi; Given user tanpa `payments.verify`, Then 403; Given QRIS diganti, Then hanya `tenant.update` dan audit before/after; Given QRIS belum diatur, Then checkout `409 PAYMENT_NOT_CONFIGURED` |
+| AC-ORD-010 | Given checkout tanpa persetujuan privacy/terms transaksi, Then `422`; order menyimpan versi dokumen + waktu persetujuan |
 | AC-ORD-008 | Given refund, Then audit memuat actor, jumlah, alasan |
 | AC-ORD-009 | Given order customer, When dilihat customer lain, Then tidak dapat diakses |
 

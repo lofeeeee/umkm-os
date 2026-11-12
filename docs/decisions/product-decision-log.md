@@ -30,3 +30,11 @@ Keputusan produk yang tidak membutuhkan ADR. Entri tidak ditimpa; perubahan = en
 - D-05: **DISETUJUI** — editor section-based / stacked blocks (ADR-0007).
 - D-07: **DISETUJUI sementara** — penyimpanan file lokal di PostgreSQL di belakang port provider-neutral (ADR-0009). Provider S3 eksternal + salinan backup off-site tetap terbuka.
 - ADR-0014: **DISETUJUI** usulan engineering — static export dilayani Caddy, data tenant dari API berdasarkan Host (ADR-0014).
+
+## 2026-11-12 — Gate D: D-02, D-03, D-12 transaksi
+
+- Pemutus: Product owner ("1. Qris Gopay, 2. the last one, 3. Approved"; pembacaan QRIS dikonfirmasi: "Static QRIS").
+- D-02: **DISETUJUI** — QRIS statis GoPay milik tenant, pembeli membayar langsung ke merchant tenant, staf memverifikasi manual (ADR-0004). Tanpa gateway/webhook di V1.
+- D-03: **DISETUJUI** — guest checkout + akun customer opsional; linking hanya setelah email terverifikasi (ADR-0005). Verifikasi email nyata tetap menunggu D-08.
+- D-12 privacy/terms transaksi: **DISETUJUI bersyarat** — checkout wajib menyetujui privacy + terms transaksi (versi + waktu disimpan di order); teks placeholder wajib diganti teks final hasil review legal sebelum go-live.
+- Perluasan preset permission (engineering, mengikuti pola role 2026-11-11): `payments.verify` (Owner, Manager), `payments.refund` (Owner), `customers.read` (Owner, Manager, Support Agent, Viewer), `customers.manage` (Owner, Manager). Total permission 33 → 37.

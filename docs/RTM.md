@@ -209,11 +209,11 @@ Arah balik: TC → AC lewat nomor yang sama (Test Plan §4); AC → FR lewat FSD
 | FR-INV-003 | AC-INV-003 | TC-INV-003 | ditetapkan di OpenAPI saat task | — | — | Planned |
 | FR-INV-004 | AC-INV-004 | TC-INV-004 | ditetapkan di OpenAPI saat task | — | — | Planned |
 | FR-INV-005 | AC-INV-005 | TC-INV-005 | ditetapkan di OpenAPI saat task | — | — | Planned |
-| FR-CRM-001 | AC-CRM-001 | TC-CRM-001 | ditetapkan di OpenAPI saat task | ADR-0005 (D-03) | — | Blocked by decision |
+| FR-CRM-001 | AC-CRM-001 | TC-CRM-001 | ditetapkan di OpenAPI saat task | ADR-0005 (D-03) | — | Planned |
 | FR-CRM-002 | AC-CRM-002 | TC-CRM-002 | ditetapkan di OpenAPI saat task | ADR-0005 (D-03) | — | Planned |
 | FR-CRM-003 | AC-CRM-003 | TC-CRM-003 | ditetapkan di OpenAPI saat task | ADR-0005 (D-03) | — | Planned |
 | FR-CRM-004 | AC-CRM-004 | TC-CRM-004 | ditetapkan di OpenAPI saat task | ADR-0005 (D-03) | — | Planned |
-| FR-CRM-005 | AC-CRM-005 | TC-CRM-005 | ditetapkan di OpenAPI saat task | ADR-0005 (D-03) | — | Blocked by decision |
+| FR-CRM-005 | AC-CRM-005 | TC-CRM-005 | ditetapkan di OpenAPI saat task | ADR-0005 (D-03) | — | Planned |
 | FR-CRM-006 | AC-CRM-006 | TC-CRM-006 | ditetapkan di OpenAPI saat task | ADR-0005 (D-03) | — | Planned |
 | FR-ORD-001 | AC-ORD-001 | TC-ORD-001 | ditetapkan di OpenAPI saat task | ADR-0004 (D-02) | — | Planned |
 | FR-ORD-002 | AC-ORD-002 | TC-ORD-002 | ditetapkan di OpenAPI saat task | ADR-0004 (D-02) | — | Planned |
@@ -221,9 +221,10 @@ Arah balik: TC → AC lewat nomor yang sama (Test Plan §4); AC → FR lewat FSD
 | FR-ORD-004 | AC-ORD-004 | TC-ORD-004 | ditetapkan di OpenAPI saat task | ADR-0004 (D-02) | — | Planned |
 | FR-ORD-005 | AC-ORD-005 | TC-ORD-005 | ditetapkan di OpenAPI saat task | ADR-0004 (D-02) | — | Planned |
 | FR-ORD-006 | AC-ORD-006 | TC-ORD-006 | ditetapkan di OpenAPI saat task | ADR-0004 (D-02) | — | Planned |
-| FR-ORD-007 | AC-ORD-007 | TC-ORD-007 | ditetapkan di OpenAPI saat task | ADR-0004 (D-02) | — | Blocked by decision |
+| FR-ORD-007 | AC-ORD-007 | TC-ORD-007 | ditetapkan di OpenAPI saat task | ADR-0004 (D-02) | — | Planned |
 | FR-ORD-008 | AC-ORD-008 | TC-ORD-008 | ditetapkan di OpenAPI saat task | ADR-0004 (D-02) | — | Planned |
 | FR-ORD-009 | AC-ORD-009 | TC-ORD-009 | ditetapkan di OpenAPI saat task | ADR-0004 (D-02) | — | Planned |
+| FR-ORD-010 | AC-ORD-010 | TC-ORD-010 | ditetapkan di OpenAPI saat task | D-12 (product-decision-log) | — | Planned |
 | FR-TKT-001 | AC-TKT-001 | TC-TKT-001 | ditetapkan di OpenAPI saat task | — | — | Planned |
 | FR-TKT-002 | AC-TKT-002 | TC-TKT-002 | ditetapkan di OpenAPI saat task | — | — | Planned |
 | FR-TKT-003 | AC-TKT-003 | TC-TKT-003 | ditetapkan di OpenAPI saat task | — | — | Planned |
