@@ -313,6 +313,15 @@ pub async fn mutate(
     )
     .await?;
     low_stock(&mut tx, t, variant, before, after, id).await?;
+    crate::audit_repo::record(
+        &mut *tx,
+        &AuditEvent::new(umkm_domain::audit::actions::INVENTORY_ADJUSTED, "inventory_level")
+            .by_user(actor.user_id)
+            .in_tenant(t)
+            .resource(variant)
+            .with_summary(serde_json::json!({ "kind": kind.as_str(), "delta": delta, "on_hand_after": after.on_hand, "reason": reason })),
+    )
+    .await?;
     tx.commit().await?;
     Ok(after)
 }

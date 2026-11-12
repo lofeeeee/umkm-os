@@ -2256,6 +2256,114 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
       security:
       - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/audit-logs:
+    get:
+      tags:
+      - audit
+      summary: Audit log toko (terbaru dulu, filter aksi/aktor/resource/waktu).
+      operationId: list
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: action
+        in: path
+        description: Awalan aksi, mis. `order.`
+        required: true
+        schema:
+          type:
+          - string
+          - 'null'
+      - name: actor_user_id
+        in: path
+        required: true
+        schema:
+          type:
+          - string
+          - 'null'
+          format: uuid
+      - name: resource_type
+        in: path
+        required: true
+        schema:
+          type:
+          - string
+          - 'null'
+      - name: resource_id
+        in: path
+        required: true
+        schema:
+          type:
+          - string
+          - 'null'
+      - name: from
+        in: path
+        description: RFC3339
+        required: true
+        schema:
+          type:
+          - string
+          - 'null'
+      - name: to
+        in: path
+        description: RFC3339 (eksklusif)
+        required: true
+        schema:
+          type:
+          - string
+          - 'null'
+      - name: limit
+        in: path
+        required: true
+        schema:
+          type:
+          - integer
+          - 'null'
+          format: int64
+      - name: offset
+        in: path
+        required: true
+        schema:
+          type:
+          - integer
+          - 'null'
+          format: int64
+      responses:
+        '200':
+          description: Audit log
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_AuditList'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
   /api/v1/tenants/{tenant_id}/business/addresses:
     put:
       tags:
@@ -6642,6 +6750,46 @@ components:
           type: string
         visibility:
           type: string
+    AuditView:
+      type: object
+      required:
+      - id
+      - actor_type
+      - action
+      - resource_type
+      - summary
+      - created_at
+      properties:
+        action:
+          type: string
+        actor_type:
+          type: string
+        actor_user_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        created_at:
+          type: string
+        id:
+          type: string
+          format: uuid
+        ip:
+          type:
+          - string
+          - 'null'
+        request_id:
+          type:
+          - string
+          - 'null'
+        resource_id:
+          type:
+          - string
+          - 'null'
+        resource_type:
+          type: string
+        summary:
+          type: object
     BusinessView:
       type: object
       required:
@@ -8008,6 +8156,30 @@ components:
             tenant_id:
               type: string
               format: uuid
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
+    SuccessEnvelope_AuditList:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - items
+          - total
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/AuditView'
+            total:
+              type: integer
+              format: int64
         meta:
           $ref: '#/components/schemas/Meta'
         success:
@@ -10126,6 +10298,8 @@ tags:
   description: Pengaturan checkout, order, pembayaran QRIS statis (PRD.md §4.7, ADR-0004)
 - name: approvals
   description: Approval engine multi-step (PRD.md §4.9, P4-2)
+- name: audit
+  description: Audit log append-only (PRD.md §6.9, P4-5)
 - name: notifications
   description: Notifikasi in-app (PRD.md §4.13, P4-4)
 - name: tickets

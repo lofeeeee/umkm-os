@@ -276,6 +276,14 @@ async fn hold(
         },
     )
     .await?;
+    crate::audit_repo::record(
+        &mut **tx,
+        &AuditEvent::new(umkm_domain::audit::actions::PAYMENT_CLAIMED, "order")
+            .in_tenant(t)
+            .resource(order)
+            .with_summary(serde_json::json!({ "payment_id": payment })),
+    )
+    .await?;
     Ok(())
 }
 

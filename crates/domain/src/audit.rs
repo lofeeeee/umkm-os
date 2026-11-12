@@ -19,7 +19,66 @@ pub mod actions {
     pub const AUTH_LOGOUT: &str = "auth.logout";
     pub const AUTH_EMAIL_VERIFIED: &str = "auth.email.verified";
     pub const TENANT_GUARD_PROBE_PROCESSED: &str = "tenant.guard_probe.processed";
+    pub const INVENTORY_ADJUSTED: &str = "inventory.adjusted";
+    pub const ORDER_CREATED: &str = "order.created";
+    pub const PAYMENT_CLAIMED: &str = "payment.claimed";
 }
+
+/// Kategori minimum `PRD.md §6.9` → prefiks/aksi audit yang mewakilinya (P4-5).
+/// Kategori dengan modul fase lanjut ditandai fasenya; dipakai uji cakupan & dokumentasi.
+pub const PRD_CATEGORIES: [(&str, &[&str], Option<&str>); 10] = [
+    (
+        "Login/logout dan security events",
+        &["auth.login.succeeded", "auth.login.failed", "auth.logout"],
+        None,
+    ),
+    (
+        "User invitation/role change",
+        &["member.invited", "member.updated", "role.changed"],
+        None,
+    ),
+    (
+        "Business/domain/website changes",
+        &[
+            "business.updated",
+            "website.publish",
+            "commerce.settings_changed",
+        ],
+        None,
+    ),
+    (
+        "Product dan stock changes",
+        &["product.created", "product.updated", "inventory.adjusted"],
+        None,
+    ),
+    (
+        "Order create/approve/reject/cancel",
+        &[
+            "order.created",
+            "order.approved",
+            "order.rejected",
+            "order.status_changed",
+        ],
+        None,
+    ),
+    (
+        "Payment/refund events",
+        &["payment.confirmed", "payment.rejected", "payment.refunded"],
+        None,
+    ),
+    (
+        "Ticket assignment/closure",
+        &["ticket.assigned", "ticket.closed"],
+        None,
+    ),
+    ("AI provider/config/key changes", &[], Some("P5")),
+    (
+        "Chat handover/approval",
+        &["approval.approved", "approval.rejected"],
+        Some("P6 (handover)"),
+    ),
+    ("Platform admin access", &[], Some("P7")),
+];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ActorType {

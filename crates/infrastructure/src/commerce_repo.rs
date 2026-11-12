@@ -445,6 +445,14 @@ async fn place(pool: &PgPool, t: TenantId, i: &CheckoutInput) -> Result<Placed, 
         None,
     )
     .await?;
+    crate::audit_repo::record(
+        &mut *tx,
+        &AuditEvent::new(umkm_domain::audit::actions::ORDER_CREATED, "order")
+            .in_tenant(t)
+            .resource(id)
+            .with_summary(serde_json::json!({ "total": format_sen(q.total_sen), "items": q.lines.len(), "fulfillment": i.fulfillment.as_str(), "account": i.account_id.is_some() })),
+    )
+    .await?;
     crate::outbox::enqueue(
         &mut *tx,
         &OutboxEvent {

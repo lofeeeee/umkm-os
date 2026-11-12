@@ -1,0 +1,37 @@
+P4-5 — Audit log minimum event (PRD.md §6.9, BR-010)
+Tanggal: 2026-11-12
+
+Artefak
+- crates/domain/src/audit.rs  PRD_CATEGORIES: 10 kategori minimum → aksi audit yang mewakilinya; aksi baru
+  inventory.adjusted, order.created, payment.claimed. Redaksi rekursif (P1-8) tetap berlaku di with_summary.
+- Titik audit baru: mutasi stok manual (inventory_repo::mutate), order dibuat oleh pembeli (actor anonymous, tanpa
+  PII: total, jumlah item, fulfillment, punya akun), klaim bayar pembeli.
+- crates/infrastructure/src/audit_repo.rs list (filter awalan aksi, aktor, resource, rentang waktu; tenant context).
+- apps/api/src/audit.rs  GET /api/v1/tenants/{t}/audit-logs (audit.read; preset hanya Owner). Tidak ada endpoint ubah/hapus;
+  tabel append-only sejak P1-8 (trigger + REVOKE).
+
+Hasil
+- fmt/clippy -D warnings bersih; cargo test --workspace --locked --no-fail-fast: lulus semua (audit_http 1).
+
+Cakupan
+- Satu alur nyata (registrasi → login gagal/berhasil → logout → tim → profil/website/pengaturan → produk/stok →
+  4 pesanan: konfirmasi+setujui+refund, tolak, tolak bayar, batal → ticket assign/resolve/close → approval
+  setuju/tolak) menghasilkan ≥ 25 jenis aksi audit dan memenuhi 8 dari 10 kategori PRD §6.9:
+  security, undangan/role, bisnis/website/konfigurasi, produk/stok, order (buat/setujui/tolak/batal),
+  pembayaran/refund, ticket (assign/tutup), approval. Kategori yang modulnya belum ada: AI provider/config/key (P5),
+  chat handover (P6; bagian approval sudah), akses platform admin (P7).
+- Filter API: awalan aksi; riwayat satu pesanan (resource_type+resource_id); tanggal tidak valid 422; tenant lain 0 baris;
+  Manager (tanpa audit.read) 403.
+- Tanpa rahasia: password (benar/salah), token akses order, token CSRF, email pembeli/undangan tidak ada di summary.
+- Append-only: UPDATE/DELETE audit_logs sebagai role aplikasi gagal.
+
+Negative control (setiap mutasi diverifikasi diterapkan; test terkait GAGAL)
+== NEGCTL: mutasi stok tidak diaudit
+    every_available_prd_category_is_audited
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.95s
+== NEGCTL: email pembeli masuk audit
+    every_available_prd_category_is_audited
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.01s
+== NEGCTL: audit terbaca tanpa audit.read
+    every_available_prd_category_is_audited
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.99s
