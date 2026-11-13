@@ -206,6 +206,8 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
   const doUndo = useCallback(() => setHist((h) => (h ? undo(h) : h)), []);
   const doRedo = useCallback(() => setHist((h) => (h ? redo(h) : h)), []);
 
+  /** Dokumen terakhir yang DITOLAK server: jangan dikirim ulang otomatis sampai isinya berubah. */
+  const rejected = useRef<string | null>(null);
   /** Simpan draf ke server (PUT dengan base_revision; 409 = diubah di tempat lain). */
   const saveNow = useCallback(async (): Promise<number | null> => {
     if (!st || !srv || !canEdit) return srv?.revision ?? null;
@@ -225,6 +227,8 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
         setSaveState("conflict");
         setSaveErr("Draf diubah di tempat lain (tab atau perangkat lain). Muat ulang halaman untuk melihat versi terbaru.");
       } else {
+        // 4xx (mis. 422 validasi): kirim ulang dokumen yang sama pasti gagal lagi.
+        if (e instanceof ApiError && e.status >= 400 && e.status < 500) rejected.current = json;
         setSaveState("error");
         setSaveErr(describe(e));
       }
@@ -234,7 +238,8 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
 
   useEffect(() => {
     if (!st || !srv || picking === "first" || !canEdit || saveState === "conflict") return;
-    if (JSON.stringify(toDoc(st, srv.template)) === srv.savedDoc) return;
+    const json = JSON.stringify(toDoc(st, srv.template));
+    if (json === srv.savedDoc || json === rejected.current) return;
     const t = setTimeout(() => void saveNow(), 1200);
     return () => clearTimeout(t);
   }, [st, srv, picking, canEdit, saveState, saveNow]);
