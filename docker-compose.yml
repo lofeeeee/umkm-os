@@ -38,6 +38,8 @@ services:
       args:
         PUBLIC_API_ORIGIN: ${PUBLIC_API_ORIGIN:-http://api.${ROOT_DOMAIN}}
     image: ${WEB_IMAGE:-umkm-os/web:local}
+    # `always` di VPS (IMAGE_PULL_POLICY=always) → `up -d` selalu menarik tag terbaru dari GHCR.
+    pull_policy: ${IMAGE_PULL_POLICY:-missing}
     restart: unless-stopped
     read_only: true
     cap_drop: [ALL]
@@ -68,6 +70,8 @@ services:
   migrate:
     <<: *app
     image: ${API_IMAGE:-umkm-os/api:local}
+    # `always` di VPS (IMAGE_PULL_POLICY=always) → `up -d` selalu menarik tag terbaru dari GHCR.
+    pull_policy: ${IMAGE_PULL_POLICY:-missing}
     # ADR-0018: arg sama dengan image web agar shell situs (site.html) identik dengan yang disajikan Caddy.
     build:
       context: .
@@ -90,6 +94,8 @@ services:
   api:
     <<: *app
     image: ${API_IMAGE:-umkm-os/api:local}
+    # `always` di VPS (IMAGE_PULL_POLICY=always) → `up -d` selalu menarik tag terbaru dari GHCR.
+    pull_policy: ${IMAGE_PULL_POLICY:-missing}
     # ADR-0018: arg sama dengan image web agar shell situs (site.html) identik dengan yang disajikan Caddy.
     build:
       context: .
@@ -114,6 +120,8 @@ services:
   worker:
     <<: *app
     image: ${WORKER_IMAGE:-umkm-os/worker:local}
+    # `always` di VPS (IMAGE_PULL_POLICY=always) → `up -d` selalu menarik tag terbaru dari GHCR.
+    pull_policy: ${IMAGE_PULL_POLICY:-missing}
     build: { context: ., target: worker }
     networks: [backend]
     depends_on:
@@ -192,6 +200,8 @@ services:
 
   backup:
     image: ${BACKUP_IMAGE:-umkm-os/backup:local}
+    # `always` di VPS (IMAGE_PULL_POLICY=always) → `up -d` selalu menarik tag terbaru dari GHCR.
+    pull_policy: ${IMAGE_PULL_POLICY:-missing}
     build: { context: ., dockerfile: ops/backup/Dockerfile }
     profiles: [backup]
     restart: unless-stopped

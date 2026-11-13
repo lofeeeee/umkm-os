@@ -5,8 +5,12 @@ produksi** (drill rollback menunggu VPS + DNS, lihat checklist V1.0 #25). Jangan
 
 ## 0. Prinsip
 
-1. **Image bertag, bukan `latest`.** Setiap rilis = tag git `vX.Y.Z` → image `umkm-os/api:vX.Y.Z`,
-   `umkm-os/worker:vX.Y.Z`, `umkm-os/web:vX.Y.Z`. Compose memilih lewat `API_IMAGE` / `WORKER_IMAGE` / `WEB_IMAGE`.
+1. **Image dari GHCR, dibangun CI** (`.github/workflows/images.yml`, `ghcr.io/ryasrk/umkm-os/{api,worker,web,backup}`):
+   - `:latest` — selalu commit `main` terbaru yang CI-nya hijau (dipindahkan hanya bila commit masih HEAD `main`).
+     Untuk staging/uji cepat: `IMAGE_PULL_POLICY=always` + `docker compose up -d` selalu menarik yang terbaru.
+   - `:sha-<7>` — tetap per commit; `:vX.Y.Z` — dari tag git `vX.Y.Z` (hanya bila CI commit itu hijau).
+   **Produksi memakai tag tetap** (`vX.Y.Z` atau `sha-<7>`), bukan `latest`, agar versi berjalan tercatat dan
+   rollback = kembali ke tag sebelumnya. Compose memilih lewat `API_IMAGE` / `WORKER_IMAGE` / `WEB_IMAGE` / `BACKUP_IMAGE`.
 2. **Backup sebelum migrasi.** Service `migrate` (`umkm-api migrate`) berjalan otomatis sebelum `api`/`worker`
    (depends_on). Migrasi hanya maju di produksi.
 3. **Migrasi expand/contract.** Migrasi rilis N harus tetap bisa dipakai binary rilis N-1 (tambah kolom/tabel dulu,
@@ -31,17 +35,18 @@ produksi** (drill rollback menunggu VPS + DNS, lihat checklist V1.0 #25). Jangan
 # 0) Catat versi berjalan untuk rollback.
 docker compose ps --format '{{.Service}} {{.Image}}' > /root/deploy/prev-$(date -u +%Y%m%dT%H%M%SZ).txt
 
-# 1) Bangun image bertag di mesin build/CI (bukan di VPS: hemat RAM/disk), lalu kirim/pull.
-docker build --target api    -t umkm-os/api:vX.Y.Z .
-docker build --target worker -t umkm-os/worker:vX.Y.Z .
-docker build --target web --build-arg PUBLIC_API_ORIGIN=https://api.ryasai.my.id -t umkm-os/web:vX.Y.Z .
+# 1) Image dibangun CI (bukan di VPS: hemat RAM/disk). Rilis: `git tag vX.Y.Z && git push origin vX.Y.Z`
+#    → workflow Images menerbitkan :vX.Y.Z. Tarik di VPS:
+R=ghcr.io/ryasrk/umkm-os
+export API_IMAGE=$R/api:vX.Y.Z WORKER_IMAGE=$R/worker:vX.Y.Z WEB_IMAGE=$R/web:vX.Y.Z BACKUP_IMAGE=$R/backup:vX.Y.Z
+docker compose pull api worker caddy
 
 # 2) Backup sekali sebelum migrasi (wajib bila rilis berisi migrasi).
 docker compose --profile backup run --rm backup /usr/local/bin/backup.sh
 #    -> harus exit 0 (exit 3 = salinan luar VPS belum dikonfigurasi: BERHENTI untuk rilis bermigrasi).
 
 # 3) Terapkan. `migrate` berjalan dulu; api/worker hanya mulai bila migrasi sukses.
-API_IMAGE=umkm-os/api:vX.Y.Z WORKER_IMAGE=umkm-os/worker:vX.Y.Z WEB_IMAGE=umkm-os/web:vX.Y.Z docker compose up -d
+docker compose up -d
 
 # 4) Verifikasi (maks 5 menit; gagal → langkah 4).
 docker compose ps                              # api healthy, migrate exited 0
@@ -59,7 +64,8 @@ Gunakan bila rilis baru gagal tetapi migrasinya bersifat expand (prinsip 3).
 
 ```sh
 PREV=vX.Y.(Z-1)   # dari file prev-*.txt
-API_IMAGE=umkm-os/api:$PREV WORKER_IMAGE=umkm-os/worker:$PREV WEB_IMAGE=umkm-os/web:$PREV docker compose up -d
+R=ghcr.io/ryasrk/umkm-os
+API_IMAGE=$R/api:$PREV WORKER_IMAGE=$R/worker:$PREV WEB_IMAGE=$R/web:$PREV docker compose up -d
 curl -fsS https://api.ryasai.my.id/readyz
 ```
 

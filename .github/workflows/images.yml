@@ -1,0 +1,95 @@
+# Publikasi image ke GHCR (ghcr.io/<owner>/umkm-os/{api,worker,web,backup}).
+# - Setiap commit `main` yang CI-nya HIJAU → `:sha-<7>` (tetap, untuk rollback) dan `:latest` (selalu terbaru).
+# - Tag git `vX.Y.Z` → `:vX.Y.Z`, hanya bila CI untuk commit itu sudah hijau (fail-closed).
+# `latest` dipindahkan PALING AKHIR dan hanya bila commit masih HEAD `main`, sehingga run lama yang selesai
+# belakangan tidak pernah menimpa `latest` dengan versi lebih tua.
+# Semua image dibangun dalam SATU builder: stage frontend dipakai bersama oleh `api` (site.html, ADR-0018)
+# dan `web`, sehingga shell <head> per toko identik dengan yang disajikan Caddy.
+# Tanpa action pihak ketiga selain checkout (dipin SHA): docker buildx bawaan runner.
+name: Images
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  push:
+    tags: ["v*.*.*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: images-${{ github.event_name == 'push' && github.ref || 'main' }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: build + push GHCR
+    if: >-
+      github.event_name != 'workflow_run' ||
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      packages: write
+      actions: read
+    env:
+      SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+      PUBLIC_API_ORIGIN: ${{ vars.PUBLIC_API_ORIGIN || 'https://api.ryasai.my.id' }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.SHA }}
+          persist-credentials: false
+
+      - name: Tag rilis hanya untuk commit yang CI-nya hijau
+        if: github.event_name == 'push'
+        run: |
+          ok=$(gh run list -R "$GITHUB_REPOSITORY" --workflow CI --commit "$SHA" --status success --json databaseId --jq length)
+          if [ "$ok" = 0 ]; then echo "::error::CI untuk $SHA belum hijau; tag $GITHUB_REF_NAME tidak dipublikasikan"; exit 1; fi
+
+      - name: Login GHCR + builder
+        run: |
+          echo "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          docker buildx create --use --name umkm --driver docker-container
+
+      - name: Build + push (tag sha / versi)
+        run: |
+          set -euo pipefail
+          REPO="ghcr.io/${GITHUB_REPOSITORY,,}"
+          TAG="sha-${SHA::7}"
+          [ "$GITHUB_EVENT_NAME" = push ] && TAG="$GITHUB_REF_NAME"
+          common=(--push --provenance=false
+            --label "org.opencontainers.image.source=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY"
+            --label "org.opencontainers.image.revision=$SHA"
+            --build-arg "PUBLIC_API_ORIGIN=$PUBLIC_API_ORIGIN")
+          # api pertama: stage Rust + frontend masuk cache builder (dipakai worker & web) dan cache registry.
+          docker buildx build "${common[@]}" --target api -t "$REPO/api:$TAG" \
+            --cache-from "type=registry,ref=$REPO/buildcache" \
+            --cache-to "type=registry,ref=$REPO/buildcache,mode=max" .
+          docker buildx build "${common[@]}" --target worker -t "$REPO/worker:$TAG" .
+          docker buildx build "${common[@]}" --target web -t "$REPO/web:$TAG" .
+          docker buildx build "${common[@]}" -f ops/backup/Dockerfile -t "$REPO/backup:$TAG" .
+          echo "TAG=$TAG" >> "$GITHUB_ENV"
+          echo "REPO=$REPO" >> "$GITHUB_ENV"
+
+      - name: Pindahkan latest (hanya bila masih HEAD main)
+        if: github.event_name != 'push'
+        run: |
+          set -euo pipefail
+          head=$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)
+          if [ "$head" != "$SHA" ]; then
+            echo "::notice::$SHA bukan HEAD main ($head); latest tidak diubah (run commit terbaru yang memindahkannya)"
+            exit 0
+          fi
+          for img in api worker web backup; do
+            docker buildx imagetools create -t "$REPO/$img:latest" "$REPO/$img:$TAG"
+          done
+          {
+            echo "### Image terbit"
+            for img in api worker web backup; do echo "- \`$REPO/$img:latest\` = \`$REPO/$img:$TAG\`"; done
+          } >> "$GITHUB_STEP_SUMMARY"
