@@ -50,3 +50,16 @@ unsafe_code = "forbid"
 
 [workspace.lints.clippy]
 all = { level = "warn", priority = -1 }
+
+# Hemat disk & RAM pada build dev/test (puluhan binary uji integrasi). Tanpa ini `target/debug` mencapai >100 GB
+# di WSL (2026-11-13). Backtrace tetap bernomor baris; dependensi tanpa info debug; tanpa artefak incremental.
+[profile.dev]
+debug = "line-tables-only"
+incremental = false
+
+[profile.dev.package."*"]
+debug = false
+
+[profile.test]
+debug = "line-tables-only"
+incremental = false
