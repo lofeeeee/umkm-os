@@ -1253,14 +1253,14 @@ main.d-legal { max-width: 720px; }
 .st-phone { position: relative; min-height: 640px; align-content: start; }
 
 /* Pratinjau chatbot */
-.st-chat { height: 420px; display: flex; flex-direction: column; font-family: var(--s-font, inherit); color: #0f172a; background: #fff; border-radius: 16px; overflow: hidden; }
-.st-chat-head { display: flex; align-items: center; gap: 8px; padding: 12px 14px; background: var(--c); color: #fff; font-weight: 700; font-size: 0.875rem; }
-.st-chat-head em { margin-left: auto; font-style: normal; font-weight: 500; font-size: 0.6875rem; opacity: 0.85; }
+.st-chat { font-size: calc(0.875rem * var(--s-size, 1)); height: 420px; display: flex; flex-direction: column; font-family: var(--s-font, inherit); color: #0f172a; background: #fff; border-radius: 16px; overflow: hidden; }
+.st-chat-head { display: flex; align-items: center; gap: 8px; padding: 12px 14px; background: var(--c); color: #fff; font-weight: 700; font-size: 1em; }
+.st-chat-head em { margin-left: auto; font-style: normal; font-weight: 500; font-size: 0.78em; opacity: 0.85; }
 .st-chat-dot { width: 8px; height: 8px; border-radius: 999px; background: #4ade80; box-shadow: 0 0 0 3px rgb(255 255 255 / 0.25); }
 .st-chat-log { flex: 1; padding: 12px; display: grid; gap: 8px; align-content: start; overflow: hidden; background: #f8fafc; }
-.st-chat-msg { margin: 0; max-width: 85%; padding: 8px 12px; border-radius: 14px; border-bottom-left-radius: 4px; background: #fff; font-size: 0.8125rem; box-shadow: 0 1px 2px rgb(0 0 0 / 0.06); }
+.st-chat-msg { margin: 0; max-width: 85%; padding: 8px 12px; border-radius: 14px; border-bottom-left-radius: 4px; background: #fff; font-size: 0.93em; box-shadow: 0 1px 2px rgb(0 0 0 / 0.06); }
 .st-chat-me { justify-self: end; background: var(--c); color: #fff; border-radius: 14px; border-bottom-right-radius: 4px; }
-.st-chat-input { display: flex; justify-content: space-between; align-items: center; margin: 10px; padding: 8px 12px; border-radius: 999px; border: 1px solid #e2e8f0; color: #94a3b8; font-size: 0.8125rem; }
+.st-chat-input { display: flex; justify-content: space-between; align-items: center; margin: 10px; padding: 8px 12px; border-radius: 999px; border: 1px solid #e2e8f0; color: #94a3b8; font-size: 0.93em; }
 .st-chat-input b { color: var(--c); }
 .st-measure { width: 100%; height: 0; }
 .st-zoom { position: relative; margin-top: 28px; }
@@ -1351,3 +1351,21 @@ label.st-tool { cursor: pointer; }
 /* Garis kolom hanya saat menyeret/menjatuhkan — tampilan diam tetap bersih seperti situs aslinya. */
 .st-canvas { background-image: none; }
 .st-dragging.st-canvas, .st-canvas:has(.st-ghost) { background-image: linear-gradient(to right, color-mix(in srgb, var(--brand) 9%, transparent) 0 calc(var(--col) - 12px), transparent 0); }
+
+/* Chatbot: bilah horizontal yang menempel di bawah layar */
+.st-dock { position: sticky; bottom: 0; height: 0; max-width: 1180px; margin: 0 auto; z-index: 30; }
+.st-dock > .st-float { position: absolute; right: 20px; bottom: 20px; }
+.st-phone .st-dock { position: sticky; margin: 0; }
+.st-phone .st-dock > .st-float { right: 4px; bottom: 8px; }
+.st-chatbar { position: absolute; left: 16px; right: 16px; bottom: 16px; display: grid; gap: 8px; font-size: calc(0.875rem * var(--s-size, 1)); }
+.st-chatbar.st-selected .st-chatbar-bar { outline: 3px solid var(--brand); outline-offset: 3px; }
+.st-chatbar-bar { display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 16px; border-radius: 999px; background: #fff; color: #0f172a; box-shadow: 0 0 0 1px rgb(15 23 42 / 0.08), 0 16px 40px -12px rgb(15 23 42 / 0.35); }
+.st-chatbar-who { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; white-space: nowrap; }
+.st-chatbar-who em { font-style: normal; font-weight: 500; color: #64748b; font-size: 0.85em; }
+.st-chatbar-input { flex: 1; min-width: 0; padding: 9px 14px; border-radius: 999px; background: #f1f5f9; color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.st-chatbar-send { display: grid; place-items: center; width: 38px; height: 38px; border: 0; border-radius: 999px; background: var(--c); color: #fff; cursor: pointer; flex: none; }
+.st-chatbar-send svg { width: 16px; height: 16px; }
+.st-chatbar-panel { justify-self: end; width: min(420px, 100%); border-radius: 18px; overflow: hidden; box-shadow: 0 0 0 1px rgb(15 23 42 / 0.06), 0 24px 56px -12px rgb(15 23 42 / 0.4); transform-origin: bottom right; animation: d-pop-in 200ms var(--ease-out) both; }
+.st-chatbar-panel .st-chat { height: 360px; }
+.st-phone .st-chatbar { left: 6px; right: 6px; bottom: 8px; }
+.st-phone .st-chatbar-who em { display: none; }

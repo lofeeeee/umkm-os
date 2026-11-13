@@ -37,9 +37,12 @@ interface Studio {
   primary: string;
   surface: "light" | "cream" | "dark";
   font: string;
+  /** Skala teks seluruh halaman (0.9 kecil, 1 sedang, 1.1 besar). */
+  textScale?: number;
   installed: PluginKind[];
   cells: StudioCell[];
 }
+const TEXT_SCALES = [{ v: 0.9, l: "Kecil" }, { v: 1, l: "Sedang" }, { v: 1.1, l: "Besar" }];
 
 const EMPTY_BUSINESS: Business = {
   profile: { name: "Nama Toko", socials: [], timezone: "Asia/Jakarta", pickup_available: false, delivery_available: false },
@@ -48,7 +51,8 @@ const EMPTY_BUSINESS: Business = {
 const storageKey = (t: string) => `umkm-studio-${t}`;
 let seq = 0;
 const newId = (k: string) => `${k.replace(/_/g, "-")}-${Date.now().toString(36)}${(seq++).toString(36)}`;
-const isFloating = (c: StudioCell) => c.kind === "chatbot" && c.layout === "floating";
+/** Chatbot di luar grid: gelembung bulat atau bilah bawah, keduanya mengikuti layar. */
+const isFloating = (c: StudioCell) => c.kind === "chatbot" && (c.layout === "floating" || c.layout === "bar");
 /** Plugin yang punya satu foto utama (diganti saat foto dijatuhkan). Galeri: foto ditambahkan. */
 const IMAGE_KEY: Partial<Record<PluginKind, string>> = { hero: "image", about: "image", promotion: "image" };
 const takesPhoto = (k: PluginKind) => k in IMAGE_KEY || k === "gallery";
@@ -433,6 +437,16 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
                     {FONT_PRESETS.map((f) => <option key={f}>{f}</option>)}
                   </select>
                 </label>
+                <div className="d-field" style={{ marginTop: 10, marginBottom: 0 }}>
+                  <span>Ukuran teks</span>
+                  <div className="d-seg" role="group" aria-label="Ukuran teks" style={{ width: "100%" }}>
+                    {TEXT_SCALES.map((t) => (
+                      <button key={t.v} type="button" style={{ flex: 1 }} aria-pressed={(st.textScale ?? 1) === t.v} onClick={() => update((s) => ({ ...s, textScale: t.v }), "")}>
+                        <span style={{ fontSize: `${t.v * 0.8125}rem` }}>{t.l}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
               <p className="d-hint" style={{ margin: 0 }}>Tips: klik plugin untuk memilih, klik teksnya untuk mengetik, seret foto dari komputer ke plugin. Ctrl+Z untuk membatalkan.</p>
             </>
@@ -440,7 +454,7 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
         </aside>
 
         <div className="sx-scroll sx-canvas" onPointerDown={(e) => { if (e.target === e.currentTarget) setSel(null); }}>
-        <div className="st-stage" data-surface={st.surface} style={{ ["--s-primary" as string]: st.primary }}>
+        <div className="st-stage" data-surface={st.surface} style={{ ["--s-primary" as string]: st.primary, ["--s-size" as string]: st.textScale ?? 1 }}>
           <div ref={stageRef} className="st-measure" />
           {device === "desktop" ? (
             <Canvas
@@ -481,12 +495,12 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
           ) : (
             <div className="st-phone">
               {mobileOrder(gridCells).map((c) => <div key={c.id} className="st-phone-cell">{renderCell(c)}</div>)}
-              <FloatingChat cell={floating} primary={st.primary} onToggle={setChatOpen} onSelect={setSel} selected={sel} />
+              <div className="st-dock"><FloatingChat cell={floating} primary={st.primary} onToggle={setChatOpen} onSelect={setSel} selected={sel} /></div>
             </div>
           )}
-          {device === "desktop" && <FloatingChat cell={floating} primary={st.primary} onToggle={setChatOpen} onSelect={setSel} selected={sel} />}
           {st.cells.length === 0 && <p className="st-empty">Tarik plugin dari panel kiri ke sini.</p>}
         </div>
+        {device === "desktop" && <div className="st-dock" style={{ ["--s-size" as string]: st.textScale ?? 1 }}><FloatingChat cell={floating} primary={st.primary} onToggle={setChatOpen} onSelect={setSel} selected={sel} /></div>}
         </div>
       </div>
       </div>
@@ -498,7 +512,7 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
           const c = st.cells.find((x) => x.id === full);
           if (!c) return null;
           return (
-            <div className="st-stage st-full" data-surface={st.surface} style={{ ["--s-primary" as string]: st.primary }}>
+            <div className="st-stage st-full" data-surface={st.surface} style={{ ["--s-primary" as string]: st.primary, ["--s-size" as string]: st.textScale ?? 1 }}>
               <div style={{ width: `${(isFloating(c) ? 4 : c.w) / COLS * 100}%`, minWidth: 320, margin: "0 auto" }}>{renderCell({ ...c, chatOpen: true })}</div>
             </div>
           );
@@ -625,7 +639,7 @@ function Inspector({ c, onBack, onChange, onWidth, onLayout, onDuplicate, onRemo
         </div>
       </div>
       {c.kind !== "chatbot" && <p className="d-hint" style={{ margin: 0 }}>Klik teks di kanvas untuk mengetik langsung.{takesPhoto(c.kind) && " Seret foto dari komputer ke plugin untuk memasangnya."}</p>}
-      <div className="st-section">
+      {!isFloating(c) && <div className="st-section">
         <h3>Ukuran</h3>
         <div className="d-seg" role="group" aria-label="Lebar" style={{ width: "100%" }}>
           {([[3, "¼"], [4, "⅓"], [6, "½"], [8, "⅔"], [12, "Penuh"]] as const).map(([w, l]) => (
@@ -644,7 +658,7 @@ function Inspector({ c, onBack, onChange, onWidth, onLayout, onDuplicate, onRemo
             </label>
           )}
         </div>
-      </div>
+      </div>}
       <div className="st-section">
         <h3>Gaya</h3>
         <div className="d-seg" role="group" aria-label="Gaya" style={{ width: "100%" }}>
@@ -665,7 +679,8 @@ function Inspector({ c, onBack, onChange, onWidth, onLayout, onDuplicate, onRemo
               <button type="button" style={{ flex: 1 }} aria-pressed={c.chatOpen !== false} onClick={() => onChange({ chatOpen: true }, "")}><ArrowsOut weight="bold" aria-hidden="true" /> Maksimal</button>
               <button type="button" style={{ flex: 1 }} aria-pressed={c.chatOpen === false} onClick={() => onChange({ chatOpen: false }, "")}><ArrowsIn weight="bold" aria-hidden="true" /> Minimal</button>
             </div>
-            {c.layout === "floating" && <p className="d-hint" style={{ marginTop: 6 }}>Melayang di pojok kanan bawah halaman, di luar grid. Klik gelembungnya untuk membuka/menutup.</p>}
+            {c.layout === "floating" && <p className="d-hint" style={{ marginTop: 6 }}>Gelembung bulat di pojok kanan bawah, ikut saat halaman digulir. Klik gelembungnya untuk membuka/menutup.</p>}
+            {c.layout === "bar" && <p className="d-hint" style={{ marginTop: 6 }}>Bilah horizontal selebar layar di bagian bawah, ikut saat halaman digulir. Pembeli bisa langsung mengetik pertanyaan.</p>}
           </>
         )}
       </div>
@@ -694,11 +709,33 @@ function FloatingChat({ cell, primary, onToggle, onSelect, selected }: {
 }) {
   if (!cell) return null;
   const open = cell.chatOpen !== false;
+  const title = String(cell.data.title ?? "Tanya kami");
+  const welcome = String(cell.data.welcome ?? "");
+  if (cell.layout === "bar") {
+    return (
+      <div className={`st-chatbar${selected === cell.id ? " st-selected" : ""}`} style={{ ["--c" as string]: primary }} onPointerDown={() => onSelect(cell.id)}>
+        {open && (
+          <div className="st-chatbar-panel">
+            <ChatPreview primary={primary} title={title} welcome={welcome} open onToggle={() => onToggle(cell.id, false)} />
+          </div>
+        )}
+        <div className="st-chatbar-bar">
+          <span className="st-chatbar-who"><span className="st-chat-dot" aria-hidden="true" />{title}<em>Asisten AI · online</em></span>
+          <button type="button" className="st-chatbar-input" style={{ border: 0, textAlign: "left", font: "inherit", cursor: "pointer" }} onClick={() => onToggle(cell.id, true)}>
+            {welcome || "Tulis pertanyaan…"}
+          </button>
+          <button type="button" className="st-chatbar-send" onClick={() => onToggle(cell.id, !open)} aria-label={open ? "Minimalkan chatbot" : "Buka chatbot"}>
+            {open ? <CaretDown weight="bold" /> : <ChatCircleDots weight="fill" />}
+          </button>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className={`st-float${selected === cell.id ? " st-selected" : ""}`} onPointerDown={() => onSelect(cell.id)}>
       {open && (
         <div className="st-float-panel">
-          <ChatPreview primary={primary} title={String(cell.data.title ?? "Tanya kami")} welcome={String(cell.data.welcome ?? "")} open onToggle={() => onToggle(cell.id, false)} />
+          <ChatPreview primary={primary} title={title} welcome={welcome} open onToggle={() => onToggle(cell.id, false)} />
         </div>
       )}
       <button type="button" className="st-float-bubble" style={{ ["--c" as string]: primary }} onClick={() => onToggle(cell.id, !open)} aria-label={open ? "Minimalkan chatbot" : "Buka chatbot"}>
