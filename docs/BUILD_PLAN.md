@@ -306,7 +306,7 @@ Semua status awal `MENUNGGU`; lihat `OPEN_DECISIONS.md`.
 | 6 | **RTM dua arah final** | `docs/RTM.md` | `FR → AC → TC → API → ADR → Evidence` + CI guard fail-closed | Done 2026-11-12 (`scripts/check-rtm.py`) |
 | 7 | Repository governance | `README.md`, `CODEOWNERS`, `CHANGELOG.md`, `docs/governance/` | canonical path | Planned |
 | 8 | UI/UX spec | `docs/architecture/ui-ux-spec.md` | state matrix | Planned |
-| 9 | V1.0 checklist 30 butir | `docs/governance/v1-release-checklist.md` | Lampiran A | Planned |
+| 9 | V1.0 checklist 30 butir | `docs/governance/v1-release-checklist.md` | Lampiran A | Dibuat 2026-11-13 (24/30) |
 
 ---
 
@@ -396,38 +396,40 @@ Gate H: P8 + 30/30 V1.0 checklist + D-12 sign-off -> Go-live
 
 ## Lampiran A — 30 butir V1.0 checklist (`PRD.md §18`)
 
+Status per 2026-11-13: **24/30 Terpenuhi** — rincian, bukti, dan sisa pekerjaan di `docs/governance/v1-release-checklist.md`.
+
 | # | Kategori | Butir | Task | Bukti | Status |
 |---:|---|---|---|---|---|
-| 1 | SaaS foundation | Tenant registration dan authentication | P1-2/P1-3 | `docs/evidence/V1-01.txt` | Planned |
-| 2 | SaaS foundation | Subdomain generation/resolution | P1-4 | `docs/evidence/V1-02.txt` | Planned |
-| 3 | SaaS foundation | Membership dan granular RBAC | P1-5 | `docs/evidence/V1-03.txt` | Planned |
-| 4 | SaaS foundation | PostgreSQL RLS | P1-7 | `docs/evidence/V1-04.txt` | Planned |
-| 5 | SaaS foundation | Cross-tenant isolation suite | P1-10 | `docs/evidence/V1-05.txt` | Planned |
-| 6 | Digital presence | Template selection dan page editor | P2-2/P2-3 | `docs/evidence/V1-06.txt` | Planned |
-| 7 | Digital presence | Business profile, hours, location | P2-5 | `docs/evidence/V1-07.txt` | Planned |
-| 8 | Digital presence | Responsive public website | P2-7 | `docs/evidence/V1-08.txt` | Planned |
-| 9 | Digital presence | Publish dan version rollback | P2-4 | `docs/evidence/V1-09.txt` | Planned |
-| 10 | Commerce | Product catalog dan variants | P3-1 | `docs/evidence/V1-10.txt` | Planned |
-| 11 | Commerce | Inventory movement/reservation | P3-2 | `docs/evidence/V1-11.txt` | Planned |
-| 12 | Commerce | Customer cart dan checkout | P3-4/P3-5 | `docs/evidence/V1-12.txt` | Planned |
-| 13 | Commerce | Order lifecycle dan approval | P3-6/P3-8 | `docs/evidence/V1-13.txt` | Planned |
-| 14 | Commerce | Payment integration atau verified manual payment workflow | P3-7 | `docs/evidence/V1-14.txt` | Planned |
-| 15 | Operations | Multi-admin management | P4-1 | `docs/evidence/V1-15.txt` | Planned |
-| 16 | Operations | Ticketing dan assignment | P4-3 | `docs/evidence/V1-16.txt` | Planned |
-| 17 | Operations | Approval engine | P4-2 | `docs/evidence/V1-17.txt` | Planned |
-| 18 | Operations | Notification dan audit log | P4-4/P4-5 | `docs/evidence/V1-18.txt` | Planned |
-| 19 | AI platform | OpenAI-compatible provider configuration | P5-4 | `docs/evidence/V1-19.txt` | Planned |
-| 20 | AI platform | Encrypted API credentials | P5-2 | `docs/evidence/V1-20.txt` | Planned |
-| 21 | AI platform | AI orchestration dan tool registry | P5-5/P5-6 | `docs/evidence/V1-21.txt` | Planned |
-| 22 | AI platform | Knowledge base dan tenant-scoped RAG | P5-7 | `docs/evidence/V1-22.txt` | Planned |
-| 23 | AI platform | Chat ID dan conversation viewer | P6-1/P6-3 | `docs/evidence/V1-23.txt` | Planned |
-| 24 | AI platform | AI-to-human handover | P6-4 | `docs/evidence/V1-24.txt` | Planned |
-| 25 | Production | Rust API dan worker deployment | P0-6/P8-5 | `docs/evidence/V1-25.txt` | Planned |
-| 26 | Production | VPS resource limits | P0-6/P8-5 | `docs/evidence/V1-26.txt` | Planned |
-| 27 | Production | Automated external backups | P0-10/P8-4 | `docs/evidence/V1-27.txt` | Planned |
-| 28 | Production | Monitoring dan alerting | P0-8/P8-5 | `docs/evidence/V1-28.txt` | Planned |
-| 29 | Production | Security assessment | P8-1/P8-2 | `docs/evidence/V1-29.txt` | Planned |
-| 30 | Production | Load dan recovery testing | P0-10/P8-4 | `docs/evidence/V1-30.txt` | Planned |
+| 1 | SaaS foundation | Tenant registration dan authentication | P1-2/P1-3 | `docs/governance/v1-release-checklist.md` | Terpenuhi |
+| 2 | SaaS foundation | Subdomain generation/resolution | P1-4 | `docs/governance/v1-release-checklist.md` | Terpenuhi |
+| 3 | SaaS foundation | Membership dan granular RBAC | P1-5 | `docs/governance/v1-release-checklist.md` | Terpenuhi |
+| 4 | SaaS foundation | PostgreSQL RLS | P1-7 | `docs/governance/v1-release-checklist.md` | Terpenuhi |
+| 5 | SaaS foundation | Cross-tenant isolation suite | P1-10 | `docs/governance/v1-release-checklist.md` | Terpenuhi |
+| 6 | Digital presence | Template selection dan page editor | P2-2/P2-3 | `docs/governance/v1-release-checklist.md` | Terpenuhi |
+| 7 | Digital presence | Business profile, hours, location | P2-5 | `docs/governance/v1-release-checklist.md` | Terpenuhi |
+| 8 | Digital presence | Responsive public website | P2-7 | `docs/governance/v1-release-checklist.md` | Terpenuhi |
+| 9 | Digital presence | Publish dan version rollback | P2-4 | `docs/governance/v1-release-checklist.md` | Terpenuhi |
+| 10 | Commerce | Product catalog dan variants | P3-1 | `docs/governance/v1-release-checklist.md` | Terpenuhi |
+| 11 | Commerce | Inventory movement/reservation | P3-2 | `docs/governance/v1-release-checklist.md` | Terpenuhi |
+| 12 | Commerce | Customer cart dan checkout | P3-4/P3-5 | `docs/governance/v1-release-checklist.md` | Terpenuhi |
+| 13 | Commerce | Order lifecycle dan approval | P3-6/P3-8 | `docs/governance/v1-release-checklist.md` | Terpenuhi |
+| 14 | Commerce | Payment integration atau verified manual payment workflow | P3-7 | `docs/governance/v1-release-checklist.md` | Terpenuhi |
+| 15 | Operations | Multi-admin management | P4-1 | `docs/governance/v1-release-checklist.md` | Terpenuhi |
+| 16 | Operations | Ticketing dan assignment | P4-3 | `docs/governance/v1-release-checklist.md` | Terpenuhi |
+| 17 | Operations | Approval engine | P4-2 | `docs/governance/v1-release-checklist.md` | Terpenuhi |
+| 18 | Operations | Notification dan audit log | P4-4/P4-5 | `docs/governance/v1-release-checklist.md` | Terpenuhi |
+| 19 | AI platform | OpenAI-compatible provider configuration | P5-4 | `docs/governance/v1-release-checklist.md` | Terpenuhi |
+| 20 | AI platform | Encrypted API credentials | P5-2 | `docs/governance/v1-release-checklist.md` | Terpenuhi |
+| 21 | AI platform | AI orchestration dan tool registry | P5-5/P5-6 | `docs/governance/v1-release-checklist.md` | Terpenuhi |
+| 22 | AI platform | Knowledge base dan tenant-scoped RAG | P5-7 | `docs/governance/v1-release-checklist.md` | Terpenuhi |
+| 23 | AI platform | Chat ID dan conversation viewer | P6-1/P6-3 | `docs/governance/v1-release-checklist.md` | Terpenuhi |
+| 24 | AI platform | AI-to-human handover | P6-4 | `docs/governance/v1-release-checklist.md` | Terpenuhi |
+| 25 | Production | Rust API dan worker deployment | P0-6/P8-5 | `docs/governance/v1-release-checklist.md` | Sebagian |
+| 26 | Production | VPS resource limits | P0-6/P8-5 | `docs/governance/v1-release-checklist.md` | Sebagian |
+| 27 | Production | Automated external backups | P0-10/P8-4 | `docs/governance/v1-release-checklist.md` | Terblokir (D-07) |
+| 28 | Production | Monitoring dan alerting | P0-8/P8-5 | `docs/governance/v1-release-checklist.md` | Sebagian |
+| 29 | Production | Security assessment | P8-1/P8-2 | `docs/governance/v1-release-checklist.md` | Sebagian |
+| 30 | Production | Load dan recovery testing | P0-10/P8-4 | `docs/governance/v1-release-checklist.md` | Terblokir (RPO/RTO, NFR, D-07) |
 
 ---
 
