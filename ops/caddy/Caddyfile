@@ -81,6 +81,19 @@ http://*.{$ROOT_DOMAIN} {
 		root * /srv/www
 		file_server
 	}
+	# Aset publik frontend/public (mis. /theme-boot.js) yang BENAR-BENAR ada. Hanya ekstensi aset; halaman
+	# HTML dashboard tidak pernah disajikan di host toko. Tanpa ini /theme-boot.js dijawab site.html (text/html)
+	# dan browser menolak menjalankannya (strict MIME).
+	@asset {
+		path_regexp \.(js|css|png|jpe?g|svg|ico|webp|avif|woff2?)$
+		file {
+			root /srv/www
+		}
+	}
+	handle @asset {
+		root * /srv/www
+		file_server
+	}
 	# ADR-0018: robots.txt & sitemap.xml per toko dari API (tenant dari Host asli).
 	@seo path /robots.txt /sitemap.xml
 	handle @seo {
@@ -100,6 +113,7 @@ http://*.{$ROOT_DOMAIN} {
 		rewrite * /api/v1/public/document?path={path}
 		reverse_proxy api:8080 {
 			header_up -Cookie
+			import web_shell
 			@fail status 4xx 5xx
 			handle_response @fail {
 				root * /srv/www

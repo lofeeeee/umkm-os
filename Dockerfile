@@ -33,11 +33,14 @@ COPY frontend/package.json frontend/package-lock.json frontend/.npmrc ./
 RUN npm ci --no-audit
 COPY frontend/ ./
 ARG PUBLIC_API_ORIGIN
-ENV NEXT_PUBLIC_API_ORIGIN=${PUBLIC_API_ORIGIN} NEXT_TELEMETRY_DISABLED=1
+# ADR-0018: build ID per versi (CI: SHA commit). Sama untuk image api & web dari commit yang sama → site.html
+# identik byte-per-byte (CSP hash cocok); beda antar rilis → path /_next/static/<id>/ tidak basi di cache.
+ARG NEXT_BUILD_ID=umkm
+ENV NEXT_PUBLIC_API_ORIGIN=${PUBLIC_API_ORIGIN} NEXT_BUILD_ID=${NEXT_BUILD_ID} NEXT_TELEMETRY_DISABLED=1
 RUN test -n "$PUBLIC_API_ORIGIN" || { echo "build-arg PUBLIC_API_ORIGIN wajib"; exit 1; }; npm run build
 
-# API membawa shell situs toko dari build frontend yang SAMA (ADR-0018: <head> per toko). Build Next.js
-# deterministik untuk sumber + PUBLIC_API_ORIGIN yang sama, sehingga hash chunk = yang disajikan Caddy.
+# API membawa shell situs toko (ADR-0018: <head> per toko). Build deterministik untuk sumber + PUBLIC_API_ORIGIN +
+# NEXT_BUILD_ID yang sama; bila tetap berbeda dari image web, API menolak (X-Web-Shell) dan Caddy memakai shell statis.
 FROM runtime AS api
 COPY --from=build /out/umkm-api /usr/local/bin/umkm-api
 COPY --from=frontend-build /fe/out/site.html /srv/site/site.html

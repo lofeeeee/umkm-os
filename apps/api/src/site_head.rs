@@ -36,8 +36,22 @@ use crate::{
 pub struct SiteHead {
     /// Isi `site.html` hasil build frontend. `None` = fitur nonaktif (Caddy menyajikan file statis).
     pub shell: Option<String>,
+    /// SHA-256 hex `shell`; harus sama dengan header `X-Web-Shell` dari Caddy (build web yang sedang disajikan).
+    pub shell_hash: String,
     pub api_origin: String,
     pub scheme: String,
+}
+
+impl SiteHead {
+    pub fn new(shell: Option<String>, api_origin: String, scheme: String) -> Self {
+        let shell_hash = shell.as_deref().map(shell_hash).unwrap_or_default();
+        Self {
+            shell,
+            shell_hash,
+            api_origin,
+            scheme,
+        }
+    }
 }
 
 /// Data `<head>` satu halaman (sudah final; belum di-escape).
@@ -264,6 +278,16 @@ pub async fn document(
     let Some(shell) = state.site.shell.clone() else {
         return StatusCode::NOT_FOUND.into_response();
     };
+    // Shell API harus build yang SAMA dengan yang disajikan Caddy: skrip inline-nya di-hash ke CSP build itu.
+    // Beda versi (deploy bertahap, tag api ≠ web) → 404 → Caddy menyajikan shell statisnya (situs tetap hidup).
+    let served = headers
+        .get("x-web-shell")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or_default();
+    if served != state.site.shell_hash {
+        tracing::warn!(served, own = %state.site.shell_hash, "site shell API ≠ build web; <head> per toko dilewati");
+        return StatusCode::NOT_FOUND.into_response();
+    }
     match build_meta(
         &state,
         t,
@@ -455,6 +479,15 @@ pub async fn sitemap(
     }
     xml.push_str("</urlset>\n");
     cached(xml, "application/xml; charset=utf-8")
+}
+
+/// SHA-256 hex isi shell (sama dengan `frontend/scripts/csp.mjs`).
+pub fn shell_hash(shell: &str) -> String {
+    use sha2::{Digest, Sha256};
+    Sha256::digest(shell.as_bytes())
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect()
 }
 
 pub fn routes() -> Router<AppState> {

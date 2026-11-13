@@ -120,19 +120,19 @@ pub async fn serve() -> Result<(), BoxError> {
     .with_rt_publisher(rt_publisher)
     .with_ai(ai)
     .with_billing_instructions(&settings.billing.payment_instructions)
-    .with_site(crate::site_head::SiteHead {
+    .with_site(crate::site_head::SiteHead::new(
         // ADR-0018: shell dibaca sekali; gagal baca = fitur nonaktif (Caddy menyajikan file statis).
-        shell: (!settings.site.shell_path.is_empty())
+        (!settings.site.shell_path.is_empty())
             .then(|| std::fs::read_to_string(&settings.site.shell_path))
             .and_then(|r| r.map_err(|e| tracing::warn!(error = %e, path = %settings.site.shell_path, "site shell tidak terbaca; <head> per toko nonaktif")).ok()),
-        api_origin: settings
+        settings
             .site
             .api_public_origin
             .replace(umkm_shared::config::ROOT_DOMAIN_PLACEHOLDER, &settings.tenancy.root_domain)
             .trim_end_matches('/')
             .to_owned(),
-        scheme: settings.site.scheme.clone(),
-    })
+        settings.site.scheme.clone(),
+    ))
     .with_files(Arc::new(crate::state::FileService {
         store: PgObjectStorage::new(
             pool.clone(),

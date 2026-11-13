@@ -18,6 +18,7 @@ for (const f of walk(OUT).filter((x) => x.endsWith(".html"))) {
 }
 if (pages === 0) throw new Error("csp.mjs: tidak ada HTML di out/ (jalankan next build dulu)");
 const script = ["'self'", ...[...hashes].sort()].join(" ");
+const shellHash = createHash("sha256").update(readFileSync(join(OUT, "site.html"))).digest("hex");
 const common = `default-src 'self'; script-src ${script}; style-src 'self' 'unsafe-inline'; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'`;
 const snippet = `# DIBUAT OTOMATIS oleh frontend/scripts/csp.mjs — jangan diedit. ${hashes.size} hash dari ${pages} halaman.
 (csp_app) {
@@ -25,6 +26,11 @@ const snippet = `# DIBUAT OTOMATIS oleh frontend/scripts/csp.mjs — jangan died
 }
 (csp_site) {
 \theader Content-Security-Policy "${common}; connect-src 'self'; img-src 'self' {$PUBLIC_API_ORIGIN} data:"
+}
+# ADR-0018: identitas shell situs build ini. API hanya menyisipkan <head> bila shell miliknya identik;
+# bila tidak (versi image api ≠ web), API menjawab 404 dan Caddy menyajikan shell statis yang cocok CSP ini.
+(web_shell) {
+\theader_up X-Web-Shell "${shellHash}"
 }
 `;
 writeFileSync(join(OUT, "csp.caddy"), snippet);

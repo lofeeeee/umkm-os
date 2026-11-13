@@ -24,6 +24,29 @@ async fn get(a: &axum::Router, uri: &str, host: &str) -> Res {
     send(a, Method::GET, uri, None, Some(host), None, vec![]).await
 }
 
+/// Seperti Caddy (snippet `web_shell` dari csp.mjs): kirim identitas shell build web yang disajikan.
+async fn doc(a: &axum::Router, uri: &str, host: &str, shell: &str) -> Res {
+    let req = axum::http::Request::builder()
+        .uri(uri)
+        .header("host", host)
+        .header("x-web-shell", umkm_api::site_head::shell_hash(shell))
+        .body(axum::body::Body::empty())
+        .unwrap();
+    let res = tower::ServiceExt::oneshot(a.clone(), req).await.unwrap();
+    let status = res.status().as_u16();
+    let headers = res.headers().clone();
+    let bytes = http_body_util::BodyExt::collect(res.into_body())
+        .await
+        .unwrap()
+        .to_bytes()
+        .to_vec();
+    Res {
+        status,
+        headers,
+        bytes,
+    }
+}
+
 async fn publish_doc(a: &TestApp, t: Uuid, o: &Who, doc: Value) {
     let w = format!("/api/v1/tenants/{t}/website");
     let r = json(
@@ -77,11 +100,11 @@ async fn publish_doc(a: &TestApp, t: Uuid, o: &Who, doc: Value) {
 async fn document_injects_escaped_head_per_host_and_never_leaks(pool: PgPool) {
     let a = app(&pool).await;
     let router = build_router(
-        a.state.clone().with_site(SiteHead {
-            shell: Some(SHELL.into()),
-            api_origin: "https://api.ryasai.my.id".into(),
-            scheme: "https".into(),
-        }),
+        a.state.clone().with_site(SiteHead::new(
+            Some(SHELL.into()),
+            "https://api.ryasai.my.id".into(),
+            "https".into(),
+        )),
         LIMITS,
     );
     let t = tenant(&pool, "kopi").await;
@@ -90,10 +113,27 @@ async fn document_injects_escaped_head_per_host_and_never_leaks(pool: PgPool) {
     let o2 = member(&pool, t2, "Owner").await;
     publish_doc(&a, t, &o, studio_doc()).await;
 
-    let r = get(
+    // Tanpa identitas shell / shell build lain → 404 (Caddy menyajikan shell statisnya; CSP tetap cocok).
+    let plain = get(
         &router,
         "/api/v1/public/document?path=/",
         "kopi.ryasai.my.id",
+    )
+    .await;
+    assert_eq!(plain.status, 404);
+    let other = doc(
+        &router,
+        "/api/v1/public/document?path=/",
+        "kopi.ryasai.my.id",
+        "build lain",
+    )
+    .await;
+    assert_eq!(other.status, 404);
+    let r = doc(
+        &router,
+        "/api/v1/public/document?path=/",
+        "kopi.ryasai.my.id",
+        SHELL,
     )
     .await;
     assert_eq!(r.status, 200);
@@ -114,10 +154,11 @@ async fn document_injects_escaped_head_per_host_and_never_leaks(pool: PgPool) {
     assert!(!html.contains("<script>x"));
 
     // Path berbahaya → kanonik "/".
-    let r = get(
+    let r = doc(
         &router,
         "/api/v1/public/document?path=/%22%3E%3Cscript%3E",
         "kopi.ryasai.my.id",
+        SHELL,
     )
     .await;
     assert!(
@@ -128,10 +169,11 @@ async fn document_injects_escaped_head_per_host_and_never_leaks(pool: PgPool) {
 
     // Tenant lain tanpa versi terbit: tidak membocorkan meta toko pertama.
     let _ = o2;
-    let r = get(
+    let r = doc(
         &router,
         "/api/v1/public/document?path=/",
         "lain.ryasai.my.id",
+        SHELL,
     )
     .await;
     let other = String::from_utf8(r.bytes).unwrap();
@@ -139,10 +181,11 @@ async fn document_injects_escaped_head_per_host_and_never_leaks(pool: PgPool) {
 
     // Host tak dikenal → 404 (Caddy jatuh balik ke shell statis).
     assert_eq!(
-        get(
+        doc(
             &router,
             "/api/v1/public/document?path=/",
-            "tidakada.ryasai.my.id"
+            "tidakada.ryasai.my.id",
+            SHELL,
         )
         .await
         .status,

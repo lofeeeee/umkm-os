@@ -66,7 +66,8 @@ jobs:
           common=(--push --provenance=false
             --label "org.opencontainers.image.source=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY"
             --label "org.opencontainers.image.revision=$SHA"
-            --build-arg "PUBLIC_API_ORIGIN=$PUBLIC_API_ORIGIN")
+            --build-arg "PUBLIC_API_ORIGIN=$PUBLIC_API_ORIGIN"
+            --build-arg "NEXT_BUILD_ID=${SHA::12}")
           # api pertama: stage Rust + frontend masuk cache builder (dipakai worker & web) dan cache registry.
           docker buildx build "${common[@]}" --target api -t "$REPO/api:$TAG" \
             --cache-from "type=registry,ref=$REPO/buildcache" \
