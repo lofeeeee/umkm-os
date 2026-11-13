@@ -3,7 +3,7 @@
 
 import type { SectionType } from "@/renderer/types";
 
-export type PluginKind = SectionType | "chatbot";
+export type PluginKind = SectionType | "chatbot" | "text" | "whatsapp";
 export type PluginCategory = "Konten" | "Jualan" | "Layanan" | "Info toko";
 
 export interface PluginDef {

@@ -38,9 +38,12 @@ function errorText(e: unknown): string {
   return "Tidak dapat menghubungi toko.";
 }
 
-export function ChatWidget() {
+/** Tampilan widget (plugin Chatbot Studio, ADR-0017): gelembung bulat, bilah bawah, atau menempel di halaman. */
+export interface ChatLook { variant?: "bubble" | "bar" | "inline"; title?: string; welcome?: string; startOpen?: boolean; primary?: string }
+
+export function ChatWidget({ variant = "bubble", title, welcome, startOpen = false, primary }: ChatLook = {}) {
   const [cfg, setCfg] = useState<Config | null>(null);
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(startOpen);
   const [conv, setConv] = useState<{ id: string; status: string } | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [err, setErr] = useState<string | null>(null);
@@ -137,22 +140,36 @@ export function ChatWidget() {
   });
 
   const waiting = conv?.status === "WAITING_HUMAN";
+  const heading = title?.trim() || "Chat dengan toko";
   return (
-    <div className="chat">
-      {!open && (
+    <div className={`chat chat-v-${variant}${open ? " chat-is-open" : ""}`} style={primary ? ({ ["--chat-primary" as string]: primary } as React.CSSProperties) : undefined}>
+      {!open && variant === "bubble" && (
         <button type="button" className="chat-fab" onClick={() => setOpen(true)} aria-expanded="false">
           Chat
+        </button>
+      )}
+      {!open && variant === "bar" && (
+        <button type="button" className="chat-bar" onClick={() => setOpen(true)} aria-expanded="false" aria-label="Chat">
+          <span className="chat-bar-who"><span className="chat-dot" aria-hidden="true" />{heading}</span>
+          <span className="chat-bar-input">{welcome?.trim() || "Tulis pertanyaan…"}</span>
+          <span className="chat-bar-go" aria-hidden="true">➤</span>
+        </button>
+      )}
+      {!open && variant === "inline" && (
+        <button type="button" className="chat-inline-min" onClick={() => setOpen(true)} aria-expanded="false" aria-label="Chat">
+          <span className="chat-dot" aria-hidden="true" />{heading}<span aria-hidden="true">▴</span>
         </button>
       )}
       {open && (
         <section className="chat-panel" role="dialog" aria-label="Chat dengan toko">
           <header className="chat-head">
-            <strong>Chat dengan toko</strong>
-            <button type="button" className="chat-x" onClick={() => setOpen(false)} aria-label="Tutup chat">×</button>
+            <strong>{heading}</strong>
+            <button type="button" className="chat-x" onClick={() => setOpen(false)} aria-label={variant === "inline" ? "Minimalkan chat" : "Tutup chat"}>{variant === "inline" ? "▾" : "×"}</button>
           </header>
           {err && <p className="chat-err" role="alert">{err}</p>}
           {!conv ? (
             <div className="chat-consent">
+              {welcome?.trim() && <p className="chat-welcome">{welcome}</p>}
               <p>{cfg.consent_text}</p>
               <button type="button" className="chat-btn" disabled={busy} onClick={begin}>Setuju &amp; mulai chat</button>
             </div>

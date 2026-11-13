@@ -1,0 +1,12 @@
+P9-4 — Renderer publik v2 (grid desktop, tumpuk ponsel, chatbot gelembung/bilah/menempel) — 2026-11-13T22:02:00+07:00
+
+File: frontend/src/renderer/StudioSite.tsx, site.css (.sv2), chat/widget.tsx (varian), app/site/page.tsx (dispatch v1/v2).
+$ npx vitest run →  Tests 52 passed (52)
+  StudioSite.test.tsx: urutan ponsel, wa.me ter-encode, posisi grid, hide_on, embed bukan kotak grid, teks di-escape (kontrol negatif: '<b>' tidak menjadi HTML).
+
+Uji browser (Playwright, API publik tiruan berisi dokumen nyata dari Studio = crates/domain/tests/fixtures/studio_browser_doc.json):
+  1440px: grid sesuai editor (banner 8 kol + chatbot menempel 4 kol, promo, galeri produk, 3 kartu info, testimoni); chat memakai warna tema.
+  390px: blok bertumpuk berurutan, tanpa scroll horizontal.
+  1280px chatbot 'bar': panel terbuka di kanan bawah (chat_open).
+Baris grid kosong runtuh (minmax(0,auto), row-gap 0) agar data nyata yang lebih pendek tidak menyisakan ruang kosong; auto_height=false mempertahankan tinggi editor.
+Perilaku lama dipertahankan: halaman v1 & halaman toko tetap memakai tombol 'Chat' bawaan; e2e menamai dialog 'Chat dengan toko' (tetap).

@@ -8,6 +8,8 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 
 import { API_ORIGIN } from "@/lib/api";
 import { Site, type GridProduct } from "@/renderer/Site";
+import { StudioSite } from "@/renderer/StudioSite";
+import { isV2 } from "@/studio/doc";
 import type { PublicSite } from "@/renderer/types";
 import { fileUrl, shopApi, type PublicProduct } from "@/shop/api";
 import { route } from "@/shop/route";
@@ -42,7 +44,11 @@ function WebsitePage({ slug }: { slug: string }) {
         const data = body.data as PublicSite;
         setSite(data);
         document.title = data.business.profile.name;
-        const grid = data.page.content.sections?.find((s) => s.type === "product_grid" && s.enabled);
+        // v1: section product_grid aktif; v2 (Studio): blok product_grid (ambil limit terbesar).
+        const content = data.page.content as unknown;
+        const grid = isV2(content)
+          ? content.blocks.filter((b) => b.kind === "product_grid").map((b) => ({ data: b.data })).sort((a, b) => Number(b.data.limit ?? 0) - Number(a.data.limit ?? 0))[0]
+          : data.page.content.sections?.find((s) => s.type === "product_grid" && s.enabled);
         if (grid) {
           const limit = typeof grid.data.limit === "number" ? grid.data.limit : 8;
           shopApi<{ items: PublicProduct[] }>("GET", `/products?limit=${Math.min(24, Math.max(1, limit))}`)
@@ -53,6 +59,17 @@ function WebsitePage({ slug }: { slug: string }) {
       .catch(() => setState("error"));
   }, [slug]);
   if (site) {
+    const content = site.page.content as unknown;
+    const assetUrl = (r: string) => (site.assets[r] ? `${API_ORIGIN}${site.assets[r]}` : undefined);
+    if (isV2(content)) {
+      // ADR-0017: dokumen Studio. Chatbot tampil hanya bila plugin Chatbot dipasang di halaman.
+      return (
+        <main>
+          <StudioSite doc={content} business={site.business} status={site.status} products={products ?? []} assetUrl={assetUrl} />
+          <CartFab />
+        </main>
+      );
+    }
     return (
       <main>
         <Site
@@ -63,6 +80,7 @@ function WebsitePage({ slug }: { slug: string }) {
           assetUrl={(r) => (site.assets[r] ? `${API_ORIGIN}${site.assets[r]}` : undefined)}
         />
         <CartFab />
+        <ChatWidget />
       </main>
     );
   }
@@ -91,8 +109,9 @@ export default function PublicSitePage() {
   return (
     <>
       <RoutePage r={r} />
-      {/* Web chat (P6-2): tampil hanya bila pemilik toko mengaktifkan asisten. */}
-      <ChatWidget />
+      {/* Web chat (P6-2): tampil hanya bila pemilik toko mengaktifkan asisten. Halaman website
+          menentukan sendiri (v2: dari plugin Chatbot di Studio). */}
+      {r.kind !== "page" && <ChatWidget />}
     </>
   );
 }

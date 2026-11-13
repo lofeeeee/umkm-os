@@ -94,7 +94,7 @@
 .shop-qris { width: 100%; max-width: 300px; height: auto; display: block; margin: 12px auto; border-radius: 12px; border: 1px solid var(--shop-line); padding: 8px; background: #fff; }
 
 .shop-fab {
-  position: fixed; right: 16px; bottom: 16px; z-index: 10; display: inline-flex; align-items: center; gap: 8px;
+  position: fixed; left: 16px; bottom: 16px; z-index: 10; display: inline-flex; align-items: center; gap: 8px;
   background: #0f172a; color: #fff !important; text-decoration: none;
   padding: 12px 20px; border-radius: 999px; font-weight: 700; min-height: 48px;
   box-shadow: 0 12px 28px -8px rgb(15 23 42 / 0.5);

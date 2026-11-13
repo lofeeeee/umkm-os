@@ -147,3 +147,32 @@
 @media (prefers-reduced-motion: reduce) {
   .site *, .site *::before, .site *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
 }
+
+/* ============================================================
+   Situs Studio (schema v2, ADR-0017): grid 12 kolom desktop, tumpuk di ponsel.
+   ============================================================ */
+.sv2 { container-type: inline-size; --pg-bg: #ffffff; background: var(--pg-bg); min-height: 100vh; padding: 24px 16px 96px; font-family: var(--s-font); }
+.sv2[data-surface="cream"] { --pg-bg: #fbf6ee; }
+.sv2[data-surface="dark"] { --pg-bg: #0d0d12; color-scheme: dark; }
+.sv2 .site { --s-bg: var(--pg-bg); background: transparent; min-height: 0; }
+.sv2[data-surface="cream"] .site { --s-soft: #f6eddf; --s-line: #eadfcc; }
+.sv2[data-surface="dark"] .site { --s-ink: #f4f4f5; --s-ink-2: #d4d4d8; --s-muted: #a1a1aa; --s-soft: #17171f; --s-line: #2a2a35; --s-tint: color-mix(in srgb, var(--s-primary) 18%, #0d0d12); }
+.sv2[data-surface="dark"] .s-card, .sv2[data-surface="dark"] .s-product { background: #15151c; }
+/* Baris grid tanpa tinggi minimum & tanpa celah baris: blok bertinggi otomatis mengikuti isinya,
+   baris kosong runtuh ke 0 (data nyata bisa lebih pendek/panjang dari saat disusun). Celah = padding blok. */
+.sv2-grid { max-width: 1080px; margin: 0 auto; display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); grid-auto-rows: minmax(0, auto); column-gap: 12px; row-gap: 0; }
+.sv2-block { min-width: 0; padding-bottom: 12px; box-sizing: border-box; }
+.sv2-block > .st-content { height: 100%; }
+.sv2 .s-solo .s { padding: 28px 24px; background: transparent !important; }
+.sv2-block[data-hide="desktop"] { display: none; }
+@container (max-width: 719px) {
+  .sv2-grid { display: flex; flex-direction: column; gap: 12px; }
+  .sv2-block { order: var(--order); }
+  .sv2-block[data-hide="mobile"] { display: none; }
+  .sv2-block[data-hide="desktop"] { display: block; }
+}
+.s-text p { margin: 0 0 12px; color: var(--s-ink-2); }
+.s-wa { background: #25d366 !important; box-shadow: 0 6px 16px -6px rgb(37 211 102 / 0.6); }
+.s-wa svg { flex: none; }
+.s-wa-float { position: fixed; z-index: 19; right: 16px; bottom: 84px; display: grid; place-items: center; width: 56px; height: 56px; border-radius: 999px; background: #25d366; color: #fff !important; box-shadow: 0 12px 28px -8px rgb(37 211 102 / 0.7); }
+.s-wa-float svg { width: 28px; height: 28px; }

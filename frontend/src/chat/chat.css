@@ -9,7 +9,7 @@
   line-height: 1.45;
 }
 .chat *, .chat *::before, .chat *::after { box-sizing: border-box; }
-/* Kiri bawah: tombol keranjang ada di kanan bawah. */
+/* Posisi dasar; varian gelembung (bawaan) memindahkannya ke kanan bawah — tombol keranjang di kiri bawah. */
 .chat-fab {
   position: fixed; left: 16px; bottom: 16px; z-index: 20; background: var(--chat-primary); color: #fff; border: 0;
   padding: 12px 20px; border-radius: 999px; font: inherit; font-weight: 700; min-height: 48px; cursor: pointer;
@@ -53,3 +53,21 @@
 .chat-actions { display: flex; justify-content: space-between; gap: 8px; padding: 0 12px 10px; flex-wrap: wrap; }
 .chat-link { border: 0; background: none; color: var(--chat-primary); text-decoration: underline; font: inherit; padding: 8px 0; min-height: 44px; cursor: pointer; }
 .chat-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* Varian plugin Chatbot (Studio, ADR-0017) */
+.chat-v-bubble .chat-fab { left: auto; right: 16px; }
+@media (min-width: 640px) { .chat-v-bubble .chat-panel { left: auto; right: 16px; transform-origin: bottom right; } }
+.chat-dot { display: inline-block; width: 8px; height: 8px; border-radius: 999px; background: #22c55e; margin-right: 8px; flex: none; }
+.chat-bar { position: fixed; z-index: 20; left: 12px; right: 12px; bottom: 12px; display: flex; align-items: center; gap: 10px; padding: 8px 8px 8px 14px; border: 0; border-radius: 999px; background: #fff; color: var(--chat-ink); font: inherit; cursor: pointer; text-align: left; box-shadow: 0 0 0 1px rgb(15 23 42 / 0.08), 0 16px 40px -12px rgb(15 23 42 / 0.35); max-width: 760px; margin: 0 auto; }
+.chat-bar-who { display: inline-flex; align-items: center; font-weight: 700; white-space: nowrap; }
+.chat-bar-input { flex: 1; min-width: 0; padding: 9px 14px; border-radius: 999px; background: #f1f5f9; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chat-bar-go { display: grid; place-items: center; width: 40px; height: 40px; flex: none; border-radius: 999px; background: var(--chat-primary); color: #fff; }
+@media (max-width: 480px) { .chat-bar-who { display: none; } }
+.chat-v-bar .chat-panel { bottom: 12px; }
+@media (min-width: 640px) { .chat-v-bar .chat-panel { left: auto; right: 16px; } }
+/* Menempel: panel ikut aliran halaman di dalam kotak grid. */
+.chat-v-inline { height: 100%; }
+.chat-v-inline .chat-panel { position: static; width: auto; max-height: none; height: 100%; min-height: 380px; animation: none; box-shadow: 0 0 0 1px rgb(15 23 42 / 0.06); }
+.chat-inline-min { width: 100%; display: flex; align-items: center; gap: 4px; padding: 12px 16px; border: 0; border-radius: 14px; background: var(--chat-primary); color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
+.chat-inline-min span:last-child { margin-left: auto; }
+.chat-welcome { font-weight: 600; }
