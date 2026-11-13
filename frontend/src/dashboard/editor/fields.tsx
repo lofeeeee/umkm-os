@@ -2,6 +2,8 @@
 
 import { createContext, useContext, useId, useState } from "react";
 
+import { ImageSquare, UploadSimple } from "@phosphor-icons/react/ssr";
+
 import type { Field } from "@/renderer/sections";
 import type { Json } from "@/renderer/types";
 
@@ -41,18 +43,21 @@ export function ImagePicker({ value, onChange, label }: { value: string | undefi
   return (
     <div className="d-field">
       <span>{label}</span>
-      <div className="d-row">
+      <div className="d-row" style={{ flexWrap: "nowrap" }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        {src ? <img src={src} alt="" width={56} height={56} style={{ objectFit: "cover", borderRadius: 6 }} /> : <span className="d-muted">Belum ada gambar</span>}
-        <button type="button" className="d-btn d-btn-sm" onClick={() => setOpen(!open)} disabled={!a.canEdit} aria-expanded={open}>
-          {open ? "Tutup" : "Pilih gambar"}
-        </button>
-        {value && <button type="button" className="d-btn d-btn-sm d-btn-danger" onClick={() => onChange(undefined)} disabled={!a.canEdit}>Hapus</button>}
+        {src ? <img className="d-img-tile" src={src} alt="" width={64} height={64} /> : <span className="d-img-tile" aria-hidden="true"><ImageSquare weight="duotone" /></span>}
+        <div className="d-row">
+          <button type="button" className="d-btn d-btn-sm" onClick={() => setOpen(!open)} disabled={!a.canEdit} aria-expanded={open}>
+            {open ? "Tutup" : "Pilih gambar"}
+          </button>
+          {value && <button type="button" className="d-btn d-btn-sm d-btn-ghost" onClick={() => onChange(undefined)} disabled={!a.canEdit}>Hapus</button>}
+        </div>
       </div>
       {open && (
         <div className="e-list-item">
-          <label className="d-btn d-btn-sm" style={{ display: "inline-block", marginBottom: 8 }}>
-            {busy ? "Mengunggah…" : "Unggah PNG/JPEG/WebP (maks 2 MB)"}
+          <label className="d-btn d-btn-sm">
+            <UploadSimple weight="bold" aria-hidden="true" />
+            {busy ? "Mengunggah…" : "Unggah dari perangkat"}
             <input
               type="file"
               accept="image/png,image/jpeg,image/webp"
@@ -73,17 +78,19 @@ export function ImagePicker({ value, onChange, label }: { value: string | undefi
               }}
             />
           </label>
-          {err && <div className="d-alert d-alert-error" role="alert">{err}</div>}
-          <div className="e-thumbs">
-            {a.uploads.map((u) => (
-              <button type="button" key={u.id} aria-pressed={u.ref === value} aria-label={`Pilih gambar ${u.id.slice(0, 8)}`}
-                onClick={() => { onChange(u.ref); setOpen(false); }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={a.url(u.ref)} alt="" />
-              </button>
-            ))}
-          </div>
-          {a.uploads.length === 0 && <p className="d-muted">Belum ada gambar diunggah.</p>}
+          <span className="d-hint" style={{ marginLeft: 8 }}>PNG, JPEG, atau WebP · maks. 2 MB</span>
+          {err && <div className="d-alert d-alert-error" role="alert" style={{ marginTop: 8 }}>{err}</div>}
+          {a.uploads.length > 0 ? (
+            <div className="e-thumbs">
+              {a.uploads.map((u) => (
+                <button type="button" key={u.id} aria-pressed={u.ref === value} aria-label={`Pilih gambar ${u.id.slice(0, 8)}`}
+                  onClick={() => { onChange(u.ref); setOpen(false); }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={a.url(u.ref)} alt="" />
+                </button>
+              ))}
+            </div>
+          ) : <p className="d-hint" style={{ margin: "8px 0 0" }}>Belum ada gambar di galeri toko.</p>}
         </div>
       )}
     </div>

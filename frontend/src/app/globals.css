@@ -992,3 +992,81 @@ dialog.d-cmdk::backdrop { background: rgb(0 0 0 / 0.25); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-delay: 0ms !important; transition-duration: 0.01ms !important; }
 }
+
+/* ============================================================
+   Editor bidang (gambar, daftar) — dipakai editor website & produk
+   ============================================================ */
+.e-list-item { border: 1px solid var(--line); border-radius: var(--radius); padding: var(--sp-3); margin: 0 0 var(--sp-2); background: var(--card); min-width: 0; }
+fieldset.e-list-item { padding-top: var(--sp-2); }
+fieldset.e-list-item > legend { font-weight: 600; font-size: 0.8125rem; padding: 0 4px; color: var(--ink-2); }
+.e-thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 6px; margin-top: var(--sp-2); }
+.e-thumbs button { padding: 0; border: 2px solid transparent; border-radius: var(--radius-sm); background: var(--surface-hover); cursor: pointer; aspect-ratio: 1; overflow: hidden; transition: border-color var(--dur-fast) ease, transform var(--dur-fast) var(--ease-out); }
+.e-thumbs button:hover { border-color: var(--line-strong); }
+.e-thumbs button:active { transform: scale(0.96); }
+.e-thumbs button[aria-pressed="true"] { border-color: var(--brand); }
+.e-thumbs img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.d-img-tile { width: 64px; height: 64px; flex: none; border-radius: var(--radius); object-fit: cover; border: 1px solid var(--line); background: var(--bg-subtle); display: grid; place-items: center; color: var(--subtle); }
+.d-img-tile svg { width: 20px; height: 20px; }
+.d-thumb { width: 36px; height: 36px; flex: none; border-radius: var(--radius-sm); object-fit: cover; border: 1px solid var(--line); background: var(--bg-subtle); display: inline-grid; place-items: center; color: var(--subtle); }
+.d-thumb svg { width: 16px; height: 16px; }
+.d-cell-main { display: flex; align-items: center; gap: var(--sp-3); min-width: 0; }
+.d-cell-main > div { min-width: 0; }
+.d-form-section { padding: var(--sp-5) 0; border-top: 1px solid var(--line); }
+.d-form-section:first-child { padding-top: 0; border-top: 0; }
+.d-form-section > h3 { margin: 0 0 var(--sp-1); font-size: 0.875rem; }
+.d-form-section > p.d-muted { margin: 0 0 var(--sp-4); font-size: 0.8125rem; }
+.d-input-prefix { position: relative; }
+.d-input-prefix > span { position: absolute; left: 10px; top: 50%; translate: 0 -50%; color: var(--muted); font-size: 0.8125rem; pointer-events: none; }
+.d-input-prefix > input { padding-left: 32px; }
+details.d-details > summary { cursor: pointer; font-weight: 600; font-size: 0.8125rem; color: var(--ink-2); list-style: none; display: inline-flex; align-items: center; gap: 6px; }
+details.d-details > summary::-webkit-details-marker { display: none; }
+details.d-details > summary::before { content: "▸"; font-size: 0.7rem; color: var(--muted); transition: transform var(--dur-fast) var(--ease-out); }
+details.d-details[open] > summary::before { transform: rotate(90deg); }
+details.d-details[open] > summary { margin-bottom: var(--sp-3); }
+.d-switch { display: flex; align-items: flex-start; gap: var(--sp-3); cursor: pointer; font-size: 0.8125rem; margin-bottom: var(--sp-3); }
+.d-switch input { appearance: none; width: 32px; height: 18px; flex: none; margin: 1px 0 0; border-radius: 999px; background: var(--line-strong); position: relative; cursor: pointer; transition: background-color var(--dur) ease; }
+.d-switch input::after { content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 999px; background: #fff; box-shadow: 0 1px 2px rgb(0 0 0 / 0.2); transition: transform var(--dur) var(--ease-out); }
+.d-switch input:checked { background: var(--brand); }
+.d-switch input:checked::after { transform: translateX(14px); }
+.d-switch input:disabled { opacity: 0.5; cursor: not-allowed; }
+.d-switch strong { display: block; font-weight: 600; color: var(--ink); }
+.d-switch .d-muted { display: block; font-size: 0.75rem; }
+.d-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.d-chip { display: inline-flex; align-items: center; gap: 4px; height: 26px; padding: 0 4px 0 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--bg-subtle); font-size: 0.75rem; font-weight: 550; }
+.d-chip button { display: grid; place-items: center; width: 18px; height: 18px; border: 0; border-radius: 999px; background: transparent; color: var(--muted); cursor: pointer; padding: 0; }
+.d-chip button:hover { background: var(--surface-active); color: var(--danger); }
+.d-chip button svg { width: 11px; height: 11px; }
+
+/* Tabel → tumpukan kartu di ponsel: kolom pertama selebar baris, sisanya berderet. */
+@media (max-width: 640px) {
+  .d-table-stack thead { display: none; }
+  .d-table-stack, .d-table-stack tbody { display: block; }
+  .d-table-stack tr { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 12px 14px; border-bottom: 1px solid var(--line-soft); }
+  .d-table-stack tr:last-child { border-bottom: 0; }
+  .d-table-stack td { display: block; border: 0 !important; padding: 0 !important; }
+  .d-table-stack td:first-child { flex: 1 1 100%; }
+  .d-table-stack td.d-num { text-align: left; }
+  .d-table-stack td.d-actions { margin-left: auto; }
+}
+.d-table .d-link { text-align: left; }
+
+/* Progres horizontal (pesanan) */
+.d-steps-h { list-style: none; margin: 0 0 var(--sp-5); padding: 0; display: flex; gap: var(--sp-2); flex-wrap: wrap; }
+.d-steps-h li { flex: 1 1 140px; display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: var(--radius); border: 1px solid var(--line); background: var(--card); font-size: 0.78125rem; font-weight: 550; color: var(--muted); }
+.d-steps-h-dot { display: grid; place-items: center; width: 20px; height: 20px; flex: none; border-radius: 999px; background: var(--surface-active); font-size: 0.6875rem; font-weight: 700; }
+.d-steps-h-dot svg { width: 11px; height: 11px; }
+.d-steps-h li[data-state="done"] { color: var(--ink-2); }
+.d-steps-h li[data-state="done"] .d-steps-h-dot { background: var(--ok); color: #fff; }
+.d-steps-h li[data-state="current"] { color: var(--ink); border-color: var(--brand); box-shadow: 0 0 0 1px var(--brand); }
+.d-steps-h li[data-state="current"] .d-steps-h-dot { background: var(--brand); color: #fff; }
+.d-totals { padding: var(--sp-4) var(--sp-5); border-top: 1px solid var(--line); margin-left: auto; max-width: 320px; grid-template-columns: 1fr auto; text-align: right; }
+.d-totals dt { text-align: left; }
+.d-facts { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; font-size: 0.8125rem; }
+.d-facts li { display: flex; gap: 10px; align-items: flex-start; min-width: 0; overflow-wrap: anywhere; }
+.d-facts svg { width: 15px; height: 15px; flex: none; margin-top: 2px; color: var(--muted); }
+.d-timeline { list-style: none; margin: 0; padding: 0 0 0 16px; display: grid; gap: var(--sp-4); border-left: 1px solid var(--line); }
+.d-timeline li { position: relative; display: grid; gap: 1px; font-size: 0.8125rem; }
+.d-timeline li::before { content: ""; position: absolute; left: -20.5px; top: 5px; width: 8px; height: 8px; border-radius: 999px; background: var(--card); border: 2px solid var(--line-strong); }
+.d-timeline li:first-child::before { border-color: var(--brand); background: var(--brand); }
+.d-verify { margin-top: var(--sp-5); padding: var(--sp-4); border-radius: var(--radius); background: var(--bg-subtle); border: 1px solid var(--line); }
+.d-verify .d-field { margin-bottom: var(--sp-3); }
