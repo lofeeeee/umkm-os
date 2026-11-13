@@ -1322,3 +1322,32 @@ label.st-tool { cursor: pointer; }
 .st-tpl-meta { display: grid; gap: 2px; padding: 14px 16px; }
 .st-tpl-meta strong { font-size: 0.9375rem; }
 .st-tpl-meta span { font-size: 0.8125rem; color: var(--muted); }
+
+/* ============================================================
+   Studio — halaman khusus layar penuh (sx-*)
+   ============================================================ */
+.sx { position: fixed; inset: 0; z-index: 10; display: grid; grid-template-rows: 52px minmax(0, 1fr); background: var(--bg); }
+.sx-top { display: flex; align-items: center; gap: 8px; padding: 0 12px; border-bottom: 1px solid var(--line); background: var(--bg); min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.sx-top > * { flex: none; }
+.sx-brand { display: inline-flex; align-items: center; gap: 8px; font-weight: 650; font-size: 0.875rem; margin-left: 4px; }
+.sx-brand .d-avatar { width: 24px; height: 24px; font-size: 0.75rem; }
+.sx-brand em { font-style: normal; color: var(--muted); font-weight: 500; }
+.sx-brand em::before { content: "/"; margin: 0 6px; color: var(--line-strong); }
+.sx-spacer { flex: 1 1 auto; }
+.sx-zoom { font-size: 0.75rem; color: var(--muted); font-variant-numeric: tabular-nums; min-width: 40px; text-align: center; }
+.sx-top .d-seg svg { width: 13px; height: 13px; vertical-align: -2px; }
+.sx-body { display: grid; grid-template-columns: 300px minmax(0, 1fr); min-height: 0; }
+.sx-body[data-panel="closed"] { grid-template-columns: minmax(0, 1fr); }
+.sx-panel { position: static; max-height: none; height: 100%; overflow-y: auto; border: 0; border-right: 1px solid var(--line); border-radius: 0; align-content: start; }
+.sx-scroll { overflow: auto; min-height: 0; }
+.sx-canvas { padding: 28px 32px 80px; background: var(--bg-subtle); background-image: radial-gradient(var(--line) 1px, transparent 1px); background-size: 18px 18px; }
+.sx-canvas .st-stage { max-width: 1180px; margin: 0 auto; box-shadow: var(--shadow-pop); border: 0; border-radius: 14px; }
+@media (max-width: 900px) {
+  .sx-body { grid-template-columns: minmax(0, 1fr); }
+  .sx-panel { position: fixed; z-index: 20; top: 52px; bottom: 0; left: 0; width: min(320px, 90vw); box-shadow: var(--shadow-dialog); }
+  .sx-canvas { padding: 16px; }
+}
+.sx-panel[hidden] { display: none; }
+/* Garis kolom hanya saat menyeret/menjatuhkan — tampilan diam tetap bersih seperti situs aslinya. */
+.st-canvas { background-image: none; }
+.st-dragging.st-canvas, .st-canvas:has(.st-ghost) { background-image: linear-gradient(to right, color-mix(in srgb, var(--brand) 9%, transparent) 0 calc(var(--col) - 12px), transparent 0); }

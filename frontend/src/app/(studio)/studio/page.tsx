@@ -8,11 +8,11 @@
 // schema_version 2 + validator server dibangun.
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 
 import {
   ArrowClockwise, ArrowCounterClockwise, ArrowLeft, ArrowsIn, ArrowsOut, CaretDown, CaretUp, ChatCircleDots, Check, Copy,
-  DesktopTower, DeviceMobile, ImageSquare, MagnifyingGlass, Plus, PuzzlePiece, Sparkle, SquaresFour, Trash, X,
+  CornersIn, CornersOut, DesktopTower, DeviceMobile, ImageSquare, MagnifyingGlass, Plus, PuzzlePiece, SidebarSimple, Sparkle, SquaresFour, Trash, X,
 } from "@phosphor-icons/react/ssr";
 
 import { useUploads } from "@/dashboard/assets";
@@ -128,6 +128,7 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
   const [stageW, setStageW] = useState(DESIGN_WIDTH);
   const stageRef = useRef<HTMLDivElement>(null);
   const [clipped, setClipped] = useState<Record<string, boolean>>({});
+  const [panelOpen, setPanelOpen] = useState(true);
 
   useEffect(() => {
     const el = stageRef.current;
@@ -293,11 +294,27 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
     return PLUGINS.filter((p) => !t || `${p.name} ${p.desc} ${p.keywords} ${p.category}`.toLowerCase().includes(t));
   }, [q]);
 
-  if (!st || !hist) return <div className="d-card"><span className="d-skel d-skel-block" /></div>;
+  const backHref = `/website?tenant=${ctx.tenant.id}`;
+  if (!st || !hist) {
+    return (
+      <div className="sx">
+        <header className="sx-top"><Link className="d-btn d-btn-ghost d-btn-sm" href={backHref}><ArrowLeft weight="bold" aria-hidden="true" />Website</Link><strong>Studio</strong></header>
+        <div className="sx-scroll"><div style={{ padding: 32 }}><span className="d-skel d-skel-block" style={{ height: 480 }} /></div></div>
+      </div>
+    );
+  }
 
   if (picking === "first") {
     return (
       <Assets.Provider value={assets}>
+        <div className="sx">
+        <header className="sx-top">
+          <Link className="d-btn d-btn-ghost d-btn-sm" href={backHref}><ArrowLeft weight="bold" aria-hidden="true" />Website</Link>
+          <span className="sx-brand"><span className="d-avatar" aria-hidden="true">{(ctx.tenant.name.trim()[0] ?? "T").toUpperCase()}</span>Studio</span>
+          <span className="sx-spacer" />
+          <FullscreenButton />
+        </header>
+        <div className="sx-scroll" style={{ padding: "32px 24px" }}>
         <TemplateGallery
           first
           business={business}
@@ -306,6 +323,8 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
           onCurrent={() => { setPicking(null); toast.ok("Memakai susunan website Anda saat ini."); }}
           surfaceOf={(k) => TEMPLATES.find((t) => t.key === k)!.build({ name: business.profile.name, description: business.profile.description ?? null })}
         />
+        </div>
+        </div>
       </Assets.Provider>
     );
   }
@@ -316,26 +335,31 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
 
   return (
     <Assets.Provider value={assets}>
-      <div className="st-top d-wide">
-        <Link className="d-btn d-btn-ghost d-btn-sm" href={`/website?tenant=${ctx.tenant.id}`}><ArrowLeft weight="bold" aria-hidden="true" />Website</Link>
-        <h1>Studio</h1>
-        <Badge tone="warn" plain>Prototipe — belum tampil di situs publik</Badge>
-        <span className="st-save" aria-live="polite">{saved ? <><Check weight="bold" aria-hidden="true" />Tersimpan otomatis</> : "Menyimpan…"}</span>
-        <div className="st-top-actions">
-          <div className="d-row" style={{ gap: 2 }}>
-            <button type="button" className="d-icon-btn" onClick={doUndo} disabled={hist.past.length === 0} aria-label="Urungkan (Ctrl+Z)" title="Urungkan (Ctrl+Z)"><ArrowCounterClockwise weight="bold" /></button>
-            <button type="button" className="d-icon-btn" onClick={doRedo} disabled={hist.future.length === 0} aria-label="Ulangi (Ctrl+Shift+Z)" title="Ulangi (Ctrl+Shift+Z)"><ArrowClockwise weight="bold" /></button>
-          </div>
-          <button className="d-btn d-btn-sm" onClick={() => setPicking("change")}><SquaresFour weight="bold" aria-hidden="true" />Template</button>
-          <div className="d-seg" role="group" aria-label="Perangkat">
-            <button type="button" aria-pressed={device === "desktop"} onClick={() => setDevice("desktop")}><DesktopTower weight="bold" aria-hidden="true" /> Desktop</button>
-            <button type="button" aria-pressed={device === "mobile"} onClick={() => setDevice("mobile")}><DeviceMobile weight="bold" aria-hidden="true" /> Ponsel</button>
-          </div>
+      <div className="sx">
+      <header className="sx-top">
+        <Link className="d-btn d-btn-ghost d-btn-sm" href={backHref}><ArrowLeft weight="bold" aria-hidden="true" />Website</Link>
+        <button type="button" className="d-icon-btn" onClick={() => setPanelOpen(!panelOpen)} aria-pressed={panelOpen} aria-label={panelOpen ? "Sembunyikan panel" : "Tampilkan panel"} title={panelOpen ? "Sembunyikan panel" : "Tampilkan panel"}>
+          <SidebarSimple weight={panelOpen ? "fill" : "bold"} />
+        </button>
+        <span className="sx-brand"><span className="d-avatar" aria-hidden="true">{(ctx.tenant.name.trim()[0] ?? "T").toUpperCase()}</span>{ctx.tenant.name}<em>Studio</em></span>
+        <Badge tone="warn" plain>Prototipe</Badge>
+        <span className="st-save" aria-live="polite">{saved ? <><Check weight="bold" aria-hidden="true" />Tersimpan</> : "Menyimpan…"}</span>
+        <span className="sx-spacer" />
+        <div className="d-row" style={{ gap: 2 }}>
+          <button type="button" className="d-icon-btn" onClick={doUndo} disabled={hist.past.length === 0} aria-label="Urungkan (Ctrl+Z)" title="Urungkan (Ctrl+Z)"><ArrowCounterClockwise weight="bold" /></button>
+          <button type="button" className="d-icon-btn" onClick={doRedo} disabled={hist.future.length === 0} aria-label="Ulangi (Ctrl+Shift+Z)" title="Ulangi (Ctrl+Shift+Z)"><ArrowClockwise weight="bold" /></button>
         </div>
-      </div>
+        <div className="d-seg" role="group" aria-label="Perangkat">
+          <button type="button" aria-pressed={device === "desktop"} onClick={() => setDevice("desktop")}><DesktopTower weight="bold" aria-hidden="true" /> Desktop</button>
+          <button type="button" aria-pressed={device === "mobile"} onClick={() => setDevice("mobile")}><DeviceMobile weight="bold" aria-hidden="true" /> Ponsel</button>
+        </div>
+        <span className="sx-zoom" title="Perbesaran kanvas">{Math.round(scale * 100)}%</span>
+        <button className="d-btn d-btn-sm" onClick={() => setPicking("change")}><SquaresFour weight="bold" aria-hidden="true" />Template</button>
+        <FullscreenButton />
+      </header>
 
-      <div className="st-shell d-wide">
-        <aside className="st-panel" aria-label={selected ? "Pengaturan plugin" : "Plugin"}>
+      <div className="sx-body" data-panel={panelOpen ? "open" : "closed"}>
+        <aside className="st-panel sx-panel" aria-label={selected ? "Pengaturan plugin" : "Plugin"} hidden={!panelOpen}>
           {selected ? (
             <Inspector
               c={selected}
@@ -415,6 +439,7 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
           )}
         </aside>
 
+        <div className="sx-scroll sx-canvas" onPointerDown={(e) => { if (e.target === e.currentTarget) setSel(null); }}>
         <div className="st-stage" data-surface={st.surface} style={{ ["--s-primary" as string]: st.primary }}>
           <div ref={stageRef} className="st-measure" />
           {device === "desktop" ? (
@@ -462,6 +487,8 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
           {device === "desktop" && <FloatingChat cell={floating} primary={st.primary} onToggle={setChatOpen} onSelect={setSel} selected={sel} />}
           {st.cells.length === 0 && <p className="st-empty">Tarik plugin dari panel kiri ke sini.</p>}
         </div>
+        </div>
+      </div>
       </div>
 
       <Sheet open={!!full} onClose={() => setFull(null)} wide
@@ -493,6 +520,24 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
         )}
       </Sheet>
     </Assets.Provider>
+  );
+}
+
+/* ============================================================ Layar penuh */
+function subscribeFs(cb: () => void) {
+  document.addEventListener("fullscreenchange", cb);
+  return () => document.removeEventListener("fullscreenchange", cb);
+}
+function FullscreenButton() {
+  const on = useSyncExternalStore(subscribeFs, () => !!document.fullscreenElement, () => false);
+  const toggle = () => {
+    if (document.fullscreenElement) void document.exitFullscreen();
+    else void document.documentElement.requestFullscreen?.().catch(() => toast.error("Browser ini tidak mendukung layar penuh."));
+  };
+  return (
+    <button type="button" className="d-icon-btn" onClick={toggle} aria-pressed={on} aria-label={on ? "Keluar dari layar penuh" : "Layar penuh"} title={on ? "Keluar dari layar penuh (Esc)" : "Layar penuh"}>
+      {on ? <CornersIn weight="bold" /> : <CornersOut weight="bold" />}
+    </button>
   );
 }
 

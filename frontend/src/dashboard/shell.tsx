@@ -154,7 +154,6 @@ const PLATFORM_ITEM: NavItem = { label: "Admin platform", href: "/platform", ico
 export function findNav(pathname: string): { group: string; item: NavItem } | null {
   for (const g of NAV) for (const it of g.items) if (it.href === pathname) return { group: g.label, item: it };
   if (pathname === PLATFORM_ITEM.href) return { group: "", item: PLATFORM_ITEM };
-  if (pathname === "/website/studio") return { group: "Toko online", item: { label: "Studio website", href: pathname, icon: Globe } };
   return null;
 }
 
@@ -597,6 +596,15 @@ function Shell({ children }: { children: ReactNode }) {
 }
 
 /** Dipasang di src/app/(app)/layout.tsx. */
+/** Konteks sesi & toko tanpa kerangka dasbor — untuk halaman layar penuh seperti Studio. */
+export function BareAppShell({ children }: { children: ReactNode }) {
+  return (
+    <Suspense fallback={null}>
+      <AppProvider>{children}</AppProvider>
+    </Suspense>
+  );
+}
+
 export function AppShell({ children }: { children: ReactNode }) {
   return (
     <Suspense fallback={null}>

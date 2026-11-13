@@ -187,7 +187,7 @@ function Editor({ ctx }: { ctx: TenantCtx }) {
         description={<>Ubah tampilan situs toko, cek pratinjau, lalu terbitkan. Templat {site.template_key} v{site.template_version}. {state}</>}
         actions={
           <>
-            <Link className="d-btn d-btn-ghost" href={`/website/studio?tenant=${ctx.tenant.id}`}><Sparkle weight="bold" aria-hidden="true" />Coba Studio (baru)</Link>
+            <Link className="d-btn d-btn-ghost" href={`/studio?tenant=${ctx.tenant.id}`}><Sparkle weight="bold" aria-hidden="true" />Coba Studio (baru)</Link>
             {ctx.tenant.primary_hostname && published && (
               <a className="d-btn d-btn-ghost" href={`https://${ctx.tenant.primary_hostname}`} target="_blank" rel="noopener noreferrer"><ArrowSquareOut weight="bold" aria-hidden="true" />Lihat situs</a>
             )}
