@@ -1,0 +1,18 @@
+{
+  "_doc": "Manifest plugin Studio (ADR-0019). Dibaca frontend (plugins.ts) dan diuji Rust (crates/domain/tests/frontend_contract.rs). Ubah bersama validator schema_v2.rs.",
+  "plugins": {
+    "hero":           { "version": 1, "plan": "starter", "max_per_page": 40, "layouts": [] },
+    "product_grid":   { "version": 1, "plan": "starter", "max_per_page": 40, "layouts": ["grid", "carousel", "list"] },
+    "chatbot":        { "version": 1, "plan": "starter", "max_per_page": 1,  "layouts": ["inline", "floating", "bar"] },
+    "whatsapp":       { "version": 1, "plan": "starter", "max_per_page": 1,  "layouts": ["floating", "inline"] },
+    "text":           { "version": 1, "plan": "starter", "max_per_page": 40, "layouts": [] },
+    "promotion":      { "version": 1, "plan": "starter", "max_per_page": 40, "layouts": [] },
+    "about":          { "version": 1, "plan": "starter", "max_per_page": 40, "layouts": [] },
+    "gallery":        { "version": 1, "plan": "starter", "max_per_page": 40, "layouts": [] },
+    "testimonials":   { "version": 1, "plan": "starter", "max_per_page": 40, "layouts": [] },
+    "business_hours": { "version": 1, "plan": "starter", "max_per_page": 40, "layouts": [] },
+    "location":       { "version": 1, "plan": "starter", "max_per_page": 40, "layouts": [] },
+    "contact":        { "version": 1, "plan": "starter", "max_per_page": 40, "layouts": [] }
+  },
+  "embed_layouts": { "chatbot": ["floating", "bar"], "whatsapp": ["floating"] }
+}

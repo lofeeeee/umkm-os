@@ -1,6 +1,7 @@
 //! Website builder (`PRD.md §4.3`, ADR-0007).
 
 pub mod schema;
+pub mod schema_v2;
 
 pub use schema::{FieldError, ValidPage, validate_page};
 

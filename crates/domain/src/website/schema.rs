@@ -53,6 +53,10 @@ pub struct ValidPage {
 }
 
 pub fn validate_page(doc: &Value) -> Result<ValidPage, Vec<FieldError>> {
+    // ADR-0017: dokumen Studio (`schema_version = 2`) divalidasi oleh schema_v2; v1 tetap sah.
+    if doc.get("schema_version").and_then(Value::as_i64) == Some(super::schema_v2::SCHEMA_VERSION) {
+        return super::schema_v2::validate(doc);
+    }
     let mut v = V::default();
     let size = serde_json::to_vec(doc)
         .map(|b| b.len())
@@ -108,14 +112,14 @@ pub fn validate_page(doc: &Value) -> Result<ValidPage, Vec<FieldError>> {
 }
 
 /// `[a-z0-9_-]`, tidak kosong, maks `max`.
-fn is_key(s: &str, max: usize) -> bool {
+pub(crate) fn is_key(s: &str, max: usize) -> bool {
     !s.is_empty()
         && s.len() <= max
         && s.bytes()
             .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-' || b == b'_')
 }
 
-fn is_hex_color(s: &str) -> bool {
+pub(crate) fn is_hex_color(s: &str) -> bool {
     s.len() == 7 && s.starts_with('#') && s[1..].bytes().all(|b| b.is_ascii_hexdigit())
 }
 
@@ -149,13 +153,13 @@ pub fn is_safe_href(s: &str) -> bool {
 }
 
 #[derive(Default)]
-struct V {
-    errors: Vec<FieldError>,
-    assets: BTreeSet<Uuid>,
+pub(crate) struct V {
+    pub(crate) errors: Vec<FieldError>,
+    pub(crate) assets: BTreeSet<Uuid>,
 }
 
 impl V {
-    fn err(&mut self, path: &str, code: &'static str) {
+    pub(crate) fn err(&mut self, path: &str, code: &'static str) {
         self.errors.push(FieldError {
             path: path.to_owned(),
             code,
@@ -163,7 +167,7 @@ impl V {
     }
 
     /// Objek dengan field tertutup. Field tak dikenal dilaporkan per path.
-    fn object<'a>(
+    pub(crate) fn object<'a>(
         &mut self,
         value: &'a Value,
         path: &str,
@@ -182,7 +186,7 @@ impl V {
     }
 
     /// Plain text: tanpa karakter kontrol selain baris baru; panjang dalam karakter.
-    fn text(
+    pub(crate) fn text(
         &mut self,
         map: &Map<String, Value>,
         path: &str,
@@ -208,7 +212,7 @@ impl V {
         }
     }
 
-    fn href(&mut self, map: &Map<String, Value>, path: &str, key: &str, required: bool) {
+    pub(crate) fn href(&mut self, map: &Map<String, Value>, path: &str, key: &str, required: bool) {
         let p = join(path, key);
         match map.get(key) {
             None if required => self.err(&p, "required"),
@@ -219,7 +223,13 @@ impl V {
     }
 
     /// Rujukan gambar: hanya `asset:<uuid>` (objek storage tenant, ADR-0009).
-    fn asset(&mut self, map: &Map<String, Value>, path: &str, key: &str, required: bool) {
+    pub(crate) fn asset(
+        &mut self,
+        map: &Map<String, Value>,
+        path: &str,
+        key: &str,
+        required: bool,
+    ) {
         let p = join(path, key);
         match map.get(key) {
             None if required => self.err(&p, "required"),
@@ -234,7 +244,7 @@ impl V {
         }
     }
 
-    fn boolean(&mut self, map: &Map<String, Value>, path: &str, key: &str) {
+    pub(crate) fn boolean(&mut self, map: &Map<String, Value>, path: &str, key: &str) {
         if let Some(v) = map.get(key)
             && !v.is_boolean()
         {
@@ -242,7 +252,14 @@ impl V {
         }
     }
 
-    fn int(&mut self, map: &Map<String, Value>, path: &str, key: &str, min: i64, max: i64) {
+    pub(crate) fn int(
+        &mut self,
+        map: &Map<String, Value>,
+        path: &str,
+        key: &str,
+        min: i64,
+        max: i64,
+    ) {
         let p = join(path, key);
         match map.get(key).map(Value::as_i64) {
             None => self.err(&p, "required"),
@@ -252,7 +269,7 @@ impl V {
     }
 
     /// Array objek; tiap item divalidasi `each`.
-    fn list(
+    pub(crate) fn list(
         &mut self,
         map: &Map<String, Value>,
         path: &str,
@@ -276,7 +293,7 @@ impl V {
         }
     }
 
-    fn cta(&mut self, map: &Map<String, Value>, path: &str, key: &str) {
+    pub(crate) fn cta(&mut self, map: &Map<String, Value>, path: &str, key: &str) {
         if let Some(c) = map.get(key) {
             let p = join(path, key);
             if let Some(m) = self.object(c, &p, &["label", "href"]) {
@@ -286,7 +303,7 @@ impl V {
         }
     }
 
-    fn theme(&mut self, theme: &Value) {
+    pub(crate) fn theme(&mut self, theme: &Value) {
         let Some(m) = self.object(theme, "theme", &["primary", "font"]) else {
             return;
         };
@@ -330,7 +347,7 @@ impl V {
         self.section_data(ty, data, &dp);
     }
 
-    fn section_data(&mut self, ty: &str, data: &Value, p: &str) {
+    pub(crate) fn section_data(&mut self, ty: &str, data: &Value, p: &str) {
         let allowed: &[&str] = match ty {
             "header" => &["logo", "title", "nav"],
             "hero" => &["title", "subtitle", "image", "cta"],
@@ -428,7 +445,7 @@ impl V {
     }
 }
 
-fn join(path: &str, key: &str) -> String {
+pub(crate) fn join(path: &str, key: &str) -> String {
     if path.is_empty() {
         key.to_owned()
     } else {
@@ -522,7 +539,8 @@ mod tests {
     #[test]
     fn rejects_unknown_type_version_and_dup_ids() {
         let mut d = valid();
-        d["schema_version"] = json!(2);
+        // v2 kini sah (ADR-0017, schema_v2.rs); versi tak dikenal tetap ditolak.
+        d["schema_version"] = json!(99);
         d["sections"][0]["type"] = json!("raw_html");
         d["sections"][2]["id"] = json!("hero-001");
         let c = codes(&d);

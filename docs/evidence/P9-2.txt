@@ -1,0 +1,24 @@
+P9-2 — Validator schema_version = 2 (ADR-0017/0019) — 2026-11-13T21:54:29+07:00
+
+$ cargo test -q -p umkm-domain
+test result: ok. 97 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.36s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+$ cargo test -p umkm-domain website::schema_v2 -- --list
+website::schema_v2::tests::chat_open_only_for_chatbot_and_ids_unique: test
+website::schema_v2::tests::closed_objects_enums_and_unsafe_content: test
+website::schema_v2::tests::embed_blocks_may_overlap_grid_but_are_limited_to_one: test
+website::schema_v2::tests::overlap_and_bounds_are_rejected: test
+website::schema_v2::tests::v1_documents_still_validate_through_dispatch: test
+website::schema_v2::tests::v1_rules_still_apply_inside_v2_data: test
+website::schema_v2::tests::valid_studio_document_passes_and_collects_assets: test
+
+$ cargo test -p umkm-domain --test frontend_contract -- --list
+every_editor_default_section_validates: test
+studio_document_from_defaults_validates: test
+studio_plugin_manifest_matches_validator: test
+
+Kontrol negatif (tes menuntut penolakan): overlap, out_of_bounds, too_many_of_kind, unknown_plugin_kind, invalid_layout/style/surface/text_scale, unknown_field (html/onclick/chat_open), unsafe_url, invalid_asset_ref, too_long (seo.title, alt), duplicate_id, schema_version 99.
+$ cargo clippy -p umkm-domain --all-targets -- -D warnings → bersih
