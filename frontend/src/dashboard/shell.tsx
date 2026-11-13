@@ -154,6 +154,7 @@ const PLATFORM_ITEM: NavItem = { label: "Admin platform", href: "/platform", ico
 export function findNav(pathname: string): { group: string; item: NavItem } | null {
   for (const g of NAV) for (const it of g.items) if (it.href === pathname) return { group: g.label, item: it };
   if (pathname === PLATFORM_ITEM.href) return { group: "", item: PLATFORM_ITEM };
+  if (pathname === "/website/studio") return { group: "Toko online", item: { label: "Studio website", href: pathname, icon: Globe } };
   return null;
 }
 
