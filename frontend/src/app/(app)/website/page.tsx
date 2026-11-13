@@ -7,6 +7,7 @@ import Link from "next/link";
 import { Sparkle } from "@phosphor-icons/react/ssr";
 import { ArrowDown, ArrowSquareOut, ArrowUp, CaretDown, CaretRight, DesktopTower, DeviceMobile, Eye, EyeSlash, Plus, Trash } from "@phosphor-icons/react/ssr";
 
+import { prepareImage } from "@/lib/image";
 import { Assets, FieldInput, type Upload } from "@/dashboard/editor/fields";
 import { Alert, WithTenant, type TenantCtx } from "@/dashboard/shell";
 import { waktu } from "@/lib/labels";
@@ -92,7 +93,7 @@ function Editor({ ctx }: { ctx: TenantCtx }) {
       url: (r: string) => (map[r] ? apiUrl(map[r]!) : undefined),
       upload: async (file: File) => {
         try {
-          const u = await api<Upload>("POST", `${base}/uploads`, { bytes: file });
+          const u = await api<Upload>("POST", `${base}/uploads`, { bytes: await prepareImage(file) });
           setUploads((x) => [u, ...x]);
           return u;
         } catch (e) {

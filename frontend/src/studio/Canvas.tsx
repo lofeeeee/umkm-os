@@ -9,7 +9,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
-import { DotsSixVertical } from "@phosphor-icons/react/ssr";
+import { DotsSixVertical, LockSimple } from "@phosphor-icons/react/ssr";
 
 import { COLS, height, place, type Cell } from "./grid";
 
@@ -66,6 +66,7 @@ export function Canvas<T extends Cell>({
     if (e.button !== 0) return;
     // Kontrol di dalam plugin (mis. minimalkan chatbot) dan tombol toolbar tetap bisa diklik.
     if ((e.target as HTMLElement).closest("[data-interactive], button, label, input, a")) return;
+    if (c.locked) { onSelect(c.id); return; } // terkunci: hanya bisa dipilih
     e.stopPropagation();
     if (mode === "resize") e.preventDefault();
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
@@ -96,6 +97,7 @@ export function Canvas<T extends Cell>({
 
   function key(e: React.KeyboardEvent, c: T) {
     if (e.target !== e.currentTarget) return;
+    if (c.locked && e.key !== "Delete" && e.key !== "Backspace") return;
     const d = ({ ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] } as Record<string, number[]>)[e.key];
     if (d) {
       e.preventDefault();
@@ -146,7 +148,7 @@ export function Canvas<T extends Cell>({
             <div key={c.id}>
               {active && <div className="st-slot" style={{ transform: `translate(${px(c.x)}px, ${py(c.y)}px)`, width: pw(c.w), height: ph(c.h) }} />}
               <div
-                className={`st-item${selected === c.id ? " st-selected" : ""}${active ? " st-active" : ""}${fileOver === c.id ? " st-file-over" : ""}`}
+                className={`st-item${selected === c.id ? " st-selected" : ""}${active ? " st-active" : ""}${fileOver === c.id ? " st-file-over" : ""}${c.locked ? " st-locked" : ""}`}
                 onDragOver={(e) => {
                   if (!e.dataTransfer.types.includes("Files") || !acceptsFile?.(c)) return;
                   e.preventDefault();
@@ -164,20 +166,22 @@ export function Canvas<T extends Cell>({
                 }}
                 style={{ transform: `translate(${left}px, ${top}px)`, width: w, height: h }}
                 tabIndex={0}
-                aria-label={`${label(c)}, kolom ${c.x + 1}, lebar ${c.w} dari 12`}
+                aria-label={`${label(c)}, kolom ${c.x + 1}, lebar ${c.w} dari 12${c.locked ? ", terkunci" : ""}`}
                 onPointerDown={(e) => start(e, c, "move")}
                 onFocus={() => onSelect(c.id)}
                 onKeyDown={(e) => key(e, c)}
               >
                 <div className="st-bar">
-                  <span className="st-grip"><DotsSixVertical weight="bold" aria-hidden="true" />{label(c)} <em>{c.w}/12</em></span>
+                  <span className="st-grip">{c.locked ? <LockSimple weight="fill" aria-hidden="true" /> : <DotsSixVertical weight="bold" aria-hidden="true" />}{label(c)} <em>{c.w}/12</em></span>
                   {toolbar && <span className="st-tools">{toolbar(c)}</span>}
                 </div>
                 <div className="st-body">
                   <Measure id={c.id} onMeasure={onMeasure}>{render(c)}</Measure>
                   {fileOver === c.id && <div className="st-drop-hint">Lepas untuk memasang foto</div>}
                 </div>
-                <div className="st-resize" onPointerDown={(e) => start(e, c, "resize")} title="Tarik untuk mengubah ukuran" aria-hidden="true" />
+                {c.locked
+                  ? <span className="st-lock-badge" title="Posisi terkunci" aria-hidden="true"><LockSimple weight="fill" /></span>
+                  : <div className="st-resize" onPointerDown={(e) => start(e, c, "resize")} title="Tarik untuk mengubah ukuran" aria-hidden="true" />}
               </div>
             </div>
           );

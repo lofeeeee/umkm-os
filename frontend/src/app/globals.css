@@ -1369,3 +1369,10 @@ label.st-tool { cursor: pointer; }
 .st-chatbar-panel .st-chat { height: 360px; }
 .st-phone .st-chatbar { left: 6px; right: 6px; bottom: 8px; }
 .st-phone .st-chatbar-who em { display: none; }
+/* Plugin terkunci */
+.st-locked { cursor: default; }
+.st-locked .st-grip { background: #52525b; }
+.st-lock-badge { position: absolute; z-index: 4; right: 8px; bottom: 8px; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 999px; background: rgb(24 24 27 / 0.75); color: #fff; box-shadow: var(--shadow-sm); pointer-events: none; }
+.st-lock-badge svg { width: 12px; height: 12px; }
+.st-tool-on { background: #18181b; color: #fff; }
+.st-tool-on:hover { background: #27272a; }

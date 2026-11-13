@@ -4,7 +4,8 @@
 
 export const COLS = 12;
 
-export interface Cell { id: string; x: number; y: number; w: number; h: number; minW?: number; minH?: number }
+/** `locked`: posisi & ukuran dikunci — tidak pernah digeser oleh item lain; item lain mengalir di sekitarnya. */
+export interface Cell { id: string; x: number; y: number; w: number; h: number; minW?: number; minH?: number; locked?: boolean }
 
 export function clamp(c: Cell): Cell {
   const minW = c.minW ?? 2;
@@ -24,10 +25,9 @@ const byPos = (a: Cell, b: Cell) => a.y - b.y || a.x - b.x || a.id.localeCompare
 
 /** Naikkan setiap item setinggi mungkin tanpa bertabrakan. `pinned` tidak dipindah. */
 export function compact(cells: Cell[], pinned?: string): Cell[] {
-  const placed: Cell[] = [];
-  const pin = cells.find((c) => c.id === pinned);
-  if (pin) placed.push(pin);
-  for (const c of [...cells].filter((c) => c.id !== pinned).sort(byPos)) {
+  // Item terkunci & item yang sedang dipindah adalah penghalang tetap.
+  const placed: Cell[] = cells.filter((c) => c.locked || c.id === pinned);
+  for (const c of [...cells].filter((c) => !c.locked && c.id !== pinned).sort(byPos)) {
     let next = { ...c, y: 0 };
     // Turunkan sampai tidak bertabrakan dengan item yang sudah diletakkan.
     for (;;) {
@@ -42,10 +42,18 @@ export function compact(cells: Cell[], pinned?: string): Cell[] {
 
 /** Pindah/ubah ukuran satu item lalu rapikan sisanya. Item yang digeser tetap di posisi pilihan pengguna. */
 export function place(cells: Cell[], next: Cell): Cell[] {
-  const moved = clamp(next);
+  const prev = cells.find((c) => c.id === next.id);
+  if (prev?.locked) return cells;
+  let moved = clamp(next);
   const others = cells.filter((c) => c.id !== moved.id);
-  // Dorong item yang tertabrak ke bawah item yang dipindah, lalu rapatkan ke atas.
-  const pushed = others.map((c) => (collides(c, moved) ? { ...c, y: moved.y + moved.h } : c));
+  // Tidak boleh menimpa item terkunci: turunkan sampai lewat di bawahnya.
+  for (;;) {
+    const lock = others.find((c) => c.locked && collides(c, moved));
+    if (!lock) break;
+    moved = { ...moved, y: lock.y + lock.h };
+  }
+  // Dorong item (yang tidak terkunci) yang tertabrak ke bawah item yang dipindah, lalu rapatkan ke atas.
+  const pushed = others.map((c) => (!c.locked && collides(c, moved) ? { ...c, y: moved.y + moved.h } : c));
   const all = [...pushed, moved];
   const out = compact(all, moved.id);
   return cells.some((c) => c.id === moved.id) ? cells.map((c) => out.find((o) => o.id === c.id)!) : out;

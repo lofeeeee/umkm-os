@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { Check, UploadSimple } from "@phosphor-icons/react/ssr";
 
+import { prepareImage } from "@/lib/image";
 import { Alert, WithTenant, type TenantCtx } from "@/dashboard/shell";
 import { API_ORIGIN, api, describe } from "@/lib/api";
 import { INVOICE_STATUS, SUBSCRIPTION_STATUS, status as statusOf } from "@/lib/labels";
@@ -143,7 +144,7 @@ function View({ ctx }: { ctx: TenantCtx }) {
               <span><strong>{open.has_proof ? "Ganti bukti bayar" : "Unggah bukti bayar"}</strong><span className="d-muted d-small">PNG, JPEG, atau WebP · maks. 2 MB</span></span>
               <input type="file" className="sr-only" aria-label={`${open.has_proof ? "Ganti bukti bayar" : "Unggah bukti bayar"} (PNG/JPEG/WebP, maks 2 MB)`} accept="image/png,image/jpeg,image/webp" disabled={busy} onChange={(e) => {
                 const f = e.target.files?.[0];
-                if (f) void run(() => api("POST", `${base}/invoices/${open.id}/proof`, { bytes: f }), "Bukti terkirim. Menunggu verifikasi admin platform.");
+                if (f) void run(() => prepareImage(f).then((img) => api("POST", `${base}/invoices/${open.id}/proof`, { bytes: img })), "Bukti terkirim. Menunggu verifikasi admin platform.");
               }} />
             </label>
           )}

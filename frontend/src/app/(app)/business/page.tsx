@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
+import { prepareImage } from "@/lib/image";
 import { Assets, FieldInput, type Upload } from "@/dashboard/editor/fields";
 import { Plus, Trash } from "@phosphor-icons/react/ssr";
 
@@ -61,7 +62,7 @@ function Form({ ctx }: { ctx: TenantCtx }) {
       url: (r: string) => (map[r] ? apiUrl(map[r]!) : undefined),
       upload: async (file: File) => {
         try {
-          const u = await api<Upload>("POST", `/api/v1/tenants/${ctx.tenant.id}/uploads`, { bytes: file });
+          const u = await api<Upload>("POST", `/api/v1/tenants/${ctx.tenant.id}/uploads`, { bytes: await prepareImage(file) });
           setUploads((x) => [u, ...x]);
           return u;
         } catch { return null; }

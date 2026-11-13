@@ -8,6 +8,7 @@
 
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore, type FormEvent, type ReactNode } from "react";
 
+import { prepareImage } from "@/lib/image";
 import { ApiError } from "@/lib/api";
 import { PRIVACY, TERMS } from "@/legal/content";
 import { LegalDoc } from "@/legal/LegalDoc";
@@ -361,7 +362,7 @@ export function OrderPage() {
     setBusy(true);
     setErr(null);
     try {
-      await shopApi("POST", "/orders/current/payment-proof", { bytes: file }, { "x-order-token": token });
+      await shopApi("POST", "/orders/current/payment-proof", { bytes: await prepareImage(file) }, { "x-order-token": token });
       setOk("Bukti pembayaran terkirim.");
       await load(token);
     } catch (e) {

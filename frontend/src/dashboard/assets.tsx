@@ -5,7 +5,9 @@
 import { useEffect, useMemo, useState } from "react";
 
 import type { AssetsCtx, Upload } from "@/dashboard/editor/fields";
-import { api, apiUrl } from "@/lib/api";
+import { api, apiUrl, describe } from "@/lib/api";
+import { ImagePrepError, prepareImage } from "@/lib/image";
+import { toast } from "@/ui/toast";
 
 export function useUploads(tenantId: string, canEdit: boolean, extra: Record<string, string> = {}): AssetsCtx {
   const [uploads, setUploads] = useState<Upload[]>([]);
@@ -22,10 +24,13 @@ export function useUploads(tenantId: string, canEdit: boolean, extra: Record<str
       url: (r: string) => (map[r] ? apiUrl(map[r]!) : undefined),
       upload: async (file: File) => {
         try {
-          const u = await api<Upload>("POST", `/api/v1/tenants/${tenantId}/uploads`, { bytes: file });
+          // Foto besar dikompres dulu; API memutus koneksi untuk body > ±2 MB.
+          const ready = await prepareImage(file);
+          const u = await api<Upload>("POST", `/api/v1/tenants/${tenantId}/uploads`, { bytes: ready });
           setUploads((x) => [u, ...x]);
           return u;
-        } catch {
+        } catch (e) {
+          toast.error(e instanceof ImagePrepError ? e.message : `Unggahan gagal: ${describe(e)}`);
           return null;
         }
       },

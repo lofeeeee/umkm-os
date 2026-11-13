@@ -53,4 +53,36 @@ describe("grid 12 kolom", () => {
       expect(noOverlap(cells)).toBe(true);
     }
   });
+
+  it("item terkunci tidak bergeser saat item lain dipindah, diperbesar, atau dirapatkan", () => {
+    const lock = { ...c("L", 0, 4, 12, 3), locked: true };
+    let cells: Cell[] = [c("a", 0, 0, 6, 4), c("b", 6, 0, 6, 4), lock, c("d", 0, 7, 12, 3)];
+    cells = place(cells, c("a", 0, 0, 6, 10)); // a membesar ke bawah melewati L
+    expect(cells.find((x) => x.id === "L")).toMatchObject({ x: 0, y: 4, w: 12, h: 3 });
+    expect(noOverlap(cells)).toBe(true);
+    cells = place(cells, c("b", 0, 5, 6, 4)); // b dijatuhkan di atas L → turun ke bawah L
+    expect(cells.find((x) => x.id === "L")).toMatchObject({ y: 4 });
+    expect(cells.find((x) => x.id === "b")!.y).toBeGreaterThanOrEqual(7);
+    expect(noOverlap(cells)).toBe(true);
+  });
+
+  it("item terkunci tidak bisa dipindah lewat place()", () => {
+    const cells: Cell[] = [{ ...c("L", 0, 0, 6, 3), locked: true }, c("a", 6, 0, 6, 3)];
+    expect(place(cells, { ...cells[0]!, x: 6 })).toBe(cells);
+  });
+
+  it("acak dengan item terkunci: terkunci tetap di tempat, tanpa tumpang tindih", () => {
+    const locks = [{ ...c("L1", 0, 6, 6, 3), locked: true }, { ...c("L2", 6, 14, 6, 4), locked: true }];
+    let cells: Cell[] = compact([...locks, ...Array.from({ length: 6 }, (_, i) => c(`i${i}`, (i * 4) % 12, i * 3, 4, 3))]);
+    let seed = 11;
+    const rnd = (n: number) => { seed = (seed * 1103515245 + 12345) % 2 ** 31; return seed % n; };
+    for (let k = 0; k < 300; k++) {
+      const free = cells.filter((x) => !x.locked);
+      const t = free[rnd(free.length)]!;
+      cells = place(cells, { ...t, x: rnd(12), y: rnd(24), w: 2 + rnd(10), h: 2 + rnd(5) });
+      expect(noOverlap(cells)).toBe(true);
+      expect(cells.find((x) => x.id === "L1")).toMatchObject({ x: 0, y: 6, w: 6, h: 3 });
+      expect(cells.find((x) => x.id === "L2")).toMatchObject({ x: 6, y: 14, w: 6, h: 4 });
+    }
+  });
 });

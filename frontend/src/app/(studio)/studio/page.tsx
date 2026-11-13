@@ -11,7 +11,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 
 import {
-  ArrowClockwise, ArrowCounterClockwise, ArrowLeft, ArrowsIn, ArrowsOut, CaretDown, CaretUp, ChatCircleDots, Check, Copy,
+  LockSimple, LockSimpleOpen, ArrowClockwise, ArrowCounterClockwise, ArrowLeft, ArrowsIn, ArrowsOut, CaretDown, CaretUp, ChatCircleDots, Check, Copy,
   CornersIn, CornersOut, DesktopTower, DeviceMobile, ImageSquare, MagnifyingGlass, Plus, PuzzlePiece, SidebarSimple, Sparkle, SquaresFour, Trash, X,
 } from "@phosphor-icons/react/ssr";
 
@@ -24,13 +24,13 @@ import { Site, type GridProduct } from "@/renderer/Site";
 import { FIELDS, FONT_PRESETS, defaultData } from "@/renderer/sections";
 import type { Business, Json, PageContent, SectionType } from "@/renderer/types";
 import { Canvas, DESIGN_WIDTH, GAP, ROW, rowsFor } from "@/studio/Canvas";
-import { COLS, insert, mobileOrder, place } from "@/studio/grid";
+import { COLS, compact, insert, mobileOrder, place } from "@/studio/grid";
 import { commit, redo, silent, start, undo, type History } from "@/studio/history";
 import { CELL_STYLES, PALETTES, PLUGINS, pluginDef, type PluginKind } from "@/studio/plugins";
 import { TEMPLATES, type TplCell } from "@/studio/templates";
 import { confirm, Sheet } from "@/ui/dialog";
 import { Badge } from "@/ui/page";
-import { toast } from "@/ui/toast";
+import { dismissToast, toast } from "@/ui/toast";
 
 type StudioCell = TplCell;
 interface Studio {
@@ -199,6 +199,13 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [doUndo, doRedo]);
 
+  useEffect(() => {
+    const block = (e: DragEvent) => { if (e.dataTransfer?.types.includes("Files")) e.preventDefault(); };
+    window.addEventListener("dragover", block);
+    window.addEventListener("drop", block);
+    return () => { window.removeEventListener("dragover", block); window.removeEventListener("drop", block); };
+  }, []);
+
   /* ---------------- Tinggi otomatis ---------------- */
   const onMeasure = useCallback((id: string, px: number) => {
     const rows = rowsFor(px);
@@ -209,6 +216,8 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
       clip = rows > c.h;
       if (c.autoH === false || rows === c.h) return s;
       clip = false;
+      // Plugin terkunci tetap boleh menyesuaikan tinggi dengan isinya; yang lain mengalir ulang.
+      if (c.locked) return { ...s, cells: compact(s.cells.map((x) => (x.id === id ? { ...x, h: rows } : x))) as StudioCell[] };
       return { ...s, cells: place(s.cells, { ...c, h: rows }) as StudioCell[] };
     });
     setClipped((m) => (m[id] === clip ? m : { ...m, [id]: clip }));
@@ -235,9 +244,10 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
     toast.info("Plugin dihapus. Tekan Ctrl+Z untuk membatalkan.");
   }
   async function putPhoto(id: string, file: File) {
-    if (!file.type.startsWith("image/")) { toast.error("Hanya file gambar (PNG, JPEG, WebP)."); return; }
-    const u = await assets.upload(file);
-    if (!u) { toast.error("Unggahan ditolak. Pastikan gambar PNG/JPEG/WebP ≤ 2 MB."); return; }
+    const id0 = toast.info("Mengunggah foto…");
+    const u = await assets.upload(file); // kompresi & pesan galat ditangani useUploads
+    dismissToast(id0);
+    if (!u) return;
     update((s) => ({
       ...s,
       cells: s.cells.map((c) => {
@@ -488,6 +498,9 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
                       {c.chatOpen === false ? <CaretUp weight="bold" /> : <CaretDown weight="bold" />}
                     </button>
                   )}
+                  <button type="button" className={`st-tool${c.locked ? " st-tool-on" : ""}`} onClick={() => setCell(c.id, { locked: !c.locked }, "")} aria-pressed={!!c.locked} aria-label={c.locked ? "Buka kunci posisi" : "Kunci posisi"} title={c.locked ? "Buka kunci posisi" : "Kunci posisi — plugin lain tidak akan menggeser ini"}>
+                    {c.locked ? <LockSimple weight="fill" /> : <LockSimpleOpen weight="bold" />}
+                  </button>
                   <button type="button" className="st-tool" onClick={() => setFull(c.id)} aria-label={`Lihat penuh ${pluginDef(c.kind).name}`} title="Lihat penuh"><ArrowsOut weight="bold" /></button>
                 </>
               )}
@@ -640,10 +653,14 @@ function Inspector({ c, onBack, onChange, onWidth, onLayout, onDuplicate, onRemo
       </div>
       {c.kind !== "chatbot" && <p className="d-hint" style={{ margin: 0 }}>Klik teks di kanvas untuk mengetik langsung.{takesPhoto(c.kind) && " Seret foto dari komputer ke plugin untuk memasangnya."}</p>}
       {!isFloating(c) && <div className="st-section">
+        <label className="d-switch">
+          <input type="checkbox" checked={!!c.locked} onChange={(e) => onChange({ locked: e.target.checked }, "")} />
+          <span><strong><LockSimple weight="bold" aria-hidden="true" style={{ verticalAlign: "-2px" }} /> Kunci posisi</strong><span className="d-muted">Plugin ini tidak bisa diseret, dan plugin lain tidak akan menggesernya.</span></span>
+        </label>
         <h3>Ukuran</h3>
         <div className="d-seg" role="group" aria-label="Lebar" style={{ width: "100%" }}>
           {([[3, "¼"], [4, "⅓"], [6, "½"], [8, "⅔"], [12, "Penuh"]] as const).map(([w, l]) => (
-            <button key={w} type="button" style={{ flex: 1 }} aria-pressed={c.w === w} disabled={w < (c.minW ?? 2)} onClick={() => onWidth(w)}>{l}</button>
+            <button key={w} type="button" style={{ flex: 1 }} aria-pressed={c.w === w} disabled={w < (c.minW ?? 2) || !!c.locked} onClick={() => onWidth(w)}>{l}</button>
           ))}
         </div>
         <label className="d-switch" style={{ marginTop: 10 }}>
