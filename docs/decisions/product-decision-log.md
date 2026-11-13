@@ -111,3 +111,23 @@ Keputusan produk yang tidak membutuhkan ADR. Entri tidak ditimpa; perubahan = en
 - Platform: pemakaian API = counter http_requests_total instance API sejak proses mulai; error provider = panggilan
   provider error/timeout ÷ panggilan provider.
 - Dapat diubah pemilik produk; perubahan = entri baru.
+
+## 2026-11-13 — Gate H (go-live): VPS, D-07, RPO/RTO, beban, alert, assessment, D-08, D-12
+
+- Pemutus: Product owner ("1. Nanti saya provide, 2. Belum ada, 3. Rekomendasi, 4. 100-500 UMKM, 5. Telegram, email dan
+  whatsapp menyusul 6. Uji menggunakan AI Agent, 7. Belum ada, 8. Buat sendiri, karena kita juga bagian dari UMKM mandiri").
+- VPS + DNS: disediakan pemilik kemudian (checklist #25 menunggu).
+- D-07 backup luar VPS: **belum ada** (tetap MENUNGGU) → checklist #27 terblokir; RPO tahap 1 dibatasi backup harian.
+- RPO/RTO: pemilik menyerahkan pada rekomendasi engineering → **DISETUJUI bertahap**:
+  - Tahap 1 (go-live awal, backup harian, belum ada salinan luar VPS): **RPO ≤ 24 jam, RTO ≤ 4 jam** — diukur pada
+    drill restore. Risiko diterima pemilik: kehilangan VPS = kehilangan data sejak backup terakhir dan seluruh backup
+    lokal (karena belum ada salinan luar VPS).
+  - Tahap 2 (setelah D-07 + WAL archiving ke luar VPS): **RPO ≤ 15 menit, RTO ≤ 4 jam** (NFR-007 PRD).
+- Skala beban: **100–500 toko (UMKM)** → dataset benchmark P8-2 memakai 500 tenant; skenario PRD §13.4 tetap sebagai
+  angka konkurensi; ambang = NFR-001..005. Hasil = benchmark lingkungan uji, bukan jaminan kapasitas.
+- Kanal alert: **Telegram** dulu; email & WhatsApp menyusul.
+- Assessment keamanan (checklist #29): **dilakukan oleh AI agent** (review kode & uji terarah berbasis threat model),
+  bukan pentest pihak ketiga manusia. Dicatat sebagai keterbatasan: tidak setara pentest profesional.
+- D-08 email provider: **belum ada** (tetap MENUNGGU) — email transaksional tetap log-only.
+- D-12 teks legal: **dibuat sendiri** oleh tim (pemilik juga UMKM), tanpa review konsultan hukum → teks final v1
+  menggantikan placeholder; sign-off oleh pemilik produk. Risiko diterima: belum ditinjau ahli hukum.

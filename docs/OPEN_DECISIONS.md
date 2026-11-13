@@ -19,7 +19,7 @@
 | D-12 consent AI | P5 | **DISETUJUI bersyarat** 2026-11-12 |
 | D-12 privacy/terms transaksi | P3 | **DISETUJUI bersyarat** 2026-11-12 |
 | D-12 legal billing | P7 | **DISETUJUI bersyarat** 2026-11-13 (placeholder) |
-| D-12 sign-off | Go-live | Go-live |
+| D-12 sign-off | Go-live | **DISETUJUI** 2026-11-13: teks dibuat sendiri, sign-off pemilik (tanpa review hukum) |
 | D-05 editor depth | P2 | **DISETUJUI** 2026-11-12 (section-based) |
 | D-07 storage | P2 | **DISETUJUI sementara** 2026-11-12 (lokal PostgreSQL) |
 | ADR-0014 frontend contract | P2 | **DISETUJUI** 2026-11-12 |
@@ -49,7 +49,7 @@
 | D-09 | AI provider BYOK/platform key/keduanya | BYOK dulu; platform key menyusul | cost metering/quota/liability lebih awal | P5 | ADR-0011 | Product + Finance + Legal | **DISETUJUI** 2026-11-12: keduanya — provider platform (kuota token per tenant) atau kunci milik tenant (ADR-0011) |
 | D-10 | Subscription pricing/limit/cycle | Simpan limit di `plans.limits_json`; angka final menyusul | billing integration tertahan | P7 | ADR-0016 | Product + Finance | **DISETUJUI** 2026-11-13: Starter Rp50.000 & Pro Rp100.000/bulan, uji coba 14 hari, pembayaran manual (ADR-0016) |
 | D-11 | Retention conversation/audit/file/customer | Tetapkan angka sebelum P1 | purge/deletion/export tidak bisa Done | P1 | ADR-0012 | Legal + Ops | **DISETUJUI** 2026-11-11: percakapan 30 hari, audit 1 tahun, file/data pelanggan +30 hari setelah tenant tutup/permintaan hapus (ADR-0012) |
-| D-12 | Legal/compliance | Pecah: privacy/terms registrasi (P1), privacy/terms transaksi (P3), consent AI (P5), legal billing (P7), sign-off go-live | masing-masing gate tertahan bila belum `DISETUJUI` | P1/P3/P5/P7/Go-live | Legal decision log | Legal | Privacy/terms registrasi **DISETUJUI bersyarat** 2026-11-11; privacy/terms transaksi **DISETUJUI bersyarat** 2026-11-12 (placeholder; teks final sebelum go-live); consent AI **DISETUJUI bersyarat** 2026-11-12 (placeholder); legal billing **DISETUJUI bersyarat** 2026-11-13 (placeholder); sign-off MENUNGGU |
+| D-12 | Legal/compliance | Pecah: privacy/terms registrasi (P1), privacy/terms transaksi (P3), consent AI (P5), legal billing (P7), sign-off go-live | masing-masing gate tertahan bila belum `DISETUJUI` | P1/P3/P5/P7/Go-live | Legal decision log | Legal | Privacy/terms registrasi **DISETUJUI bersyarat** 2026-11-11; privacy/terms transaksi **DISETUJUI bersyarat** 2026-11-12 (placeholder; teks final sebelum go-live); consent AI **DISETUJUI bersyarat** 2026-11-12 (placeholder); legal billing **DISETUJUI bersyarat** 2026-11-13 (placeholder); sign-off **DISETUJUI** 2026-11-13 — teks v1 dibuat sendiri, tanpa review hukum (product-decision-log) |
 
 ---
 
