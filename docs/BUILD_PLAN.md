@@ -274,6 +274,24 @@ Prefix `/api/v1`; envelope sukses/gagal; `meta.request_id`; cursor pagination; r
 
 ---
 
+### Phase 9 — Studio website (ADR-0017/0018/0019) — Fase 1 riset "bisa terbit dengan aman"
+
+Sumber: `docs/ux/riset-studio-website-builder.md` §7 Fase 1. Bukti per tugas di `docs/evidence/<task>.txt`.
+
+| Task | Celah riset | File | Uji |
+|---|---|---|---|
+| P9-1 Catatan keputusan | — | `docs/decisions/0017..0019`, log keputusan | review |
+| P9-2 Validator `schema_version = 2` | G-SEC-01/02, G-ECO-01 | `crates/domain/src/website/schema_v2.rs` | unit + fuzz + tes kontrak frontend |
+| P9-3 Studio ↔ server: draf, simpan otomatis, terbit, riwayat, pulihkan | G-PUB-01/02/03, G-EDT-05 | `frontend/src/app/(studio)/studio` | tsc/lint/vitest + uji browser |
+| P9-4 Renderer publik v2 (grid desktop, tumpuk ponsel, chatbot gelembung/bilah/menempel) | G-PUB-01, G-LAY-01 | `frontend/src/renderer/StudioSite.tsx`, `frontend/src/chat/` | vitest + responsif 375/768/1440 |
+| P9-5 `<head>` per toko + robots/sitemap + JSON-LD + favicon | G-SEO-01/02/03/05, G-BRD-02 | `apps/api/src/website.rs`, `ops/caddy/` | tes HTTP + escape |
+| P9-6 Aksesibilitas: alt text, tombol pindah/ukuran tanpa seret, target 24 px, cek kontras | G-MED-01, G-A11Y-01/02/05/07, G-BRD-01 | studio + renderer | uji keyboard/pointer |
+| P9-7 Performa gambar | G-MED-04/05, G-PRF-02/03 | renderer | ukuran & atribut gambar |
+| P9-8 Plugin Teks + WhatsApp | G-PLG-02/17 | schema v2 + studio + renderer | unit + browser |
+| P9-9 Privasi: buang EXIF, tautan kebijakan otomatis | G-SEC-05, G-PDP-01/03/04 | `frontend/src/lib/image.ts`, renderer | unit |
+| P9-10 Pemeriksa "siap terbit" | G-PUB-05 | studio | unit |
+| P9-11 Gating paket plugin (ADR-0019) | G-ECO-03/04 | API publik + studio | tes HTTP |
+
 ## 6. Ketergantungan keputusan
 
 | Keputusan | Harus diputus sebelum | Mengapa |

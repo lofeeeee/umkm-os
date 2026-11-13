@@ -131,3 +131,12 @@ Keputusan produk yang tidak membutuhkan ADR. Entri tidak ditimpa; perubahan = en
 - D-08 email provider: **belum ada** (tetap MENUNGGU) — email transaksional tetap log-only.
 - D-12 teks legal: **dibuat sendiri** oleh tim (pemilik juga UMKM), tanpa review konsultan hukum → teks final v1
   menggantikan placeholder; sign-off oleh pemilik produk. Risiko diterima: belum ditinjau ahli hukum.
+
+## 2026-11-13 — Studio website (ADR-0017/0018/0019): DISETUJUI
+
+- Pemutus: Product owner ("Setujui, mulai Fase 1"; "API render <head> per toko"; "Inti gratis, beberapa Pro").
+- ADR-0017 Accepted (menggantikan ADR-0007): kanvas grid 12 kolom + plugin resmi, `schema_version = 2`.
+- ADR-0018 Accepted (mengubah ADR-0014): `<head>`/Open Graph/JSON-LD situs toko dirender API per toko.
+- ADR-0019 Accepted: kontrak plugin + paket — semua plugin Fase 1 untuk semua paket; blok Pro saat turun paket
+  disembunyikan, tidak dihapus.
+- Dasar: `docs/ux/riset-studio-website-builder.md` (±110 celah). Dikerjakan sebagai Phase 9 BUILD_PLAN.

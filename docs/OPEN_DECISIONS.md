@@ -20,7 +20,7 @@
 | D-12 privacy/terms transaksi | P3 | **DISETUJUI bersyarat** 2026-11-12 |
 | D-12 legal billing | P7 | **DISETUJUI bersyarat** 2026-11-13 (placeholder) |
 | D-12 sign-off | Go-live | **DISETUJUI** 2026-11-13: teks dibuat sendiri, sign-off pemilik (tanpa review hukum) |
-| D-05 editor depth | P2 | **DISETUJUI** 2026-11-12 (section-based) |
+| D-05 editor depth | P2 | **DISETUJUI** 2026-11-12 (section-based); **diganti** 2026-11-13 → Studio grid + plugin (ADR-0017) |
 | D-07 storage | P2 | **DISETUJUI sementara** 2026-11-12 (lokal PostgreSQL) |
 | ADR-0014 frontend contract | P2 | **DISETUJUI** 2026-11-12 |
 | D-02 payment | P3 | **DISETUJUI** 2026-11-12 (QRIS statis) |

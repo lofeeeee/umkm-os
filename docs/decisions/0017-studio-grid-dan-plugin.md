@@ -1,8 +1,8 @@
 ---
-status: Proposed
+status: Accepted
 date: 2026-11-13
 decision-makers: Product owner (pemilik repo)
-supersedes: ADR-0007 (bila diterima)
+supersedes: ADR-0007
 ---
 
 # ADR-0017 — Studio website: kanvas grid 12 kolom + plugin resmi
@@ -71,3 +71,16 @@ mode `floating` dirender sebagai widget chat yang ada (ADR-0006), bukan di grid.
 4. Rollback lintas versi skema (v2 → versi v1 lama).
 
 Append-only: ubah status lewat ADR atau catatan baru.
+
+## Keputusan 2026-11-13 — Accepted
+
+Pemilik produk menyetujui ("Setujui, mulai Fase 1") setelah mencoba prototipe dan membaca
+`docs/ux/riset-studio-website-builder.md`. Konsekuensi yang ditetapkan bersama keputusan ini:
+
+* `schema_version = 2` divalidasi server (Rust) berdampingan dengan v1; dokumen v1 tetap sah dan tetap
+  dirender publik. Website v1 dikonversi otomatis menjadi v2 saat pertama dibuka di Studio (tanpa migrasi DB).
+* Jalur draf → terbit → versi → rollback memakai endpoint yang ada (ADR-0014 butir 3–5) tanpa perubahan tabel.
+* Open point 3 diputus: tinggi blok mengikuti isi di publik (`auto_height`, bawaan `true`).
+* Open point 2 diputus lewat ADR-0019 (inti gratis, sebagian plugin Pro).
+* `<head>` per toko (SEO/Open Graph) lewat ADR-0018.
+* Pekerjaan dilacak sebagai Phase 9 di `docs/BUILD_PLAN.md`.

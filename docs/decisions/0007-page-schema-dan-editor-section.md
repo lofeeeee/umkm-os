@@ -43,3 +43,8 @@ Larangan (`PRD.md §4.3`): tidak ada field HTML/JS/CSS bebas. Renderer menampilk
 ## More Information
 
 Status di `OPEN_DECISIONS.md`: D-05 `DISETUJUI` 2026-11-12. Append-only.
+
+## Catatan 2026-11-13
+
+Digantikan oleh ADR-0017 (Studio grid 12 kolom + plugin resmi, `schema_version = 2`). Dokumen v1 tetap
+divalidasi dan dirender selama masa transisi.
