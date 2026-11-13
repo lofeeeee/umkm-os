@@ -1,12 +1,19 @@
 "use client";
 
 // Stok (P3-2): level per varian, mutasi (masuk/keluar/opname), ambang low-stock, riwayat.
+// Kelola satu varian di panel samping supaya daftar tetap terlihat.
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
+import { ArrowDown, ArrowUp, Scales, Stack } from "@phosphor-icons/react/ssr";
+
 import { Alert, WithTenant, type TenantCtx } from "@/dashboard/shell";
 import { api, describe } from "@/lib/api";
+import { STOCK_MOVEMENT, angka, waktu } from "@/lib/labels";
+import { Sheet } from "@/ui/dialog";
+import { Badge, BusyButton, EmptyState, PageHeader, SearchInput, Skeleton, Tabs } from "@/ui/page";
+import { toast } from "@/ui/toast";
 
 interface Row {
   variant_id: string; product_name: string; variant_name: string; sku: string;
@@ -14,122 +21,166 @@ interface Row {
 }
 interface Movement { id: string; kind: string; delta: number; on_hand_after: number; reason: string; reference: string | null; created_at: string }
 
-const KIND: Record<string, string> = { stock_in: "Masuk", stock_out: "Keluar", adjustment: "Opname", sale: "Penjualan" };
-
 export default function InventoryPage() {
   return <WithTenant>{(ctx) => <Stock ctx={ctx} />}</WithTenant>;
 }
 
+const variantLabel = (r: Row) => (r.variant_name && r.variant_name !== "Default" ? r.variant_name : null);
+
 function Stock({ ctx }: { ctx: TenantCtx }) {
   const base = `/api/v1/tenants/${ctx.tenant.id}/inventory`;
-  const [rows, setRows] = useState<Row[]>([]);
-  const [low, setLow] = useState(false);
+  const [rows, setRows] = useState<Row[] | null>(null);
+  const [low, setLow] = useState<"all" | "low">("all");
   const [q, setQ] = useState("");
   const [open, setOpen] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const load = useCallback(
-    () => api<{ items: Row[] }>("GET", `${base}?limit=100&low=${low}${q ? `&q=${encodeURIComponent(q)}` : ""}`)
-      .then((r) => setRows(r.items), (e) => setErr(describe(e))),
+    () => api<{ items: Row[] }>("GET", `${base}?limit=100&low=${low === "low"}${q ? `&q=${encodeURIComponent(q)}` : ""}`)
+      .then((r) => { setRows(r.items); setErr(null); }, (e) => setErr(describe(e))),
     [base, low, q],
   );
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    const t = setTimeout(() => void load(), q ? 250 : 0);
+    return () => clearTimeout(t);
+  }, [load, q]);
+  const row = rows?.find((r) => r.variant_id === open);
   return (
     <>
-      <h1>Stok</h1>
+      <PageHeader title="Stok" description="Jumlah fisik, yang sedang dipesan, dan yang tersedia per varian. Catat stok masuk/keluar agar riwayatnya rapi." />
       <Alert kind="error">{err}</Alert>
-      <div className="d-row" style={{ marginBottom: 12 }}>
-        <input aria-label="Cari" placeholder="Cari produk / SKU" value={q} onChange={(e) => setQ(e.target.value)} />
-        <label className="d-check"><input type="checkbox" checked={low} onChange={(e) => setLow(e.target.checked)} /> Hanya stok menipis</label>
+      <Tabs label="Filter stok" value={low} onChange={setLow} items={[{ value: "all", label: "Semua varian" }, { value: "low", label: "Stok menipis" }]} />
+      <div className="d-toolbar">
+        <SearchInput label="Cari" placeholder="Cari produk atau SKU…" value={q} onChange={setQ} />
       </div>
-      <div className="d-card" style={{ overflowX: "auto" }}>
-        <table className="d-table">
-          <thead><tr><th>Produk</th><th>Fisik</th><th>Dipesan</th><th>Tersedia</th><th>Ambang</th><th /></tr></thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr key={r.variant_id}>
-                <td>{r.product_name}{r.variant_name !== "Default" && ` · ${r.variant_name}`}<div className="d-muted">{r.sku}</div></td>
-                <td>{r.on_hand}</td>
-                <td>{r.reserved}</td>
-                <td>{r.available}{r.is_low && <strong> · menipis</strong>}</td>
-                <td>{r.min_stock ?? "—"}</td>
-                <td><button className="d-btn d-btn-sm" onClick={() => setOpen(open === r.variant_id ? null : r.variant_id)} aria-expanded={open === r.variant_id}>Kelola</button></td>
-              </tr>
-            ))}
-            {rows.length === 0 && (
-              <tr>
-                <td colSpan={6}>
-                  <div className="d-empty">
-                    <p className="d-empty-title">Belum ada data stok</p>
-                    <p className="d-muted">Stok muncul setelah Anda menambahkan produk. Setiap varian punya catatan stoknya sendiri.</p>
-                    <Link className="d-btn d-btn-primary" href={`/products?tenant=${ctx.tenant.id}`}>Buka Produk</Link>
-                  </div>
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+      <div className="d-table-wrap">
+        {rows === null ? <div style={{ padding: 20 }}><Skeleton lines={5} /></div> : rows.length === 0 ? (
+          <EmptyState
+            icon={Stack}
+            title={low === "low" ? "Tidak ada stok menipis" : q ? "Tidak ada yang cocok" : "Belum ada data stok"}
+            action={low === "all" && !q ? <Link className="d-btn d-btn-primary" href={`/products?tenant=${ctx.tenant.id}`}>Buka Produk</Link> : undefined}
+          >
+            {low === "low" ? "Semua varian masih di atas ambang minimum." : q ? "Coba kata kunci lain." : "Stok muncul setelah Anda menambahkan produk. Setiap varian punya catatan stoknya sendiri."}
+          </EmptyState>
+        ) : (
+          <table className="d-table d-table-stack">
+            <thead><tr><th>Produk</th><th className="d-num">Fisik</th><th className="d-num">Dipesan</th><th className="d-num">Tersedia</th><th className="d-num d-hide-sm">Ambang</th><th><span className="sr-only">Aksi</span></th></tr></thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={r.variant_id}>
+                  <td><span className="d-strong">{r.product_name}</span><span className="d-sub">{[variantLabel(r), r.sku].filter(Boolean).join(" · ")}</span></td>
+                  <td className="d-num">{r.on_hand}</td>
+                  <td className="d-num d-muted">{r.reserved}</td>
+                  <td className="d-num">{r.is_low ? <Badge tone="warn">{r.available}</Badge> : <span className="d-strong">{r.available}</span>}</td>
+                  <td className="d-num d-hide-sm d-muted">{r.min_stock ?? "—"}</td>
+                  <td className="d-actions"><button className="d-btn d-btn-sm" onClick={() => setOpen(r.variant_id)}>Kelola</button></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
-      {open && <Manage ctx={ctx} base={base} row={rows.find((r) => r.variant_id === open)!} onChange={load} />}
+      <Sheet open={!!row} onClose={() => setOpen(null)} title={row?.product_name ?? ""} description={row ? [variantLabel(row), row.sku].filter(Boolean).join(" · ") : undefined}>
+        {row && <Manage key={row.variant_id} ctx={ctx} base={base} row={row} onChange={load} />}
+      </Sheet>
     </>
   );
 }
 
+const KINDS = [
+  { value: "stock_in", label: "Stok masuk", icon: ArrowDown, hint: "Barang datang dari pemasok/produksi." },
+  { value: "stock_out", label: "Stok keluar", icon: ArrowUp, hint: "Rusak, hilang, atau dipakai sendiri." },
+  { value: "adjustment", label: "Opname", icon: Scales, hint: "Isi jumlah fisik hasil hitung ulang." },
+] as const;
+
 function Manage({ ctx, base, row, onChange }: { ctx: TenantCtx; base: string; row: Row; onChange: () => Promise<unknown> }) {
   const can = ctx.can("inventory.adjust");
-  const [moves, setMoves] = useState<Movement[]>([]);
+  const [moves, setMoves] = useState<Movement[] | null>(null);
   const [m, setM] = useState({ kind: "stock_in", quantity: "", reason: "", reference: "" });
   const [s, setS] = useState({ min_stock: row.min_stock?.toString() ?? "", allow_negative: row.allow_negative });
-  const [msg, setMsg] = useState<{ ok?: string; err?: string }>({});
+  const [err, setErr] = useState<string | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
   const loadMoves = useCallback(() => api<Movement[]>("GET", `${base}/${row.variant_id}/movements`).then(setMoves, () => setMoves([])), [base, row.variant_id]);
   useEffect(() => { void loadMoves(); }, [loadMoves]);
-  async function run(f: () => Promise<unknown>, ok: string) {
-    setMsg({});
-    try { await f(); setMsg({ ok }); await onChange(); await loadMoves(); } catch (e) { setMsg({ err: describe(e) }); }
+  async function run(key: string, f: () => Promise<unknown>, ok: string) {
+    setErr(null);
+    setBusy(key);
+    try { await f(); toast.ok(ok); await onChange(); await loadMoves(); } catch (e) { setErr(describe(e)); } finally { setBusy(null); }
   }
+  const kind = KINDS.find((k) => k.value === m.kind)!;
   return (
-    <div className="d-card">
-      <h2>{row.product_name} · {row.sku}</h2>
-      <Alert kind="error">{msg.err}</Alert>
-      <Alert kind="ok">{msg.ok}</Alert>
+    <>
+      <dl className="d-stat-grid" style={{ margin: "0 0 20px" }}>
+        <div className="d-stat"><dt className="d-stat-label">Fisik</dt><dd className="d-stat-value" style={{ margin: 0 }}>{angka(row.on_hand)}</dd></div>
+        <div className="d-stat"><dt className="d-stat-label">Dipesan</dt><dd className="d-stat-value" style={{ margin: 0 }}>{angka(row.reserved)}</dd></div>
+        <div className={`d-stat${row.is_low ? " d-stat-warn" : ""}`}><dt className="d-stat-label">Tersedia</dt><dd className="d-stat-value" style={{ margin: 0 }}>{angka(row.available)}</dd></div>
+      </dl>
+      <Alert kind="error">{err}</Alert>
       {can && (
         <>
-          <div className="d-row">
-            <select aria-label="Jenis" value={m.kind} onChange={(e) => setM({ ...m, kind: e.target.value })}>
-              <option value="stock_in">Stok masuk</option>
-              <option value="stock_out">Stok keluar</option>
-              <option value="adjustment">Opname (jumlah fisik)</option>
-            </select>
-            <input aria-label="Jumlah" inputMode="numeric" placeholder="Jumlah" value={m.quantity} onChange={(e) => setM({ ...m, quantity: e.target.value })} />
-            <input aria-label="Alasan" placeholder="Alasan (wajib)" maxLength={200} value={m.reason} onChange={(e) => setM({ ...m, reason: e.target.value })} />
-            <input aria-label="Referensi" placeholder="Referensi (opsional)" maxLength={100} value={m.reference} onChange={(e) => setM({ ...m, reference: e.target.value })} />
-            <button className="d-btn d-btn-primary" onClick={() => run(() => api("POST", `${base}/${row.variant_id}/movements`, {
-              json: { kind: m.kind, quantity: Number(m.quantity), reason: m.reason, reference: m.reference || null },
-            }), "Mutasi tercatat.")}>Catat</button>
-          </div>
-          <div className="d-row" style={{ marginTop: 12 }}>
-            <input aria-label="Ambang stok menipis" placeholder="Ambang menipis" inputMode="numeric" value={s.min_stock} onChange={(e) => setS({ ...s, min_stock: e.target.value })} />
-            <label className="d-check"><input type="checkbox" checked={s.allow_negative} onChange={(e) => setS({ ...s, allow_negative: e.target.checked })} /> Izinkan stok negatif</label>
-            <button className="d-btn" onClick={() => run(() => api("PUT", `${base}/${row.variant_id}/settings`, {
+          <section className="d-form-section">
+            <h3>Catat perubahan stok</h3>
+            <p className="d-muted">{kind.hint}</p>
+            <div className="d-seg" role="group" aria-label="Jenis perubahan" style={{ marginBottom: 16 }}>
+              {KINDS.map((k) => (
+                <button key={k.value} type="button" aria-pressed={m.kind === k.value} onClick={() => setM({ ...m, kind: k.value })}>{k.label}</button>
+              ))}
+            </div>
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              void run("move", () => api("POST", `${base}/${row.variant_id}/movements`, {
+                json: { kind: m.kind, quantity: Number(m.quantity), reason: m.reason, reference: m.reference || null },
+              }), "Mutasi tercatat.").then(() => setM((x) => ({ ...x, quantity: "", reason: "", reference: "" })));
+            }}>
+              <div className="d-grid">
+                <label className="d-field"><span>{m.kind === "adjustment" ? "Jumlah fisik" : "Jumlah"}</span>
+                  <input aria-label="Jumlah" inputMode="numeric" value={m.quantity} onChange={(e) => setM({ ...m, quantity: e.target.value })} />
+                </label>
+                <label className="d-field"><span>Alasan</span>
+                  <input aria-label="Alasan" placeholder="mis. Kiriman pemasok" maxLength={200} value={m.reason} onChange={(e) => setM({ ...m, reason: e.target.value })} />
+                </label>
+              </div>
+              <label className="d-field"><span>Referensi <span className="d-opt">(opsional, mis. no. nota)</span></span>
+                <input aria-label="Referensi" maxLength={100} value={m.reference} onChange={(e) => setM({ ...m, reference: e.target.value })} />
+              </label>
+              <BusyButton busy={busy === "move"} disabled={!m.quantity || !m.reason.trim()}>Catat</BusyButton>
+            </form>
+          </section>
+          <section className="d-form-section">
+            <h3>Peringatan stok</h3>
+            <p className="d-muted">Anda diberi tahu saat stok tersedia turun di bawah ambang.</p>
+            <label className="d-field" style={{ maxWidth: 200 }}><span>Ambang menipis</span>
+              <input aria-label="Ambang stok menipis" placeholder="mis. 5" inputMode="numeric" value={s.min_stock} onChange={(e) => setS({ ...s, min_stock: e.target.value })} />
+            </label>
+            <label className="d-switch">
+              <input type="checkbox" checked={s.allow_negative} onChange={(e) => setS({ ...s, allow_negative: e.target.checked })} />
+              <span><strong>Izinkan stok negatif</strong><span className="d-muted">Pesanan tetap diterima meski stok habis (pre-order).</span></span>
+            </label>
+            <BusyButton type="button" className="d-btn" busy={busy === "settings"} onClick={() => run("settings", () => api("PUT", `${base}/${row.variant_id}/settings`, {
               json: { min_stock: s.min_stock === "" ? null : Number(s.min_stock), allow_negative: s.allow_negative },
-            }), "Pengaturan tersimpan.")}>Simpan pengaturan</button>
-          </div>
+            }), "Pengaturan tersimpan.")}>Simpan pengaturan</BusyButton>
+          </section>
         </>
       )}
-      <h3>Riwayat</h3>
-      <table className="d-table">
-        <thead><tr><th>Waktu</th><th>Jenis</th><th>Perubahan</th><th>Setelah</th><th>Alasan</th></tr></thead>
-        <tbody>
-          {moves.map((x) => (
-            <tr key={x.id}>
-              <td>{new Date(x.created_at).toLocaleString("id-ID")}</td>
-              <td>{KIND[x.kind] ?? x.kind}</td>
-              <td>{x.delta > 0 ? `+${x.delta}` : x.delta}</td>
-              <td>{x.on_hand_after}</td>
-              <td>{x.reason}{x.reference && <div className="d-muted">{x.reference}</div>}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+      <section className="d-form-section">
+        <h3>Riwayat</h3>
+        {moves === null ? <Skeleton lines={3} /> : moves.length === 0 ? <p className="d-muted">Belum ada mutasi.</p> : (
+          <div className="d-table-wrap">
+            <table className="d-table">
+              <thead><tr><th>Waktu</th><th>Jenis</th><th className="d-num">Perubahan</th><th className="d-num">Setelah</th></tr></thead>
+              <tbody>
+                {moves.map((x) => (
+                  <tr key={x.id}>
+                    <td className="d-nowrap">{waktu(x.created_at)}<span className="d-sub">{x.reason}{x.reference && ` · ${x.reference}`}</span></td>
+                    <td>{STOCK_MOVEMENT[x.kind] ?? x.kind}</td>
+                    <td className="d-num" style={{ color: x.delta > 0 ? "var(--ok)" : x.delta < 0 ? "var(--danger)" : undefined }}>{x.delta > 0 ? `+${x.delta}` : x.delta}</td>
+                    <td className="d-num">{x.on_hand_after}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+    </>
   );
 }
