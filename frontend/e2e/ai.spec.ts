@@ -29,10 +29,10 @@ test("asisten AI: provider platform, pengetahuan diindeks worker, uji coba memak
   await expect(page.getByRole("heading", { name: "Asisten AI" })).toBeVisible();
   // Provider platform (model dari daftar operator; tanpa URL/kunci).
   await page.getByLabel("Nama").fill("AI Platform");
-  await page.getByRole("button", { name: "Tambah provider" }).click();
-  await expect(page.getByText("Provider ditambahkan.")).toBeVisible();
+  await page.getByRole("button", { name: "Tambah penyedia" }).click();
+  await expect(page.getByText("Penyedia ditambahkan.")).toBeVisible();
   await expect(page.getByText(/AI platform · mock-1 · aktif/)).toBeVisible();
-  await page.getByLabel("Provider utama").selectOption({ label: "AI Platform" });
+  await page.getByLabel("Penyedia utama").selectOption({ label: "AI Platform" });
   await page.getByLabel("Topik terlarang — langsung ke staf (pisahkan koma)").fill("politik");
   await page.getByLabel("Topik terlarang — langsung ke staf (pisahkan koma)").blur();
   await page.getByRole("button", { name: "Simpan pengaturan" }).click();

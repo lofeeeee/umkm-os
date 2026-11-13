@@ -37,9 +37,9 @@ test("web chat: persetujuan AI, jawaban AI, realtime, handover, akhiri", async (
   const q = new URL(page.url()).search;
   await page.getByRole("link", { name: "Asisten AI" }).click();
   await page.getByLabel("Nama").fill("AI Platform");
-  await page.getByRole("button", { name: "Tambah provider" }).click();
-  await expect(page.getByText("Provider ditambahkan.")).toBeVisible();
-  await page.getByLabel("Provider utama").selectOption({ label: "AI Platform" });
+  await page.getByRole("button", { name: "Tambah penyedia" }).click();
+  await expect(page.getByText("Penyedia ditambahkan.")).toBeVisible();
+  await page.getByLabel("Penyedia utama").selectOption({ label: "AI Platform" });
   await page.getByLabel("Aktifkan chatbot untuk pelanggan").check();
   await page.getByRole("button", { name: "Simpan pengaturan" }).click();
   await expect(page.getByText("Pengaturan tersimpan.")).toBeVisible();

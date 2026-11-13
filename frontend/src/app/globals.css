@@ -1089,3 +1089,15 @@ details.d-details[open] > summary { margin-bottom: var(--sp-3); }
 .d-composer textarea { border: 0; box-shadow: none !important; padding: 0; min-height: 64px; background: transparent; }
 .d-composer-internal { background: var(--warn-bg); border-color: var(--warn-line); border-style: dashed; }
 .d-thread li > span:last-child { display: block; }
+
+/* Pilihan berbentuk kartu (radio/switch) */
+.d-choice-grid { display: grid; gap: var(--sp-2); grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr)); }
+.d-choice { display: flex; gap: 10px; align-items: flex-start; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; background: var(--card); transition: border-color var(--dur-fast) ease, background-color var(--dur-fast) ease; font-size: 0.8125rem; }
+.d-choice:hover { border-color: var(--line-strong); }
+.d-choice:has(input:checked) { border-color: var(--brand); background: var(--brand-soft); box-shadow: 0 0 0 1px var(--brand); }
+.d-choice strong { display: block; font-weight: 600; color: var(--ink); }
+.d-choice .d-muted { display: block; font-size: 0.75rem; }
+.d-subpanel { padding: var(--sp-4); border: 1px dashed var(--line-strong); border-radius: var(--radius-lg); background: var(--bg-subtle); }
+.d-subpanel[open] { border-style: solid; }
+.d-subpanel > summary { color: var(--ink); }
+.d-subpanel > summary::before { display: none; }
