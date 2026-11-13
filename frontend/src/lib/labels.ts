@@ -57,11 +57,10 @@ export const TICKET_STATUS: Record<string, StatusDef> = {
 };
 
 export const TICKET_PRIORITY: Record<string, StatusDef> = {
-  LOW: S("Rendah", "neutral"),
-  NORMAL: S("Normal", "neutral"),
-  MEDIUM: S("Sedang", "neutral"),
-  HIGH: S("Tinggi", "warn"),
-  URGENT: S("Mendesak", "danger"),
+  low: S("Rendah", "neutral"),
+  normal: S("Normal", "neutral"),
+  high: S("Tinggi", "warn"),
+  urgent: S("Mendesak", "danger"),
 };
 
 export const APPROVAL_STATUS: Record<string, StatusDef> = {

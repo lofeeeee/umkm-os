@@ -148,6 +148,7 @@ export function Tabs<T extends string>({
           type="button"
           role="tab"
           aria-selected={value === it.value}
+          aria-label={it.count !== undefined ? `${it.label} (${it.count})` : undefined}
           onClick={() => onChange(it.value)}
         >
           {it.label}

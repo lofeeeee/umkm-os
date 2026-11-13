@@ -6,9 +6,15 @@
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 
+import { confirm } from "@/ui/dialog";
+
+import { ChatCircleDots } from "@phosphor-icons/react/ssr";
+
 import { Alert, WithTenant, type TenantCtx } from "@/dashboard/shell";
-import { CONV_STATUS, ConversationView, when, type ConversationDetail, type ConversationSummary } from "@/inbox/conversation";
+import { ConversationView, when, type ConversationDetail, type ConversationSummary } from "@/inbox/conversation";
 import { API_ORIGIN, ApiError, api, describe } from "@/lib/api";
+import { CONVERSATION_STATUS, relatif, status } from "@/lib/labels";
+import { BusyButton, EmptyState, PageHeader, PageSkeleton, Skeleton, Tabs } from "@/ui/page";
 
 export default function ConversationsPage() {
   return <WithTenant>{(ctx) => <Conversations ctx={ctx} />}</WithTenant>;
@@ -61,7 +67,7 @@ function useChatPings(tenantId: string, onPing: (conversationId: string) => void
 
 function Conversations({ ctx }: { ctx: TenantCtx }) {
   const base = `/api/v1/tenants/${ctx.tenant.id}/conversations`;
-  const [items, setItems] = useState<ConversationSummary[]>([]);
+  const [items, setItems] = useState<ConversationSummary[] | null>(null);
   const [masked, setMasked] = useState(false);
   const [tab, setTab] = useState<Tab>("waiting");
   const [counts, setCounts] = useState<Counts | null>(null);
@@ -86,47 +92,61 @@ function Conversations({ ctx }: { ctx: TenantCtx }) {
   useChatPings(ctx.tenant.id, onPing);
 
   if (!ctx.can("conversations.read")) return <Alert kind="error">Anda tidak punya izin melihat percakapan.</Alert>;
+  const back = () => { setOpenId(null); setOpen(null); void load(); };
   if (openId) {
     return (
       <>
-        <button className="d-btn d-btn-sm" onClick={() => { setOpenId(null); setOpen(null); void load(); }}>← Kembali</button>
-        <h1>Percakapan</h1>
+        <PageHeader
+          back={{ onClick: back, label: "Semua percakapan" }}
+          title={open?.customer?.name ?? "Pengunjung"}
+          description={open ? `${status(CONVERSATION_STATUS, open.status).label} · ${open.message_count} pesan · terakhir ${when(open.last_message_at)}` : undefined}
+        />
         <Alert kind="error">{err}</Alert>
-        {open && (
-          <>
-            {ctx.can("conversations.reply") && (
-              <StaffPanel ctx={ctx} d={open} url={`${base}/${open.id}`} onDone={() => loadOne(open.id)} />
-            )}
-            <ConversationView d={open} />
-          </>
+        {!open ? <PageSkeleton /> : (
+          <ConversationView
+            d={open}
+            staff={ctx.can("conversations.reply") ? <StaffPanel ctx={ctx} d={open} url={`${base}/${open.id}`} onDone={() => loadOne(open.id)} /> : undefined}
+          />
         )}
       </>
     );
   }
   return (
     <>
-      <h1>Percakapan</h1>
+      <PageHeader title="Percakapan" description="Chat pelanggan dari website. Asisten AI menjawab otomatis; yang butuh manusia masuk ke antrean Menunggu staf." />
       <Alert kind="error">{err}</Alert>
-      {masked && <p className="d-muted">Data sensitif disamarkan untuk peran Anda.</p>}
-      <div className="d-row cv-tabs" role="tablist" aria-label="Antrean" style={{ marginBottom: 12 }}>
-        {(Object.keys(TABS) as Tab[]).map((k) => (
-          <button key={k} role="tab" aria-selected={tab === k} className={`d-btn d-btn-sm${tab === k ? " d-btn-primary" : ""}`} onClick={() => setTab(k)}>
-            {TABS[k].label}{counts && TABS[k].count ? ` (${TABS[k].count(counts)})` : ""}
-          </button>
-        ))}
-      </div>
-      {items.length === 0 ? <p className="d-muted">Belum ada percakapan.</p> : (
+      {masked && <Alert kind="info">Data sensitif disamarkan untuk peran Anda.</Alert>}
+      <Tabs
+        label="Antrean"
+        value={tab}
+        onChange={setTab}
+        items={(Object.keys(TABS) as Tab[]).map((k) => ({ value: k, label: TABS[k].label, count: counts && TABS[k].count ? TABS[k].count(counts) : undefined }))}
+      />
+      {items === null ? <div className="d-card"><Skeleton lines={6} /></div> : items.length === 0 ? (
+        <div className="d-card"><EmptyState icon={ChatCircleDots} title="Antrean kosong">{tab === "waiting" ? "Tidak ada pelanggan yang menunggu staf. Kerja bagus!" : "Belum ada percakapan di tab ini."}</EmptyState></div>
+      ) : (
         <ul className="cv-list" aria-label="Daftar percakapan">
-          {items.map((c) => (
-            <li key={c.id} className="d-card">
-              <button className="cv-open" onClick={() => { setErr(null); setOpenId(c.id); }}>
-                <strong>{c.customer?.name ?? "Pengunjung"}</strong>
-                <span className="cv-badge" data-status={c.status}>{CONV_STATUS[c.status] ?? c.status}</span>
-                <span className="cv-preview">{c.last_message ?? "—"}</span>
-                <span className="d-muted">{c.message_count} pesan · {when(c.last_message_at)}{c.assignee_email ? ` · ${c.assignee_email}` : ""}</span>
-              </button>
-            </li>
-          ))}
+          {items.map((c) => {
+            const st = status(CONVERSATION_STATUS, c.status);
+            return (
+              <li key={c.id}>
+                <button className="cv-open" onClick={() => { setErr(null); setOpenId(c.id); }}>
+                  <span className="d-cell-main">
+                    <span className="d-avatar d-avatar-muted" aria-hidden="true">{(c.customer?.name?.trim()[0] ?? "?").toUpperCase()}</span>
+                    <span style={{ minWidth: 0 }}>
+                      <strong>{c.customer?.name ?? "Pengunjung"}</strong>
+                      <span className="cv-preview">{c.last_message ?? "—"}</span>
+                    </span>
+                  </span>
+                  <span className="cv-side">
+                    <span className="d-muted d-small">{relatif(c.last_message_at)}</span>
+                    <span className="cv-badge" data-status={c.status}>{st.label}</span>
+                  </span>
+                  <span className="d-muted">{c.message_count} pesan{c.assignee_email ? ` · ${c.assignee_email}` : ""}</span>
+                </button>
+              </li>
+            );
+          })}
         </ul>
       )}
     </>
@@ -167,7 +187,22 @@ function StaffPanel({ ctx, d, url, onDone }: { ctx: TenantCtx; d: ConversationDe
   const pending = d.drafts.filter((x) => x.status === "pending" || x.status === "approval_pending");
   return (
     <section className="d-card" aria-label="Tindakan staf">
-      <h2>Tindakan</h2>
+      <header className="d-card-head">
+        <div className="d-card-head-text"><h2>Tindakan staf</h2>{d.status !== "HUMAN" && !closed && <p>Membalas = mengambil alih; AI berhenti menjawab.</p>}</div>
+        <div className="d-card-head-actions">
+          {canTake && !closed && d.status !== "HUMAN" && (
+            <button className="d-btn d-btn-sm" disabled={busy} onClick={() => void run(() => api("POST", `${url}/takeover`), "Percakapan Anda tangani.")}>Ambil alih</button>
+          )}
+          {canTake && !closed && d.status !== "AI" && !byOther && (
+            <button className="d-btn d-btn-sm" disabled={busy} onClick={() => void run(() => api("POST", `${url}/release`), "Dikembalikan ke asisten AI.")}>Kembalikan ke AI</button>
+          )}
+          {!closed && !byOther && (
+            <button className="d-btn d-btn-sm d-btn-danger" disabled={busy} onClick={async () => {
+              if (await confirm({ title: "Tutup percakapan?", body: "Pelanggan perlu memulai chat baru untuk menghubungi toko lagi.", confirmLabel: "Tutup percakapan", danger: true })) void run(() => api("POST", `${url}/close`), "Percakapan ditutup.");
+            }}>Tutup percakapan</button>
+          )}
+        </div>
+      </header>
       <Alert kind="error">{msg.err}</Alert>
       <Alert kind="ok">{msg.ok}</Alert>
       {byOther && <p className="d-muted">Sedang ditangani {d.assignee_email ?? "staf lain"}.</p>}
@@ -196,17 +231,20 @@ function StaffPanel({ ctx, d, url, onDone }: { ctx: TenantCtx; d: ConversationDe
         </div>
       )}
       {!closed && !byOther && (
-        <form onSubmit={reply}>
-          <label className="d-field"><span>Balas pelanggan</span>
-            <textarea name="body" rows={3} maxLength={4000} required />
-          </label>
-          <button className="d-btn d-btn-primary" disabled={busy}>Kirim balasan</button>
-          {d.status !== "HUMAN" && <span className="d-muted"> Membalas = mengambil alih (AI berhenti).</span>}
+        <form className="d-composer" onSubmit={reply} style={{ marginTop: 0 }}>
+          <label className="sr-only" htmlFor="cv-reply">Balas pelanggan</label>
+          <textarea id="cv-reply" name="body" rows={3} maxLength={4000} required placeholder="Tulis balasan untuk pelanggan… (Ctrl+Enter untuk kirim)"
+            onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) e.currentTarget.form?.requestSubmit(); }} />
+          <div className="d-row" style={{ justifyContent: "flex-end" }}>
+            <BusyButton busy={busy}>Kirim balasan</BusyButton>
+          </div>
         </form>
       )}
       {canTake && !closed && <AssignForm ctx={ctx} d={d} url={url} run={run} busy={busy} />}
       {ctx.can("tickets.reply") && (
-        <form className="cv-ticket" onSubmit={(e) => {
+        <details className="d-details cv-ticket" open>
+        <summary>Buat tiket dari percakapan</summary>
+        <form onSubmit={(e) => {
           e.preventDefault();
           const form = e.currentTarget;
           const f = new FormData(form);
@@ -215,28 +253,19 @@ function StaffPanel({ ctx, d, url, onDone }: { ctx: TenantCtx; d: ConversationDe
             form.reset();
           }, "Tiket dibuat.");
         }}>
-          <h3>Buat tiket dari percakapan</h3>
+          <div className="d-grid">
           <label className="d-field"><span>Subjek tiket</span><input name="subject" maxLength={200} required /></label>
           <label className="d-field"><span>Prioritas</span>
             <select name="priority" defaultValue="normal">
               <option value="low">Rendah</option><option value="normal">Normal</option><option value="high">Tinggi</option><option value="urgent">Mendesak</option>
             </select>
           </label>
-          <label className="d-field"><span>Keterangan (opsional)</span><textarea name="description" rows={2} maxLength={5000} /></label>
+          </div>
+          <label className="d-field"><span>Keterangan <span className="d-opt">(opsional)</span></span><textarea name="description" rows={2} maxLength={5000} /></label>
           <button className="d-btn" disabled={busy}>Buat tiket</button>
         </form>
+        </details>
       )}
-      <div className="d-row" style={{ marginTop: 12 }}>
-        {canTake && !closed && d.status !== "HUMAN" && (
-          <button className="d-btn" disabled={busy} onClick={() => void run(() => api("POST", `${url}/takeover`), "Percakapan Anda tangani.")}>Ambil alih</button>
-        )}
-        {canTake && !closed && d.status !== "AI" && !byOther && (
-          <button className="d-btn" disabled={busy} onClick={() => void run(() => api("POST", `${url}/release`), "Dikembalikan ke asisten AI.")}>Kembalikan ke AI</button>
-        )}
-        {!closed && !byOther && (
-          <button className="d-btn" disabled={busy} onClick={() => void run(() => api("POST", `${url}/close`), "Percakapan ditutup.")}>Tutup percakapan</button>
-        )}
-      </div>
     </section>
   );
 }
@@ -259,8 +288,8 @@ function AssignForm({ ctx, d, url, run, busy }: {
   }, [ctx, d.assignee_user_id]);
   if (!members || members.length === 0) return null;
   return (
-    <div className="d-row" style={{ marginTop: 12 }}>
-      <label className="d-field" style={{ margin: 0 }}><span>Tugaskan ke</span>
+    <div className="d-row" style={{ marginTop: 16, alignItems: "flex-end" }}>
+      <label className="d-field" style={{ margin: 0, flex: 1 }}><span>Tugaskan ke</span>
         <select value={to} onChange={(e) => setTo(e.target.value)}>
           <option value="">Pilih anggota…</option>
           {members.map((m) => <option key={m.user_id} value={m.user_id}>{m.email} ({m.role_name})</option>)}

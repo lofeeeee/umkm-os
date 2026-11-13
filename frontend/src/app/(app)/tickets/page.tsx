@@ -4,8 +4,13 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+import { Headset, LockSimple, Paperclip, Plus, Warning } from "@phosphor-icons/react/ssr";
+
 import { Alert, WithTenant, type TenantCtx } from "@/dashboard/shell";
 import { API_ORIGIN, api, describe } from "@/lib/api";
+import { TICKET_PRIORITY, TICKET_STATUS, relatif, status as statusOf, waktu } from "@/lib/labels";
+import { Badge, BusyButton, Card, EmptyState, PageHeader, PageSkeleton, SearchInput, Skeleton, Tabs } from "@/ui/page";
+import { toast } from "@/ui/toast";
 
 interface Ticket {
   id: string; code: string; source: string; subject: string; description: string | null; priority: string; status: string;
@@ -17,15 +22,20 @@ interface Ticket {
 }
 interface MemberRow { user_id: string; email: string; status: string }
 
-const STATUS: Record<string, string> = {
-  OPEN: "Baru", ASSIGNED: "Ditugaskan", IN_PROGRESS: "Dikerjakan", WAITING_CUSTOMER: "Menunggu pelanggan",
-  WAITING_INTERNAL: "Menunggu internal", RESOLVED: "Selesai", CLOSED: "Ditutup",
-};
 const NEXT: Record<string, string[]> = {
   OPEN: ["IN_PROGRESS", "RESOLVED", "CLOSED"], ASSIGNED: ["IN_PROGRESS", "WAITING_CUSTOMER", "WAITING_INTERNAL", "RESOLVED"],
   IN_PROGRESS: ["WAITING_CUSTOMER", "WAITING_INTERNAL", "RESOLVED"], WAITING_CUSTOMER: ["IN_PROGRESS", "RESOLVED", "CLOSED"],
   WAITING_INTERNAL: ["IN_PROGRESS", "RESOLVED"], RESOLVED: ["CLOSED", "IN_PROGRESS"], CLOSED: ["IN_PROGRESS"],
 };
+const SOURCE: Record<string, string> = { web: "Website", chat: "Percakapan", staff: "Dibuat staf", order: "Pesanan", email: "Email" };
+const TABS = [
+  { value: "", label: "Semua" },
+  { value: "OPEN", label: "Baru" },
+  { value: "IN_PROGRESS", label: "Dikerjakan" },
+  { value: "WAITING_CUSTOMER", label: "Menunggu pelanggan" },
+  { value: "RESOLVED", label: "Selesai" },
+  { value: "CLOSED", label: "Ditutup" },
+];
 
 export default function TicketsPage() {
   return <WithTenant>{(ctx) => <Tickets ctx={ctx} />}</WithTenant>;
@@ -33,69 +43,71 @@ export default function TicketsPage() {
 
 function Tickets({ ctx }: { ctx: TenantCtx }) {
   const base = `/api/v1/tenants/${ctx.tenant.id}/tickets`;
-  const [items, setItems] = useState<Ticket[]>([]);
-  const [status, setStatus] = useState("");
+  const [items, setItems] = useState<Ticket[] | null>(null);
+  const [tab, setTab] = useState("");
   const [q, setQ] = useState("");
   const [open, setOpen] = useState<string | null>(null);
   const [members, setMembers] = useState<MemberRow[]>([]);
   const [err, setErr] = useState<string | null>(null);
   const [subject, setSubject] = useState("");
+  const [busy, setBusy] = useState(false);
   const load = useCallback(
-    () => api<{ items: Ticket[] }>("GET", `${base}?limit=100${status ? `&status=${status}` : ""}${q ? `&q=${encodeURIComponent(q)}` : ""}`).then((r) => setItems(r.items), (e) => setErr(describe(e))),
-    [base, status, q],
+    () => api<{ items: Ticket[] }>("GET", `${base}?limit=100${tab ? `&status=${tab}` : ""}${q ? `&q=${encodeURIComponent(q)}` : ""}`).then((r) => { setItems(r.items); setErr(null); }, (e) => setErr(describe(e))),
+    [base, tab, q],
   );
   useEffect(() => {
-    void load();
+    const t = setTimeout(() => void load(), q ? 250 : 0);
+    return () => clearTimeout(t);
+  }, [load, q]);
+  useEffect(() => {
     api<MemberRow[]>("GET", `/api/v1/tenants/${ctx.tenant.id}/members`).then(setMembers, () => setMembers([]));
-  }, [load, ctx.tenant.id]);
+  }, [ctx.tenant.id]);
   if (open) return <Detail ctx={ctx} url={`${base}/${open}`} members={members} onBack={() => { setOpen(null); void load(); }} />;
+  async function create() {
+    setBusy(true);
+    try { await api("POST", base, { json: { subject } }); setSubject(""); await load(); toast.ok("Tiket dibuat."); } catch (e) { setErr(describe(e)); } finally { setBusy(false); }
+  }
   return (
     <>
-      <h1>Tiket</h1>
+      <PageHeader title="Tiket" description="Masalah yang perlu ditindaklanjuti: keluhan pesanan, permintaan khusus, atau eskalasi dari percakapan." />
       <Alert kind="error">{err}</Alert>
-      <div className="d-row" style={{ marginBottom: 12 }}>
-        <input aria-label="Cari" placeholder="Cari kode / subjek" value={q} onChange={(e) => setQ(e.target.value)} />
-        <select aria-label="Status" value={status} onChange={(e) => setStatus(e.target.value)}>
-          <option value="">Semua status</option>
-          {Object.entries(STATUS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-        </select>
-        {ctx.can("tickets.reply") && (
-          <>
-            <input aria-label="Subjek tiket baru" placeholder="Subjek tiket baru" value={subject} maxLength={200} onChange={(e) => setSubject(e.target.value)} />
-            <button className="d-btn" disabled={!subject.trim()} onClick={async () => {
-              try { await api("POST", base, { json: { subject } }); setSubject(""); await load(); } catch (e) { setErr(describe(e)); }
-            }}>Buat tiket</button>
-          </>
-        )}
+      {ctx.can("tickets.reply") && (
+        <form className="d-card d-row" style={{ padding: 12, flexWrap: "nowrap" }} onSubmit={(e) => { e.preventDefault(); if (subject.trim()) void create(); }}>
+          <input aria-label="Subjek tiket baru" placeholder="Tulis subjek tiket baru, mis. “Pesanan belum sampai”" value={subject} maxLength={200} onChange={(e) => setSubject(e.target.value)} />
+          <BusyButton busy={busy} disabled={!subject.trim()}><Plus weight="bold" aria-hidden="true" />Buat tiket</BusyButton>
+        </form>
+      )}
+      <Tabs label="Filter status tiket" value={tab} onChange={setTab} items={TABS} />
+      <div className="d-toolbar">
+        <SearchInput label="Cari" placeholder="Cari kode atau subjek…" value={q} onChange={setQ} />
       </div>
-      <div className="d-card" style={{ overflowX: "auto" }}>
-        <table className="d-table">
-          <thead><tr><th>Kode</th><th>Subjek</th><th>Prioritas</th><th>Status</th><th>Batas waktu</th><th /></tr></thead>
-          <tbody>
-            {items.map((t) => (
-              <tr key={t.id}>
-                <td>{t.code}<div className="d-muted">{t.source}</div></td>
-                <td>{t.subject}</td>
-                <td>{t.priority}</td>
-                <td>{STATUS[t.status] ?? t.status}</td>
-                <td>{t.sla_first_response_breached || t.sla_resolution_breached ? <strong>Terlewat</strong> : "Aman"}</td>
-                <td><button className="d-btn d-btn-sm" onClick={() => setOpen(t.id)}>Buka</button></td>
-              </tr>
-            ))}
-            {items.length === 0 && (
-              <tr>
-                <td colSpan={6}>
-                  <div className="d-empty">
-                    <p className="d-empty-title">Belum ada tiket</p>
-                    <p className="d-muted">
-                      {status ? "Tidak ada tiket dengan status ini." : "Tiket dibuat saat pelanggan butuh bantuan, atau saat staf mengeskalasi percakapan."}
-                    </p>
-                  </div>
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+      <div className="d-table-wrap">
+        {items === null ? <div style={{ padding: 20 }}><Skeleton lines={5} /></div> : items.length === 0 ? (
+          <EmptyState icon={Headset} title={tab || q ? "Tidak ada tiket yang cocok" : "Belum ada tiket"}>
+            {tab || q ? "Coba tab atau kata kunci lain." : "Tiket dibuat saat pelanggan butuh bantuan, atau saat staf mengeskalasi percakapan."}
+          </EmptyState>
+        ) : (
+          <table className="d-table d-table-stack">
+            <thead><tr><th>Tiket</th><th>Subjek</th><th>Prioritas</th><th>Status</th><th className="d-hide-sm">Tenggat</th><th><span className="sr-only">Aksi</span></th></tr></thead>
+            <tbody>
+              {items.map((t) => {
+                const st = statusOf(TICKET_STATUS, t.status);
+                const pr = statusOf(TICKET_PRIORITY, t.priority);
+                const late = t.sla_first_response_breached || t.sla_resolution_breached;
+                return (
+                  <tr key={t.id}>
+                    <td className="d-nowrap"><span className="d-strong">{t.code}</span><span className="d-sub">{SOURCE[t.source] ?? t.source} · {relatif(t.created_at)}</span></td>
+                    <td>{t.subject}</td>
+                    <td><Badge tone={pr.tone} plain>{pr.label}</Badge></td>
+                    <td><Badge tone={st.tone}>{st.label}</Badge></td>
+                    <td className="d-hide-sm">{late ? <Badge tone="danger" plain>Terlewat</Badge> : <span className="d-muted">Aman</span>}</td>
+                    <td className="d-actions"><button className="d-btn d-btn-sm" onClick={() => setOpen(t.id)}>Buka</button></td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
       </div>
     </>
   );
@@ -105,66 +117,105 @@ function Detail({ ctx, url, members, onBack }: { ctx: TenantCtx; url: string; me
   const [t, setT] = useState<Ticket | null>(null);
   const [body, setBody] = useState("");
   const [internal, setInternal] = useState(false);
-  const [msg, setMsg] = useState<{ ok?: string; err?: string }>({});
-  const load = useCallback(() => api<Ticket>("GET", url).then(setT, (e) => setMsg({ err: describe(e) })), [url]);
+  const [err, setErr] = useState<string | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const load = useCallback(() => api<Ticket>("GET", url).then(setT, (e) => setErr(describe(e))), [url]);
   useEffect(() => { void load(); }, [load]);
-  async function run(f: () => Promise<unknown>, ok: string) {
-    setMsg({});
-    try { await f(); setMsg({ ok }); await load(); } catch (e) { setMsg({ err: describe(e) }); }
+  async function run(key: string, f: () => Promise<unknown>, ok: string) {
+    setErr(null);
+    setBusy(key);
+    try { await f(); toast.ok(ok); await load(); } catch (e) { setErr(describe(e)); } finally { setBusy(null); }
   }
-  if (!t) return <><Alert kind="error">{msg.err}</Alert><p className="d-muted" aria-busy="true">Memuat…</p></>;
-  const email = (u: string | null) => members.find((m) => m.user_id === u)?.email ?? "—";
+  if (!t) return <><Alert kind="error">{err}</Alert>{!err && <PageSkeleton />}</>;
+  const email = (u: string | null) => members.find((m) => m.user_id === u)?.email ?? "Belum ditugaskan";
+  const st = statusOf(TICKET_STATUS, t.status);
+  const pr = statusOf(TICKET_PRIORITY, t.priority);
+  const next = (NEXT[t.status] ?? []).filter((s) => ctx.can(s === "RESOLVED" || s === "CLOSED" ? "tickets.close" : "tickets.reply"));
   return (
-    <div className="d-card">
-      <button className="d-btn d-btn-sm" onClick={onBack}>← Daftar tiket</button>
-      <h2>{t.code} · {t.subject}</h2>
-      <Alert kind="error">{msg.err}</Alert>
-      <Alert kind="ok">{msg.ok}</Alert>
-      <p>
-        {STATUS[t.status]} · prioritas {t.priority} · ditugaskan: {email(t.assignee_user_id)}<br />
-        <span className="d-muted">Respons pertama s.d. {new Date(t.first_response_due_at).toLocaleString("id-ID")}{t.sla_first_response_breached && " (terlewat)"} · selesai s.d. {new Date(t.resolution_due_at).toLocaleString("id-ID")}{t.sla_resolution_breached && " (terlewat)"}</span>
-      </p>
-      {t.description && <p>{t.description}</p>}
-      <div className="d-row">
-        {ctx.can("tickets.assign") && (
-          <select aria-label="Tugaskan ke" value={t.assignee_user_id ?? ""} onChange={(e) => run(() => api("POST", `${url}/assign`, { json: { assignee_user_id: e.target.value || null } }), "Penugasan diperbarui.")}>
-            <option value="">Belum ditugaskan</option>
-            {members.filter((m) => m.status === "active").map((m) => <option key={m.user_id} value={m.user_id}>{m.email}</option>)}
-          </select>
-        )}
-        {ctx.can("tickets.reply") && (
-          <select aria-label="Prioritas" value={t.priority} onChange={(e) => run(() => api("PATCH", url, { json: { priority: e.target.value } }), "Prioritas diperbarui.")}>
-            {["low", "normal", "high", "urgent"].map((p) => <option key={p} value={p}>{p}</option>)}
-          </select>
-        )}
-        {(NEXT[t.status] ?? []).filter((s) => ctx.can(s === "RESOLVED" || s === "CLOSED" ? "tickets.close" : "tickets.reply")).map((s) => (
-          <button key={s} className="d-btn d-btn-sm" onClick={() => run(() => api("POST", `${url}/status`, { json: { status: s } }), "Status diperbarui.")}>{STATUS[s]}</button>
+    <>
+      <PageHeader
+        back={{ onClick: onBack, label: "Semua tiket" }}
+        title={<>{t.code} · {t.subject}</>}
+        description={`${st.label} · prioritas ${pr.label} · ditugaskan: ${email(t.assignee_user_id)}`}
+        actions={next.map((s, i) => (
+          <BusyButton key={s} type="button" busy={busy === s} className={i === 0 ? "d-btn d-btn-primary" : "d-btn"}
+            onClick={() => run(s, () => api("POST", `${url}/status`, { json: { status: s } }), "Status diperbarui.")}>
+            {statusOf(TICKET_STATUS, s).label}
+          </BusyButton>
         ))}
-      </div>
-      <h3>Percakapan</h3>
-      <ul className="d-thread">
-        {t.messages.map((m) => (
-          <li key={m.id} className={m.visibility === "internal" ? "d-internal" : ""}>
-            <strong>{m.author_type === "customer" ? "Pelanggan" : m.visibility === "internal" ? "Catatan internal" : "Staf"}</strong>
-            <span className="d-muted"> {new Date(m.created_at).toLocaleString("id-ID")}</span>
-            <p>{m.body}</p>
-          </li>
-        ))}
-      </ul>
-      {t.attachments.length > 0 && (
-        <p>Lampiran: {t.attachments.map((a, i) => (
-          <a key={a.id} href={`${API_ORIGIN}${url}/attachments/${a.id}`} target="_blank" rel="noopener">Gambar {i + 1}{a.visibility === "internal" ? " (internal)" : ""} </a>
-        ))}</p>
-      )}
-      {ctx.can("tickets.reply") && (
-        <div>
-          <textarea aria-label="Balasan" rows={3} maxLength={5000} value={body} onChange={(e) => setBody(e.target.value)} style={{ width: "100%" }} />
-          <div className="d-row">
-            <label className="d-check"><input type="checkbox" checked={internal} onChange={(e) => setInternal(e.target.checked)} /> Catatan internal (tidak terlihat pelanggan)</label>
-            <button className="d-btn d-btn-primary" disabled={!body.trim()} onClick={() => run(async () => { await api("POST", `${url}/messages`, { json: { body, internal } }); setBody(""); }, "Terkirim.")}>Kirim</button>
-          </div>
+      />
+      <Alert kind="error">{err}</Alert>
+      <div className="d-split">
+        <Card title="Percakapan" label="Percakapan tiket">
+          {t.description && <p style={{ whiteSpace: "pre-wrap" }}>{t.description}</p>}
+          {t.messages.length === 0 ? <p className="d-muted">Belum ada balasan.</p> : (
+            <ul className="d-thread">
+              {t.messages.map((m) => (
+                <li key={m.id} className={m.visibility === "internal" ? "d-internal" : m.author_type === "customer" ? "" : "d-me"}>
+                  <span className="d-muted">
+                    <strong style={{ color: "var(--ink)" }}>{m.author_type === "customer" ? "Pelanggan" : m.visibility === "internal" ? "Catatan internal" : "Staf"}</strong> · {waktu(m.created_at)}
+                  </span>
+                  <span style={{ whiteSpace: "pre-wrap" }}>{m.body}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {t.attachments.length > 0 && (
+            <p className="d-row">
+              <Paperclip weight="bold" aria-hidden="true" />
+              {t.attachments.map((a, i) => (
+                <a key={a.id} href={`${API_ORIGIN}${url}/attachments/${a.id}`} target="_blank" rel="noopener">Gambar {i + 1}{a.visibility === "internal" ? " (internal)" : ""}</a>
+              ))}
+            </p>
+          )}
+          {ctx.can("tickets.reply") && (
+            <form className={`d-composer${internal ? " d-composer-internal" : ""}`} onSubmit={(e) => {
+              e.preventDefault();
+              void run("send", async () => { await api("POST", `${url}/messages`, { json: { body, internal } }); setBody(""); }, internal ? "Catatan tersimpan." : "Balasan terkirim.");
+            }}>
+              <textarea aria-label="Balasan" rows={3} maxLength={5000} value={body}
+                placeholder={internal ? "Catatan untuk tim (tidak terlihat pelanggan)…" : "Tulis balasan untuk pelanggan…"}
+                onChange={(e) => setBody(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && body.trim()) e.currentTarget.form?.requestSubmit(); }} />
+              <div className="d-row d-row-between">
+                <label className="d-check" style={{ margin: 0 }}>
+                  <input type="checkbox" checked={internal} onChange={(e) => setInternal(e.target.checked)} />
+                  <span><LockSimple weight="bold" aria-hidden="true" style={{ verticalAlign: "-2px" }} /> Catatan internal (tidak terlihat pelanggan)</span>
+                </label>
+                <BusyButton busy={busy === "send"} disabled={!body.trim()}>Kirim</BusyButton>
+              </div>
+            </form>
+          )}
+        </Card>
+        <div className="d-stack" style={{ alignContent: "start" }}>
+          <Card title="Detail">
+            {ctx.can("tickets.assign") && (
+              <label className="d-field"><span>Ditugaskan ke</span>
+                <select aria-label="Tugaskan ke" value={t.assignee_user_id ?? ""} onChange={(e) => run("assign", () => api("POST", `${url}/assign`, { json: { assignee_user_id: e.target.value || null } }), "Penugasan diperbarui.")}>
+                  <option value="">Belum ditugaskan</option>
+                  {members.filter((m) => m.status === "active").map((m) => <option key={m.user_id} value={m.user_id}>{m.email}</option>)}
+                </select>
+              </label>
+            )}
+            {ctx.can("tickets.reply") && (
+              <label className="d-field"><span>Prioritas</span>
+                <select aria-label="Prioritas" value={t.priority} onChange={(e) => run("prio", () => api("PATCH", url, { json: { priority: e.target.value } }), "Prioritas diperbarui.")}>
+                  {["low", "normal", "high", "urgent"].map((p) => <option key={p} value={p}>{statusOf(TICKET_PRIORITY, p).label}</option>)}
+                </select>
+              </label>
+            )}
+            <dl className="d-dl">
+              <dt>Sumber</dt><dd>{SOURCE[t.source] ?? t.source}</dd>
+              <dt>Dibuat</dt><dd>{waktu(t.created_at)}</dd>
+              <dt>Respons pertama</dt><dd>{waktu(t.first_response_due_at)}{t.sla_first_response_breached && <> <Badge tone="danger" plain>Terlewat</Badge></>}</dd>
+              <dt>Target selesai</dt><dd>{waktu(t.resolution_due_at)}{t.sla_resolution_breached && <> <Badge tone="danger" plain>Terlewat</Badge></>}</dd>
+            </dl>
+            {(t.sla_first_response_breached || t.sla_resolution_breached) && (
+              <p className="d-small" style={{ color: "var(--danger)", marginTop: 12 }}><Warning weight="bold" aria-hidden="true" style={{ verticalAlign: "-2px" }} /> Tenggat layanan terlewat — prioritaskan tiket ini.</p>
+            )}
+          </Card>
         </div>
-      )}
-    </div>
+      </div>
+    </>
   );
 }

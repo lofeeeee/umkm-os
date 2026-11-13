@@ -4,6 +4,11 @@
 // latensi, ringkasan tool, riwayat assignment/handover, status, approval. Data sensitif sudah
 // dimasking oleh API sesuai permission; UI hanya menandai bila tampilan dimasking.
 
+import type { ReactNode } from "react";
+
+import { APPROVAL_STATUS, CONVERSATION_STATUS, TICKET_STATUS, status } from "@/lib/labels";
+import { Badge } from "@/ui/page";
+
 export interface CustomerContext { id: string; name: string; email: string | null; phone: string | null; has_account: boolean }
 export interface ConversationSummary {
   id: string; channel: string; status: string; customer: CustomerContext | null; assignee_user_id: string | null;
@@ -66,85 +71,92 @@ function RunMeta({ r }: { r: AiRun }) {
   );
 }
 
-export function ConversationView({ d }: { d: ConversationDetail }) {
+/**
+ * Tampilan percakapan: timeline (gelembung chat) + slot `staff` (tindakan staf) di kiri, konteks di kanan.
+ * Nama region dipakai e2e: Timeline, Status percakapan, Pelanggan, Riwayat, Tiket, Approval.
+ */
+export function ConversationView({ d, staff }: { d: ConversationDetail; staff?: ReactNode }) {
+  const st = status(CONVERSATION_STATUS, d.status);
   return (
     <div className="cv">
       {d.masked && (
-        <p className="d-alert" role="note">Data sensitif (kontak pelanggan, email/nomor dalam pesan) disamarkan untuk peran Anda.</p>
+        <div className="d-alert d-alert-info" role="note"><div>Data sensitif (kontak pelanggan, email/nomor dalam pesan) disamarkan untuk peran Anda.</div></div>
       )}
-      <div className="d-grid2">
-        <section className="d-card" aria-label="Pelanggan">
-          <h2>Pelanggan</h2>
-          {d.customer ? (
-            <dl className="cv-dl">
-              <dt>Nama</dt><dd>{d.customer.name}</dd>
-              <dt>Email</dt><dd>{d.customer.email ?? "—"}</dd>
-              <dt>Telepon</dt><dd>{d.customer.phone ?? "—"}</dd>
-              <dt>Akun</dt><dd>{d.customer.has_account ? "terverifikasi" : "tamu"}</dd>
+      <div className="d-split">
+        <div className="d-stack" style={{ alignContent: "start", minWidth: 0 }}>
+          <section className="d-card" aria-label="Timeline">
+            <header className="d-card-head"><div className="d-card-head-text"><h2>Percakapan</h2><p>{d.timeline.length} pesan · dimulai {when(d.created_at)}</p></div></header>
+            <ol className="cv-timeline">
+              {d.timeline.map((m) => (
+                <li key={m.id} className={`cv-msg cv-${m.sender.toLowerCase()}`}>
+                  <div className="cv-head">
+                    <strong>{SENDER[m.sender] ?? m.sender}</strong>
+                    {m.sender_email && <span className="d-muted"> · {m.sender_email}</span>}
+                    <span className="d-muted"> · {when(m.created_at)}</span>
+                  </div>
+                  <div className="cv-body">{m.body}</div>
+                  {m.ai && <RunMeta r={m.ai} />}
+                </li>
+              ))}
+            </ol>
+            {d.other_ai_runs.length > 0 && (
+              <details className="d-details" style={{ marginTop: 16 }}>
+                <summary>Pemanggilan AI tanpa balasan ({d.other_ai_runs.length})</summary>
+                {d.other_ai_runs.map((r) => <RunMeta key={r.run_id} r={r} />)}
+              </details>
+            )}
+          </section>
+          {staff}
+        </div>
+
+        <div className="d-stack" style={{ alignContent: "start", minWidth: 0 }}>
+          <section className="d-card" aria-label="Status percakapan">
+            <header className="d-card-head"><div className="d-card-head-text"><h2>Status</h2></div><Badge tone={st.tone}>{st.label}</Badge></header>
+            <dl className="d-dl">
+              <dt>Status</dt><dd>{st.label}</dd>
+              <dt>Kanal</dt><dd>{d.channel === "web" ? "Chat website" : d.channel}</dd>
+              <dt>Ditangani</dt><dd>{d.assignee_email ?? "—"}</dd>
+              <dt>Persetujuan AI</dt><dd>{d.consent_version} · {when(d.consented_at)}</dd>
+              {d.closed_at && <><dt>Ditutup</dt><dd>{when(d.closed_at)}</dd></>}
             </dl>
-          ) : <p className="d-muted">Pengunjung anonim (belum masuk akun).</p>}
-        </section>
-        <section className="d-card" aria-label="Status percakapan">
-          <h2>Status</h2>
-          <dl className="cv-dl">
-            <dt>Status</dt><dd>{CONV_STATUS[d.status] ?? d.status}</dd>
-            <dt>Channel</dt><dd>{d.channel === "web" ? "Web chat" : d.channel}</dd>
-            <dt>Ditangani</dt><dd>{d.assignee_email ?? "—"}</dd>
-            <dt>Persetujuan AI</dt><dd>{d.consent_version} · {when(d.consented_at)}</dd>
-            {d.closed_at && <><dt>Ditutup</dt><dd>{when(d.closed_at)}</dd></>}
-          </dl>
-        </section>
-      </div>
-
-      <section className="d-card" aria-label="Timeline">
-        <h2>Timeline</h2>
-        <ol className="cv-timeline">
-          {d.timeline.map((m) => (
-            <li key={m.id} className={`cv-msg cv-${m.sender.toLowerCase()}`}>
-              <div className="cv-head">
-                <strong>{SENDER[m.sender] ?? m.sender}</strong>
-                {m.sender_email && <span className="d-muted"> · {m.sender_email}</span>}
-                <span className="d-muted"> · {when(m.created_at)}</span>
-              </div>
-              <div className="cv-body">{m.body}</div>
-              {m.ai && <RunMeta r={m.ai} />}
-            </li>
-          ))}
-        </ol>
-        {d.other_ai_runs.length > 0 && (
-          <>
-            <h3>Pemanggilan AI tanpa balasan</h3>
-            {d.other_ai_runs.map((r) => <RunMeta key={r.run_id} r={r} />)}
-          </>
-        )}
-      </section>
-
-      <div className="d-grid2">
-        <section className="d-card" aria-label="Riwayat">
-          <h2>Riwayat penugasan & handover</h2>
-          <ol className="cv-history">
-            {d.history.map((e, i) => (
-              <li key={i}>
-                {EVENT[e.kind] ?? e.kind} — oleh {ACTOR[e.actor_type] ?? e.actor_type}{e.actor_email ? ` (${e.actor_email})` : ""}
-                <span className="d-muted"> · {when(e.created_at)}</span>
-              </li>
-            ))}
-          </ol>
-        </section>
-        <section className="d-card" aria-label="Tiket">
-          <h2>Tiket terkait</h2>
-          {d.tickets.length === 0 ? <p className="d-muted">Belum ada.</p> : (
-            <ul>{d.tickets.map((x) => <li key={x.id}><strong>{x.code}</strong> {x.subject} — {x.status}</li>)}</ul>
+          </section>
+          <section className="d-card" aria-label="Pelanggan">
+            <header className="d-card-head"><div className="d-card-head-text"><h2>Pelanggan</h2></div></header>
+            {d.customer ? (
+              <dl className="d-dl">
+                <dt>Nama</dt><dd>{d.customer.name}</dd>
+                <dt>Email</dt><dd>{d.customer.email ?? "—"}</dd>
+                <dt>Telepon</dt><dd>{d.customer.phone ?? "—"}</dd>
+                <dt>Akun</dt><dd>{d.customer.has_account ? "Terverifikasi" : "Tamu"}</dd>
+              </dl>
+            ) : <p className="d-muted">Pengunjung anonim (belum masuk akun).</p>}
+          </section>
+          <section className="d-card" aria-label="Tiket">
+            <header className="d-card-head"><div className="d-card-head-text"><h2>Tiket terkait</h2></div></header>
+            {d.tickets.length === 0 ? <p className="d-muted">Belum ada.</p> : (
+              <ul className="d-facts">{d.tickets.map((x) => <li key={x.id}><span><strong>{x.code}</strong> {x.subject} <Badge tone={status(TICKET_STATUS, x.status).tone} plain>{status(TICKET_STATUS, x.status).label}</Badge></span></li>)}</ul>
+            )}
+          </section>
+          <section className="d-card" aria-label="Riwayat">
+            <header className="d-card-head"><div className="d-card-head-text"><h2>Riwayat penugasan</h2></div></header>
+            <ol className="d-timeline">
+              {[...d.history].reverse().map((e, i) => (
+                <li key={i}>
+                  <span>{EVENT[e.kind] ?? e.kind} — oleh {ACTOR[e.actor_type] ?? e.actor_type}{e.actor_email ? ` (${e.actor_email})` : ""}</span>
+                  <span className="d-muted d-small">{when(e.created_at)}</span>
+                </li>
+              ))}
+            </ol>
+          </section>
+          {d.approvals.length > 0 && (
+            <section className="d-card" aria-label="Approval">
+              <header className="d-card-head"><div className="d-card-head-text"><h2>Persetujuan</h2></div></header>
+              <ul className="d-facts">
+                {d.approvals.map((a) => <li key={a.id}><span>{a.summary} — <Badge tone={status(APPROVAL_STATUS, a.status).tone} plain>{status(APPROVAL_STATUS, a.status).label}</Badge> <span className="d-muted">(langkah {a.current_step + 1})</span></span></li>)}
+              </ul>
+            </section>
           )}
-        </section>
-        <section className="d-card" aria-label="Approval">
-          <h2>Approval</h2>
-          {d.approvals.length === 0 ? <p className="d-muted">Tidak ada.</p> : (
-            <ul>
-              {d.approvals.map((a) => <li key={a.id}>{a.summary} — <strong>{a.status}</strong> (langkah {a.current_step + 1})</li>)}
-            </ul>
-          )}
-        </section>
+        </div>
       </div>
     </div>
   );
