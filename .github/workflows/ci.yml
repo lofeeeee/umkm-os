@@ -116,7 +116,7 @@ jobs:
       - run: docker build -f ops/backup/Dockerfile -t umkm-os/backup:ci .
       - run: docker build --target web --build-arg PUBLIC_API_ORIGIN=https://api.ryasai.my.id -t umkm-os/web:ci .
       - name: shellcheck
-        run: docker run --rm -v "$PWD:/mnt" -w /mnt koalaman/shellcheck:v0.11.0 scripts/*.sh ops/backup/*.sh
+        run: docker run --rm -v "$PWD:/mnt" -w /mnt koalaman/shellcheck:v0.11.0 scripts/*.sh scripts/load/*.sh ops/backup/*.sh
 
   workflow-lint:
     name: actionlint
