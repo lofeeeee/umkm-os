@@ -1380,3 +1380,9 @@ label.st-tool { cursor: pointer; }
    tidak tertutup plugin di atasnya dan tombolnya bisa diklik. */
 .st-item:hover, .st-item:focus-within, .st-item.st-selected { z-index: 15; }
 .st-item.st-active { z-index: 20; }
+/* Toolbar = satu area utuh + "jembatan" ke tepi atas kotak: kursor yang bergerak dari badan plugin ke
+   tombol mana pun tidak pernah jatuh ke plugin di atasnya (hover tidak putus, toolbar tidak hilang). */
+.st-bar { top: -38px; height: 38px; padding-bottom: 10px; align-items: flex-end; }
+.st-item:hover > .st-bar, .st-item.st-selected > .st-bar, .st-item.st-active > .st-bar, .st-item:focus-within > .st-bar { pointer-events: auto; }
+.st-grip { cursor: grab; }
+.st-locked .st-grip { cursor: default; }
