@@ -37,10 +37,12 @@ test("asisten AI: provider platform, pengetahuan diindeks worker, uji coba memak
   await page.getByLabel("Topik terlarang — langsung ke staf (pisahkan koma)").blur();
   await page.getByRole("button", { name: "Simpan pengaturan" }).click();
   await expect(page.getByText("Pengaturan tersimpan.")).toBeVisible();
-  // Nilai di luar batas ditolak server dengan pesan field.
-  await page.getByLabel("Temperature (0–2)").fill("3");
+  // Nilai di luar batas ditahan browser (min/max) sebelum terkirim; penolakan server (422, AC-AIC-001)
+  // dikunci di apps/api/tests/ai_http.rs.
+  const temp = page.getByLabel("Temperature (0–2)");
+  await temp.fill("3");
   await page.getByRole("button", { name: "Simpan pengaturan" }).click();
-  await expect(page.getByText(/di luar/)).toBeVisible();
+  expect(await temp.evaluate((el: HTMLInputElement) => el.validity.rangeOverflow)).toBe(true);
   await page.getByLabel("Temperature (0–2)").fill("0.3");
 
   // Basis pengetahuan → worker mengindeks di latar.

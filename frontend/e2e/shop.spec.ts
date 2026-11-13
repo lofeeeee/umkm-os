@@ -56,7 +56,7 @@ test("toko: checkout guest + pembayaran QRIS statis + konfirmasi pemilik", async
   await expect(owner.getByRole("button", { name: /Pakai template ini|Terbitkan/ }).first()).toBeVisible();
   if (await choose.isVisible()) await choose.click();
   await owner.getByRole("button", { name: "Terbitkan" }).click();
-  await expect(owner.getByRole("status")).toHaveText("Website diterbitkan.");
+  await expect(owner.getByRole("status").filter({ hasText: "Website diterbitkan." })).toBeVisible();
 
   // ambil di tempat
   await owner.goto(`${APP}/business${q}`);

@@ -37,6 +37,8 @@ test("operasional: tiket, notifikasi realtime, role kustom, audit", async ({ bro
 
   // Tab A menunggu notifikasi (lonceng tanpa angka)
   await page.goto(`${APP}/orders${q}`);
+  // Lonceng muncul setelah shell memuat konteks toko; tunggu halaman siap dulu (hindari balapan).
+  await expect(page.getByRole("heading", { level: 1, name: "Pesanan" })).toBeVisible({ timeout: 15_000 });
   const bell = page.getByRole("button", { name: /^Notifikasi/ });
   await expect(bell).toHaveAccessibleName("Notifikasi");
 

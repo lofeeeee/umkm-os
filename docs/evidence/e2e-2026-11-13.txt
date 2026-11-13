@@ -1,0 +1,20 @@
+E2E Playwright stack nyata setelah redesign UI + Phase 9 — 2026-11-13T23:36:15+07:00
+
+Runner: scripts/e2e-stack.sh up && scripts/e2e-stack.sh test   (terisolasi: DB umkm_e2e, role umkm_e2e_app
+NOBYPASSRLS, API :18080, worker, mock LLM :18181, Caddy :80 dengan ops/caddy/Caddyfile, domain umkm.test)
+
+Hasil akhir: 9 spec / 12 tes lolos — ai, billing, chat, dashboard, mfa, ops, responsive (4), shop, studio.
+
+Bug produk yang DITEMUKAN e2e dan diperbaiki (commit terpisah):
+1. Situs toko blank ("Memuat…"): shell <head> dari API beda build dengan web → CSP memblokir skrip inline. (cf4ed21)
+2. /theme-boot.js di host toko dijawab text/html → skrip tema ditolak browser. (cf4ed21)
+3. Kuota AI platform: UI menampilkan kuota operator, runtime menegakkan paket (Starter 0) → chatbot Starter
+   diam-diam selalu meneruskan ke staf tanpa penjelasan. (6bc553d)
+4. Toko baru tidak diarahkan ke Studio; plugin Teks/WhatsApp tidak bisa ditambahkan. (P9-8)
+
+Spec yang tertinggal dari UI baru dan disesuaikan (bukan bug): label paket/status Langganan, ringkasan platform,
+toast bertumpuk (status dicari per teks), validasi temperature kini di browser (min/max; 422 server dikunci
+apps/api/tests/ai_http.rs), ops menunggu halaman siap sebelum lonceng (flaky 1/5 → stabil 3/3).
+
+Catatan runner (bukan perilaku produk): Starter di DB e2e diberi 200.000 token platform untuk ai/chat.spec;
+limiter registrasi per IP dikosongkan antar spec; super admin uji dikembalikan ke "belum MFA" sebelum billing.

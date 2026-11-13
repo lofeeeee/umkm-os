@@ -28,14 +28,14 @@ test("editor: edit, preview ponsel, publish, tampil di situs publik", async ({ p
   await page.screenshot({ path: "test-results/editor-mobile.png", fullPage: true });
 
   await page.getByRole("button", { name: "Simpan draf" }).click();
-  await expect(page.getByRole("status")).toHaveText("Draf tersimpan.");
+  await expect(page.getByRole("status").filter({ hasText: "Draf tersimpan." })).toBeVisible();
   // Draft belum terbit: publik masih versi lama
   const pub = await context.newPage();
   await pub.goto(SITE);
   await expect(pub.locator("[data-section-type=hero] h1")).not.toHaveText(title);
 
   await page.getByRole("button", { name: "Terbitkan" }).click();
-  await expect(page.getByRole("status")).toHaveText("Website diterbitkan.");
+  await expect(page.getByRole("status").filter({ hasText: "Website diterbitkan." })).toBeVisible();
   // Respons publik di-cache 60 dtk (ADR-0014 #7): pengunjung baru (konteks tanpa cache) melihat versi baru.
   const fresh = await (await browser.newContext()).newPage();
   await fresh.goto(SITE);

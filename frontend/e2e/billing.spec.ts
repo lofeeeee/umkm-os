@@ -65,7 +65,8 @@ test("langganan: pilih Pro, unggah bukti, super admin (MFA) menyetujui", async (
   await page.waitForURL(/\/website\?tenant=/);
   await page.getByRole("link", { name: "Langganan" }).click();
   const current = page.getByRole("region", { name: "Paket saat ini" });
-  await expect(current).toContainText("Paket Starter — Uji coba");
+  await expect(current.getByRole("heading", { level: 2 })).toHaveText("Paket Starter");
+  await expect(current).toContainText("Uji coba berakhir");
   await expect(current).toContainText("Token AI platform bulan ini");
 
   // Pilih Pro → tagihan + instruksi → unggah bukti.
@@ -95,7 +96,7 @@ test("langganan: pilih Pro, unggah bukti, super admin (MFA) menyetujui", async (
   // P7-5: ringkasan platform (agregat lintas toko, hanya admin platform).
   const stats = ap.getByRole("region", { name: "Ringkasan platform" });
   await expect(stats).toContainText("Toko aktif");
-  await expect(stats).toContainText("starter · trialing");
+  await expect(stats).toContainText(/Starter · Masa uji coba: \d+/);
   await expect(stats).toContainText("Permintaan API");
   const queue = ap.getByRole("list", { name: "Tagihan langganan" });
   const item = queue.getByRole("listitem").filter({ hasText: code });
@@ -106,7 +107,8 @@ test("langganan: pilih Pro, unggah bukti, super admin (MFA) menyetujui", async (
 
   // Toko: Pro aktif, tagihan lunas.
   await page.reload();
-  await expect(current).toContainText("Paket Pro — Aktif");
+  await expect(current.getByRole("heading", { level: 2 })).toHaveText("Paket Pro");
+  await expect(current).toContainText("Aktif sampai");
   await expect(page.getByRole("region", { name: "Riwayat tagihan" })).toContainText("Lunas");
   await page.setViewportSize({ width: 360, height: 740 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
