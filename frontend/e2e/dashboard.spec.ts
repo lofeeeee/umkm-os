@@ -17,7 +17,7 @@ test("editor: edit, preview ponsel, publish, tampil di situs publik", async ({ p
   await expect(page.getByRole("heading", { name: "Website" })).toBeVisible();
 
   const title = `Judul <script>alert(1)</script> ${Date.now()}`;
-  await page.getByRole("button", { name: /Ubah Hero/ }).click();
+  await page.getByRole("button", { name: /Ubah Banner utama/ }).click();
   const field = page.getByLabel("Judul *").first();
   await field.fill(title);
   const preview = page.getByTestId("preview");
@@ -27,8 +27,8 @@ test("editor: edit, preview ponsel, publish, tampil di situs publik", async ({ p
   await expect.poll(async () => (await preview.boundingBox())?.width).toBe(375);
   await page.screenshot({ path: "test-results/editor-mobile.png", fullPage: true });
 
-  await page.getByRole("button", { name: "Simpan draft" }).click();
-  await expect(page.getByRole("status")).toHaveText("Draft tersimpan.");
+  await page.getByRole("button", { name: "Simpan draf" }).click();
+  await expect(page.getByRole("status")).toHaveText("Draf tersimpan.");
   // Draft belum terbit: publik masih versi lama
   const pub = await context.newPage();
   await pub.goto(SITE);
