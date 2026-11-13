@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import Script from "next/script";
 import type { ReactNode } from "react";
 
 import "../renderer/site.css";
@@ -28,7 +27,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="id" suppressHydrationWarning>
       <head>
         {/* Tema sebelum paint (anti-FOUC); file statis 'self' — aman CSP (ADR-0014) dan bebas inline script. */}
-        <Script src="/theme-boot.js" strategy="beforeInteractive" />
+        {/* Skrip pemblokir di <head> sengaja: harus jalan sebelum paint. (next/script beforeInteractive
+            dimuat lewat runtime → tema bisa berkedip.) Peringatan dev React soal <script> boleh diabaikan. */}
+        <script src="/theme-boot.js" async={false} />
       </head>
       <body>
         {children}
