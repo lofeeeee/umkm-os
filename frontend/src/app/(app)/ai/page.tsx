@@ -51,15 +51,22 @@ export default function AiPage() {
   return <WithTenant>{(ctx) => <Ai ctx={ctx} />}</WithTenant>;
 }
 
+/** `limit`: null = tanpa batas, 0 = tidak termasuk paket, >0 = kuota bulanan. */
 function Meter({ label, used, limit }: { label: string; used: number; limit: number | null }) {
   const pct = limit ? Math.min(used / limit, 1) : 0;
   return (
     <div className="d-meter">
       <div className="d-meter-head"><span>{label}</span><span>{angka(used)}{limit ? ` / ${angka(limit)}` : ""} token</span></div>
-      {limit ? <div className="d-progress"><span style={{ transform: `scaleX(${pct})`, background: pct > 0.9 ? "var(--danger)" : pct > 0.7 ? "var(--warn)" : undefined }} /></div> : <span className="d-hint">Tanpa batas</span>}
+      {limit === 0 ? <span className="d-hint">Tidak termasuk paket Anda</span>
+        : limit ? <div className="d-progress"><span style={{ transform: `scaleX(${pct})`, background: pct > 0.9 ? "var(--danger)" : pct > 0.7 ? "var(--warn)" : undefined }} /></div>
+        : <span className="d-hint">Tanpa batas</span>}
     </div>
   );
 }
+
+/** Teks kuota untuk pembaca layar & deskripsi kartu. */
+const quotaText = (used: number, limit: number | null) =>
+  `${angka(used)}${limit === 0 ? " (tidak termasuk paket)" : limit ? ` / ${angka(limit)}` : ""} token`;
 
 function Ai({ ctx }: { ctx: TenantCtx }) {
   const base = `/api/v1/tenants/${ctx.tenant.id}/ai`;
@@ -70,6 +77,8 @@ function Ai({ ctx }: { ctx: TenantCtx }) {
   const [cfg, setCfg] = useState<Config | null>(null);
   const [docs, setDocs] = useState<Doc[]>([]);
   const [usage, setUsage] = useState<Usage | null>(null);
+  /** Paket tidak menyertakan token AI platform (mis. Starter): batas efektif 0 dari server. */
+  const platformBlocked = usage?.platform_quota === 0;
   const [err, setErr] = useState<string | null>(null);
   const [cfgErr, setCfgErr] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -103,12 +112,19 @@ function Ai({ ctx }: { ctx: TenantCtx }) {
       />
       <Alert kind="error">{err}</Alert>
       {!cfg.primary_provider_id && <Alert kind="info">Langkah pertama: tambahkan penyedia AI, lalu pilih sebagai penyedia utama di pengaturan chatbot.</Alert>}
+      {platformBlocked && providers.some((p) => p.source === "platform" && p.id === cfg.primary_provider_id) && (
+        <Alert kind="error">
+          Penyedia utama memakai AI platform, tetapi paket Anda tidak menyertakan token AI platform. Chatbot akan
+          meneruskan semua pertanyaan ke staf. <a href={`/subscription?tenant=${ctx.tenant.id}`}>Tingkatkan ke Pro</a> atau
+          tambahkan penyedia dengan kunci API sendiri.
+        </Alert>
+      )}
 
       {usage && (
         <Card
           title="Pemakaian token"
           label="Pemakaian"
-          description={`Pemakaian bulan ini: platform ${usage.platform_tokens.toLocaleString("id-ID")}${usage.platform_quota ? ` / ${usage.platform_quota.toLocaleString("id-ID")}` : ""} token · kunci sendiri ${usage.byok_tokens.toLocaleString("id-ID")}${usage.byok_budget ? ` / ${usage.byok_budget.toLocaleString("id-ID")}` : ""} token`}
+          description={`Pemakaian bulan ini: platform ${quotaText(usage.platform_tokens, usage.platform_quota)} · kunci sendiri ${quotaText(usage.byok_tokens, usage.byok_budget)}`}
         >
           <div className="d-grid2" aria-hidden="true">
             <Meter label="AI platform" used={usage.platform_tokens} limit={usage.platform_quota} />
@@ -145,7 +161,7 @@ function Ai({ ctx }: { ctx: TenantCtx }) {
             ))}
           </ul>
         )}
-        {manageProv && <AddProvider view={view} first={providers.length === 0} onAdd={(body) => run(() => api("POST", `${base}/providers`, { json: body }), "Penyedia ditambahkan.")} />}
+        {manageProv && <AddProvider view={view} platformBlocked={platformBlocked} subscriptionHref={`/subscription?tenant=${ctx.tenant.id}`} first={providers.length === 0} onAdd={(body) => run(() => api("POST", `${base}/providers`, { json: body }), "Penyedia ditambahkan.")} />}
       </Card>
 
       <Card title="Pengaturan chatbot" label="Pengaturan chatbot" description="Cara chatbot menyapa, kapan menyerahkan ke staf, dan topik yang boleh dijawab.">
@@ -250,8 +266,8 @@ function RotateKey({ onSave }: { onSave: (k: string) => void }) {
   );
 }
 
-function AddProvider({ view, onAdd, first }: { view: ConfigView; onAdd: (b: Record<string, string>) => void; first: boolean }) {
-  const [source, setSource] = useState(view.platform.available ? "platform" : "byok");
+function AddProvider({ view, onAdd, first, platformBlocked, subscriptionHref }: { view: ConfigView; onAdd: (b: Record<string, string>) => void; first: boolean; platformBlocked: boolean; subscriptionHref: string }) {
+  const [source, setSource] = useState(view.platform.available && !platformBlocked ? "platform" : "byok");
   const [f, setF] = useState({ name: "", provider_type: "openai", base_url: "https://api.openai.com/v1", model: view.platform.models[0] ?? "", api_key: "" });
   function submit(e: FormEvent) {
     e.preventDefault();
@@ -268,6 +284,12 @@ function AddProvider({ view, onAdd, first }: { view: ConfigView; onAdd: (b: Reco
           {view.platform.available && <button type="button" aria-pressed={source === "platform"} onClick={() => setSource("platform")}>AI platform (kuota bulanan)</button>}
           <button type="button" aria-pressed={source === "byok"} onClick={() => setSource("byok")}>Kunci API sendiri</button>
         </div>
+        {source === "platform" && platformBlocked && (
+          <p className="d-hint" role="note" style={{ marginTop: -8, marginBottom: 16 }}>
+            Paket Anda belum menyertakan token AI platform, jadi chatbot dengan penyedia ini tidak akan menjawab.{" "}
+            <a href={subscriptionHref}>Lihat paket Pro</a> atau pilih “Kunci API sendiri”.
+          </p>
+        )}
         <div className="d-grid">
           <label className="d-field"><span>Nama</span><input required maxLength={60} placeholder="mis. AI Utama" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></label>
           {source === "platform" ? (

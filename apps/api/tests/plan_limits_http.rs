@@ -126,6 +126,27 @@ async fn ai_quota_comes_from_plan(pool: PgPool) {
         .unwrap();
     let test_url = format!("/api/v1/tenants/{t}/ai/test");
     let ask = || post(&a, &o, &test_url, json!({"message": "halo"}));
+    // Kuota yang DITAMPILKAN (GET usage) = kuota yang DITEGAKKAN (paket ∩ operator), bukan kuota operator saja.
+    let usage_url = format!("/api/v1/tenants/{t}/ai/usage");
+    let quota = || async {
+        let r = send(
+            &a.router,
+            Method::GET,
+            &usage_url,
+            Some(&o),
+            None,
+            None,
+            vec![],
+        )
+        .await;
+        assert_eq!(r.status, 200);
+        r.json()["data"]["platform_quota"].as_u64()
+    };
+    assert_eq!(
+        quota().await,
+        Some(0),
+        "Starter: token platform tidak termasuk paket"
+    );
     // Uji coba Starter: token AI platform 0 → quota_exceeded tanpa memanggil provider.
     let r = ask().await;
     assert_eq!(r.status, 200, "{}", String::from_utf8_lossy(&r.bytes));
@@ -133,6 +154,7 @@ async fn ai_quota_comes_from_plan(pool: PgPool) {
     // Data paket diubah (Starter dapat 1000 token) → tidak lagi quota_exceeded (provider uji tak terjangkau → error).
     set_limit(&pool, "starter", "platform_ai_tokens_monthly", json!(1000)).await;
     assert_ne!(ask().await.json()["data"]["status"], "quota_exceeded");
+    assert_eq!(quota().await, Some(1000));
     // Kunci paket rusak → fail-closed: kuota 0.
     sqlx::query(
         "UPDATE plans SET limits_json = limits_json - 'byok_allowed' WHERE code = 'starter'",
@@ -141,6 +163,11 @@ async fn ai_quota_comes_from_plan(pool: PgPool) {
     .await
     .unwrap();
     assert_eq!(ask().await.json()["data"]["status"], "quota_exceeded");
+    assert_eq!(
+        quota().await,
+        Some(0),
+        "paket rusak → tampil 0 juga (fail-closed)"
+    );
 }
 
 async fn public(a: &TestApp, m: Method, path: &str, body: Option<Value>) -> Res {

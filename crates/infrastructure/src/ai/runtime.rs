@@ -291,6 +291,24 @@ impl AiRuntime {
         Ok(n.max(0) as u64)
     }
 
+    /// Batas token bulan ini per sumber, dihitung PERSIS seperti saat menjawab (`limit`), agar angka yang
+    /// ditampilkan ke pemilik toko sama dengan yang ditegakkan. `None` = tanpa batas; `Some(0)` = tidak tersedia.
+    pub async fn month_limit(
+        &self,
+        t: TenantId,
+        source: ProviderSource,
+    ) -> Result<Option<u64>, ai_repo::AiRepoError> {
+        let cfg = ai_repo::get_config(&self.pool, t).await?;
+        let plan = match crate::billing_repo::current(&self.pool, t).await {
+            Ok(p) => Some(p.plan.limits),
+            Err(e) => {
+                tracing::error!(error = %e, "plan limits unavailable; AI quota fail-closed");
+                None
+            }
+        };
+        Ok(self.limit(&cfg, source, plan.as_ref()).0)
+    }
+
     /// Kuota bulan berjalan (P7-2, ADR-0016): token platform = batas paket, dibatasi juga kuota operator;
     /// BYOK hanya bila paket mengizinkan (lalu anggaran tenant). Paket tak terbaca → 0 (fail-closed).
     fn limit(

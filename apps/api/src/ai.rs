@@ -789,7 +789,13 @@ pub async fn usage(
                 .month_usage(t, ProviderSource::Byok)
                 .await
                 .map_err(internal)?,
-            platform_quota: s.platform.as_ref().map(|p| p.monthly_quota),
+            // Batas EFEKTIF (paket ∩ kuota operator), sama dengan yang ditegakkan runtime.
+            // 0 = tidak termasuk paket (mis. Starter: hanya kunci API sendiri).
+            platform_quota: s
+                .runtime
+                .month_limit(t, ProviderSource::Platform)
+                .await
+                .map_err(internal)?,
             byok_budget: cfg.monthly_token_budget,
         },
         &id,
