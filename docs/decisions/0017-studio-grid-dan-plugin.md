@@ -55,11 +55,19 @@ mode `floating` dirender sebagai widget chat yang ada (ADR-0006), bukan di grid.
 * Bad: perlu validator Rust baru (overlap/bounds), migrasi v1→v2 (konversi otomatis: tiap section = baris penuh),
   renderer publik dua versi selama transisi, dan aturan tinggi blok (konten bisa melebihi `h`).
 
+## Prototipe (2026-11-13) juga menguji
+
+* Galeri 6 template (`frontend/src/studio/templates.ts`) yang langsung diisi data toko.
+* Edit teks langsung di kanvas lewat `EditContext` (`frontend/src/renderer/edit.tsx`): `contentEditable="plaintext-only"`,
+  batas panjang dari skema field; situs publik tidak memasang konteks sehingga renderer publik tetap teks biasa.
+* Seret foto dari komputer ke plugin (unggah ke aset toko yang sama, ADR-0009).
+* Undo/Redo dengan penggabungan langkah (`frontend/src/studio/history.ts`) + simpan otomatis.
+
 ## Open points sebelum Accepted
 
 1. Disetujui pemilik produk setelah mencoba prototipe.
 2. Batas plugin per paket (Starter vs Pro)? — menyentuh ADR-0016.
-3. Tinggi blok: tetap (`h`, konten dipotong/scroll) atau otomatis menyesuaikan isi di publik.
+3. Tinggi blok — usulan dari prototipe: `auto_height: true` (bawaan) = tinggi mengikuti isi di publik; `false` = tinggi `h` tetap. Editor menandai isi yang terpotong.
 4. Rollback lintas versi skema (v2 → versi v1 lama).
 
 Append-only: ubah status lewat ADR atau catatan baru.

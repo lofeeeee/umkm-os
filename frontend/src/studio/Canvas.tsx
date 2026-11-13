@@ -25,8 +25,11 @@ export const rowsFor = (px: number) => Math.max(2, Math.ceil((px + GAP) / (ROW +
 interface Drag { id: string; mode: "move" | "resize"; sx: number; sy: number; orig: Cell; base: Cell[]; started: boolean }
 
 export function Canvas<T extends Cell>({
-  cells, onChange, selected, onSelect, onDropPlugin, onRemove, onMeasure, onResizeH, render, label, toolbar, scale = 1,
+  cells, onChange, selected, onSelect, onDropPlugin, onRemove, onMeasure, onResizeH, render, label, toolbar, scale = 1, onDropFile, acceptsFile,
 }: {
+  /** Foto dijatuhkan dari komputer ke sebuah plugin. */
+  onDropFile?: (id: string, file: File) => void;
+  acceptsFile?: (c: T) => boolean;
   cells: T[];
   onChange: (cells: T[]) => void;
   selected: string | null;
@@ -47,6 +50,7 @@ export function Canvas<T extends Cell>({
   const [drag, setDrag] = useState<Drag | null>(null);
   const [offset, setOffset] = useState({ dx: 0, dy: 0 });
   const [ghost, setGhost] = useState<{ x: number; y: number } | null>(null);
+  const [fileOver, setFileOver] = useState<string | null>(null);
 
   const colW = (width - GAP * (COLS - 1)) / COLS;
   const px = (x: number) => x * (colW + GAP);
@@ -61,7 +65,7 @@ export function Canvas<T extends Cell>({
   function start(e: React.PointerEvent, c: T, mode: Drag["mode"]) {
     if (e.button !== 0) return;
     // Kontrol di dalam plugin (mis. minimalkan chatbot) dan tombol toolbar tetap bisa diklik.
-    if ((e.target as HTMLElement).closest("[data-interactive], button")) return;
+    if ((e.target as HTMLElement).closest("[data-interactive], button, label, input, a")) return;
     e.stopPropagation();
     if (mode === "resize") e.preventDefault();
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
@@ -142,7 +146,22 @@ export function Canvas<T extends Cell>({
             <div key={c.id}>
               {active && <div className="st-slot" style={{ transform: `translate(${px(c.x)}px, ${py(c.y)}px)`, width: pw(c.w), height: ph(c.h) }} />}
               <div
-                className={`st-item${selected === c.id ? " st-selected" : ""}${active ? " st-active" : ""}`}
+                className={`st-item${selected === c.id ? " st-selected" : ""}${active ? " st-active" : ""}${fileOver === c.id ? " st-file-over" : ""}`}
+                onDragOver={(e) => {
+                  if (!e.dataTransfer.types.includes("Files") || !acceptsFile?.(c)) return;
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (fileOver !== c.id) setFileOver(c.id);
+                }}
+                onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setFileOver(null); }}
+                onDrop={(e) => {
+                  const f = e.dataTransfer.files?.[0];
+                  if (!f || !acceptsFile?.(c)) return;
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setFileOver(null);
+                  onDropFile?.(c.id, f);
+                }}
                 style={{ transform: `translate(${left}px, ${top}px)`, width: w, height: h }}
                 tabIndex={0}
                 aria-label={`${label(c)}, kolom ${c.x + 1}, lebar ${c.w} dari 12`}
@@ -152,10 +171,11 @@ export function Canvas<T extends Cell>({
               >
                 <div className="st-bar">
                   <span className="st-grip"><DotsSixVertical weight="bold" aria-hidden="true" />{label(c)} <em>{c.w}/12</em></span>
-                  {toolbar?.(c)}
+                  {toolbar && <span className="st-tools">{toolbar(c)}</span>}
                 </div>
                 <div className="st-body">
                   <Measure id={c.id} onMeasure={onMeasure}>{render(c)}</Measure>
+                  {fileOver === c.id && <div className="st-drop-hint">Lepas untuk memasang foto</div>}
                 </div>
                 <div className="st-resize" onPointerDown={(e) => start(e, c, "resize")} title="Tarik untuk mengubah ukuran" aria-hidden="true" />
               </div>
@@ -177,5 +197,6 @@ function Measure({ id, onMeasure, children }: { id: string; onMeasure: (id: stri
     ro.observe(el);
     return () => ro.disconnect();
   }, [id, onMeasure]);
-  return <div ref={ref} className="st-measure-inner">{children}</div>;
+  // Tautan di dalam pratinjau tidak boleh berpindah halaman saat mengedit.
+  return <div ref={ref} className="st-measure-inner" onClickCapture={(e) => { if ((e.target as HTMLElement).closest("a")) e.preventDefault(); }}>{children}</div>;
 }

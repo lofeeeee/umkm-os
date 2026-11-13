@@ -4,6 +4,7 @@
 
 import type { CSSProperties, ReactNode } from "react";
 
+import { T, useEditing } from "./edit";
 import { fontStack, safeColor, safeHref, text, waLink } from "./safe";
 import type { Business, Json, OpenStatus, PageContent, Section } from "./types";
 
@@ -70,15 +71,18 @@ function Link({ href, children, className }: { href: Json | undefined; children:
 function Cta({ cta }: { cta: Json | undefined }) {
   const c = obj(cta);
   if (!c) return null;
-  return <Link className="s-btn" href={c.href}>{text(c.label)}</Link>;
+  return <Link className="s-btn" href={c.href}><T path="cta.label" v={c.label} /></Link>;
 }
 
 function Title({ v }: { v: Json | undefined }) {
   const t = text(v);
-  return t ? <h2 className="s-title">{t}</h2> : null;
+  const editing = useEditing();
+  return t || editing ? <h2 className="s-title"><T path="title" v={v} placeholder="Judul" /></h2> : null;
 }
 
-function Paragraphs({ v }: { v: Json | undefined }) {
+function Paragraphs({ v, path = "body" }: { v: Json | undefined; path?: string }) {
+  // Saat mengedit: satu isian multi-baris (paragraf dipisah baris kosong).
+  if (useEditing()) return <p><T path={path} v={v} multiline /></p>;
   return (
     <>
       {text(v)
@@ -87,6 +91,16 @@ function Paragraphs({ v }: { v: Json | undefined }) {
         .map((p, i) => <p key={i}>{p}</p>)}
     </>
   );
+}
+
+function Subtitle({ v }: { v: Json | undefined }) {
+  const editing = useEditing();
+  return text(v) || editing ? <p className="s-lead"><T path="subtitle" v={v} multiline placeholder="Kalimat pendek tentang usaha Anda" /></p> : null;
+}
+
+function Caption({ v, path }: { v: Json | undefined; path: string }) {
+  const editing = useEditing();
+  return text(v) || editing ? <figcaption><T path={path} v={v} placeholder="Keterangan" /></figcaption> : null;
 }
 
 function SectionBody({ s, props }: { s: Section; props: SiteProps }) {
@@ -109,8 +123,8 @@ function SectionBody({ s, props }: { s: Section; props: SiteProps }) {
       return (
         <div className={`s-hero${hasImg(d.image ?? b.profile.cover ?? undefined, assetUrl) ? " has-media" : ""}`}>
           <div className="s-hero-text">
-            <h1>{text(d.title)}</h1>
-            {text(d.subtitle) && <p className="s-lead">{text(d.subtitle)}</p>}
+            <h1><T path="title" v={d.title} placeholder="Judul utama" /></h1>
+            <Subtitle v={d.subtitle} />
             <Cta cta={d.cta} />
           </div>
           <Img r={d.image ?? b.profile.cover ?? undefined} alt="" assetUrl={assetUrl} className="s-hero-img" />
@@ -158,7 +172,7 @@ function SectionBody({ s, props }: { s: Section; props: SiteProps }) {
       return (
         <div className={`s-promo${hasImg(d.image, assetUrl) ? " has-media" : ""}`}>
           <div>
-            <h2 className="s-title">{text(d.title)}</h2>
+            <h2 className="s-title"><T path="title" v={d.title} placeholder="Judul promo" /></h2>
             <Paragraphs v={d.body} />
             <Cta cta={d.cta} />
           </div>
@@ -173,7 +187,7 @@ function SectionBody({ s, props }: { s: Section; props: SiteProps }) {
             {list(d.images).map((g, i) => (
               <figure key={i}>
                 <Img r={g.asset} alt={text(g.caption)} assetUrl={assetUrl} />
-                {text(g.caption) && <figcaption>{text(g.caption)}</figcaption>}
+                <Caption v={g.caption} path={`images.${i}.caption`} />
               </figure>
             ))}
           </div>
@@ -186,8 +200,8 @@ function SectionBody({ s, props }: { s: Section; props: SiteProps }) {
           <div className="s-cards">
             {list(d.items).map((t, i) => (
               <blockquote key={i} className="s-card">
-                <p>“{text(t.quote)}”</p>
-                <cite>{text(t.name)}</cite>
+                <p>“<T path={`items.${i}.quote`} v={t.quote} multiline />”</p>
+                <cite><T path={`items.${i}.name`} v={t.name} placeholder="Nama" /></cite>
               </blockquote>
             ))}
           </div>
@@ -277,7 +291,7 @@ function SectionBody({ s, props }: { s: Section; props: SiteProps }) {
     case "footer":
       return (
         <div className="s-foot">
-          <span>{text(d.text)}</span>
+          <span><T path="text" v={d.text} /></span>
           <span className="s-muted">© {b.profile.name}</span>
         </div>
       );
