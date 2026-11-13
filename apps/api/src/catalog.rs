@@ -639,7 +639,7 @@ pub async fn change_status(
 
 // ------------------------------------------------------------------ publik
 
-async fn public_view(
+pub(crate) async fn public_view(
     state: &AppState,
     t: umkm_shared::ids::TenantId,
     list: Vec<Product>,

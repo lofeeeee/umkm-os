@@ -81,6 +81,33 @@ http://*.{$ROOT_DOMAIN} {
 		root * /srv/www
 		file_server
 	}
+	# ADR-0018: robots.txt & sitemap.xml per toko dari API (tenant dari Host asli).
+	@seo path /robots.txt /sitemap.xml
+	handle @seo {
+		rewrite * /api/v1/public{path}
+		reverse_proxy api:8080 {
+			header_up -Cookie
+		}
+	}
+	# ADR-0018: permintaan dokumen (path tanpa ekstensi file) → shell + <head> per toko dari API.
+	# API gagal/nonaktif (4xx/5xx) → shell statis seperti sebelumnya: situs tetap tampil, hanya tanpa meta.
+	@doc {
+		method GET HEAD
+		not path /_next/* /_api/*
+		not path_regexp \.[A-Za-z0-9]+$
+	}
+	handle @doc {
+		rewrite * /api/v1/public/document?path={path}
+		reverse_proxy api:8080 {
+			header_up -Cookie
+			@fail status 4xx 5xx
+			handle_response @fail {
+				root * /srv/www
+				rewrite * /site.html
+				file_server
+			}
+		}
+	}
 	handle {
 		root * /srv/www
 		rewrite * /site.html

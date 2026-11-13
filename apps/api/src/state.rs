@@ -31,6 +31,8 @@ pub struct AppState {
     pub ai: Option<Arc<AiService>>,
     /// Instruksi pembayaran langganan manual (P7-3, ADR-0016). Kosong = belum diatur operator.
     pub billing_instructions: Arc<str>,
+    /// `<head>` situs toko (P9-5, ADR-0018). Default = nonaktif.
+    pub site: Arc<crate::site_head::SiteHead>,
 }
 
 /// Rahasia & konfigurasi AI tingkat proses.
@@ -84,6 +86,7 @@ impl AppState {
             rt_publisher: None,
             ai: None,
             billing_instructions: Arc::from(""),
+            site: Arc::default(),
         }
     }
 
@@ -94,6 +97,11 @@ impl AppState {
 
     pub fn with_rt_publisher(mut self, p: umkm_infrastructure::realtime::RtPublisher) -> Self {
         self.rt_publisher = Some(p);
+        self
+    }
+
+    pub fn with_site(mut self, site: crate::site_head::SiteHead) -> Self {
+        self.site = Arc::new(site);
         self
     }
 

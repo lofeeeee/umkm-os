@@ -91,3 +91,10 @@ output_cost_per_million_idr = 0.0
 [billing]
 # ADR-0016: pembayaran langganan manual. PLACEHOLDER — isi rekening/QRIS platform yang sah sebelum go-live.
 payment_instructions = "Transfer ke rekening platform (placeholder; diganti sebelum go-live), lalu unggah bukti bayar."
+
+[site]
+# ADR-0018: <head> situs toko (judul, deskripsi, Open Graph, JSON-LD) dirender API per Host.
+# shell_path kosong = nonaktif (Caddy menyajikan shell statis tanpa meta). <ROOT_DOMAIN> diganti root domain aktif.
+shell_path = "/srv/site/site.html"
+api_public_origin = "http://api.<ROOT_DOMAIN>"
+scheme = "http"

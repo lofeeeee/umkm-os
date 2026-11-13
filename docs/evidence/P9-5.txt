@@ -1,0 +1,36 @@
+P9-5 — <head> situs toko per Host, robots.txt, sitemap.xml, JSON-LD, favicon (ADR-0018) — 2026-11-13T22:09:21+07:00
+
+Rancangan
+- apps/api/src/site_head.rs: GET /api/v1/public/document?path=/… → site.html (shell build frontend) dengan
+  <title>, meta description, canonical, og:* (title/description/url/site_name/type/locale/image), twitter:card,
+  <link rel=icon>, dan JSON-LD (LocalBusiness di beranda; Product + Offer IDR di /produk/{slug}).
+  Sumber: versi TERBIT (seo.title/description/image/favicon) + profil bisnis; draf tidak pernah dipakai.
+  Gambar = signed URL absolut (api_public_origin) hanya untuk aset milik tenant (signed_assets).
+  Langganan nonaktif/tanpa profil → shell apa adanya. Host tak dikenal/fitur nonaktif → 404.
+- GET /api/v1/public/robots.txt (Sitemap per Host; Disallow keranjang/akun/pesanan) dan /sitemap.xml
+  (beranda + ≤500 produk aktif). Semua Cache-Control public, max-age=60; Vary: Host.
+- Keamanan: escape HTML untuk teks & atribut; JSON-LD di-escape untuk konteks <script> (<,>,& → \u003c…),
+  sehingga teks pemilik toko tidak bisa menutup elemen. path disaring [A-Za-z0-9/_-] (lainnya → "/"),
+  Host disaring. JSON-LD adalah blok data (tidak dieksekusi) → tidak terkena script-src CSP.
+- Konfigurasi [site] (shell_path, api_public_origin dengan <ROOT_DOMAIN>, scheme); dev = nonaktif.
+  Dockerfile: image api menyalin /fe/out/site.html dari stage frontend-build yang sama dengan image web;
+  compose memberi build-arg PUBLIC_API_ORIGIN yang sama ke keduanya agar hash chunk identik.
+- Caddy: /robots.txt & /sitemap.xml → API; path tanpa ekstensi (GET/HEAD) → /api/v1/public/document;
+  respons 4xx/5xx API → shell statis (situs tetap tampil tanpa meta). Cookie dibuang (header_up -Cookie).
+
+Tes
+$ cargo test -p umkm-api --lib site_head → 4 passed (escape judul/atribut/JSON-LD dengan '</script>',
+  inject mengganti <title>/description shell dan mempertahankan skrip, path/host berbahaya, clip).
+$ cargo test -p umkm-api --test site_head_http → 1 passed (DB nyata, role aplikasi + RLS): dokumen Studio v2
+  terbit dengan seo.title berisi '</title><script>' → ter-escape, satu <title>, canonical per Host,
+  og:site_name dari profil ter-escape, JSON-LD LocalBusiness, path berbahaya → canonical "/",
+  tenant lain tanpa versi terbit tidak memuat meta toko pertama, host tak dikenal 404, fitur nonaktif 404,
+  robots & sitemap per Host.
+$ cargo test -p umkm-api --test openapi --test website_http --test tenant_resolver → lolos (tanpa regresi).
+$ cargo clippy -p umkm-api -p umkm-shared --all-targets -D warnings → bersih.
+Caddy 2.10 (caddy validate → Valid configuration) + uji routing dengan stub API di jaringan docker sementara:
+  /produk/kopi-susu → API document?path=%2Fproduk%2Fkopi-susu, Host asli, cookie kosong;
+  stub 404 → shell statis 200; /robots.txt & /sitemap.xml → API; /_next/*.js → 200 file statis;
+  /_api/public/site tetap ke API; CSP & X-Frame-Options tetap terpasang.
+
+Belum diuji: crawler WhatsApp/Facebook nyata terhadap domain produksi (butuh deploy).

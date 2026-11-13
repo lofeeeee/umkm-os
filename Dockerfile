@@ -21,12 +21,6 @@ WORKDIR /app
 # Non-root (PRD.md §9.6, §14.3)
 USER 10001:10001
 
-FROM runtime AS api
-COPY --from=build /out/umkm-api /usr/local/bin/umkm-api
-EXPOSE 8080
-ENTRYPOINT ["umkm-api"]
-CMD ["serve"]
-
 FROM runtime AS worker
 COPY --from=build /out/umkm-worker /usr/local/bin/umkm-worker
 ENTRYPOINT ["umkm-worker"]
@@ -41,6 +35,15 @@ COPY frontend/ ./
 ARG PUBLIC_API_ORIGIN
 ENV NEXT_PUBLIC_API_ORIGIN=${PUBLIC_API_ORIGIN} NEXT_TELEMETRY_DISABLED=1
 RUN test -n "$PUBLIC_API_ORIGIN" || { echo "build-arg PUBLIC_API_ORIGIN wajib"; exit 1; }; npm run build
+
+# API membawa shell situs toko dari build frontend yang SAMA (ADR-0018: <head> per toko). Build Next.js
+# deterministik untuk sumber + PUBLIC_API_ORIGIN yang sama, sehingga hash chunk = yang disajikan Caddy.
+FROM runtime AS api
+COPY --from=build /out/umkm-api /usr/local/bin/umkm-api
+COPY --from=frontend-build /fe/out/site.html /srv/site/site.html
+EXPOSE 8080
+ENTRYPOINT ["umkm-api"]
+CMD ["serve"]
 
 FROM caddy:2.10-alpine AS web
 COPY --from=frontend-build /fe/out /srv/www

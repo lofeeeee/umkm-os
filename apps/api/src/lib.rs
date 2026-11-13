@@ -28,6 +28,7 @@ pub mod readiness;
 pub mod realtime;
 pub mod router;
 pub mod session;
+pub mod site_head;
 pub mod state;
 pub mod team;
 pub mod tenants;

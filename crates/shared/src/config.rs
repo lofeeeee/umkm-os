@@ -108,6 +108,21 @@ pub struct Settings {
     /// P7-3 (ADR-0016): instruksi pembayaran langganan manual. Tanpa section = belum diatur.
     #[serde(default)]
     pub billing: BillingSettings,
+    /// P9-5 (ADR-0018): `<head>` situs toko dari API. Tanpa section = nonaktif (shell statis saja).
+    #[serde(default)]
+    pub site: SiteSettings,
+}
+
+/// `<head>` situs toko per Host (ADR-0018). Bukan rahasia.
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(deny_unknown_fields, default)]
+pub struct SiteSettings {
+    /// Path `site.html` hasil build frontend (dibaca sekali saat start). Kosong = fitur nonaktif.
+    pub shell_path: String,
+    /// Origin publik API untuk URL absolut gambar `og:image`, mis. `https://api.ryasai.my.id`.
+    pub api_public_origin: String,
+    /// Skema URL situs toko untuk kanonik/sitemap (`https` di produksi; kosong = https).
+    pub scheme: String,
 }
 
 /// Pembayaran langganan manual (ADR-0016). Bukan rahasia: rekening/QRIS tujuan ditampilkan ke pemilik toko.

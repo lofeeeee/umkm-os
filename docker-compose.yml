@@ -68,7 +68,12 @@ services:
   migrate:
     <<: *app
     image: ${API_IMAGE:-umkm-os/api:local}
-    build: { context: ., target: api }
+    # ADR-0018: arg sama dengan image web agar shell situs (site.html) identik dengan yang disajikan Caddy.
+    build:
+      context: .
+      target: api
+      args:
+        PUBLIC_API_ORIGIN: ${PUBLIC_API_ORIGIN:-http://api.${ROOT_DOMAIN}}
     command: ["migrate"]
     restart: "no"
     environment:
@@ -85,7 +90,12 @@ services:
   api:
     <<: *app
     image: ${API_IMAGE:-umkm-os/api:local}
-    build: { context: ., target: api }
+    # ADR-0018: arg sama dengan image web agar shell situs (site.html) identik dengan yang disajikan Caddy.
+    build:
+      context: .
+      target: api
+      args:
+        PUBLIC_API_ORIGIN: ${PUBLIC_API_ORIGIN:-http://api.${ROOT_DOMAIN}}
     command: ["serve"]
     networks: [edge, backend]
     depends_on:
