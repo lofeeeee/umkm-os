@@ -1,0 +1,15 @@
+P9-6 — Aksesibilitas Studio & situs toko — 2026-11-13T23:39:58+07:00
+
+1. Teks alternatif foto (WCAG 1.1.1): renderer memakai image_alt (banner/promo/tentang) dan alt galeri (jatuh ke
+   keterangan); sebelumnya selalu alt="". Inspector Studio: "Teks alternatif foto" (maks 160 = validator v2;
+   hanya Studio karena v1 menolak field ini). Tes: StudioSite.test.tsx (di-escape; tanpa alt tetap alt="").
+2. Pindah tanpa menyeret (WCAG 2.5.7): grid.moveBy + grup tombol "Pindahkan" (atas/bawah/kiri/kanan) di Inspector;
+   atas/bawah bertukar dengan tetangga sekolom, item terkunci dihormati. Lebar sudah lewat tombol; keyboard
+   panah/Shift+panah tetap. Tes: grid.test.ts (tukar, tepi grid, terkunci, tanpa tetangga).
+3. Target ≥ 24 px (WCAG 2.5.8): pegangan resize 20 → 24 px; tombol lain sudah 28 px+.
+4. Kontras warna utama (WCAG 1.4.3): pemilik toko bebas memilih warna, tetapi tombol/promo/chat memakai teks putih
+   tetap → lavender template "Malam" (#A78BFA) hanya ±2.7:1. Kini onColor() memilih putih/hampir-hitam dengan
+   kontras tertinggi (--s-on-primary, --chat-on-primary); gradien promo mengarah ke gelap/terang sesuai teksnya.
+   Tes: contrast.test.ts — nilai acuan WCAG (21:1, #767676 ≈ 4.54), setiap template & palet ≥ 4.5:1.
+
+vitest 61/61, tsc, eslint bersih.

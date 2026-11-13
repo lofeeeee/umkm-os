@@ -5,7 +5,7 @@
 import type { CSSProperties, ReactNode } from "react";
 
 import { T, useEditing } from "./edit";
-import { fontStack, safeColor, safeHref, text, waLink } from "./safe";
+import { fontStack, primaryVars, safeColor, safeHref, text, waLink } from "./safe";
 import type { Business, Json, OpenStatus, PageContent, Section } from "./types";
 
 export interface SiteProps {
@@ -127,7 +127,7 @@ function SectionBody({ s, props }: { s: Section; props: SiteProps }) {
             <Subtitle v={d.subtitle} />
             <Cta cta={d.cta} />
           </div>
-          <Img r={d.image ?? b.profile.cover ?? undefined} alt="" assetUrl={assetUrl} className="s-hero-img" />
+          <Img r={d.image ?? b.profile.cover ?? undefined} alt={text(d.image_alt)} assetUrl={assetUrl} className="s-hero-img" />
         </div>
       );
     case "about":
@@ -137,7 +137,7 @@ function SectionBody({ s, props }: { s: Section; props: SiteProps }) {
             <Title v={d.title} />
             <Paragraphs v={d.body} />
           </div>
-          <Img r={d.image} alt="" assetUrl={assetUrl} className="s-media" />
+          <Img r={d.image} alt={text(d.image_alt)} assetUrl={assetUrl} className="s-media" />
         </div>
       );
     case "product_grid": {
@@ -176,7 +176,7 @@ function SectionBody({ s, props }: { s: Section; props: SiteProps }) {
             <Paragraphs v={d.body} />
             <Cta cta={d.cta} />
           </div>
-          <Img r={d.image} alt="" assetUrl={assetUrl} className="s-media" />
+          <Img r={d.image} alt={text(d.image_alt)} assetUrl={assetUrl} className="s-media" />
         </div>
       );
     case "gallery":
@@ -186,7 +186,7 @@ function SectionBody({ s, props }: { s: Section; props: SiteProps }) {
           <div className="s-gallery">
             {list(d.images).map((g, i) => (
               <figure key={i}>
-                <Img r={g.asset} alt={text(g.caption)} assetUrl={assetUrl} />
+                <Img r={g.asset} alt={text(g.alt) || text(g.caption)} assetUrl={assetUrl} />
                 <Caption v={g.caption} path={`images.${i}.caption`} />
               </figure>
             ))}
@@ -303,7 +303,7 @@ function SectionBody({ s, props }: { s: Section; props: SiteProps }) {
 export function Site(props: SiteProps) {
   const { content, preview } = props;
   const style = {
-    "--s-primary": safeColor(content.theme?.primary),
+    ...primaryVars(content.theme?.primary),
     "--s-font": fontStack(content.theme?.font),
   } as CSSProperties;
   const sections = (content.sections ?? []).filter((s) => preview || s.enabled);

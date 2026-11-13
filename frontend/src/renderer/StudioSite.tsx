@@ -9,7 +9,7 @@ import type { CSSProperties, ReactNode } from "react";
 import { ChatWidget } from "@/chat/widget";
 import type { BlockV2, PageV2 } from "@/studio/doc";
 
-import { fontStack, safeColor, text, waLink } from "./safe";
+import { fontStack, primaryVars, safeColor, text, waLink } from "./safe";
 import { Site, type GridProduct } from "./Site";
 import type { Business, OpenStatus } from "./types";
 
@@ -99,7 +99,7 @@ export function StudioSite(props: StudioSiteProps) {
   const chat = doc.blocks.find((b) => b.kind === "chatbot" && isEmbed(b));
   const wa = doc.blocks.find((b) => b.kind === "whatsapp" && isEmbed(b));
   const style = {
-    "--s-primary": safeColor(doc.theme.primary),
+    ...primaryVars(doc.theme.primary),
     "--s-font": fontStack(doc.theme.font),
     "--s-size": doc.theme.text_scale ?? 1,
   } as CSSProperties;

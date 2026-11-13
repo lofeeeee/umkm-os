@@ -37,7 +37,7 @@
 
 .s-btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  background: var(--s-primary); color: #fff !important; text-decoration: none;
+  background: var(--s-primary); color: var(--s-on-primary, #fff) !important; text-decoration: none;
   padding: 12px 22px; border-radius: 999px; font-weight: 700; min-height: 48px;
   box-shadow: 0 6px 16px -6px color-mix(in srgb, var(--s-primary) 60%, transparent);
   transition: transform 160ms var(--s-ease), box-shadow 160ms var(--s-ease), filter 160ms ease;
@@ -67,11 +67,11 @@
 .s-hero-img, .s-media { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; box-shadow: 0 24px 48px -20px rgb(15 23 42 / 0.35); }
 .s-promo {
   padding: 28px; border-radius: calc(var(--s-radius) + 6px);
-  background: linear-gradient(135deg, var(--s-primary), color-mix(in srgb, var(--s-primary) 70%, #000));
-  color: #fff;
+  background: linear-gradient(135deg, var(--s-primary), color-mix(in srgb, var(--s-primary) 70%, var(--s-shade, #000)));
+  color: var(--s-on-primary, #fff);
 }
-.s-promo .s-title, .s-promo .s-lead, .s-promo p { color: #fff; }
-.s-promo .s-btn { background: #fff; color: var(--s-primary) !important; box-shadow: none; }
+.s-promo .s-title, .s-promo .s-lead, .s-promo p { color: var(--s-on-primary, #fff); }
+.s-promo .s-btn { background: var(--s-on-primary, #fff); color: var(--s-primary) !important; box-shadow: none; }
 
 .s-gallery { display: grid; gap: 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .s-gallery figure { margin: 0; overflow: hidden; border-radius: var(--s-radius); }

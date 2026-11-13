@@ -36,4 +36,16 @@ describe("renderer publik Studio (v2)", () => {
     expect(html).not.toContain("<b>");
     expect(html).toContain("wa.me/");
   });
+  it("teks alternatif foto (WCAG 1.1.1): image_alt dirender & di-escape, galeri jatuh ke keterangan", () => {
+    const withImg: PageV2 = { ...doc, blocks: [
+      { id: "hero", kind: "hero", x: 0, y: 0, w: 12, h: 8, style: "plain", data: { title: "Kopi", image: "asset:1", image_alt: 'Kopi "susu" <b>' } },
+      { id: "promo", kind: "promotion", x: 0, y: 8, w: 6, h: 4, style: "plain", data: { title: "Promo", image: "asset:2" } },
+      { id: "gal", kind: "gallery", x: 0, y: 12, w: 12, h: 6, style: "plain", data: { images: [{ asset: "asset:3", caption: "Etalase" }, { asset: "asset:4", alt: "Barista", caption: "x" }] } },
+    ] };
+    const html = renderToStaticMarkup(<StudioSite doc={withImg} business={biz} assetUrl={(r) => `/f/${r}`} />);
+    expect(html).toContain('alt="Kopi &quot;susu&quot; &lt;b&gt;"');
+    expect(html).toMatch(/src="\/f\/asset:2" alt=""/);
+    expect(html).toContain('alt="Etalase"');
+    expect(html).toContain('alt="Barista"');
+  });
 });

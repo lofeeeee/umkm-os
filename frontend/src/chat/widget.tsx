@@ -7,6 +7,7 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 
 import { ApiError } from "@/lib/api";
+import { onColor } from "@/renderer/safe";
 import { shopApi } from "@/shop/api";
 
 import "./chat.css";
@@ -142,7 +143,7 @@ export function ChatWidget({ variant = "bubble", title, welcome, startOpen = fal
   const waiting = conv?.status === "WAITING_HUMAN";
   const heading = title?.trim() || "Chat dengan toko";
   return (
-    <div className={`chat chat-v-${variant}${open ? " chat-is-open" : ""}`} style={primary ? ({ ["--chat-primary" as string]: primary } as React.CSSProperties) : undefined}>
+    <div className={`chat chat-v-${variant}${open ? " chat-is-open" : ""}`} style={primary ? ({ ["--chat-primary" as string]: primary, ["--chat-on-primary" as string]: onColor(primary) } as React.CSSProperties) : undefined}>
       {!open && variant === "bubble" && (
         <button type="button" className="chat-fab" onClick={() => setOpen(true)} aria-expanded="false">
           Chat

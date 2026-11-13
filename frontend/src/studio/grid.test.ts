@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { clamp, collides, compact, height, insert, mobileOrder, place, type Cell } from "./grid";
+import { clamp, collides, compact, height, insert, mobileOrder, moveBy, place, type Cell } from "./grid";
 
 const c = (id: string, x: number, y: number, w: number, h: number): Cell => ({ id, x, y, w, h });
 const noOverlap = (cells: Cell[]) => cells.every((a) => cells.every((b) => !collides(a, b)));
@@ -86,3 +86,33 @@ describe("grid 12 kolom", () => {
     }
   });
 });
+
+describe("moveBy — pindah tanpa menyeret (WCAG 2.5.7)", () => {
+  const A = { id: "a", x: 0, y: 0, w: 12, h: 4 };
+  const B = { id: "b", x: 0, y: 4, w: 12, h: 4 };
+  const C = { id: "c", x: 0, y: 8, w: 6, h: 3 };
+  const at = (cells: { id: string; x: number; y: number }[], id: string) => cells.find((c) => c.id === id)!;
+  it("atas/bawah menukar dengan tetangga terdekat", () => {
+    const up = moveBy([A, B, C], "b", "up");
+    expect(at(up, "b").y).toBe(0);
+    expect(at(up, "a").y).toBe(4);
+    const down = moveBy([A, B, C], "a", "down");
+    expect(at(down, "b").y).toBe(0);
+    expect(at(down, "a").y).toBe(4);
+  });
+  it("kiri/kanan satu kolom, dibatasi tepi grid", () => {
+    expect(at(moveBy([A, B, C], "c", "right"), "c").x).toBe(1);
+    expect(at(moveBy([A, B, C], "c", "left"), "c").x).toBe(0);
+    expect(at(moveBy([A, B, C], "a", "right"), "a").x).toBe(0);
+  });
+  it("tanpa tetangga atau terkunci: tidak berubah", () => {
+    expect(moveBy([A, B], "a", "up")).toEqual([A, B]);
+    const locked = [A, { ...B, locked: true }];
+    expect(moveBy(locked, "b", "up")).toEqual(locked);
+    // tetangga bawah terkunci: item melompat ke bawahnya, item terkunci tetap
+    const r = moveBy([A, { ...B, locked: true }], "a", "down");
+    expect(at(r, "b").y).toBe(4);
+    expect(at(r, "a").y).toBe(8);
+  });
+});
+

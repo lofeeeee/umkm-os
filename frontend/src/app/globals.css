@@ -1220,7 +1220,7 @@ main.d-legal { max-width: 720px; }
 .st-tool:active { transform: scale(0.92); }
 .st-tool svg { width: 14px; height: 14px; }
 .st-clip { pointer-events: auto; height: 24px; padding: 0 8px; display: inline-flex; align-items: center; border-radius: 999px; background: #fef3c7; color: #92400e; font-size: 0.6875rem; font-weight: 700; }
-.st-resize { position: absolute; z-index: 4; right: -7px; bottom: -7px; width: 20px; height: 20px; border-radius: 6px; background: #fff; border: 2px solid var(--brand); cursor: nwse-resize; opacity: 0; transition: opacity var(--dur-fast) ease; box-shadow: var(--shadow-sm); }
+.st-resize { position: absolute; z-index: 4; right: -9px; bottom: -9px; width: 24px; height: 24px; border-radius: 6px; background: #fff; border: 2px solid var(--brand); cursor: nwse-resize; opacity: 0; transition: opacity var(--dur-fast) ease; box-shadow: var(--shadow-sm); }
 .st-item:hover .st-resize, .st-selected .st-resize, .st-active .st-resize { opacity: 1; }
 .st-body { flex: 1; min-height: 0; overflow: hidden; border-radius: 16px; position: relative; }
 /* Saat mengedit, isi plugin tidak menangkap klik (seluruh kotak bisa diseret), kecuali kontrol bertanda. */

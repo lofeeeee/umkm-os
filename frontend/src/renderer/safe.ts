@@ -8,6 +8,35 @@ export function safeColor(c: unknown, fallback = "#2563EB"): string {
   return typeof c === "string" && HEX.test(c) ? c : fallback;
 }
 
+/** Luminans relatif WCAG 2.x dari `#RRGGBB`. */
+function luminance(hex: string): number {
+  const ch = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
+    .map((c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
+  return 0.2126 * ch[0]! + 0.7152 * ch[1]! + 0.0722 * ch[2]!;
+}
+
+/** Rasio kontras WCAG antara dua warna `#RRGGBB`. */
+export function contrast(a: string, b: string): number {
+  const [x, y] = [luminance(a), luminance(b)].sort((p, q) => q - p);
+  return (x! + 0.05) / (y! + 0.05);
+}
+
+/**
+ * Warna teks di atas warna utama toko (P9-6, WCAG 1.4.3): putih atau hampir-hitam, mana yang kontrasnya lebih
+ * tinggi. Pemilik toko bebas memilih warna; tombol tetap terbaca untuk warna terang seperti lavender/kuning.
+ */
+export function onColor(bg: string): "#ffffff" | "#111111" {
+  const c = safeColor(bg);
+  return contrast(c, "#ffffff") >= contrast(c, "#111111") ? "#ffffff" : "#111111";
+}
+
+/** Variabel CSS warna utama + pasangan teksnya (dipakai Site, StudioSite, editor). */
+export function primaryVars(primary: unknown): Record<string, string> {
+  const p = safeColor(primary);
+  const on = onColor(p);
+  return { "--s-primary": p, "--s-on-primary": on, "--s-shade": on === "#ffffff" ? "#000000" : "#ffffff" };
+}
+
 /** Sama dengan `is_safe_href` di crates/domain/src/website/schema.rs. */
 export function safeHref(s: unknown): string | undefined {
   if (typeof s !== "string" || s.length === 0 || s.length > 500) return undefined;

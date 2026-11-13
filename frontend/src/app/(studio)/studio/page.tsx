@@ -12,7 +12,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 
 import {
   LockSimple, LockSimpleOpen, ArrowSquareOut, ClockCounterClockwise, WarningCircle, ArrowClockwise, ArrowCounterClockwise, ArrowLeft, ArrowsIn, ArrowsOut, CaretDown, CaretUp, ChatCircleDots, Check, Copy,
-  CornersIn, CornersOut, DesktopTower, DeviceMobile, ImageSquare, MagnifyingGlass, Plus, PuzzlePiece, SidebarSimple, Sparkle, SquaresFour, Trash, WhatsappLogo, X,
+  ArrowDown, ArrowRight, ArrowUp, CornersIn, CornersOut, DesktopTower, DeviceMobile, ImageSquare, MagnifyingGlass, Plus, PuzzlePiece, SidebarSimple, Sparkle, SquaresFour, Trash, WhatsappLogo, X,
 } from "@phosphor-icons/react/ssr";
 
 import { useUploads } from "@/dashboard/assets";
@@ -22,11 +22,11 @@ import { api } from "@/lib/api";
 import { EditContext, type EditApi } from "@/renderer/edit";
 import { Site, type GridProduct } from "@/renderer/Site";
 import { TextBlock, WhatsAppButton } from "@/renderer/StudioSite";
-import { fontStack } from "@/renderer/safe";
+import { fontStack, primaryVars } from "@/renderer/safe";
 import { FIELDS, FONT_PRESETS, defaultData } from "@/renderer/sections";
 import type { Business, Json, PageContent, SectionType } from "@/renderer/types";
 import { Canvas, DESIGN_WIDTH, GAP, ROW, rowsFor } from "@/studio/Canvas";
-import { COLS, compact, insert, mobileOrder, place } from "@/studio/grid";
+import { COLS, compact, insert, mobileOrder, moveBy, place } from "@/studio/grid";
 import { commit, redo, silent, start, undo, type History } from "@/studio/history";
 import { CELL_STYLES, EXTRA_DATA, PALETTES, PLUGINS, pluginDef, type PluginKind } from "@/studio/plugins";
 import { TEMPLATES, type TplCell } from "@/studio/templates";
@@ -383,7 +383,7 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
           open={c.chatOpen !== false} onToggle={() => setChatOpen(c.id, c.chatOpen === false)} />
       ) : c.kind === "text" || c.kind === "whatsapp" ? (
         <EditContext.Provider value={editable ? editApi(c) : null}>
-          <div className="site s-solo" style={{ ["--s-primary" as string]: th.primary, ["--s-font" as string]: fontStack(th.font) }}>
+          <div className="site s-solo" style={{ ...primaryVars(th.primary), ["--s-font" as string]: fontStack(th.font) }}>
             <section className="s"><div className="s-inner">
               {c.kind === "text" ? <TextBlock b={c} /> : <WhatsAppButton b={c} business={business} />}
             </div></section>
@@ -486,6 +486,7 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
               onBack={() => setSel(null)}
               onChange={(patch, key) => setCell(selected.id, patch, key)}
               onWidth={(w) => update((s) => ({ ...s, cells: place(s.cells, { ...selected, w }) as StudioCell[] }), "")}
+              onMove={(d) => update((s) => ({ ...s, cells: [...moveBy(s.cells.filter((x) => !isEmbed(x)), selected.id, d) as StudioCell[], ...s.cells.filter(isEmbed)] }), `move:${selected.id}`)}
               onLayout={(l) => {
                 if (l === "inline" && isEmbed(selected)) {
                   update((s) => ({ ...s, cells: insert(s.cells.filter((c) => c.id !== selected.id), { ...selected, layout: "inline" } as StudioCell) as StudioCell[] }), "");
@@ -788,11 +789,12 @@ function MiniLayout({ cells, render, theme }: { cells: StudioCell[]; render: (c:
 }
 
 /* ============================================================ Inspektur */
-function Inspector({ c, onBack, onChange, onWidth, onLayout, onDuplicate, onRemove, onFull, onPhoto, aiHref, businessHref }: {
+function Inspector({ c, onBack, onChange, onWidth, onMove, onLayout, onDuplicate, onRemove, onFull, onPhoto, aiHref, businessHref }: {
   c: StudioCell;
   onBack: () => void;
   onChange: (patch: Partial<StudioCell>, key?: string) => void;
   onWidth: (w: number) => void;
+  onMove: (d: "up" | "down" | "left" | "right") => void;
   onLayout: (l: string) => void;
   onDuplicate: () => void;
   onRemove: () => void;
@@ -818,6 +820,13 @@ function Inspector({ c, onBack, onChange, onWidth, onLayout, onDuplicate, onRemo
           <input type="checkbox" checked={!!c.locked} onChange={(e) => onChange({ locked: e.target.checked }, "")} />
           <span><strong><LockSimple weight="bold" aria-hidden="true" style={{ verticalAlign: "-2px" }} /> Kunci posisi</strong><span className="d-muted">Plugin ini tidak bisa diseret, dan plugin lain tidak akan menggesernya.</span></span>
         </label>
+        <h3>Posisi</h3>
+        {/* WCAG 2.5.7 (P9-6): semua yang bisa diseret juga bisa lewat tombol. */}
+        <div className="d-seg" role="group" aria-label="Pindahkan" style={{ width: "100%", marginBottom: 12 }}>
+          {([["up", "Pindah ke atas", ArrowUp], ["down", "Pindah ke bawah", ArrowDown], ["left", "Geser ke kiri", ArrowLeft], ["right", "Geser ke kanan", ArrowRight]] as const).map(([d, l, Icon]) => (
+            <button key={d} type="button" style={{ flex: 1, minHeight: 32 }} aria-label={l} title={l} disabled={!!c.locked} onClick={() => onMove(d)}><Icon weight="bold" aria-hidden="true" /></button>
+          ))}
+        </div>
         <h3>Ukuran</h3>
         <div className="d-seg" role="group" aria-label="Lebar" style={{ width: "100%" }}>
           {([[3, "¼"], [4, "⅓"], [6, "½"], [8, "⅔"], [12, "Penuh"]] as const).map(([w, l]) => (
@@ -882,9 +891,19 @@ function Inspector({ c, onBack, onChange, onWidth, onLayout, onDuplicate, onRemo
             <p className="d-hint">Nomor diambil dari WhatsApp (atau telepon) di <Link href={businessHref}>Profil bisnis</Link>.</p>
           </>
         ) : (
-          FIELDS[c.kind as SectionType].map((f) => (
-            <FieldInput key={f.key} f={f} data={c.data} disabled={false} onChange={(d) => onChange({ data: d })} />
-          ))
+          <>
+            {FIELDS[c.kind as SectionType].map((f) => (
+              <FieldInput key={f.key} f={f} data={c.data} disabled={false} onChange={(d) => onChange({ data: d })} />
+            ))}
+            {/* WCAG 1.1.1 (P9-6): field v2 — hanya di Studio; editor v1 tidak mengenalnya. */}
+            {c.kind in IMAGE_KEY && (
+              <label className="d-field"><span>Teks alternatif foto</span>
+                <input maxLength={160} placeholder="mis. Segelas kopi susu gula aren di meja kayu" value={String(c.data.image_alt ?? "")}
+                  onChange={(e) => onChange({ data: { ...c.data, image_alt: e.target.value } })} />
+                <span className="d-hint">Dibacakan untuk pembeli tunanetra dan membantu Google memahami foto. Kosongkan bila foto hanya hiasan.</span>
+              </label>
+            )}
+          </>
         )}
       </div>
     </>
