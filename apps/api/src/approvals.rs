@@ -365,7 +365,17 @@ pub async fn execute(state: &AppState, t: TenantId, r: &Request) -> Result<(), S
                 .await
                 .map_err(err_text)
         }
-        // ai_response: executor menyusul P5 (respons AI yang disetujui dikirim oleh modul percakapan).
+        // P6-4: draft balasan AI yang disetujui dikirim ke pelanggan atas nama pemohon.
+        "ai_response.send" => {
+            need("conversations.reply")?;
+            let conv: Uuid = field(pl, "conversation_id")?;
+            let draft: Uuid = field(pl, "draft_id")?;
+            let body: String = field(pl, "body")?;
+            crate::inbox::apply_send_draft(state, &actor, conv, draft, &body)
+                .await
+                .map(|_| ())
+                .map_err(err_text)
+        }
         other => Err(format!("belum ada executor untuk {other}")),
     }
 }

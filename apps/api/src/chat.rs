@@ -57,6 +57,8 @@ pub const HANDOVER_NOTICE: &str =
     "Pesan Anda diteruskan ke staf toko. Mohon tunggu balasan di sini.";
 pub const EVENT_MESSAGE: &str = "chat.message";
 pub const EVENT_STATUS: &str = "chat.status";
+/// Hanya staf (`conversations.reply`); tidak pernah diteruskan ke SSE pelanggan.
+pub const EVENT_DRAFT: &str = "chat.draft";
 
 fn cookie_name(s: &AuthService) -> &'static str {
     if s.secure_cookies {
@@ -86,7 +88,7 @@ fn read_cookie<'a>(s: &AuthService, h: &'a HeaderMap) -> Option<&'a str> {
         .map(|(_, v)| v)
 }
 
-fn conv_err(e: ConversationError) -> ApiError {
+pub(crate) fn conv_err(e: ConversationError) -> ApiError {
     match e {
         ConversationError::NotFound => not_found(),
         ConversationError::Closed => conflict("conversation_closed", "Percakapan sudah berakhir"),
@@ -548,7 +550,7 @@ pub async fn chat_stream(
 // ------------------------------------------------------------------ alur
 
 /// Event realtime: staf ber-`conversations.read` menerima `data`; pelanggan hanya `data.customer`.
-fn staff_event(
+pub(crate) fn staff_event(
     t: TenantId,
     kind: &str,
     conversation_id: Uuid,
@@ -566,7 +568,7 @@ fn staff_event(
     ev
 }
 
-async fn emit_status(state: &AppState, t: TenantId, conv: Uuid, s: ConversationStatus) {
+pub(crate) async fn emit_status(state: &AppState, t: TenantId, conv: Uuid, s: ConversationStatus) {
     emit(
         state,
         staff_event(
@@ -603,7 +605,7 @@ pub async fn append_and_emit(
 }
 
 /// AI → WAITING_HUMAN + pesan SYSTEM untuk pelanggan.
-async fn to_staff(
+pub(crate) async fn to_staff(
     state: &AppState,
     t: TenantId,
     conv: Uuid,
@@ -720,7 +722,26 @@ async fn respond(
             Ok((out, ConversationStatus::WaitingHuman))
         }
         // Assisted: draft untuk staf (penyimpanan & persetujuan draft: P6-4). Human queue: antre staf.
-        Decision::DraftForAdmin | Decision::HumanQueue => Ok((
+        // Assisted: draft disimpan untuk staf (tidak pernah dikirim ke pelanggan tanpa keputusan staf).
+        Decision::DraftForAdmin => {
+            if let Some(reply) = o.reply.as_deref().and_then(|x| validate_body(x).ok()) {
+                let draft = repo::create_draft(pool(state)?, t, conv, Some(run_id), &reply)
+                    .await
+                    .map_err(conv_err)?;
+                let mut ev = TenantEvent::tenant(
+                    t,
+                    EVENT_DRAFT,
+                    serde_json::json!({ "conversation_id": conv.to_string(), "draft_id": draft.to_string() }),
+                );
+                ev.permission = Some("conversations.reply".into());
+                emit(state, ev).await;
+            }
+            Ok((
+                to_staff(state, t, conv, Actor::Ai).await?,
+                ConversationStatus::WaitingHuman,
+            ))
+        }
+        Decision::HumanQueue => Ok((
             to_staff(state, t, conv, Actor::Ai).await?,
             ConversationStatus::WaitingHuman,
         )),

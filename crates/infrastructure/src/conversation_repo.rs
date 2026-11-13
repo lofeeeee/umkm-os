@@ -28,6 +28,8 @@ pub enum ConversationError {
     InvalidReference,
     #[error("acak tidak tersedia")]
     Random,
+    #[error("draft sudah diputus")]
+    DraftDecided,
     #[error(transparent)]
     Db(#[from] sqlx::Error),
 }
@@ -313,7 +315,7 @@ pub async fn transition(
     sqlx::query(
         "UPDATE conversations
             SET status = $3,
-                assignee_user_id = CASE WHEN $3 = 'HUMAN' THEN $4 ELSE assignee_user_id END,
+                assignee_user_id = CASE WHEN $3 = 'HUMAN' THEN $4 WHEN $3 = 'AI' THEN NULL ELSE assignee_user_id END,
                 human_involved = human_involved OR $3 = 'HUMAN',
                 closed_at = CASE WHEN $3 = 'CLOSED' THEN now() ELSE NULL END
           WHERE tenant_id = $1 AND id = $2",
@@ -358,6 +360,7 @@ pub struct ConversationRef {
     pub id: Uuid,
     pub status: ConversationStatus,
     pub customer_id: Option<Uuid>,
+    pub assignee_user_id: Option<Uuid>,
 }
 
 pub async fn get(
@@ -367,7 +370,7 @@ pub async fn get(
 ) -> Result<Option<ConversationRef>, ConversationError> {
     let mut tx = tenant_tx(pool, t).await?;
     let row = sqlx::query(
-        "SELECT id, status, customer_id FROM conversations WHERE tenant_id = $1 AND id = $2",
+        "SELECT id, status, customer_id, assignee_user_id FROM conversations WHERE tenant_id = $1 AND id = $2",
     )
     .bind(t.as_uuid())
     .bind(conversation_id)
@@ -378,6 +381,7 @@ pub async fn get(
         id: r.get("id"),
         status: status_of(r.get::<&str, _>("status")),
         customer_id: r.get("customer_id"),
+        assignee_user_id: r.get("assignee_user_id"),
     }))
 }
 
@@ -778,4 +782,220 @@ pub async fn detail(
         approvals,
         runs_without_message: run_infos,
     }))
+}
+
+// ------------------------------------------------------------------ draft Assisted (P6-4)
+
+#[derive(Debug, Clone)]
+pub struct Draft {
+    pub id: Uuid,
+    pub conversation_id: Uuid,
+    pub ai_run_id: Option<Uuid>,
+    pub body: String,
+    /// `pending` | `approval_pending` | `sent` | `discarded`
+    pub status: String,
+    pub decided_by_user_id: Option<Uuid>,
+    pub sent_message_id: Option<Uuid>,
+    pub created_at: String,
+}
+
+fn draft_cols() -> String {
+    format!(
+        "id, conversation_id, ai_run_id, body, status, decided_by_user_id, sent_message_id, {} AS created_at",
+        ts("created_at")
+    )
+}
+
+fn draft_of(r: &sqlx::postgres::PgRow) -> Draft {
+    Draft {
+        id: r.get("id"),
+        conversation_id: r.get("conversation_id"),
+        ai_run_id: r.get("ai_run_id"),
+        body: r.get("body"),
+        status: r.get("status"),
+        decided_by_user_id: r.get("decided_by_user_id"),
+        sent_message_id: r.get("sent_message_id"),
+        created_at: r.get("created_at"),
+    }
+}
+
+/// Simpan draft AI (mode Assisted) + event `draft_created`.
+pub async fn create_draft(
+    pool: &PgPool,
+    t: TenantId,
+    conversation_id: Uuid,
+    ai_run_id: Option<Uuid>,
+    body: &str,
+) -> Result<Uuid, ConversationError> {
+    let mut tx = tenant_tx(pool, t).await?;
+    let id: Uuid = sqlx::query_scalar(
+        "INSERT INTO conversation_drafts (tenant_id, conversation_id, ai_run_id, body) VALUES ($1, $2, $3, $4) RETURNING id",
+    )
+    .bind(t.as_uuid())
+    .bind(conversation_id)
+    .bind(ai_run_id)
+    .bind(body)
+    .fetch_one(&mut *tx)
+    .await
+    .map_err(map_err)?;
+    sqlx::query(
+        "INSERT INTO conversation_events (tenant_id, conversation_id, kind, actor_type, data)
+         VALUES ($1, $2, 'draft_created', 'ai', jsonb_build_object('draft_id', $3::text))",
+    )
+    .bind(t.as_uuid())
+    .bind(conversation_id)
+    .bind(id)
+    .execute(&mut *tx)
+    .await?;
+    tx.commit().await?;
+    Ok(id)
+}
+
+pub async fn drafts(
+    pool: &PgPool,
+    t: TenantId,
+    conversation_id: Uuid,
+) -> Result<Vec<Draft>, ConversationError> {
+    let mut tx = tenant_tx(pool, t).await?;
+    let rows = sqlx::query(sqlx::AssertSqlSafe(format!(
+        "SELECT {} FROM conversation_drafts WHERE tenant_id = $1 AND conversation_id = $2 ORDER BY created_at",
+        draft_cols()
+    )))
+    .bind(t.as_uuid())
+    .bind(conversation_id)
+    .fetch_all(&mut *tx)
+    .await?;
+    tx.commit().await?;
+    Ok(rows.iter().map(draft_of).collect())
+}
+
+pub async fn draft(
+    pool: &PgPool,
+    t: TenantId,
+    conversation_id: Uuid,
+    id: Uuid,
+) -> Result<Option<Draft>, ConversationError> {
+    let mut tx = tenant_tx(pool, t).await?;
+    let row = sqlx::query(sqlx::AssertSqlSafe(format!(
+        "SELECT {} FROM conversation_drafts WHERE tenant_id = $1 AND conversation_id = $2 AND id = $3",
+        draft_cols()
+    )))
+    .bind(t.as_uuid())
+    .bind(conversation_id)
+    .bind(id)
+    .fetch_optional(&mut *tx)
+    .await?;
+    tx.commit().await?;
+    Ok(row.as_ref().map(draft_of))
+}
+
+/// Draft menunggu approval engine (kebijakan `ai_response`).
+pub async fn mark_draft_approval(
+    pool: &PgPool,
+    t: TenantId,
+    draft_id: Uuid,
+    user: Uuid,
+    approval_id: Uuid,
+) -> Result<(), ConversationError> {
+    let mut tx = tenant_tx(pool, t).await?;
+    let conv: Option<Uuid> = sqlx::query_scalar(
+        "UPDATE conversation_drafts SET status = 'approval_pending'
+          WHERE tenant_id = $1 AND id = $2 AND status = 'pending' RETURNING conversation_id",
+    )
+    .bind(t.as_uuid())
+    .bind(draft_id)
+    .fetch_optional(&mut *tx)
+    .await?;
+    let conv = conv.ok_or(ConversationError::DraftDecided)?;
+    sqlx::query(
+        "INSERT INTO conversation_events (tenant_id, conversation_id, kind, actor_type, actor_user_id, data)
+         VALUES ($1, $2, 'draft_approval_requested', 'staff', $3,
+                 jsonb_build_object('draft_id', $4::text, 'approval_request_id', $5::text))",
+    )
+    .bind(t.as_uuid())
+    .bind(conv)
+    .bind(user)
+    .bind(draft_id)
+    .bind(approval_id)
+    .execute(&mut *tx)
+    .await?;
+    tx.commit().await?;
+    Ok(())
+}
+
+/// Putuskan draft secara atomik (draft dikunci; sekali saja).
+/// `send = Some(body)`: kirim — teks sama dengan draft → sender AI (+ ai_run_id), diedit → ADMIN oleh `user`.
+/// `send = None`: buang.
+pub async fn decide_draft(
+    pool: &PgPool,
+    t: TenantId,
+    draft_id: Uuid,
+    user: Uuid,
+    send: Option<&str>,
+) -> Result<Option<Message>, ConversationError> {
+    let mut tx = tenant_tx(pool, t).await?;
+    let row = sqlx::query(
+        "SELECT conversation_id, ai_run_id, body, status FROM conversation_drafts
+          WHERE tenant_id = $1 AND id = $2 FOR UPDATE",
+    )
+    .bind(t.as_uuid())
+    .bind(draft_id)
+    .fetch_optional(&mut *tx)
+    .await?
+    .ok_or(ConversationError::NotFound)?;
+    let status: String = row.get("status");
+    if status != "pending" && status != "approval_pending" {
+        return Err(ConversationError::DraftDecided);
+    }
+    let conv: Uuid = row.get("conversation_id");
+    let run: Option<Uuid> = row.get("ai_run_id");
+    let original: String = row.get("body");
+    let mut sent = None;
+    if let Some(body) = send {
+        let unchanged = body == original;
+        let (sender, sender_user, ai_run) = if unchanged {
+            (SenderType::Ai, None, run)
+        } else {
+            (SenderType::Admin, Some(user), None)
+        };
+        let m = sqlx::query(sqlx::AssertSqlSafe(format!(
+            "INSERT INTO conversation_messages (tenant_id, conversation_id, sender_type, sender_user_id, body, ai_run_id)
+             VALUES ($1, $2, $3, $4, $5, $6) RETURNING {MESSAGE_COLS}"
+        )))
+        .bind(t.as_uuid())
+        .bind(conv)
+        .bind(sender.as_str())
+        .bind(sender_user)
+        .bind(body)
+        .bind(ai_run)
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(map_err)?;
+        sent = Some(message(&m));
+    }
+    sqlx::query(
+        "UPDATE conversation_drafts SET status = $3, decided_by_user_id = $4, decided_at = now(), sent_message_id = $5
+          WHERE tenant_id = $1 AND id = $2",
+    )
+    .bind(t.as_uuid())
+    .bind(draft_id)
+    .bind(if sent.is_some() { "sent" } else { "discarded" })
+    .bind(user)
+    .bind(sent.as_ref().map(|m| m.id))
+    .execute(&mut *tx)
+    .await?;
+    sqlx::query(
+        "INSERT INTO conversation_events (tenant_id, conversation_id, kind, actor_type, actor_user_id, data)
+         VALUES ($1, $2, $3, 'staff', $4, jsonb_build_object('draft_id', $5::text, 'edited', $6::boolean))",
+    )
+    .bind(t.as_uuid())
+    .bind(conv)
+    .bind(if sent.is_some() { "draft_sent" } else { "draft_discarded" })
+    .bind(user)
+    .bind(draft_id)
+    .bind(send.is_some_and(|b| b != original))
+    .execute(&mut *tx)
+    .await?;
+    tx.commit().await?;
+    Ok(sent)
 }

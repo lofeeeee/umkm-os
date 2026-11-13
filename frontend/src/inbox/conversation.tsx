@@ -24,6 +24,7 @@ export interface ConversationDetail extends ConversationSummary {
   other_ai_runs: AiRun[];
   history: { kind: string; from_status: string | null; to_status: string | null; actor_type: string; actor_email: string | null; created_at: string }[];
   approvals: { id: string; status: string; action: string; summary: string; current_step: number; created_at: string }[];
+  drafts: { id: string; body: string; status: string; ai_run_id: string | null; created_at: string }[];
   masked: boolean;
 }
 
@@ -34,6 +35,8 @@ const SENDER: Record<string, string> = { CUSTOMER: "Pelanggan", AI: "Asisten AI"
 const EVENT: Record<string, string> = {
   created: "Percakapan dimulai", assigned: "Ditugaskan", unassigned: "Penugasan dilepas",
   handover_requested: "Diteruskan ke staf", taken_over: "Diambil alih staf", released: "Dikembalikan ke AI", closed: "Ditutup",
+  draft_created: "Draft AI dibuat", draft_sent: "Draft AI dikirim", draft_discarded: "Draft AI dibuang",
+  draft_approval_requested: "Draft AI menunggu persetujuan",
 };
 const ACTOR: Record<string, string> = { customer: "pelanggan", ai: "AI", staff: "staf", system: "sistem" };
 const DECISION: Record<string, string> = {

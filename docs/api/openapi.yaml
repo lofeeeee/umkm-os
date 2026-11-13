@@ -4607,6 +4607,428 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
       security:
       - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/conversations/{conversation_id}/close:
+    post:
+      tags:
+      - conversations
+      summary: Tutup percakapan. Butuh `conversations.reply`.
+      operationId: close
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: conversation_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Ditutup
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_StaffActionView'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: Sudah ditutup / staf lain
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/conversations/{conversation_id}/drafts/{draft_id}/discard:
+    post:
+      tags:
+      - conversations
+      summary: Buang draft AI. Butuh `conversations.reply`.
+      operationId: discard_draft
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: conversation_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: draft_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '204':
+          description: Dibuang
+        '404':
+          description: Draft tidak ada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: Draft sudah diputus
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/conversations/{conversation_id}/drafts/{draft_id}/send:
+    post:
+      tags:
+      - conversations
+      summary: Setujui & kirim draft AI (boleh diedit). Kebijakan approval `ai_response` → 202 menunggu persetujuan.
+      operationId: send_draft
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: conversation_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: draft_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendDraft'
+        required: true
+      responses:
+        '200':
+          description: Terkirim ke pelanggan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_StaffActionView'
+        '202':
+          description: Menunggu approval (`approval_request_id`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_PendingApproval'
+        '403':
+          description: Permission kurang
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '404':
+          description: Draft tidak ada di percakapan ini
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: Draft sudah diputus / percakapan ditutup / staf lain
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '422':
+          description: Isi tidak valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/conversations/{conversation_id}/messages:
+    post:
+      tags:
+      - conversations
+      summary: Balasan staf ke pelanggan (ADMIN). Dari status AI/menunggu = ambil alih otomatis.
+      operationId: reply
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: conversation_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StaffReply'
+        required: true
+      responses:
+        '200':
+          description: Terkirim (juga lewat SSE pelanggan)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_StaffActionView'
+        '403':
+          description: Permission kurang
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: Ditutup / ditangani staf lain
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '422':
+          description: Isi tidak valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/conversations/{conversation_id}/release:
+    post:
+      tags:
+      - conversations
+      summary: Kembalikan percakapan ke asisten AI. Butuh `conversations.takeover`; hanya penangan saat ini.
+      operationId: release
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: conversation_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Kembali ke AI
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_StaffActionView'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: Status tidak dapat diubah / staf lain
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/conversations/{conversation_id}/takeover:
+    post:
+      tags:
+      - conversations
+      summary: Ambil alih percakapan (AI berhenti membalas otomatis). Butuh `conversations.takeover`.
+      operationId: takeover
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: conversation_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Ditangani pelaku (HUMAN)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_StaffActionView'
+        '403':
+          description: Permission kurang
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '404':
+          description: Tidak ada di tenant ini
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: Ditutup / ditangani staf lain
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
   /api/v1/tenants/{tenant_id}/customers:
     get:
       tags:
@@ -9106,6 +9528,30 @@ components:
         title:
           type: string
       additionalProperties: false
+    DraftView:
+      type: object
+      required:
+      - content
+      - revision
+      - assets
+      properties:
+        assets:
+          type: object
+          description: '`asset:<uuid>` -> signed path (relatif ke origin API), untuk preview.'
+          additionalProperties:
+            type: string
+          propertyNames:
+            type: string
+        content:
+          type: object
+        published_version:
+          type:
+          - integer
+          - 'null'
+          format: int32
+        revision:
+          type: integer
+          format: int32
     EmptyBody:
       type: object
       additionalProperties: false
@@ -10178,6 +10624,15 @@ components:
         body:
           type: string
       additionalProperties: false
+    SendDraft:
+      type: object
+      properties:
+        body:
+          type:
+          - string
+          - 'null'
+          description: Teks yang dikirim; kosong = teks draft apa adanya (terkirim sebagai pesan AI).
+      additionalProperties: false
     SessionResponse:
       type: object
       required:
@@ -10239,6 +10694,14 @@ components:
         platform:
           type: string
         url:
+          type: string
+      additionalProperties: false
+    StaffReply:
+      type: object
+      required:
+      - body
+      properties:
+        body:
           type: string
       additionalProperties: false
     StartChat:
@@ -10597,6 +11060,7 @@ components:
             - other_ai_runs
             - history
             - approvals
+            - drafts
             - masked
             properties:
               approvals:
@@ -10611,6 +11075,11 @@ components:
                 type: string
               consented_at:
                 type: string
+              drafts:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DraftView'
+                description: Draft balasan AI (mode Assisted); tidak terlihat pelanggan.
               history:
                 type: array
                 items:
@@ -11775,6 +12244,30 @@ components:
               type: boolean
               description: Penyetuju order ≠ staf yang mengonfirmasi pembayaran (default aktif)
           additionalProperties: false
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
+    SuccessEnvelope_StaffActionView:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - status
+          properties:
+            message:
+              oneOf:
+              - $ref: '#/components/schemas/ChatMessageView'
+                description: Pesan yang terkirim ke pelanggan (bila ada)
+              - type: 'null'
+            status:
+              type: string
+              description: Status percakapan setelah aksi
         meta:
           $ref: '#/components/schemas/Meta'
         success:

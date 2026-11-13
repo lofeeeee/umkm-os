@@ -219,9 +219,16 @@ pub async fn tenant_events(
                     if ev.permission.as_deref().is_some_and(|p| !actor.has(p)) {
                         continue;
                     }
+                    // Event chat (P6-2/3): staf hanya menerima ping; isi diambil ulang lewat API
+                    // viewer yang memasking sesuai permission (FR-CNV-003) — SSE tidak boleh jadi jalan pintas.
+                    let data = if ev.kind.starts_with("chat.") {
+                        serde_json::json!({ "conversation_id": ev.data.get("conversation_id") })
+                    } else {
+                        ev.data.clone()
+                    };
                     let event = Event::default()
                         .event(ev.kind.clone())
-                        .json_data(&ev.data)
+                        .json_data(&data)
                         .ok()?;
                     return Some((Ok(event), (rx, guard, pool)));
                 }

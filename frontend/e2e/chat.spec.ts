@@ -87,6 +87,22 @@ test("web chat: persetujuan AI, jawaban AI, realtime, handover, akhiri", async (
   await expect(log.getByRole("listitem").last()).toContainText("halo?");
   await expect(panel.getByRole("button", { name: "Bicara dengan admin" })).toHaveCount(0);
 
+  // P6-4: pemilik membalas dari dashboard (ambil alih) → pelanggan menerima lewat SSE tanpa reload;
+  // pesan pelanggan berikutnya muncul di dashboard lewat ping SSE tenant.
+  await page.goto(`${APP}/conversations${q}`);
+  await page.getByRole("list", { name: "Daftar percakapan" }).getByRole("button").first().click();
+  const actions = page.getByRole("region", { name: "Tindakan staf" });
+  await actions.getByLabel("Balas pelanggan").fill("Halo kak, saya pemilik toko. Ada yang bisa dibantu?");
+  await actions.getByRole("button", { name: "Kirim balasan" }).click();
+  await expect(actions.getByText("Balasan terkirim.")).toBeVisible();
+  await expect(log).toContainText("Halo kak, saya pemilik toko.");
+  await expect(log).toContainText("Staf toko");
+  await expect(logB).toContainText("Halo kak, saya pemilik toko.");
+  await panel.getByLabel("Tulis pesan").fill("Terima kasih, saya tunggu");
+  await panel.getByRole("button", { name: "Kirim" }).click();
+  await expect(page.getByRole("region", { name: "Timeline" })).toContainText("Terima kasih, saya tunggu");
+  await expect(page.getByRole("region", { name: "Status percakapan" })).toContainText("Ditangani staf");
+
   // Ponsel: panel muat tanpa scroll horizontal.
   await a.setViewportSize({ width: 360, height: 740 });
   expect(await a.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
@@ -110,6 +126,7 @@ test("web chat: persetujuan AI, jawaban AI, realtime, handover, akhiri", async (
   await expect(tl.getByTestId("ai-meta").first()).toContainText("get_business_hours");
   const hist = page.getByRole("region", { name: "Riwayat" });
   await expect(hist).toContainText("Diteruskan ke staf — oleh pelanggan");
+  await expect(hist).toContainText("Diambil alih staf — oleh staf");
   await expect(hist).toContainText("Ditutup — oleh pelanggan");
   await expect(page.getByRole("note")).toHaveCount(0);
   await page.setViewportSize({ width: 360, height: 740 });

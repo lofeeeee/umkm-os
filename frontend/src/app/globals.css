@@ -101,3 +101,4 @@ table.d-table th, table.d-table td { text-align: left; padding: 6px 4px; border-
 .cv-admin { border-left-color: #059669; }
 .cv-body { white-space: pre-wrap; overflow-wrap: anywhere; }
 .cv-history { margin: 0; padding-left: 18px; }
+.cv-draft { border: 1px dashed var(--line); border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; }

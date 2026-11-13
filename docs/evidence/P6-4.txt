@@ -1,0 +1,65 @@
+P6-4 — Handover + balasan staf + persetujuan chat (PRD.md §4.9, §4.10, §4.12)
+Tanggal: 2026-11-13
+
+Artefak
+- migrations/0029_conversation_drafts.{up,down}.sql  conversation_drafts (draft AI mode Assisted; status pending |
+  approval_pending | sent | discarded; RLS; tanpa DELETE untuk role aplikasi; CASCADE saat percakapan dipurge) +
+  jenis event draft_created/draft_sent/draft_discarded/draft_approval_requested.
+- apps/api/src/chat.rs  keputusan DraftForAdmin → draft disimpan (tidak pernah terkirim ke pelanggan tanpa keputusan
+  staf) + event staf chat.draft; percakapan menunggu staf.
+- crates/infrastructure/src/conversation_repo.rs  create_draft, drafts, draft, mark_draft_approval, decide_draft
+  (draft dikunci FOR UPDATE; pesan + status draft + event dalam satu transaksi → tidak bisa terkirim dua kali;
+  teks sama = pesan AI dengan ai_run_id, diedit = pesan ADMIN atas nama staf); release ke AI melepas assignee.
+- apps/api/src/inbox.rs  POST /tenants/{t}/conversations/{id}/takeover | release (conversations.takeover),
+  /messages | /close (conversations.reply), /drafts/{d}/send | /discard (conversations.reply). Balasan dari status
+  AI/menunggu = ambil alih otomatis (butuh conversations.takeover); HUMAN milik staf lain → 409 assigned_to_other.
+  Kirim draft melewati approval engine (entity ai_response, action ai_response.send): kebijakan aktif → 202 +
+  draft approval_pending; executor (apps/api/src/approvals.rs) mengirim atas nama pemohon setelah disetujui.
+- apps/api/src/realtime.rs  PERBAIKAN keamanan yang ditemukan di task ini: event chat.* di SSE staf kini hanya ping
+  {conversation_id}; sebelumnya isi pesan mentah terkirim ke semua pemegang conversations.read (termasuk Viewer
+  yang harus melihat versi termasking, FR-CNV-003). Isi diambil ulang lewat API viewer.
+- frontend/src/app/conversations/page.tsx  panel "Tindakan staf": balas, ambil alih, kembalikan ke AI, tutup,
+  draft AI (edit/kirim/buang, status menunggu persetujuan); pembaruan realtime lewat ping SSE tenant.
+- OpenAPI: 6 operasi baru (tag conversations).
+
+Hasil
+- fmt, clippy -D warnings bersih; cargo test --workspace --no-fail-fast: 424 lulus, 0 gagal.
+- sqlx migrate run → revert 0 → run: exit 0. check-rtm OK. Frontend tsc/eslint/vitest 24 lulus.
+- Playwright stack nyata: chat (diperluas: pemilik membalas dari dashboard → widget pelanggan menerima tanpa reload
+  di dua tab; balasan pelanggan muncul di dashboard lewat ping SSE; riwayat "Diambil alih staf"), ai, ops, shop,
+  mfa — 5/5 lulus, tanpa error CSP/JS.
+
+Cakupan apps/api/tests/conversation_staff_http.rs (4)
+- takeover_stops_ai_and_staff_reply_reaches_customer: Viewer 403 balas/ambil alih; balasan staf dari AI → HUMAN,
+  pelanggan melihat ADMIN; pesan pelanggan berikutnya tidak memanggil AI; staf lain 409 assigned_to_other (balas &
+  release); isi kosong 422; release → AI menjawab lagi; takeover idempoten; tutup → pelanggan & staf 409; riwayat
+  created → taken_over → released → taken_over → closed; toko lain 404.
+- assisted_drafts_are_private_until_staff_decides: Assisted → WAITING_HUMAN, draft pending dengan ai_run_id, tidak
+  terlihat pelanggan; Viewer 403; kirim diedit → ADMIN + HUMAN; kirim/buang ulang 409 draft_decided; draft apa
+  adanya → pesan AI dengan jejak run; draft dibuang tidak pernah sampai; event draft_*; Viewer melihat draft
+  termasking.
+- chat_approval_policy_holds_draft_until_approved: kebijakan ai_response (Manager) → 202, draft approval_pending,
+  pelanggan belum melihat, kirim ulang 409; Manager menyetujui → executor mengirim pesan AI, draft sent, approval
+  approved, pemohon menjadi penangan.
+- staff_sse_carries_no_message_content: SSE tenant Viewer menerima ping chat.message dengan conversation_id tanpa
+  isi pesan/nomor/jawaban AI.
+
+Negative control (mutasi sementara, dikembalikan; test terkait GAGAL)
+  == NEGCTL: staf lain boleh menyela percakapan yang ditangani
+      takeover_stops_ai_and_staff_reply_reaches_customer ... FAILED
+      result: FAILED. 3 passed; 1 failed;
+  == NEGCTL: draft Assisted langsung terkirim ke pelanggan
+      assisted_drafts_are_private_until_staff_decides ... FAILED
+      chat_approval_policy_holds_draft_until_approved ... FAILED
+      result: FAILED. 2 passed; 2 failed;
+  == NEGCTL: kirim draft melewati approval engine
+      chat_approval_policy_holds_draft_until_approved ... FAILED
+      result: FAILED. 3 passed; 1 failed;
+  == NEGCTL: SSE staf membawa isi pesan
+      staff_sse_carries_no_message_content ... FAILED
+      result: FAILED. 3 passed; 1 failed;
+Setelah dikembalikan: conversation_staff_http 4 lulus.
+
+Belum di task ini
+- Panel draft di dashboard belum diuji di browser (alur draft diuji lewat HTTP); inbox antrean + tiket dari
+  percakapan (P6-5); analitik (P6-6). Penugasan ke staf lain tanpa mengambil alih belum ada (P6-5).
