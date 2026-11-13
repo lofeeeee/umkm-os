@@ -1376,3 +1376,7 @@ label.st-tool { cursor: pointer; }
 .st-lock-badge svg { width: 12px; height: 12px; }
 .st-tool-on { background: #18181b; color: #fff; }
 .st-tool-on:hover { background: #27272a; }
+/* Plugin yang disorot/dipilih naik ke lapisan atas, supaya toolbar-nya (yang menjorok ke atas kotak)
+   tidak tertutup plugin di atasnya dan tombolnya bisa diklik. */
+.st-item:hover, .st-item:focus-within, .st-item.st-selected { z-index: 15; }
+.st-item.st-active { z-index: 20; }
