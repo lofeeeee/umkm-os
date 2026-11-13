@@ -50,4 +50,4 @@ Negative control (mutasi sementara, dikembalikan; test terkait GAGAL)
 Setelah dikembalikan: mfa_http 3 lulus.
 
 Belum di task ini
-- UI dashboard (langkah kedua login, halaman Keamanan akun, toggle kebijakan tenant) → P4-1b-UI.
+- UI dashboard (langkah kedua login, halaman Keamanan akun, toggle kebijakan tenant) → docs/evidence/P4-1b-UI.txt.

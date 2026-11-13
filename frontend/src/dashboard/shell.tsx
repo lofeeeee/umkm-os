@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 
 import { Bell } from "./bell";
-import { api, ApiError, loadSession, setCsrf, tenantParam, type Session, type TenantView } from "@/lib/api";
+import { api, ApiError, isMfaRequired, loadSession, setCsrf, tenantParam, type Session, type TenantView } from "@/lib/api";
 
 export function TopBar({ tenant }: { tenant?: TenantView | null }) {
   const can = (p: string) => !!tenant?.my_permissions.includes(p);
@@ -36,6 +36,7 @@ export function TopBar({ tenant }: { tenant?: TenantView | null }) {
         {can("members.read") && <Link href={`/team${q}`}>Tim</Link>}
         {can("audit.read") && <Link href={`/audit${q}`}>Audit</Link>}
         {can("ai_config.read") && <Link href={`/ai${q}`}>Asisten AI</Link>}
+        <Link href={`/security${q}`}>Keamanan</Link>
         {tenant && <Bell tenantId={tenant.id} />}
         <button type="button" className="d-btn d-btn-sm" onClick={logout}>Keluar</button>
       </nav>
@@ -61,6 +62,10 @@ export function WithTenant({ children }: { children: (ctx: TenantCtx) => ReactNo
         router.replace("/login");
         return;
       }
+      if (session.mfa_enrollment_required) {
+        router.replace("/security?reason=mfa");
+        return;
+      }
       const id = tenantParam();
       if (!id) {
         router.replace("/");
@@ -70,6 +75,11 @@ export function WithTenant({ children }: { children: (ctx: TenantCtx) => ReactNo
         const tenant = await api<TenantView>("GET", `/api/v1/tenants/${id}`);
         setCtx({ session, tenant, can: (p) => tenant.my_permissions.includes(p) });
       } catch (e) {
+        // AUTH-012: toko mewajibkan MFA untuk peran ini dan sesi belum lolos MFA.
+        if (isMfaRequired(e)) {
+          router.replace(`/security?tenant=${id}&reason=mfa`);
+          return;
+        }
         setError(e instanceof ApiError && e.status === 404 ? "Toko tidak ditemukan." : "Gagal memuat toko.");
       }
     })().catch(() => setError("Tidak dapat menghubungi server."));

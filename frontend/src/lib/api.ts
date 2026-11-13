@@ -49,7 +49,19 @@ export async function api<T>(method: string, path: string, body?: Body): Promise
   return data.data as T;
 }
 
-export interface Session { user_id: string; session_id: string; csrf_token: string }
+export interface Session {
+  user_id: string; session_id: string; csrf_token: string;
+  /** Hanya dari GET /auth/session (AUTH-011/012). */
+  mfa_verified?: boolean; mfa_enrollment_required?: boolean;
+}
+/** Jawaban 202 /auth/login bila akun memakai MFA. */
+export interface MfaChallenge { mfa_required: true; mfa_token: string }
+
+/** 403 `details.reason = "mfa_required"`: akun/toko mewajibkan MFA untuk sesi ini. */
+export function isMfaRequired(e: unknown): boolean {
+  return e instanceof ApiError && e.status === 403
+    && (e.details as { reason?: string } | null)?.reason === "mfa_required";
+}
 export interface Membership { tenant_id: string; name: string; slug: string; role: string }
 export interface TenantView {
   id: string; name: string; slug: string; status: string;

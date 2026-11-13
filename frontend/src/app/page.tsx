@@ -13,8 +13,13 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     (async () => {
-      if (!(await loadSession())) {
+      const session = await loadSession();
+      if (!session) {
         router.replace("/login");
+        return;
+      }
+      if (session.mfa_enrollment_required) {
+        router.replace("/security?reason=mfa");
         return;
       }
       setItems(await api<Membership[]>("GET", "/api/v1/tenants"));

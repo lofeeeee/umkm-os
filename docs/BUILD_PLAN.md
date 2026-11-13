@@ -200,7 +200,7 @@ Prefix `/api/v1`; envelope sukses/gagal; `meta.request_id`; cursor pagination; r
 
 ### Phase 4 — Operations
 
-**Status:** Gate P4 lulus 2026-11-12 (`docs/evidence/phase-4-operations.txt`). MFA (AUTH-011/012) API selesai 2026-11-13 sebagai P4-1b (`docs/evidence/P4-1b.txt`); UI menyusul.
+**Status:** Gate P4 lulus 2026-11-12 (`docs/evidence/phase-4-operations.txt`). MFA (AUTH-011/012) selesai 2026-11-13 sebagai P4-1b (`docs/evidence/P4-1b.txt`, UI `docs/evidence/P4-1b-UI.txt`).
 
 | Task | Requirement | File | Uji |
 |---|---|---|---|

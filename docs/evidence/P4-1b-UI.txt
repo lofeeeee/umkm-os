@@ -1,0 +1,35 @@
+P4-1b-UI — UI dashboard MFA TOTP (AUTH-011/012)
+Tanggal: 2026-11-13
+
+Artefak
+- frontend/src/app/login/page.tsx  /auth/login 202 → langkah "Verifikasi dua langkah" (TOTP atau kode pemulihan;
+  token tantangan hanya di memori; 401 = tantangan habis → kembali ke form password).
+- frontend/src/app/security/page.tsx  halaman Keamanan: status, siapkan (kunci base32 dikelompokkan + tautan
+  otpauth://), aktifkan → 10 kode pemulihan ditampilkan sekali, buat ulang kode, matikan (password + kode; tidak
+  ditampilkan bila akun platform wajib MFA). Dengan ?tenant=: toggle "Wajibkan MFA untuk Owner, Manager, dan Admin"
+  (tenant.update; ditolak bila sesi belum lolos MFA).
+- frontend/src/dashboard/shell.tsx  tautan "Keamanan"; WithTenant mengarahkan ke /security?reason=mfa bila sesi
+  wajib MFA (AUTH-011) atau toko menolak dengan reason=mfa_required (AUTH-012). Halaman beranda idem.
+- frontend/src/lib/api.ts  tipe Session (mfa_verified, mfa_enrollment_required), MfaChallenge, isMfaRequired().
+- frontend/e2e/mfa.spec.ts  TOTP dihitung di tes (node:crypto HMAC-SHA1) dari kunci yang tampil di layar.
+- Tanpa dependency baru. QR code tidak ditampilkan (butuh library; kunci manual + tautan otpauth sudah didukung
+  aplikasi authenticator umum) — dicatat sebagai tindak lanjut.
+
+Hasil
+- npx tsc --noEmit, npx eslint ., vitest 22/22: lulus. Build statis + csp.mjs: 21 hash dari 20 halaman.
+- Playwright di stack nyata (Caddy caddy:2.10-alpine --network host, API + worker release, PostgreSQL + Redis dev,
+  domain umkm.test): mfa.spec.ts, ops.spec.ts, shop.spec.ts — 3 lulus, tanpa error CSP/JS.
+  (dashboard/responsive/ai tidak dijalankan: butuh SITE_URL/akun seed/mock LLM; area tersebut tidak diubah.)
+
+Cakupan mfa.spec.ts
+- Toggle kebijakan toko sebelum sesi lolos MFA → pesan "Aktifkan MFA di akun Anda…", checkbox tetap off.
+- Siapkan → kunci 32 karakter base32; kode salah → "Kode tidak valid"; kode benar → 10 kode pemulihan format
+  xxxxx-xxxxx; status "Aktif · sisa kode pemulihan: 10".
+- Sesi kini lolos MFA → kebijakan toko tersimpan dan tercentang.
+- Keluar → masuk → langkah kedua dengan TOTP langkah berikutnya → "Toko saya"; halaman Pesanan dapat dibuka
+  (Owner melewati kebijakan toko karena sesi lolos MFA).
+- Masuk dengan kode pemulihan (huruf besar) → berhasil, sisa 9; kode yang sama dipakai lagi → "Kode tidak valid".
+
+Ditemukan saat E2E
+- Caddy lokal wajib PUBLIC_API_ORIGIN agar CSP connect-src mengizinkan api.umkm.test (bukan bug kode; catatan
+  menjalankan stack lokal).
