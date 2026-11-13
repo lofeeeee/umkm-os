@@ -5,6 +5,8 @@ import type { SectionType } from "@/renderer/types";
 
 import type { Json } from "@/renderer/types";
 
+import manifest from "./plugin-manifest.json";
+
 export type PluginKind = SectionType | "chatbot" | "text" | "whatsapp";
 export type PluginCategory = "Konten" | "Jualan" | "Layanan" | "Info toko";
 
@@ -39,6 +41,14 @@ export const PLUGINS: PluginDef[] = [
 ];
 
 export const pluginDef = (k: PluginKind) => PLUGINS.find((p) => p.kind === k)!;
+
+/** ADR-0019: paket minimum plugin dari manifest (sama dengan `plugin_plan` server; tak dikenal = pro). */
+export function pluginPlan(k: string): "starter" | "pro" {
+  const p = (manifest.plugins as Record<string, { plan?: string }>)[k]?.plan;
+  return p === "starter" ? "starter" : "pro";
+}
+/** Blok tidak tampil di situs publik untuk paket ini. `planCode` null = belum diketahui (jangan menandai). */
+export const needsUpgrade = (plan: "starter" | "pro", planCode: string | null) => plan === "pro" && planCode !== null && planCode !== "pro";
 
 /** Data awal plugin di luar renderer section v1 (bentuk = validator server schema_v2.rs). */
 export const EXTRA_DATA: Partial<Record<PluginKind, { [k: string]: Json }>> = {

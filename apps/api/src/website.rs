@@ -664,7 +664,17 @@ pub async fn public_site(
         .await
         .map_err(internal)?
         .ok_or_else(not_found)?;
-    let content = strip_disabled(content);
+    let mut content = strip_disabled(content);
+    // ADR-0019 (P9-11): blok plugin Pro tidak dirender untuk toko tanpa Pro (draf & versi tetap utuh).
+    let has_pro = umkm_infrastructure::billing_repo::current(p, t)
+        .await
+        .map(|c| c.plan.code == "pro")
+        .unwrap_or(false);
+    umkm_domain::website::schema_v2::hide_unentitled_blocks(
+        &mut content,
+        has_pro,
+        umkm_domain::website::schema_v2::plugin_plan,
+    );
     let info = business_repo::load(p, t)
         .await
         .map_err(internal)?

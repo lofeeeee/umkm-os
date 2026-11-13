@@ -28,7 +28,7 @@ import type { Business, Json, PageContent, SectionType } from "@/renderer/types"
 import { Canvas, DESIGN_WIDTH, GAP, ROW, rowsFor } from "@/studio/Canvas";
 import { COLS, compact, insert, mobileOrder, moveBy, place } from "@/studio/grid";
 import { commit, redo, silent, start, undo, type History } from "@/studio/history";
-import { CELL_STYLES, EXTRA_DATA, PALETTES, PLUGINS, pluginDef, type PluginKind } from "@/studio/plugins";
+import { CELL_STYLES, EXTRA_DATA, PALETTES, PLUGINS, needsUpgrade, pluginDef, pluginPlan, type PluginKind } from "@/studio/plugins";
 import { readiness, type Issue } from "@/studio/readiness";
 import { TEMPLATES, type TplCell } from "@/studio/templates";
 import { fromDoc, isV2, toDoc, type StudioState } from "@/studio/doc";
@@ -134,6 +134,8 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
   const [hist, setHist] = useState<History<Studio> | null>(null);
   const st = hist?.present ?? null;
   const [business, setBusiness] = useState<Business>(EMPTY_BUSINESS);
+  /** Kode paket toko (ADR-0019); null = belum diketahui / tanpa izin baca. */
+  const [planCode, setPlanCode] = useState<string | null>(null);
   const [rawProducts, setRawProducts] = useState<{ slug: string; name: string; image?: string; price: string; promo_price: string | null; available: boolean }[]>([]);
   const [draft, setDraft] = useState<PageContent | null>(null);
   const [picking, setPicking] = useState<"first" | "change" | null>(null);
@@ -189,6 +191,7 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
       ]);
       const d = await api<Draft>("GET", `${base}/website/pages/home/draft`);
       setBusiness(b);
+      void api<{ plan: { code: string } }>("GET", `${base}/subscription`).then((x) => setPlanCode(x.plan.code)).catch(() => setPlanCode(null));
       setRawProducts(p.items.map((x) => ({ slug: x.slug, name: x.name, image: x.images[0], price: x.variants[0]?.price ?? "0.00", promo_price: x.variants[0]?.promo_price ?? null, available: x.available })));
       setDraftAssetsForUploads(d.assets);
       const minSize = (k: PluginKind) => ({ minW: pluginDef(k).minW, minH: pluginDef(k).minH });
@@ -510,6 +513,7 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
               onPhoto={(f) => void putPhoto(selected.id, f)}
               aiHref={`/ai?tenant=${ctx.tenant.id}`}
               businessHref={`/business?tenant=${ctx.tenant.id}`}
+              upgradeHref={needsUpgrade(pluginPlan(selected.kind), planCode) ? `/subscription?tenant=${ctx.tenant.id}` : null}
             />
           ) : (
             <>
@@ -531,7 +535,7 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
                     <li key={p.kind} draggable={installed} className={installed ? "st-draggable" : undefined}
                       onDragStart={(e) => { e.dataTransfer.setData("application/x-umkm-plugin", p.kind); e.dataTransfer.effectAllowed = "copy"; }}>
                       <span className="st-plugin-icon" aria-hidden="true">{p.kind === "chatbot" ? <ChatCircleDots weight="duotone" /> : p.kind === "product_grid" ? <Sparkle weight="duotone" /> : <PuzzlePiece weight="duotone" />}</span>
-                      <span className="st-plugin-text"><strong>{p.name}</strong><span>{p.desc}</span></span>
+                      <span className="st-plugin-text"><strong>{p.name}{pluginPlan(p.kind) === "pro" && <Badge tone="brand" plain>Pro</Badge>}</strong><span>{p.desc}</span></span>
                       {installed
                         ? <button type="button" className="d-icon-btn" aria-label={`Tambah ${p.name} ke halaman`} onClick={() => add(p.kind)}><Plus weight="bold" /></button>
                         : <button type="button" className="d-btn d-btn-sm" onClick={() => { update((s) => ({ ...s, installed: [...s.installed, p.kind] }), ""); toast.ok(`${p.name} terpasang. Tarik ke kanvas untuk memakainya.`); }}>Pasang</button>}
@@ -613,6 +617,7 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
               label={(c) => pluginDef(c.kind).name}
               toolbar={(c) => (
                 <>
+                  {needsUpgrade(pluginPlan(c.kind), planCode) && <span className="st-clip st-pro" title="Tidak tampil di situs sampai toko memakai paket Pro">Butuh paket Pro</span>}
                   {c.kind === "product_grid" && noPhoto > 0 && (
                     <Link className="st-clip st-nudge" href={`/products?tenant=${ctx.tenant.id}`}>{noPhoto} produk tanpa foto →</Link>
                   )}
@@ -829,7 +834,7 @@ function MiniLayout({ cells, render, theme }: { cells: StudioCell[]; render: (c:
 }
 
 /* ============================================================ Inspektur */
-function Inspector({ c, onBack, onChange, onWidth, onMove, onLayout, onDuplicate, onRemove, onFull, onPhoto, aiHref, businessHref }: {
+function Inspector({ c, onBack, onChange, onWidth, onMove, onLayout, onDuplicate, onRemove, onFull, onPhoto, aiHref, businessHref, upgradeHref }: {
   c: StudioCell;
   onBack: () => void;
   onChange: (patch: Partial<StudioCell>, key?: string) => void;
@@ -842,6 +847,8 @@ function Inspector({ c, onBack, onChange, onWidth, onMove, onLayout, onDuplicate
   onPhoto: (f: File) => void;
   aiHref: string;
   businessHref: string;
+  /** Diisi bila plugin butuh paket lebih tinggi (ADR-0019). */
+  upgradeHref: string | null;
 }) {
   const def = pluginDef(c.kind);
   return (
@@ -854,6 +861,12 @@ function Inspector({ c, onBack, onChange, onWidth, onMove, onLayout, onDuplicate
           <button type="button" className="d-icon-btn" aria-label="Hapus dari halaman" title="Hapus" onClick={onRemove}><Trash weight="bold" /></button>
         </div>
       </div>
+      {upgradeHref && (
+        <div className="d-alert d-alert-info" role="note"><div>
+          Plugin ini bagian paket Pro: tetap tersimpan, tetapi tidak tampil di situs sampai toko memakai Pro.{" "}
+          <Link href={upgradeHref}>Lihat paket</Link>
+        </div></div>
+      )}
       {c.kind !== "chatbot" && <p className="d-hint" style={{ margin: 0 }}>Klik teks di kanvas untuk mengetik langsung.{takesPhoto(c.kind) && " Seret foto dari komputer ke plugin untuk memasangnya."}</p>}
       {!isEmbed(c) && <div className="st-section">
         <label className="d-switch">

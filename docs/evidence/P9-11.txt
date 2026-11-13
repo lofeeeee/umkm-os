@@ -1,0 +1,13 @@
+P9-11 — Plugin dibatasi paket (ADR-0019) — 2026-11-14T05:43:54+07:00
+
+- schema_v2::plugin_plan(kind): Fase 1 semua plugin resmi "starter"; jenis tak dikenal "pro" (fail-closed).
+- schema_v2::hide_unentitled_blocks(doc, has_pro, plan_of): blok pro dibuang HANYA dari dokumen yang dikirim ke
+  situs publik; draf & versi terbit tetap utuh (naik paket → tampil lagi). Dokumen v1 tidak disentuh.
+- GET /api/v1/public/site: has_pro = paket aktif "pro" (gagal baca → false); filter diterapkan sebelum respons.
+- Kontrak: plan di frontend/src/studio/plugin-manifest.json == plugin_plan() server (frontend_contract.rs).
+- Studio: pluginPlan() dari manifest, needsUpgrade(); chip "Pro" di katalog, tanda "Butuh paket Pro" di blok,
+  catatan + tautan Langganan di Inspector. Simpan draf tetap boleh.
+
+Tes: schema_v2 pro_blocks_are_hidden_publicly_without_pro_but_never_deleted_from_source (paket tiruan: gallery=pro →
+starter kehilangan 1 blok, Pro utuh, plugin resmi tidak tersentuh, v1 diabaikan); plugins.test.ts; website_http lolos.
+Catatan: belum ada plugin "pro" nyata, jadi penegakan di HTTP diuji lewat fungsi murni dengan penentu paket tiruan.

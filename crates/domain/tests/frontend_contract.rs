@@ -32,7 +32,9 @@ fn every_editor_default_section_validates() {
 /// ADR-0019: manifest plugin frontend = daftar plugin & varian tata letak yang diterima validator v2.
 #[test]
 fn studio_plugin_manifest_matches_validator() {
-    use umkm_domain::website::schema_v2::{PLUGIN_KINDS, is_embed, layouts, max_per_page};
+    use umkm_domain::website::schema_v2::{
+        PLUGIN_KINDS, is_embed, layouts, max_per_page, plugin_plan,
+    };
     let manifest: Value = serde_json::from_str(include_str!(
         "../../../frontend/src/studio/plugin-manifest.json"
     ))
@@ -56,9 +58,10 @@ fn studio_plugin_manifest_matches_validator() {
             max_per_page(kind),
             "max_per_page {kind}"
         );
-        assert!(
-            matches!(def["plan"].as_str(), Some("starter" | "pro")),
-            "plan {kind}"
+        assert_eq!(
+            def["plan"].as_str(),
+            Some(plugin_plan(kind)),
+            "plan {kind} (ADR-0019)"
         );
     }
     for (kind, ls) in manifest["embed_layouts"].as_object().unwrap() {

@@ -55,6 +55,36 @@ pub fn max_per_page(kind: &str) -> usize {
     }
 }
 
+/// Paket minimum plugin (ADR-0019). Fase 1 Studio: semua plugin `starter`; kandidat `pro` ditambah di sini dan di
+/// `frontend/src/studio/plugin-manifest.json` (dijaga tes kontrak).
+pub fn plugin_plan(kind: &str) -> &'static str {
+    if PLUGIN_KINDS.contains(&kind) {
+        "starter"
+    } else {
+        "pro" // tak dikenal: perlakukan paling ketat (fail-closed)
+    }
+}
+
+/// ADR-0019: blok yang butuh paket lebih tinggi TIDAK dihapus dari draf/versi terbit (naik paket → tampil lagi),
+/// hanya dibuang dari dokumen yang dikirim ke situs publik. Mengembalikan jumlah blok yang disembunyikan.
+pub fn hide_unentitled_blocks(
+    content: &mut Value,
+    has_pro: bool,
+    plan_of: impl Fn(&str) -> &'static str,
+) -> usize {
+    if has_pro || content.get("schema_version").and_then(Value::as_i64) != Some(SCHEMA_VERSION) {
+        return 0;
+    }
+    let Some(Value::Array(blocks)) = content.get_mut("blocks") else {
+        return 0;
+    };
+    let before = blocks.len();
+    blocks.retain(|b| {
+        plan_of(b.get("kind").and_then(Value::as_str).unwrap_or_default()) == "starter"
+    });
+    before - blocks.len()
+}
+
 /// Blok "embed" berada di luar grid (gelembung/bilah) sehingga dikecualikan dari cek tumpang tindih.
 pub fn is_embed(kind: &str, layout: Option<&str>) -> bool {
     matches!(
@@ -559,5 +589,33 @@ mod tests {
         let mut v3 = d.clone();
         v3["schema_version"] = json!(3);
         assert!(validate_page(&v3).is_err());
+    }
+
+    #[test]
+    fn pro_blocks_are_hidden_publicly_without_pro_but_never_deleted_from_source() {
+        let src = json!({"schema_version": 2, "template": "t", "theme": {"primary": "#000000", "font": "inter"},
+            "blocks": [{"id": "a", "kind": "hero"}, {"id": "b", "kind": "gallery"}, {"id": "c", "kind": "text"}]});
+        // Paket tiruan: gallery = pro.
+        let plan = |k: &str| if k == "gallery" { "pro" } else { "starter" };
+        let mut starter = src.clone();
+        assert_eq!(hide_unentitled_blocks(&mut starter, false, plan), 1);
+        let ids: Vec<_> = starter["blocks"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|b| b["id"].as_str().unwrap())
+            .collect();
+        assert_eq!(ids, ["a", "c"]);
+        let mut pro = src.clone();
+        assert_eq!(hide_unentitled_blocks(&mut pro, true, plan), 0);
+        assert_eq!(pro, src, "Pro: dokumen utuh");
+        // Fase 1: semua plugin resmi starter → tidak ada yang disembunyikan; jenis tak dikenal fail-closed.
+        let mut real = src.clone();
+        assert_eq!(hide_unentitled_blocks(&mut real, false, plugin_plan), 0);
+        assert!(PLUGIN_KINDS.iter().all(|k| plugin_plan(k) == "starter"));
+        assert_eq!(plugin_plan("formulir-baru"), "pro");
+        // Dokumen v1 tidak disentuh.
+        let mut v1 = json!({"schema_version": 1, "sections": [{"type": "gallery"}]});
+        assert_eq!(hide_unentitled_blocks(&mut v1, false, plan), 0);
     }
 }
