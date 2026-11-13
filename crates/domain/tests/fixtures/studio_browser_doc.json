@@ -1,0 +1,150 @@
+{
+  "schema_version": 2,
+  "template": "kuliner",
+  "theme": {
+    "primary": "#C2410C",
+    "font": "poppins",
+    "surface": "cream",
+    "text_scale": 1
+  },
+  "blocks": [
+    {
+      "id": "hero-1",
+      "kind": "hero",
+      "x": 0,
+      "y": 0,
+      "w": 8,
+      "h": 7,
+      "style": "plain",
+      "data": {
+        "title": "Kopi Senja",
+        "subtitle": "Kedai kopi rumahan",
+        "cta": {
+          "label": "Lihat menu",
+          "href": "#menu"
+        }
+      },
+      "auto_height": true
+    },
+    {
+      "id": "chatbot-2",
+      "kind": "chatbot",
+      "x": 8,
+      "y": 0,
+      "w": 4,
+      "h": 12,
+      "style": "card",
+      "data": {
+        "title": "Tanya kami",
+        "welcome": "Halo! Mau pesan apa hari ini? 😊"
+      },
+      "auto_height": true,
+      "layout": "inline",
+      "chat_open": true
+    },
+    {
+      "id": "promotion-3",
+      "kind": "promotion",
+      "x": 0,
+      "y": 12,
+      "w": 12,
+      "h": 9,
+      "style": "tint",
+      "data": {
+        "title": "Gratis ongkir minggu ini",
+        "body": "Untuk pesanan di atas Rp50.000 area dalam kota.",
+        "cta": {
+          "label": "Pesan sekarang",
+          "href": "#menu"
+        }
+      },
+      "auto_height": true
+    },
+    {
+      "id": "product-grid-4",
+      "kind": "product_grid",
+      "x": 0,
+      "y": 21,
+      "w": 12,
+      "h": 14,
+      "style": "plain",
+      "data": {
+        "title": "Menu favorit",
+        "limit": 8
+      },
+      "auto_height": true,
+      "layout": "grid"
+    },
+    {
+      "id": "business-hours-5",
+      "kind": "business_hours",
+      "x": 0,
+      "y": 35,
+      "w": 4,
+      "h": 13,
+      "style": "card",
+      "data": {
+        "title": "Jam buka"
+      },
+      "auto_height": true
+    },
+    {
+      "id": "location-6",
+      "kind": "location",
+      "x": 4,
+      "y": 35,
+      "w": 4,
+      "h": 6,
+      "style": "card",
+      "data": {
+        "title": "Lokasi",
+        "show_map": true
+      },
+      "auto_height": true
+    },
+    {
+      "id": "contact-7",
+      "kind": "contact",
+      "x": 8,
+      "y": 35,
+      "w": 4,
+      "h": 6,
+      "style": "card",
+      "data": {
+        "title": "Pesan lewat WhatsApp",
+        "show_whatsapp": true,
+        "show_phone": true,
+        "show_email": false,
+        "socials": []
+      },
+      "auto_height": true
+    },
+    {
+      "id": "testimonials-8",
+      "kind": "testimonials",
+      "x": 0,
+      "y": 48,
+      "w": 12,
+      "h": 8,
+      "style": "plain",
+      "data": {
+        "title": "Kata pelanggan",
+        "items": [
+          {
+            "name": "Rina",
+            "quote": "Rasanya pas, selalu jadi langganan tiap pagi."
+          },
+          {
+            "name": "Budi",
+            "quote": "Pengiriman cepat dan masih hangat."
+          },
+          {
+            "name": "Sari",
+            "quote": "Porsinya mantap, harganya bersahabat."
+          }
+        ]
+      },
+      "auto_height": true
+    }
+  ]
+}

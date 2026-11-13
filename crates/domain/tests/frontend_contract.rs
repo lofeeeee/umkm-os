@@ -90,3 +90,27 @@ fn studio_document_from_defaults_validates() {
         panic!("dokumen Studio dari default tidak valid: {e:?}");
     }
 }
+
+/// Setiap template Studio (frontend/src/studio/templates.ts → toDoc) lolos validator v2.
+#[test]
+fn every_studio_template_validates() {
+    let all: Value =
+        serde_json::from_str(include_str!("fixtures/studio_templates.json")).expect("JSON");
+    let map = all.as_object().expect("objek");
+    assert!(map.len() >= 6, "fixture template kosong");
+    for (key, doc) in map {
+        if let Err(e) = validate_page(doc) {
+            panic!("template {key} ditolak validator: {e:?}");
+        }
+    }
+}
+
+/// Dokumen nyata yang dikirim browser Studio (tinggi hasil pengukuran, P9-3) lolos validator v2.
+#[test]
+fn studio_browser_document_validates() {
+    let doc: Value =
+        serde_json::from_str(include_str!("fixtures/studio_browser_doc.json")).expect("JSON");
+    if let Err(e) = validate_page(&doc) {
+        panic!("dokumen dari browser ditolak: {e:?}");
+    }
+}

@@ -1,0 +1,777 @@
+{
+  "hangat": {
+    "schema_version": 2,
+    "template": "modern_store",
+    "theme": {
+      "primary": "#C2410C",
+      "font": "poppins",
+      "surface": "cream",
+      "text_scale": 1
+    },
+    "blocks": [
+      {
+        "id": "hero-1",
+        "kind": "hero",
+        "x": 0,
+        "y": 0,
+        "w": 8,
+        "h": 10,
+        "style": "plain",
+        "data": {
+          "title": "Kopi Senja Bandung",
+          "subtitle": "Kedai kopi rumahan dengan biji pilihan.",
+          "cta": {
+            "label": "Lihat menu",
+            "href": "#menu"
+          }
+        },
+        "auto_height": true
+      },
+      {
+        "id": "chatbot-2",
+        "kind": "chatbot",
+        "x": 8,
+        "y": 0,
+        "w": 4,
+        "h": 10,
+        "style": "card",
+        "data": {
+          "title": "Tanya kami",
+          "welcome": "Halo! Mau pesan apa hari ini? 😊"
+        },
+        "auto_height": true,
+        "layout": "inline",
+        "chat_open": true
+      },
+      {
+        "id": "promotion-3",
+        "kind": "promotion",
+        "x": 0,
+        "y": 10,
+        "w": 12,
+        "h": 5,
+        "style": "tint",
+        "data": {
+          "title": "Gratis ongkir minggu ini",
+          "body": "Untuk pesanan di atas Rp50.000 area dalam kota.",
+          "cta": {
+            "label": "Pesan sekarang",
+            "href": "#menu"
+          }
+        },
+        "auto_height": true
+      },
+      {
+        "id": "product-grid-4",
+        "kind": "product_grid",
+        "x": 0,
+        "y": 15,
+        "w": 12,
+        "h": 12,
+        "style": "plain",
+        "data": {
+          "title": "Menu favorit",
+          "limit": 8
+        },
+        "auto_height": true,
+        "layout": "grid"
+      },
+      {
+        "id": "business-hours-5",
+        "kind": "business_hours",
+        "x": 0,
+        "y": 27,
+        "w": 4,
+        "h": 9,
+        "style": "card",
+        "data": {
+          "title": "Jam buka"
+        },
+        "auto_height": true
+      },
+      {
+        "id": "location-6",
+        "kind": "location",
+        "x": 4,
+        "y": 27,
+        "w": 4,
+        "h": 6,
+        "style": "card",
+        "data": {
+          "title": "Lokasi",
+          "show_map": true
+        },
+        "auto_height": true
+      },
+      {
+        "id": "contact-7",
+        "kind": "contact",
+        "x": 8,
+        "y": 27,
+        "w": 4,
+        "h": 6,
+        "style": "card",
+        "data": {
+          "title": "Pesan lewat WhatsApp",
+          "show_whatsapp": true,
+          "show_phone": true,
+          "show_email": false,
+          "socials": []
+        },
+        "auto_height": true
+      },
+      {
+        "id": "testimonials-8",
+        "kind": "testimonials",
+        "x": 0,
+        "y": 36,
+        "w": 12,
+        "h": 8,
+        "style": "plain",
+        "data": {
+          "title": "Kata pelanggan",
+          "items": [
+            {
+              "name": "Rina",
+              "quote": "Rasanya pas, selalu jadi langganan tiap pagi."
+            },
+            {
+              "name": "Budi",
+              "quote": "Pengiriman cepat dan masih hangat."
+            },
+            {
+              "name": "Sari",
+              "quote": "Porsinya mantap, harganya bersahabat."
+            }
+          ]
+        },
+        "auto_height": true
+      }
+    ]
+  },
+  "butik": {
+    "schema_version": 2,
+    "template": "modern_store",
+    "theme": {
+      "primary": "#BE185D",
+      "font": "merriweather",
+      "surface": "light",
+      "text_scale": 1
+    },
+    "blocks": [
+      {
+        "id": "hero-1",
+        "kind": "hero",
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 10,
+        "style": "dark",
+        "data": {
+          "title": "Kopi Senja Bandung",
+          "subtitle": "Kedai kopi rumahan dengan biji pilihan.",
+          "cta": {
+            "label": "Lihat koleksi",
+            "href": "#koleksi"
+          }
+        },
+        "auto_height": true
+      },
+      {
+        "id": "product-grid-2",
+        "kind": "product_grid",
+        "x": 0,
+        "y": 10,
+        "w": 12,
+        "h": 12,
+        "style": "plain",
+        "data": {
+          "title": "Koleksi terbaru",
+          "limit": 12
+        },
+        "auto_height": true,
+        "layout": "carousel"
+      },
+      {
+        "id": "about-3",
+        "kind": "about",
+        "x": 0,
+        "y": 22,
+        "w": 6,
+        "h": 8,
+        "style": "plain",
+        "data": {
+          "title": "Tentang kami",
+          "body": "Kami memilih bahan berkualitas dan menjahit dengan teliti, supaya setiap potong awet dipakai bertahun-tahun."
+        },
+        "auto_height": true
+      },
+      {
+        "id": "gallery-4",
+        "kind": "gallery",
+        "x": 6,
+        "y": 22,
+        "w": 6,
+        "h": 8,
+        "style": "plain",
+        "data": {
+          "title": "Lookbook",
+          "images": []
+        },
+        "auto_height": true
+      },
+      {
+        "id": "testimonials-5",
+        "kind": "testimonials",
+        "x": 0,
+        "y": 30,
+        "w": 12,
+        "h": 8,
+        "style": "tint",
+        "data": {
+          "title": "Mereka sudah mencoba",
+          "items": [
+            {
+              "name": "Dewi",
+              "quote": "Bahannya adem, jahitannya rapi."
+            },
+            {
+              "name": "Putri",
+              "quote": "Ukurannya pas sesuai tabel."
+            },
+            {
+              "name": "Ayu",
+              "quote": "Respon admin cepat dan ramah."
+            }
+          ]
+        },
+        "auto_height": true
+      },
+      {
+        "id": "chatbot-6",
+        "kind": "chatbot",
+        "x": 8,
+        "y": 38,
+        "w": 4,
+        "h": 10,
+        "style": "card",
+        "data": {
+          "title": "Butuh bantuan ukuran?",
+          "welcome": "Hai! Mau dibantu pilih ukuran atau warna?"
+        },
+        "auto_height": true,
+        "layout": "floating",
+        "chat_open": false
+      }
+    ]
+  },
+  "profesional": {
+    "schema_version": 2,
+    "template": "modern_store",
+    "theme": {
+      "primary": "#0369A1",
+      "font": "inter",
+      "surface": "light",
+      "text_scale": 1
+    },
+    "blocks": [
+      {
+        "id": "hero-1",
+        "kind": "hero",
+        "x": 0,
+        "y": 0,
+        "w": 7,
+        "h": 10,
+        "style": "plain",
+        "data": {
+          "title": "Kopi Senja Bandung",
+          "subtitle": "Kedai kopi rumahan dengan biji pilihan.",
+          "cta": {
+            "label": "Konsultasi gratis",
+            "href": "#kontak"
+          }
+        },
+        "auto_height": true
+      },
+      {
+        "id": "contact-2",
+        "kind": "contact",
+        "x": 7,
+        "y": 0,
+        "w": 5,
+        "h": 10,
+        "style": "card",
+        "data": {
+          "title": "Hubungi kami",
+          "show_whatsapp": true,
+          "show_phone": true,
+          "show_email": true,
+          "socials": []
+        },
+        "auto_height": true
+      },
+      {
+        "id": "about-3",
+        "kind": "about",
+        "x": 0,
+        "y": 10,
+        "w": 12,
+        "h": 7,
+        "style": "tint",
+        "data": {
+          "title": "Kenapa memilih kami",
+          "body": "Tim berpengalaman, jadwal fleksibel, dan laporan pekerjaan yang transparan."
+        },
+        "auto_height": true
+      },
+      {
+        "id": "product-grid-4",
+        "kind": "product_grid",
+        "x": 0,
+        "y": 17,
+        "w": 12,
+        "h": 10,
+        "style": "plain",
+        "data": {
+          "title": "Layanan & harga",
+          "limit": 8
+        },
+        "auto_height": true,
+        "layout": "list"
+      },
+      {
+        "id": "testimonials-5",
+        "kind": "testimonials",
+        "x": 0,
+        "y": 27,
+        "w": 12,
+        "h": 8,
+        "style": "plain",
+        "data": {
+          "title": "Ulasan pelanggan",
+          "items": [
+            {
+              "name": "Hendra",
+              "quote": "Pekerjaan rapi dan tepat waktu."
+            },
+            {
+              "name": "Lina",
+              "quote": "Harga sesuai yang dijanjikan."
+            },
+            {
+              "name": "Agus",
+              "quote": "Komunikasinya enak, recommended."
+            }
+          ]
+        },
+        "auto_height": true
+      },
+      {
+        "id": "business-hours-6",
+        "kind": "business_hours",
+        "x": 0,
+        "y": 35,
+        "w": 6,
+        "h": 9,
+        "style": "card",
+        "data": {
+          "title": "Jam layanan"
+        },
+        "auto_height": true
+      },
+      {
+        "id": "location-7",
+        "kind": "location",
+        "x": 6,
+        "y": 35,
+        "w": 6,
+        "h": 6,
+        "style": "card",
+        "data": {
+          "title": "Area layanan",
+          "show_map": true
+        },
+        "auto_height": true
+      },
+      {
+        "id": "chatbot-8",
+        "kind": "chatbot",
+        "x": 8,
+        "y": 41,
+        "w": 4,
+        "h": 10,
+        "style": "card",
+        "data": {
+          "title": "Tanya jadwal",
+          "welcome": "Halo! Mau cek jadwal kosong?"
+        },
+        "auto_height": true,
+        "layout": "floating",
+        "chat_open": false
+      }
+    ]
+  },
+  "galeri": {
+    "schema_version": 2,
+    "template": "modern_store",
+    "theme": {
+      "primary": "#92400E",
+      "font": "merriweather",
+      "surface": "cream",
+      "text_scale": 1
+    },
+    "blocks": [
+      {
+        "id": "hero-1",
+        "kind": "hero",
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 9,
+        "style": "plain",
+        "data": {
+          "title": "Kopi Senja Bandung",
+          "subtitle": "Kedai kopi rumahan dengan biji pilihan.",
+          "cta": {
+            "label": "Lihat karya",
+            "href": "#karya"
+          }
+        },
+        "auto_height": true
+      },
+      {
+        "id": "gallery-2",
+        "kind": "gallery",
+        "x": 0,
+        "y": 9,
+        "w": 12,
+        "h": 8,
+        "style": "plain",
+        "data": {
+          "title": "Karya kami",
+          "images": []
+        },
+        "auto_height": true
+      },
+      {
+        "id": "product-grid-3",
+        "kind": "product_grid",
+        "x": 0,
+        "y": 17,
+        "w": 12,
+        "h": 12,
+        "style": "plain",
+        "data": {
+          "title": "Bisa dipesan",
+          "limit": 8
+        },
+        "auto_height": true,
+        "layout": "grid"
+      },
+      {
+        "id": "about-4",
+        "kind": "about",
+        "x": 0,
+        "y": 29,
+        "w": 6,
+        "h": 8,
+        "style": "card",
+        "data": {
+          "title": "Cerita kami",
+          "body": "Berawal dari hobi di garasi rumah, kini karya kami dipakai pelanggan di berbagai kota."
+        },
+        "auto_height": true
+      },
+      {
+        "id": "testimonials-5",
+        "kind": "testimonials",
+        "x": 6,
+        "y": 29,
+        "w": 6,
+        "h": 8,
+        "style": "card",
+        "data": {
+          "title": "Kata mereka",
+          "items": [
+            {
+              "name": "Maya",
+              "quote": "Detailnya cantik sekali."
+            },
+            {
+              "name": "Rudi",
+              "quote": "Bungkusnya rapi, aman sampai tujuan."
+            }
+          ]
+        },
+        "auto_height": true
+      },
+      {
+        "id": "chatbot-6",
+        "kind": "chatbot",
+        "x": 0,
+        "y": 37,
+        "w": 4,
+        "h": 10,
+        "style": "card",
+        "data": {
+          "title": "Pesan khusus?",
+          "welcome": "Halo! Mau pesan desain khusus?"
+        },
+        "auto_height": true,
+        "layout": "inline",
+        "chat_open": true
+      },
+      {
+        "id": "contact-7",
+        "kind": "contact",
+        "x": 4,
+        "y": 37,
+        "w": 4,
+        "h": 6,
+        "style": "plain",
+        "data": {
+          "title": "Kontak",
+          "show_whatsapp": true,
+          "show_phone": false,
+          "show_email": true,
+          "socials": []
+        },
+        "auto_height": true
+      },
+      {
+        "id": "location-8",
+        "kind": "location",
+        "x": 8,
+        "y": 37,
+        "w": 4,
+        "h": 6,
+        "style": "plain",
+        "data": {
+          "title": "Workshop",
+          "show_map": false
+        },
+        "auto_height": true
+      }
+    ]
+  },
+  "malam": {
+    "schema_version": 2,
+    "template": "modern_store",
+    "theme": {
+      "primary": "#A78BFA",
+      "font": "poppins",
+      "surface": "dark",
+      "text_scale": 1
+    },
+    "blocks": [
+      {
+        "id": "hero-1",
+        "kind": "hero",
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 9,
+        "style": "tint",
+        "data": {
+          "title": "Kopi Senja Bandung",
+          "subtitle": "Kedai kopi rumahan dengan biji pilihan.",
+          "cta": {
+            "label": "Lihat menu",
+            "href": "#menu"
+          }
+        },
+        "auto_height": true
+      },
+      {
+        "id": "product-grid-2",
+        "kind": "product_grid",
+        "x": 0,
+        "y": 9,
+        "w": 7,
+        "h": 14,
+        "style": "plain",
+        "data": {
+          "title": "Menu malam ini",
+          "limit": 8
+        },
+        "auto_height": true,
+        "layout": "list"
+      },
+      {
+        "id": "chatbot-3",
+        "kind": "chatbot",
+        "x": 7,
+        "y": 9,
+        "w": 5,
+        "h": 12,
+        "style": "card",
+        "data": {
+          "title": "Reservasi meja",
+          "welcome": "Hai! Mau reservasi untuk berapa orang?"
+        },
+        "auto_height": true,
+        "layout": "inline",
+        "chat_open": true
+      },
+      {
+        "id": "business-hours-4",
+        "kind": "business_hours",
+        "x": 0,
+        "y": 23,
+        "w": 6,
+        "h": 9,
+        "style": "card",
+        "data": {
+          "title": "Buka"
+        },
+        "auto_height": true
+      },
+      {
+        "id": "location-5",
+        "kind": "location",
+        "x": 6,
+        "y": 23,
+        "w": 6,
+        "h": 6,
+        "style": "card",
+        "data": {
+          "title": "Temukan kami",
+          "show_map": true
+        },
+        "auto_height": true
+      },
+      {
+        "id": "testimonials-6",
+        "kind": "testimonials",
+        "x": 0,
+        "y": 32,
+        "w": 12,
+        "h": 8,
+        "style": "plain",
+        "data": {
+          "title": "Kesan pengunjung",
+          "items": [
+            {
+              "name": "Dimas",
+              "quote": "Suasananya cozy, musiknya pas."
+            },
+            {
+              "name": "Nadia",
+              "quote": "Kopinya enak buat begadang."
+            }
+          ]
+        },
+        "auto_height": true
+      }
+    ]
+  },
+  "segar": {
+    "schema_version": 2,
+    "template": "modern_store",
+    "theme": {
+      "primary": "#15803D",
+      "font": "nunito",
+      "surface": "light",
+      "text_scale": 1
+    },
+    "blocks": [
+      {
+        "id": "promotion-1",
+        "kind": "promotion",
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 5,
+        "style": "tint",
+        "data": {
+          "title": "Promo hari ini",
+          "body": "Diskon 10% untuk belanja pertama lewat website.",
+          "cta": {
+            "label": "Belanja sekarang",
+            "href": "#produk"
+          }
+        },
+        "auto_height": true
+      },
+      {
+        "id": "hero-2",
+        "kind": "hero",
+        "x": 0,
+        "y": 5,
+        "w": 12,
+        "h": 8,
+        "style": "plain",
+        "data": {
+          "title": "Kopi Senja Bandung",
+          "subtitle": "Kedai kopi rumahan dengan biji pilihan.",
+          "cta": {
+            "label": "Mulai belanja",
+            "href": "#produk"
+          }
+        },
+        "auto_height": true
+      },
+      {
+        "id": "product-grid-3",
+        "kind": "product_grid",
+        "x": 0,
+        "y": 13,
+        "w": 12,
+        "h": 12,
+        "style": "plain",
+        "data": {
+          "title": "Paling laris",
+          "limit": 12
+        },
+        "auto_height": true,
+        "layout": "grid"
+      },
+      {
+        "id": "contact-4",
+        "kind": "contact",
+        "x": 0,
+        "y": 25,
+        "w": 6,
+        "h": 6,
+        "style": "card",
+        "data": {
+          "title": "Pesan cepat",
+          "show_whatsapp": true,
+          "show_phone": true,
+          "show_email": false,
+          "socials": []
+        },
+        "auto_height": true
+      },
+      {
+        "id": "business-hours-5",
+        "kind": "business_hours",
+        "x": 6,
+        "y": 25,
+        "w": 6,
+        "h": 9,
+        "style": "card",
+        "data": {
+          "title": "Jam buka"
+        },
+        "auto_height": true
+      },
+      {
+        "id": "chatbot-6",
+        "kind": "chatbot",
+        "x": 8,
+        "y": 34,
+        "w": 4,
+        "h": 10,
+        "style": "card",
+        "data": {
+          "title": "Tanya stok",
+          "welcome": "Halo! Mau cek stok barang apa?"
+        },
+        "auto_height": true,
+        "layout": "floating",
+        "chat_open": false
+      }
+    ]
+  }
+}

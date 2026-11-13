@@ -1386,3 +1386,5 @@ label.st-tool { cursor: pointer; }
 .st-item:hover > .st-bar, .st-item.st-selected > .st-bar, .st-item.st-active > .st-bar, .st-item:focus-within > .st-bar { pointer-events: auto; }
 .st-grip { cursor: grab; }
 .st-locked .st-grip { cursor: default; }
+.st-save-bad { color: var(--danger); font-weight: 600; }
+.st-save-bad svg { color: var(--danger); }

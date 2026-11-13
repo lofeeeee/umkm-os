@@ -1,0 +1,15 @@
+P9-3 — Studio ↔ server (draf, simpan otomatis, terbit, riwayat, pulihkan) — 2026-11-13T21:58:13+07:00
+
+Frontend: src/studio/doc.ts (toDoc/fromDoc v2) + studio page memakai endpoint draf/publish/versions/rollback yang ada (ADR-0014).
+$ npx vitest run →  Tests 49 passed (49)
+$ cargo test -p umkm-domain --test frontend_contract → test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+Uji browser (Playwright, API tiruan) — /studio: pilih template Hangat → simpan otomatis → Terbitkan → Riwayat:
+  [PUT draft] schema 2 blocks 8 base_revision 3 theme {primary:#C2410C,font:poppins,surface:cream,text_scale:1}
+  status: Draf tersimpan
+  [POST publish] revision 4
+  toast: Website diterbitkan.
+Dokumen yang dikirim browser disimpan sebagai crates/domain/tests/fixtures/studio_browser_doc.json dan lolos validator Rust.
+
+Kontrol negatif: 409 → status 'Konflik — muat ulang' dan simpan otomatis berhenti; tanpa website.edit → 'Hanya lihat'; editor lama menolak mengedit draf v2 (diarahkan ke Studio).
+BELUM DIUJI ke API nyata: API dev yang berjalan masih binary lama (restart diblokir; perlu restart oleh pemilik).

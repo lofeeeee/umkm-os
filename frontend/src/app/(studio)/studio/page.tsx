@@ -11,7 +11,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 
 import {
-  LockSimple, LockSimpleOpen, ArrowClockwise, ArrowCounterClockwise, ArrowLeft, ArrowsIn, ArrowsOut, CaretDown, CaretUp, ChatCircleDots, Check, Copy,
+  LockSimple, LockSimpleOpen, ArrowSquareOut, ClockCounterClockwise, WarningCircle, ArrowClockwise, ArrowCounterClockwise, ArrowLeft, ArrowsIn, ArrowsOut, CaretDown, CaretUp, ChatCircleDots, Check, Copy,
   CornersIn, CornersOut, DesktopTower, DeviceMobile, ImageSquare, MagnifyingGlass, Plus, PuzzlePiece, SidebarSimple, Sparkle, SquaresFour, Trash, X,
 } from "@phosphor-icons/react/ssr";
 
@@ -28,20 +28,17 @@ import { COLS, compact, insert, mobileOrder, place } from "@/studio/grid";
 import { commit, redo, silent, start, undo, type History } from "@/studio/history";
 import { CELL_STYLES, PALETTES, PLUGINS, pluginDef, type PluginKind } from "@/studio/plugins";
 import { TEMPLATES, type TplCell } from "@/studio/templates";
+import { fromDoc, isV2, toDoc, type StudioState } from "@/studio/doc";
+import { ApiError, describe } from "@/lib/api";
+import { waktu } from "@/lib/labels";
 import { confirm, Sheet } from "@/ui/dialog";
-import { Badge } from "@/ui/page";
+import { Badge, Skeleton } from "@/ui/page";
 import { dismissToast, toast } from "@/ui/toast";
 
 type StudioCell = TplCell;
-interface Studio {
-  primary: string;
-  surface: "light" | "cream" | "dark";
-  font: string;
-  /** Skala teks seluruh halaman (0.9 kecil, 1 sedang, 1.1 besar). */
-  textScale?: number;
-  installed: PluginKind[];
-  cells: StudioCell[];
-}
+/** Keadaan Studio; dokumen server = toDoc(Studio) (schema_version 2). */
+type Studio = StudioState;
+type SaveState = "idle" | "saving" | "saved" | "error" | "conflict" | "readonly";
 const TEXT_SCALES = [{ v: 0.9, l: "Kecil" }, { v: 1, l: "Sedang" }, { v: 1.1, l: "Besar" }];
 
 const EMPTY_BUSINESS: Business = {
@@ -116,7 +113,8 @@ export default function StudioPage() {
 
 function StudioEditor({ ctx }: { ctx: TenantCtx }) {
   const base = `/api/v1/tenants/${ctx.tenant.id}`;
-  const assets = useUploads(ctx.tenant.id, ctx.can("website.edit"));
+  const [draftAssetsForUploads, setDraftAssetsForUploads] = useState<Record<string, string>>({});
+  const assets = useUploads(ctx.tenant.id, ctx.can("website.edit"), draftAssetsForUploads);
   const [hist, setHist] = useState<History<Studio> | null>(null);
   const st = hist?.present ?? null;
   const [business, setBusiness] = useState<Business>(EMPTY_BUSINESS);
@@ -128,7 +126,14 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
   const [q, setQ] = useState("");
   const [device, setDevice] = useState<"desktop" | "mobile">("desktop");
   const [full, setFull] = useState<string | null>(null);
-  const [savedRef, setSavedRef] = useState<Studio | null>(null);
+  const canEdit = ctx.can("website.edit");
+  const canPublish = ctx.can("website.publish");
+  // Sinkronisasi server: template website, revisi draf terakhir, versi terbit.
+  const [srv, setSrv] = useState<{ template: string; revision: number; published: number | null; savedDoc: string } | null>(null);
+  const [saveState, setSaveState] = useState<SaveState>("idle");
+  const [saveErr, setSaveErr] = useState<string | null>(null);
+  const [versionsOpen, setVersionsOpen] = useState(false);
+  const [publishing, setPublishing] = useState(false);
   const [stageW, setStageW] = useState(DESIGN_WIDTH);
   const stageRef = useRef<HTMLDivElement>(null);
   const [clipped, setClipped] = useState<Record<string, boolean>>({});
@@ -143,29 +148,53 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
   });
   const scale = Math.min(1, stageW / DESIGN_WIDTH);
 
-  /* ---------------- Muat data toko ---------------- */
+  /* ---------------- Muat data toko & draf server ---------------- */
   useEffect(() => {
-    let saved: Studio | null = null;
-    try { saved = JSON.parse(localStorage.getItem(storageKey(ctx.tenant.id)) ?? "null") as Studio | null; } catch { saved = null; }
-    Promise.all([
-      api<Business>("GET", `${base}/business/profile`).catch(() => EMPTY_BUSINESS),
-      api<{ items: { slug: string; name: string; available: boolean; images: string[]; variants: { price: string; promo_price: string | null }[] }[] }>("GET", `${base}/products?limit=24&status=active`).catch(() => ({ items: [] })),
-      api<{ content: PageContent }>("GET", `${base}/website/pages/home/draft`).then((d) => d.content, () => null),
-    ]).then(([b, p, d]) => {
+    let local: Studio | null = null;
+    try { local = JSON.parse(localStorage.getItem(storageKey(ctx.tenant.id)) ?? "null") as Studio | null; } catch { local = null; }
+    type Draft = { content: PageContent | Record<string, unknown>; revision: number; published_version: number | null; assets: Record<string, string> };
+    // Website belum dibuat → pilih template server pertama (Studio menyusun ulang tampilannya sendiri).
+    const ensureWebsite = async () => {
+      const w = await api<{ template_key: string }>("GET", `${base}/website`).catch((e) => (e instanceof ApiError && e.status === 404 ? null : Promise.reject(e)));
+      if (w) return w.template_key;
+      const tpls = await api<{ key: string }[]>("GET", `${base}/website/templates`);
+      const key = tpls[0]?.key;
+      if (!key) throw new Error("Tidak ada template website.");
+      await api("PUT", `${base}/website`, { json: { template_key: key } });
+      return key;
+    };
+    (async () => {
+      const [b, p, template] = await Promise.all([
+        api<Business>("GET", `${base}/business/profile`).catch(() => EMPTY_BUSINESS),
+        api<{ items: { slug: string; name: string; available: boolean; images: string[]; variants: { price: string; promo_price: string | null }[] }[] }>("GET", `${base}/products?limit=24&status=active`).catch(() => ({ items: [] })),
+        ensureWebsite(),
+      ]);
+      const d = await api<Draft>("GET", `${base}/website/pages/home/draft`);
       setBusiness(b);
-      setDraft(d);
       setRawProducts(p.items.map((x) => ({ slug: x.slug, name: x.name, image: x.images[0], price: x.variants[0]?.price ?? "0.00", promo_price: x.variants[0]?.promo_price ?? null, available: x.available })));
-      if (saved) {
-        // Batas ukuran selalu dari katalog terbaru (layout tersimpan bisa memakai versi lama).
-        const norm = withInstalled({ ...saved, cells: saved.cells.map((c) => ({ ...c, minW: pluginDef(c.kind).minW, minH: pluginDef(c.kind).minH })) });
-        setHist(start(norm));
-        setSavedRef(norm);
+      setDraftAssetsForUploads(d.assets);
+      const minSize = (k: PluginKind) => ({ minW: pluginDef(k).minW, minH: pluginDef(k).minH });
+      if (isV2(d.content)) {
+        // Dokumen Studio dari server = sumber kebenaran.
+        const st0 = withInstalled(fromDoc(d.content, minSize));
+        setHist(start(st0));
+        setSrv({ template, revision: d.revision, published: d.published_version, savedDoc: JSON.stringify(toDoc(st0, template)) });
       } else {
-        setHist(start(fromDraft(d)));
-        setPicking("first");
+        // Website v1: konversi otomatis (ADR-0017). Prototipe yang tersimpan di browser dipakai bila ada.
+        const v1 = d.content as PageContent;
+        setDraft(v1);
+        setSrv({ template, revision: d.revision, published: d.published_version, savedDoc: "" });
+        if (local) {
+          setHist(start(withInstalled({ ...local, cells: local.cells.map((c) => ({ ...c, ...minSize(c.kind) })) })));
+          toast.info("Susunan dari prototipe Studio dipakai dan sedang disimpan ke server.");
+        } else {
+          setHist(start(fromDraft(v1)));
+          setPicking("first");
+        }
       }
-    });
-  }, [base, ctx.tenant.id]);
+      if (!canEdit) setSaveState("readonly");
+    })().catch((e) => { setSaveState("error"); setSaveErr(describe(e)); });
+  }, [base, ctx.tenant.id, canEdit]);
   const products = useMemo<GridProduct[]>(() => rawProducts.map((p) => ({ ...p, image: p.image ? assets.url(p.image) : undefined })), [rawProducts, assets]);
   const noPhoto = rawProducts.filter((p) => !p.image).length;
 
@@ -177,14 +206,56 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
   const doUndo = useCallback(() => setHist((h) => (h ? undo(h) : h)), []);
   const doRedo = useCallback(() => setHist((h) => (h ? redo(h) : h)), []);
 
+  /** Simpan draf ke server (PUT dengan base_revision; 409 = diubah di tempat lain). */
+  const saveNow = useCallback(async (): Promise<number | null> => {
+    if (!st || !srv || !canEdit) return srv?.revision ?? null;
+    const doc = toDoc(st, srv.template);
+    const json = JSON.stringify(doc);
+    if (json === srv.savedDoc) return srv.revision;
+    setSaveState("saving");
+    try {
+      const r = await api<{ revision: number }>("PUT", `${base}/website/pages/home/draft`, { json: { content: doc, base_revision: srv.revision } });
+      setSrv((x) => (x ? { ...x, revision: r.revision, savedDoc: json } : x));
+      setSaveState("saved");
+      setSaveErr(null);
+      try { localStorage.removeItem(storageKey(ctx.tenant.id)); } catch { /* abaikan */ }
+      return r.revision;
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 409) {
+        setSaveState("conflict");
+        setSaveErr("Draf diubah di tempat lain (tab atau perangkat lain). Muat ulang halaman untuk melihat versi terbaru.");
+      } else {
+        setSaveState("error");
+        setSaveErr(describe(e));
+      }
+      return null;
+    }
+  }, [st, srv, canEdit, base, ctx.tenant.id]);
+
   useEffect(() => {
-    if (!st || picking === "first") return;
-    const t = setTimeout(() => {
-      try { localStorage.setItem(storageKey(ctx.tenant.id), JSON.stringify(st)); setSavedRef(st); } catch { /* penyimpanan diblokir */ }
-    }, 600);
+    if (!st || !srv || picking === "first" || !canEdit || saveState === "conflict") return;
+    if (JSON.stringify(toDoc(st, srv.template)) === srv.savedDoc) return;
+    const t = setTimeout(() => void saveNow(), 1200);
     return () => clearTimeout(t);
-  }, [st, picking, ctx.tenant.id]);
-  const saved = st !== null && savedRef === st;
+  }, [st, srv, picking, canEdit, saveState, saveNow]);
+  const saved = !!st && !!srv && JSON.stringify(toDoc(st, srv.template)) === srv.savedDoc;
+
+  async function publish() {
+    if (!srv) return;
+    setPublishing(true);
+    try {
+      const rev = await saveNow();
+      if (rev === null) { toast.error("Draf belum tersimpan, jadi belum bisa diterbitkan."); return; }
+      const r = await api<{ version: number }>("POST", `${base}/website/pages/home/publish`, { json: { revision: rev } });
+      setSrv((x) => (x ? { ...x, published: r.version ?? x.published } : x));
+      toast.ok("Website diterbitkan. Pengunjung melihat versi baru dalam ±1 menit.");
+    } catch (e) {
+      toast.error(describe(e));
+    } finally {
+      setPublishing(false);
+    }
+  }
+
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -356,8 +427,7 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
           <SidebarSimple weight={panelOpen ? "fill" : "bold"} />
         </button>
         <span className="sx-brand"><span className="d-avatar" aria-hidden="true">{(ctx.tenant.name.trim()[0] ?? "T").toUpperCase()}</span>{ctx.tenant.name}<em>Studio</em></span>
-        <Badge tone="warn" plain>Prototipe</Badge>
-        <span className="st-save" aria-live="polite">{saved ? <><Check weight="bold" aria-hidden="true" />Tersimpan</> : "Menyimpan…"}</span>
+        <SaveBadge state={saveState} saved={saved} err={saveErr} onRetry={() => { setSaveState("idle"); void saveNow(); }} />
         <span className="sx-spacer" />
         <div className="d-row" style={{ gap: 2 }}>
           <button type="button" className="d-icon-btn" onClick={doUndo} disabled={hist.past.length === 0} aria-label="Urungkan (Ctrl+Z)" title="Urungkan (Ctrl+Z)"><ArrowCounterClockwise weight="bold" /></button>
@@ -369,7 +439,14 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
         </div>
         <span className="sx-zoom" title="Perbesaran kanvas">{Math.round(scale * 100)}%</span>
         <button className="d-btn d-btn-sm" onClick={() => setPicking("change")}><SquaresFour weight="bold" aria-hidden="true" />Template</button>
+        <button className="d-btn d-btn-sm" onClick={() => setVersionsOpen(true)}><ClockCounterClockwise weight="bold" aria-hidden="true" />Riwayat</button>
         <FullscreenButton />
+        {ctx.tenant.primary_hostname && srv?.published && (
+          <a className="d-btn d-btn-sm d-btn-ghost" href={`https://${ctx.tenant.primary_hostname}`} target="_blank" rel="noopener noreferrer"><ArrowSquareOut weight="bold" aria-hidden="true" />Lihat situs</a>
+        )}
+        <button className="d-btn d-btn-sm d-btn-primary" onClick={() => void publish()} disabled={!canPublish || publishing || saveState === "conflict"} title={canPublish ? "Terbitkan ke situs publik" : "Butuh izin terbitkan website"}>
+          {publishing ? "Menerbitkan…" : srv?.published ? "Terbitkan perubahan" : "Terbitkan"}
+        </button>
       </header>
 
       <div className="sx-body" data-panel={panelOpen ? "open" : "closed"}>
@@ -532,6 +609,11 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
         })()}
       </Sheet>
 
+      <Sheet open={versionsOpen} onClose={() => setVersionsOpen(false)} title="Riwayat terbit"
+        description="Setiap kali menerbitkan, versi lama disimpan. Pulihkan menampilkan versi itu lagi di situs; draf Anda tidak berubah.">
+        {versionsOpen && <Versions base={base} canPublish={canPublish} published={srv?.published ?? null} onRestored={(v) => setSrv((x) => (x ? { ...x, published: v } : x))} />}
+      </Sheet>
+
       <Sheet open={picking === "change"} onClose={() => setPicking(null)} wide title="Ganti template" description="Susunan dan warna diganti; Anda bisa membatalkan dengan Ctrl+Z.">
         {picking === "change" && (
           <TemplateGallery
@@ -547,6 +629,54 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
         )}
       </Sheet>
     </Assets.Provider>
+  );
+}
+
+/* ============================================================ Status simpan & riwayat */
+function SaveBadge({ state, saved, err, onRetry }: { state: SaveState; saved: boolean; err: string | null; onRetry: () => void }) {
+  if (state === "readonly") return <Badge plain>Hanya lihat</Badge>;
+  if (state === "conflict" || state === "error") {
+    return (
+      <span className="st-save st-save-bad" role="alert" title={err ?? undefined}>
+        <WarningCircle weight="fill" aria-hidden="true" />{state === "conflict" ? "Konflik — muat ulang" : "Gagal menyimpan"}
+        {state === "error" && <button type="button" className="d-link d-small" onClick={onRetry}>Coba lagi</button>}
+      </span>
+    );
+  }
+  return <span className="st-save" aria-live="polite">{saved ? <><Check weight="bold" aria-hidden="true" />Draf tersimpan</> : "Menyimpan…"}</span>;
+}
+
+interface Version { version: number; created_at_unix: number; is_current: boolean }
+function Versions({ base, canPublish, published, onRestored }: { base: string; canPublish: boolean; published: number | null; onRestored: (v: number) => void }) {
+  const [items, setItems] = useState<Version[] | null>(null);
+  const [busy, setBusy] = useState<number | null>(null);
+  const load = useCallback(() => api<Version[]>("GET", `${base}/website/pages/home/versions`).then(setItems, (e) => { toast.error(describe(e)); setItems([]); }), [base]);
+  useEffect(() => { void load(); }, [load, published]);
+  if (!items) return <Skeleton lines={4} />;
+  if (items.length === 0) return <p className="d-muted">Belum pernah diterbitkan.</p>;
+  return (
+    <ul className="d-list">
+      {items.map((v) => (
+        <li key={v.version}>
+          <div className="d-list-main">
+            <strong>Versi {v.version} {v.is_current && <Badge tone="ok">Tampil di situs</Badge>}</strong>
+            <span className="d-muted">{waktu(v.created_at_unix * 1000)}</span>
+          </div>
+          {!v.is_current && (
+            <button type="button" className="d-btn d-btn-sm" disabled={!canPublish || busy !== null} onClick={async () => {
+              if (!(await confirm({ title: `Pulihkan versi ${v.version}?`, body: "Situs publik akan menampilkan versi ini lagi. Draf yang sedang Anda ubah tidak berubah.", confirmLabel: "Pulihkan" }))) return;
+              setBusy(v.version);
+              try {
+                await api("POST", `${base}/website/pages/home/rollback`, { json: { version: v.version } });
+                toast.ok(`Situs kini menampilkan versi ${v.version}.`);
+                onRestored(v.version);
+                await load();
+              } catch (e) { toast.error(describe(e)); } finally { setBusy(null); }
+            }}>Pulihkan</button>
+          )}
+        </li>
+      ))}
+    </ul>
   );
 }
 

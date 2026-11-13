@@ -14,6 +14,7 @@ import { waktu } from "@/lib/labels";
 import { confirm, Sheet } from "@/ui/dialog";
 import { Badge, BusyButton, Card, PageHeader, PageSkeleton } from "@/ui/page";
 import { toast } from "@/ui/toast";
+import { isV2 } from "@/studio/doc";
 import { api, ApiError, apiUrl, describe } from "@/lib/api";
 import { FIELDS, FONT_PRESETS, SECTION_LABELS, defaultData, newSectionId } from "@/renderer/sections";
 import { Site } from "@/renderer/Site";
@@ -172,6 +173,22 @@ function Editor({ ctx }: { ctx: TenantCtx }) {
   if (site === undefined) return <>{error ? <Alert kind="error">{error}</Alert> : <PageSkeleton />}</>;
   if (site === null) return <TemplatePicker base={base} canEdit={canEdit} business={business} onSelected={async () => { setSite(await api<WebsiteView>("GET", `${base}/website`)); await loadDraft(); }} />;
   if (!content) return <Alert kind="error">{error}</Alert>;
+  // ADR-0017: draf sudah berformat Studio (v2) → editor lama tidak boleh menimpanya.
+  if (isV2(content)) {
+    return (
+      <>
+        <PageHeader title="Website" description="Website toko Anda kini disusun di Studio: kanvas grid, plugin, dan pratinjau langsung." />
+        <Card>
+          <div className="d-empty">
+            <span className="d-empty-icon" aria-hidden="true"><Sparkle weight="duotone" /></span>
+            <p className="d-empty-title">Website ini dikelola di Studio</p>
+            <p>Ubah tampilan, terbitkan, dan pulihkan versi lama langsung dari Studio.</p>
+            <Link className="d-btn d-btn-primary" href={`/studio?tenant=${ctx.tenant.id}`}>Buka Studio</Link>
+          </div>
+        </Card>
+      </>
+    );
+  }
 
   const previewContent = viewing?.content ?? content;
   const previewAssets = viewing
@@ -188,7 +205,7 @@ function Editor({ ctx }: { ctx: TenantCtx }) {
         description={<>Ubah tampilan situs toko, cek pratinjau, lalu terbitkan. Templat {site.template_key} v{site.template_version}. {state}</>}
         actions={
           <>
-            <Link className="d-btn d-btn-ghost" href={`/studio?tenant=${ctx.tenant.id}`}><Sparkle weight="bold" aria-hidden="true" />Coba Studio (baru)</Link>
+            <Link className="d-btn d-btn-ghost" href={`/studio?tenant=${ctx.tenant.id}`}><Sparkle weight="bold" aria-hidden="true" />Buka Studio</Link>
             {ctx.tenant.primary_hostname && published && (
               <a className="d-btn d-btn-ghost" href={`https://${ctx.tenant.primary_hostname}`} target="_blank" rel="noopener noreferrer"><ArrowSquareOut weight="bold" aria-hidden="true" />Lihat situs</a>
             )}

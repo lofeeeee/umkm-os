@@ -13,6 +13,8 @@ export interface TplCell extends Cell {
   layout?: string;
   autoH?: boolean;
   chatOpen?: boolean;
+  /** Sembunyikan blok di perangkat tertentu (G-LAY-02, didukung skema v2). */
+  hideOn?: "mobile" | "desktop";
 }
 export interface TplResult {
   primary: string;
