@@ -2,57 +2,32 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useState, useSyncExternalStore, type FormEvent } from "react";
 
-import { CheckCircle, Globe, Storefront, Wallet } from "@phosphor-icons/react/ssr";
-
+import { Alert } from "@/dashboard/shell";
 import { api, describe, setCsrf } from "@/lib/api";
+import { AuthShell, PasswordInput } from "@/ui/auth";
+import { BusyButton } from "@/ui/page";
 
-function AuthBrand() {
-  return (
-    <div className="d-auth-brand" aria-hidden="true">
-      <div className="d-auth-logo">
-        <span>
-          <Storefront size={20} weight="bold" />
-        </span>
-        UMKM OS
-      </div>
-      <div className="d-auth-pitch">
-        <h2>Mulai digitalisasi usaha Anda hari ini</h2>
-        <p>Daftar, dapatkan website, dan kelola pesanan pertama dalam hitungan menit.</p>
-      </div>
-      <ul className="d-auth-feats">
-        <li>
-          <Globe aria-hidden="true" weight="bold" />
-          <div>
-            <strong>Website siap pakai</strong>
-            <span>Editor visual dengan pratinjau ponsel langsung.</span>
-          </div>
-        </li>
-        <li>
-          <Wallet aria-hidden="true" weight="bold" />
-          <div>
-            <strong>Pesanan & pembayaran QRIS</strong>
-            <span>Verifikasi tercatat, approval berlapis untuk keamanan.</span>
-          </div>
-        </li>
-        <li>
-          <CheckCircle aria-hidden="true" weight="bold" />
-          <div>
-            <strong>Asisten AI percakapan</strong>
-            <span>Jawab pelanggan otomatis, serahkan ke staf bila perlu.</span>
-          </div>
-        </li>
-      </ul>
-      <p className="d-auth-foot">© {new Date().getFullYear()} UMKM OS — sistem operasi usaha mikro, kecil, dan menengah.</p>
-    </div>
-  );
+/** "Kopi Senja Bandung" → "kopi-senja-bandung" (3–63 karakter a-z0-9-). */
+function slugify(s: string): string {
+  return s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 63);
 }
+/** Domain toko = host dasbor tanpa label pertama (app.contoh.id → contoh.id). */
+const rootDomain = () => window.location.hostname.split(".").slice(1).join(".") || window.location.hostname;
+const noop = () => () => {};
 
 export default function Register() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [name, setName] = useState("");
+  const [slug, setSlug] = useState("");
+  const [slugTouched, setSlugTouched] = useState(false);
+  const [password, setPassword] = useState("");
+  const domain = useSyncExternalStore(noop, rootDomain, () => "");
+  const effectiveSlug = slugTouched ? slug : slugify(name);
+
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
@@ -62,9 +37,9 @@ export default function Register() {
       const r = await api<{ csrf_token: string }>("POST", "/api/v1/auth/register", {
         json: {
           email: f.get("email"),
-          password: f.get("password"),
-          business_name: f.get("business_name"),
-          slug: (f.get("slug") as string) || null,
+          password,
+          business_name: name,
+          slug: effectiveSlug.length >= 3 ? effectiveSlug : null,
           accept_terms: f.get("terms") === "on",
           accept_privacy: f.get("privacy") === "on",
         },
@@ -77,26 +52,31 @@ export default function Register() {
       setBusy(false);
     }
   }
+  const strength = password.length === 0 ? null : password.length < 8 ? "Minimal 8 karakter" : password.length < 12 ? "Cukup — lebih panjang lebih aman" : "Kuat";
   return (
-    <div className="d-auth">
-      <AuthBrand />
-      <div className="d-auth-form">
-        <main className="d-narrow">
-          <h1>Daftar</h1>
-          <p className="d-muted">Buat akun dan toko digital pertama Anda.</p>
-          <form className="d-card" onSubmit={submit}>
-            {error && <div className="d-alert d-alert-error" role="alert">{error}</div>}
-            <label className="d-field"><span>Nama bisnis</span><input name="business_name" required maxLength={120} autoFocus /></label>
-            <label className="d-field"><span>Alamat toko (opsional)</span><input name="slug" pattern="[a-z0-9-]{3,63}" placeholder="tokosaya" /></label>
-            <label className="d-field"><span>Email</span><input name="email" type="email" autoComplete="email" required /></label>
-            <label className="d-field"><span>Password</span><input name="password" type="password" autoComplete="new-password" required minLength={8} /></label>
-            <label className="d-check"><input name="terms" type="checkbox" required /> Saya menyetujui <a href="/legal/syarat" target="_blank" rel="noopener">syarat & ketentuan</a></label>
-            <label className="d-check"><input name="privacy" type="checkbox" required /> Saya menyetujui <a href="/legal/privasi" target="_blank" rel="noopener">kebijakan privasi</a></label>
-            <button className="d-btn d-btn-primary" disabled={busy} style={{ width: "100%" }}>{busy ? "Memproses…" : "Daftar"}</button>
-          </form>
-          <p>Sudah punya akun? <Link href="/login">Masuk</Link></p>
-        </main>
-      </div>
-    </div>
+    <AuthShell pitch="Mulai digitalisasi usaha Anda hari ini">
+      <h1>Daftarkan usaha</h1>
+      <p className="d-muted">Gratis 14 hari, tanpa kartu kredit. Website toko langsung jadi.</p>
+      <form className="d-card" onSubmit={submit}>
+        <Alert kind="error">{error}</Alert>
+        <label className="d-field"><span>Nama bisnis</span>
+          <input name="business_name" required maxLength={120} autoFocus placeholder="mis. Kopi Senja" value={name} onChange={(e) => setName(e.target.value)} />
+        </label>
+        <label className="d-field"><span>Alamat toko</span>
+          <span className="d-input-suffix">
+            <input name="slug" pattern="[a-z0-9-]{3,63}" placeholder="tokosaya" value={effectiveSlug}
+              onChange={(e) => { setSlugTouched(true); setSlug(e.target.value.toLowerCase()); }} style={{ paddingRight: domain ? `${domain.length * 7.5 + 24}px` : undefined }} />
+            {domain && <em aria-hidden="true">.{domain}</em>}
+          </span>
+          <span className="d-hint">Huruf kecil, angka, dan tanda hubung. Boleh dikosongkan agar dibuat otomatis.</span>
+        </label>
+        <label className="d-field"><span>Email</span><input name="email" type="email" autoComplete="email" required placeholder="nama@contoh.id" /></label>
+        <PasswordInput name="password" autoComplete="new-password" minLength={8} value={password} onChange={setPassword} hint={strength ?? "Minimal 8 karakter."} />
+        <label className="d-check"><input name="terms" type="checkbox" required /> <span>Saya menyetujui <a href="/legal/syarat" target="_blank" rel="noopener">syarat & ketentuan</a></span></label>
+        <label className="d-check"><input name="privacy" type="checkbox" required /> <span>Saya menyetujui <a href="/legal/privasi" target="_blank" rel="noopener">kebijakan privasi</a></span></label>
+        <BusyButton busy={busy} className="d-btn d-btn-primary d-btn-block d-btn-lg">Daftar</BusyButton>
+      </form>
+      <p>Sudah punya akun? <Link href="/login">Masuk</Link></p>
+    </AuthShell>
   );
 }

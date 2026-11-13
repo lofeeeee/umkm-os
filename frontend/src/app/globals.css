@@ -1149,3 +1149,14 @@ details.d-details[open] > summary { margin-bottom: var(--sp-3); }
 .d-upload > svg { width: 22px; height: 22px; color: var(--brand); flex: none; }
 .d-upload strong { display: block; font-size: 0.8125rem; }
 .d-upload .d-muted { display: block; }
+.d-password { position: relative; display: block; }
+.d-password input { padding-right: 40px; }
+.d-password .d-icon-btn { position: absolute; right: 2px; top: 50%; translate: 0 -50%; width: 32px; height: 32px; }
+.d-otp { font-size: 1.125rem !important; letter-spacing: 0.3em; text-align: center; font-variant-numeric: tabular-nums; }
+
+/* Dokumen legal */
+.legal-doc { font-size: 0.875rem; line-height: 1.7; }
+.legal-doc h2 { font-size: 0.9375rem; margin: var(--sp-6) 0 var(--sp-2); }
+.legal-doc p { color: var(--ink-2); }
+.legal-meta { color: var(--muted); font-size: 0.75rem; }
+main.d-legal { max-width: 720px; }
