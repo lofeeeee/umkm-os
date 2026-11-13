@@ -252,4 +252,4 @@ Arah balik: TC → AC lewat nomor yang sama (Test Plan §4); AC → FR lewat FSD
 | FR-ANL-001 | AC-ANL-001 | TC-ANL-001 | GET /api/v1/tenants/{tenant_id}/analytics/overview | ADR-0016 | `docs/evidence/P7-5.txt` | Verified |
 | FR-ANL-002 | AC-ANL-002 | TC-ANL-002 | GET /api/v1/platform/analytics | ADR-0016 | `docs/evidence/P7-5.txt` | Verified |
 | FR-SUB-001 | AC-SUB-001 | TC-SUB-001 | GET /api/v1/plans; GET /api/v1/tenants/{tenant_id}/subscription; batas di endpoint produk/undangan/upload/chat | ADR-0016 | `docs/evidence/P7-2.txt` | Verified |
-| FR-SUB-002 | AC-SUB-002 | TC-SUB-002 | ditetapkan di OpenAPI saat task | D-10 | — | Planned |
+| FR-SUB-002 | AC-SUB-002 | TC-SUB-002 | internal (ai_runs.estimated_cost_idr) | ADR-0011, ADR-0016 | `docs/evidence/P7-SUB-002.txt` | Verified |

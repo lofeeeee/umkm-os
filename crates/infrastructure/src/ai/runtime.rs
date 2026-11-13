@@ -82,6 +82,26 @@ pub struct RunResult {
     pub outcome: TurnOutcome,
 }
 
+/// AC-SUB-002: estimasi biaya (Rupiah) satu panggilan. Hanya provider platform dengan harga terkonfigurasi;
+/// BYOK (ditagih ke akun toko) atau harga 0 → `None` (tidak diketahui, bukan gratis).
+pub fn estimate_cost_idr(
+    platform: Option<&PlatformAiSettings>,
+    source: ProviderSource,
+    usage: &Usage,
+) -> Option<f64> {
+    let p = platform?;
+    if source != ProviderSource::Platform
+        || (p.input_cost_per_million_idr <= 0.0 && p.output_cost_per_million_idr <= 0.0)
+    {
+        return None;
+    }
+    Some(
+        (f64::from(usage.prompt_tokens) * p.input_cost_per_million_idr
+            + f64::from(usage.completion_tokens) * p.output_cost_per_million_idr)
+            / 1_000_000.0,
+    )
+}
+
 /// Konteks pencatatan satu giliran (latensi diukur sejak giliran dimulai).
 struct RecordCtx {
     conversation_id: Option<Uuid>,
@@ -556,8 +576,8 @@ impl AiRuntime {
         };
         let id: Uuid = sqlx::query_scalar(
             "INSERT INTO ai_runs (tenant_id, provider_id, source, model, purpose, status, decision, prompt_tokens,
-                completion_tokens, latency_ms, error_code, conversation_id)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $11, $10, $12) RETURNING id",
+                completion_tokens, latency_ms, error_code, conversation_id, estimated_cost_idr)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $11, $10, $12, round($13::numeric, 4)) RETURNING id",
         )
         .bind(t.as_uuid())
         .bind(provider)
@@ -571,6 +591,7 @@ impl AiRuntime {
         .bind(o.error_code)
         .bind(rc.started.elapsed().as_millis().min(i32::MAX as u128) as i32)
         .bind(rc.conversation_id)
+        .bind(estimate_cost_idr(self.platform.as_ref(), source, &o.usage))
         .fetch_one(&mut *tx)
         .await?;
         for c in &o.tool_calls {

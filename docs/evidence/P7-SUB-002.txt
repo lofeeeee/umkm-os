@@ -1,0 +1,28 @@
+FR-SUB-002 / AC-SUB-002 — Pemakaian AI menyimpan token input/output DAN estimasi biaya (PRD.md §4.15)
+Tanggal: 2026-11-13 (prasyarat Gate P7: TC-SUB Verified)
+
+Artefak
+- migrations/0034_ai_cost_estimate.{up,down}.sql  ai_runs.estimated_cost_idr numeric(14,4) (≥ 0 atau NULL).
+- crates/shared/src/config.rs  [ai.platform] input_cost_per_million_idr / output_cost_per_million_idr (Rp per 1 juta
+  token; default 0 = belum diketahui). Config dev/staging/production memuat kunci dengan nilai 0 + penjelasan.
+- crates/infrastructure/src/ai/runtime.rs  estimate_cost_idr: provider platform dengan harga terkonfigurasi →
+  (prompt × harga input + completion × harga output) ÷ 1.000.000, dibulatkan 4 desimal di DB; BYOK (ditagih provider ke
+  akun toko) atau harga 0 → NULL (tidak diketahui, BUKAN gratis). Disimpan di setiap baris ai_runs bersama token.
+
+Hasil
+- crates/infrastructure/tests/ai_runtime.rs::every_run_stores_tokens_and_cost_estimate: giliran nyata ke provider
+  tiruan → prompt/completion > 0 dan estimated_cost_idr = rumus (selisih < 0,0001); BYOK / tanpa platform / harga 0 →
+  None; harga input saja → Rp10 untuk 1.000 token input.
+- Gate P7 (perintah gate penuh) exit 0 — lihat phase-7-commercialization.txt.
+
+Negative control (mutasi sementara pada runtime.rs, dikembalikan; test GAGAL)
+  == NEGCTL: estimasi biaya tidak disimpan
+      every_run_stores_tokens_and_cost_estimate ... FAILED
+      result: FAILED. 5 passed; 1 failed;
+  == NEGCTL: harga tak diketahui dianggap gratis (0)
+      every_run_stores_tokens_and_cost_estimate ... FAILED
+      result: FAILED. 5 passed; 1 failed;
+
+Catatan
+- Estimasi belum ditampilkan di dashboard/analitik (data tersedia di ai_runs untuk laporan berikutnya).
+- Harga provider platform harus diisi operator sesuai tarif; selama 0, estimasi NULL.

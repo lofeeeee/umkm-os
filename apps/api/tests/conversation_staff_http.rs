@@ -65,6 +65,7 @@ async fn chat_app(pool: &PgPool, port: u16) -> TestApp {
             embeddings: false,
             monthly_quota: 1_000_000,
             trusted_internal: true,
+            ..Default::default()
         }),
         None,
         4,

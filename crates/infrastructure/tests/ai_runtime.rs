@@ -106,6 +106,7 @@ fn runtime(app: PgPool, port: u16, mode: &str, quota: u64) -> AiRuntime {
             embeddings: true,
             monthly_quota: quota,
             trusted_internal: true,
+            ..Default::default()
         }),
         platform_key: None,
         tenant_egress: Egress::new(
@@ -428,5 +429,54 @@ async fn worker_indexes_pending_knowledge_and_answers_use_it(pool: PgPool) {
     assert!(
         sys.contains("<<<KONTEKS") && sys.contains("2 hari kerja"),
         "{sys}"
+    );
+}
+
+/// AC-SUB-002: setiap panggilan AI menyimpan token input/output DAN estimasi biaya.
+#[sqlx::test(migrator = "MIGRATOR")]
+async fn every_run_stores_tokens_and_cost_estimate(pool: PgPool) {
+    use umkm_application::ai::llm::Usage;
+    use umkm_domain::ai::ProviderSource;
+    use umkm_infrastructure::ai::runtime::estimate_cost_idr;
+
+    let (port, _) = provider().await;
+    let mut rt = runtime(app_pool(&pool).await, port, "ok", 1_000_000);
+    if let Some(p) = rt.platform.as_mut() {
+        p.input_cost_per_million_idr = 15_000.0;
+        p.output_cost_per_million_idr = 60_000.0;
+    }
+    let t = setup(&pool, "hybrid", true, 10_000).await;
+    rt.answer(t, "Kopi Senja", ask("ada kopi gayo?"), "chat")
+        .await
+        .unwrap();
+    let (pt, ct, cost): (i32, i32, Option<f64>) = sqlx::query_as(
+        "SELECT prompt_tokens, completion_tokens, estimated_cost_idr::float8 FROM ai_runs WHERE tenant_id = $1",
+    )
+    .bind(t.as_uuid())
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert!(pt > 0 && ct > 0, "token input/output tersimpan");
+    let want = (f64::from(pt) * 15_000.0 + f64::from(ct) * 60_000.0) / 1_000_000.0;
+    assert!((cost.unwrap() - want).abs() < 0.0001, "{cost:?} vs {want}");
+
+    // Harga tidak diketahui / BYOK → None (tidak dianggap gratis).
+    let u = Usage {
+        prompt_tokens: 1000,
+        completion_tokens: 100,
+    };
+    let mut p = rt.platform.clone().unwrap();
+    assert_eq!(estimate_cost_idr(Some(&p), ProviderSource::Byok, &u), None);
+    assert_eq!(estimate_cost_idr(None, ProviderSource::Platform, &u), None);
+    p.input_cost_per_million_idr = 0.0;
+    p.output_cost_per_million_idr = 0.0;
+    assert_eq!(
+        estimate_cost_idr(Some(&p), ProviderSource::Platform, &u),
+        None
+    );
+    p.input_cost_per_million_idr = 10_000.0;
+    assert_eq!(
+        estimate_cost_idr(Some(&p), ProviderSource::Platform, &u),
+        Some(10.0)
     );
 }

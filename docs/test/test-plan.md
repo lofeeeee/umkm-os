@@ -129,4 +129,4 @@ Perintah gate P2: `cargo fmt --check && cargo clippy --workspace -- -D warnings 
 | TC-ANL-001 | AC-ANL-001 | Integration+E2E | `apps/api/tests/analytics_overview_http.rs`, `frontend/e2e/chat.spec.ts` | Verified |
 | TC-ANL-002 | AC-ANL-002 | Integration+E2E | `apps/api/tests/analytics_overview_http.rs`, `frontend/e2e/billing.spec.ts` | Verified |
 | TC-SUB-001 | AC-SUB-001 | Unit+Integration | `crates/domain/src/billing.rs`, `apps/api/tests/billing_http.rs`, `apps/api/tests/plan_limits_http.rs` | Verified |
-| TC-SUB-002 | AC-SUB-002 | lihat §2 | ditetapkan saat task | Planned |
+| TC-SUB-002 | AC-SUB-002 | Unit+Integration | `crates/infrastructure/tests/ai_runtime.rs` | Verified |

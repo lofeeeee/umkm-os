@@ -85,6 +85,10 @@ models = []
 embedding_model = ""
 # Kuota bulanan per tenant dalam satuan token (prompt + completion); angka final mengikuti D-10.
 monthly_quota = 200000
+# AC-SUB-002: harga provider platform (Rp per 1 juta token) untuk estimasi biaya per panggilan AI.
+# 0 = belum diketahui → estimasi disimpan NULL (bukan dianggap gratis). Isi sesuai tarif provider.
+input_cost_per_million_idr = 0.0
+output_cost_per_million_idr = 0.0
 
 [billing]
 # ADR-0016: pembayaran langganan manual. PLACEHOLDER — isi rekening/QRIS platform yang sah sebelum go-live.

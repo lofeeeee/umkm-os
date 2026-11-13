@@ -1,0 +1,46 @@
+Gate P7 — Commercialization (BUILD_PLAN.md Phase 7; Test Plan §3 baris P7–P8: TC-ANL/TC-SUB Verified)
+Tanggal: 2026-11-13. Gate G: D-06 subdomain saja (ADR-0008, P7-4 di luar V1.0), D-10 Starter/Pro + uji coba 14 hari +
+pembayaran manual (ADR-0016), D-12 legal billing bersyarat (placeholder).
+
+Perintah gate (sama dengan Gate P2–P6):
+  cargo fmt --all --check && cargo clippy --workspace --all-targets --locked -- -D warnings &&
+  cargo test --workspace --locked && python3 scripts/check-rtm.py && cargo deny check &&
+  scripts/check-domain-boundary.sh && scripts/check-ci-needs.sh && docker compose --env-file .env.example config -q &&
+  (cd frontend && npm run lint && npm run typecheck && npm test && npm run build)
+Output:
+  rust tests passed=444 failed=0
+  check-rtm: OK — 74 FR, 84 AC, 84 TC
+  advisories ok, bans ok, licenses ok, sources ok
+  OK: umkm-domain bebas dari axum/sqlx/reqwest/tokio/hyper/tower/redis
+  OK: ci-gate mengagregasi 6 job: ['containers', 'frontend', 'lint', 'supply-chain', 'test', 'workflow-lint']
+        Tests  24 passed (24)
+  csp.mjs: 25 hash inline script dari 24 halaman -> out/csp.caddy
+  GATE_EXIT=0
+Ditambah: migration run → revert 0 → run exit 0 (0031–0034); Playwright stack nyata 6/6 (billing, chat, ai, ops, shop,
+mfa; dua batch karena rate limit registrasi). target/ setelah gate: 5,0 GB (profil hemat disk 8001777).
+
+Task & bukti: P7-1, P7-2, P7-3, P7-5, P7-SUB-002. P7-4 (custom domain) di luar V1.0 (ADR-0008) — tidak dikerjakan.
+Migration: 0031_billing, 0032_subscription_invoices, 0033_platform_analytics, 0034_ai_cost_estimate.
+RTM Verified: TC-SUB-001, TC-SUB-002, TC-ANL-001, TC-ANL-002. Audit: 10/10 kategori PRD §6.9 aktif.
+
+Exit criteria
+- Paket = data (plans.limits_json); perubahan berlaku tanpa deploy (AC-SUB-001) ............................... YA
+- Batas paket ditegakkan backend (produk, anggota, file, percakapan, kuota AI); langganan habis → toko publik mati YA
+- Pembayaran manual: toko tidak bisa menyetujui sendiri; keputusan hanya admin platform (super_admin + MFA), diaudit YA
+- Pemakaian AI: token + estimasi biaya per panggilan (AC-SUB-002) ............................................ YA
+- Analitik toko 9 metrik tenant-scoped (AC-ANL-001); analitik platform 6 metrik hanya admin platform (AC-ANL-002) YA
+
+Temuan & perbaikan selama fase
+- target/debug mencapai 104 GB di WSL (RAM host 99%, disk C: menyusut) → profil dev/test hemat disk + aturan
+  kebersihan; full suite ±4–5 GB.
+- Test P6-6 rapuh terhadap jam antar-transaksi → fixture deterministik.
+
+Belum / catatan
+- Flaky lama: crates/infrastructure/tests/outbox.rs::concurrent_workers_never_double_send gagal 1× di bawah beban
+  suite penuh (16/20); lulus di run gate ini & 3/3 sendiri — perlu diperbaiki (worker berhenti saat semua event sedang
+  di-backoff). Belum dikerjakan.
+- Tidak ada job pengingat/penanda langganan berakhir; instruksi pembayaran, teks penagihan, dan harga provider AI
+  masih placeholder/0 — wajib diisi sebelum go-live.
+- Baris P7–P8 Test Plan juga menyebut load + recovery drill dan checklist 30/30 V1.0: itu bagian Phase 8 (go-live gate).
+- Keputusan engineering menunggu konfirmasi pemilik (product-decision-log 2026-11-13): angka batas paket, definisi
+  metrik analitik, aturan masking, role admin AUTH-012.

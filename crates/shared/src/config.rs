@@ -236,6 +236,10 @@ pub struct PlatformAiSettings {
     pub monthly_quota: u64,
     /// Endpoint jaringan internal tepercaya (http/IP privat; `PRD.md §6.5` #9). Hanya untuk operator.
     pub trusted_internal: bool,
+    /// AC-SUB-002: harga provider platform (Rupiah per 1 juta token) untuk estimasi biaya per panggilan.
+    /// 0 = belum diketahui → estimasi tidak disimpan (NULL), bukan dianggap gratis.
+    pub input_cost_per_million_idr: f64,
+    pub output_cost_per_million_idr: f64,
 }
 
 impl Default for PlatformAiSettings {
@@ -249,6 +253,8 @@ impl Default for PlatformAiSettings {
             embeddings: true,
             monthly_quota: 200_000,
             trusted_internal: false,
+            input_cost_per_million_idr: 0.0,
+            output_cost_per_million_idr: 0.0,
         }
     }
 }
