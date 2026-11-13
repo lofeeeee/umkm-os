@@ -219,12 +219,48 @@ pub struct SignedQuery {
     t: Uuid,
     exp: u64,
     sig: String,
+    /// P9-7: lebar varian untuk srcset (320/640/960/1280). Tidak ikut ditandatangani: hanya mengecilkan objek
+    /// yang SAMA yang sudah lolos signature.
+    w: Option<u32>,
+}
+
+/// Maks resize bersamaan per proses (container API 512 MB; decode foto besar ±50–100 MB).
+static RESIZE: tokio::sync::Semaphore = tokio::sync::Semaphore::const_new(2);
+
+/// Header gambar yang sama untuk objek asli & varian.
+fn image_response(bytes: Vec<u8>, content_type: &str, etag: &str, max_age: u64) -> Response {
+    let mut res = bytes.into_response();
+    let h = res.headers_mut();
+    if let Ok(ct) = HeaderValue::from_str(content_type) {
+        h.insert(header::CONTENT_TYPE, ct);
+    }
+    h.insert(
+        header::CONTENT_DISPOSITION,
+        HeaderValue::from_static("inline"),
+    );
+    // Bila browser tetap mencoba menafsirkan sebagai dokumen: tanpa skrip, origin unik.
+    h.insert(
+        header::CONTENT_SECURITY_POLICY,
+        HeaderValue::from_static("default-src 'none'; sandbox"),
+    );
+    h.insert(
+        "cross-origin-resource-policy",
+        HeaderValue::from_static("same-site"),
+    );
+    if let Ok(cc) = HeaderValue::from_str(&format!("private, max-age={max_age}, immutable")) {
+        h.insert(header::CACHE_CONTROL, cc);
+    }
+    if let Ok(e) = HeaderValue::from_str(&format!("\"{etag}\"")) {
+        h.insert(header::ETAG, e);
+    }
+    res
 }
 
 /// Sajikan objek via signed URL (AC-FILE-003..005). Publik, tanpa cookie.
 #[utoipa::path(
     get, path = "/files/{object_id}", tag = "files",
-    params(("object_id" = Uuid, Path), ("t" = Uuid, Query), ("exp" = u64, Query), ("sig" = String, Query)),
+    params(("object_id" = Uuid, Path), ("t" = Uuid, Query), ("exp" = u64, Query), ("sig" = String, Query),
+        ("w" = Option<u32>, Query, description = "Lebar varian srcset: 320 | 640 | 960 | 1280")),
     responses(
         (status = 200, description = "Byte gambar", content_type = "image/*"),
         (status = 404, description = "Signature salah/kedaluwarsa/objek tidak ada", body = umkm_shared::http::ErrorEnvelope)
@@ -253,33 +289,86 @@ pub async fn serve_file(
         .await
         .map_err(storage_error)?
         .ok_or_else(not_found)?;
-    let mut res = obj.bytes.into_response();
-    let h = res.headers_mut();
-    h.insert(
-        header::CONTENT_TYPE,
-        HeaderValue::from_static(obj.content_type.content_type()),
-    );
-    h.insert(
-        header::CONTENT_DISPOSITION,
-        HeaderValue::from_static("inline"),
-    );
-    // Bila browser tetap mencoba menafsirkan sebagai dokumen: tanpa skrip, origin unik.
-    h.insert(
-        header::CONTENT_SECURITY_POLICY,
-        HeaderValue::from_static("default-src 'none'; sandbox"),
-    );
-    h.insert(
-        "cross-origin-resource-policy",
-        HeaderValue::from_static("same-site"),
-    );
     let max_age = v.expires_unix.saturating_sub(now);
-    if let Ok(cc) = HeaderValue::from_str(&format!("private, max-age={max_age}, immutable")) {
-        h.insert(header::CACHE_CONTROL, cc);
+    let Some(w) = q.w else {
+        return Ok(image_response(
+            obj.bytes,
+            obj.content_type.content_type(),
+            &obj.sha256_hex,
+            max_age,
+        ));
+    };
+    // P9-7: varian lebar. Lebar di luar daftar → 404 seragam (bukan pintu resize sembarang ukuran).
+    if !umkm_infrastructure::image_variant::WIDTHS.contains(&w) {
+        return Err(not_found());
     }
-    if let Ok(etag) = HeaderValue::from_str(&format!("\"{}\"", obj.sha256_hex)) {
-        h.insert(header::ETAG, etag);
+    let etag = format!("{}-w{w}", obj.sha256_hex);
+    if let Some((ct, bytes)) = f
+        .store
+        .get_variant(v.tenant, v.object, w)
+        .await
+        .map_err(storage_error)?
+    {
+        return Ok(image_response(bytes, &ct, &etag, max_age));
     }
-    Ok(res)
+    let ty = obj.content_type;
+    // Asli sudah cukup kecil (dari header saja, tanpa decode piksel) → sajikan asli.
+    let fits = umkm_infrastructure::image_variant::display_width(&obj.bytes, ty).map(|dw| dw <= w);
+    if !matches!(fits, Ok(false)) {
+        return Ok(image_response(
+            obj.bytes,
+            ty.content_type(),
+            &obj.sha256_hex,
+            max_age,
+        ));
+    }
+    let made = {
+        let _permit = RESIZE
+            .acquire()
+            .await
+            .map_err(|_| ApiError::new(ErrorCode::ServiceUnavailable))?;
+        let src = obj.bytes.clone();
+        tokio::task::spawn_blocking(move || {
+            umkm_infrastructure::image_variant::make_variant(&src, ty, w)
+        })
+        .await
+    };
+    match made {
+        Ok(Ok(Some(var))) => {
+            if let Err(e) = f
+                .store
+                .put_variant(v.tenant, v.object, w, var.content_type, &var.bytes)
+                .await
+            {
+                tracing::warn!(error = %e, "simpan varian gambar gagal; tetap disajikan");
+            }
+            Ok(image_response(var.bytes, var.content_type, &etag, max_age))
+        }
+        Ok(Ok(None)) => Ok(image_response(
+            obj.bytes,
+            ty.content_type(),
+            &obj.sha256_hex,
+            max_age,
+        )),
+        Ok(Err(e)) => {
+            tracing::warn!(error = %e, "varian gambar gagal dibuat; sajikan asli");
+            Ok(image_response(
+                obj.bytes,
+                ty.content_type(),
+                &obj.sha256_hex,
+                max_age,
+            ))
+        }
+        Err(e) => {
+            tracing::error!(error = %e, "tugas resize gagal");
+            Ok(image_response(
+                obj.bytes,
+                ty.content_type(),
+                &obj.sha256_hex,
+                max_age,
+            ))
+        }
+    }
 }
 
 pub fn routes() -> Router<AppState> {

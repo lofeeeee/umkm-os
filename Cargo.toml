@@ -10,6 +10,8 @@ license = "UNLICENSED"
 publish = false
 
 [workspace.dependencies]
+# P9-7: varian ukuran gambar (hanya decoder/encoder JPEG, PNG, WebP; tanpa format lain).
+image = { version = "0.25.10", default-features = false, features = ["jpeg", "png", "webp"] }
 umkm-shared = { path = "crates/shared" }
 umkm-domain = { path = "crates/domain" }
 umkm-application = { path = "crates/application" }

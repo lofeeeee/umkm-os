@@ -66,11 +66,15 @@ test("toko: checkout guest + pembayaran QRIS statis + konfirmasi pemilik", async
 
   // produk
   await owner.goto(`${APP}/products${q}`);
-  await owner.getByRole("button", { name: "Tambah produk" }).click();
+  await owner.getByRole("button", { name: "Tambah produk", exact: true }).click();
   await owner.getByLabel("Nama").fill("Kopi Susu E2E");
   await owner.getByLabel("SKU").fill("E2E-1");
   await owner.getByLabel("Harga", { exact: true }).fill("18000");
   await owner.getByLabel("Harga promo").fill("15000");
+  // Foto sampul (P9-7: tampil di situs lewat srcset varian server).
+  await owner.getByRole("button", { name: "Pilih gambar" }).click();
+  await owner.getByLabel("Unggah dari perangkat").setInputFiles({ name: "kopi.png", mimeType: "image/png", buffer: PNG });
+  await expect(owner.locator("img.d-img-tile")).toBeVisible();
   await owner.getByRole("button", { name: "Simpan" }).click();
   const row = owner.getByRole("row", { name: /Kopi Susu E2E/ });
   await expect(row.getByRole("cell", { name: "Draf", exact: true })).toBeVisible();
@@ -92,7 +96,8 @@ test("toko: checkout guest + pembayaran QRIS statis + konfirmasi pemilik", async
   await owner.goto(`${APP}/shop-settings${q}`);
   await owner.getByRole("button", { name: "Pilih gambar" }).click();
   await owner.locator("input[type=file]").setInputFiles({ name: "qris.png", mimeType: "image/png", buffer: PNG });
-  await expect(owner.locator(".d-field img").first()).toBeVisible();
+  // QRIS terpasang = tombol "Hapus" muncul (galeri gambar toko juga berisi <img>, jangan dijadikan tanda).
+  await expect(owner.getByRole("button", { name: "Hapus", exact: true })).toBeVisible();
   await owner.getByLabel("Nama penerima (tampil di halaman bayar)").fill("Toko E2E");
   await owner.getByLabel("Terima pesanan online").check();
   await owner.getByRole("button", { name: "Simpan" }).click();
@@ -104,6 +109,14 @@ test("toko: checkout guest + pembayaran QRIS statis + konfirmasi pemilik", async
   watch(buyer, errors);
   await buyer.goto(SITE);
   const card = buyer.locator(".s-product", { hasText: "Kopi Susu E2E" });
+  // P9-7: foto produk memakai srcset varian server (&w=) dan benar-benar termuat (CSP img-src, CORP).
+  const photo = card.locator("img");
+  await expect(photo).toHaveAttribute("srcset", /&w=320 320w/);
+  // decode() berhasil = byte gambar termuat & valid. (naturalWidth tidak dipakai: PNG uji 1×1 dengan deskriptor
+  // 320w punya lebar intrinsik < 1 px setelah koreksi kepadatan.)
+  await expect.poll(() => photo.evaluate(async (i: HTMLImageElement) => {
+    try { await i.decode(); return /&w=\d+/.test(i.currentSrc); } catch { return false; }
+  })).toBe(true);
   await expect(card).toContainText("Rp15.000");
   await noHorizontalScroll(buyer);
   await card.click();

@@ -18,6 +18,7 @@ pub mod crm_repo;
 pub mod crypto;
 pub mod customer_auth_repo;
 pub mod http_client;
+pub mod image_variant;
 pub mod inventory_repo;
 pub mod metrics;
 pub mod mfa;

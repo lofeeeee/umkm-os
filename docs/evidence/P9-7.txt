@@ -1,0 +1,26 @@
+P9-7 — Performa gambar: varian lebar di server + srcset/sizes — 2026-11-14T05:56:49+07:00
+
+Server
+- crates/infrastructure/src/image_variant.rs (dependensi baru image 0.25.10, fitur jpeg/png/webp saja; lisensi lolos
+  cargo deny): decode dengan batas 8000 px & alokasi 192 MB (bom dekompresi), orientasi EXIF diterapkan, resize
+  CatmullRom, encode JPEG q82 (PNG bila transparan). display_width() dari header saja (tanpa decode piksel).
+- Migrasi 0035 stored_object_variants (tenant_id, object_id, width ∈ {320,640,960,1280}); FK ke stored_objects
+  ON DELETE CASCADE; RLS per tenant; tanpa UPDATE.
+- GET /files/{id}?…&w=: lebar di luar daftar → 404; varian ada → sajikan; asli sudah ≤ lebar → asli (tanpa decode);
+  selain itu resize di spawn_blocking dengan semaphore 2 (container 512 MB), simpan (ON CONFLICT DO NOTHING),
+  sajikan; gagal → asli. Signature tetap wajib (w hanya mengecilkan objek yang sama). Header keamanan sama; ETag per lebar.
+
+Frontend
+- safe.ts srcSet() (hanya URL /files/ bertanda tangan) & sizesFor(); Site.tsx: SlotWidth context — sizes dihitung dari
+  lebar slot nyata (Studio: w/12 × 1180) dan aturan container query (split 2 kolom ≥ 768; grid 2/3/4 kolom).
+- Sebelumnya (commit 13e7664): banner eager + fetchpriority=high, lainnya lazy, decoding async.
+
+Tes
+- image_variant: rasio aspek (2000×1000 → 640×320), gambar kecil → None, lebar liar ditolak, PNG transparan tetap PNG,
+  Orientation=6 → 640×1280 & display_width 1000, header PNG 20000×20000 ditolak.
+- upload_http width_variants_are_generated_once_and_bounded: varian 640×320 JPEG + header keamanan + ETag -w640;
+  permintaan kedua dari tabel (1 baris, byte identik); w=641 → 404; tanpa signature → 404; PNG 1×1 → asli.
+- StudioSite.test: srcset 4 lebar; sizes banner 8/12 (split) & about 4/12 (satu kolom) = 393 px.
+- e2e shop.spec: foto produk memakai srcset, browser memuat URL &w= dan decode() berhasil (CSP img-src & CORP lolos).
+  Suite e2e penuh 9 spec / 12 tes lolos; vitest 68/68; clippy --workspace -D warnings bersih.
+Catatan: e2e "Tambah produk" sebelumnya flaky (cocok juga dengan "Tambah produk pertama") → exact.

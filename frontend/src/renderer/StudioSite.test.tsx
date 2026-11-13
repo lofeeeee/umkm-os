@@ -51,7 +51,21 @@ describe("renderer publik Studio (v2)", () => {
     expect(html).toContain('alt="Etalase"');
     expect(html).toContain('alt="Barista"');
     // P9-7: banner (LCP) dimuat segera dengan prioritas tinggi; foto lain lazy; semua decoding async.
-    expect(html).toMatch(/alt="Kopi &quot;susu&quot; &lt;b&gt;" decoding="async" loading="eager" fetchPriority="high"|alt="Kopi &quot;susu&quot; &lt;b&gt;" decoding="async" loading="eager" fetchpriority="high"/);
-    expect(html).toMatch(/src="\/f\/asset:2" alt="" decoding="async" loading="lazy"/);
+    expect(html).toMatch(/alt="Kopi &quot;susu&quot; &lt;b&gt;" decoding="async" loading="eager" fetch[pP]riority="high"/);
+    // srcset hanya untuk URL file bertanda tangan (di sini /f/… → tidak ada srcset).
+    expect(html).not.toContain("srcSet");
+    expect(html).toMatch(/src="\/f\/asset:2"[^>]*alt=""[^>]*loading="lazy"/);
+  });
+  it("srcset varian server + sizes dari lebar blok (P9-7)", () => {
+    const U = "https://api.x/files/0f8fad5b-d9cb-469f-a165-70867728950e?t=a&exp=1&sig=s";
+    const d: PageV2 = { ...doc, blocks: [
+      { id: "h8", kind: "hero", x: 0, y: 0, w: 8, h: 8, style: "plain", data: { title: "K", image: "asset:1" } },
+      { id: "a4", kind: "about", x: 8, y: 0, w: 4, h: 8, style: "plain", data: { title: "A", body: "b", image: "asset:1" } },
+    ] };
+    const html = renderToStaticMarkup(<StudioSite doc={d} business={biz} assetUrl={() => U} />).replace(/&amp;/g, "&");
+    for (const w of [320, 640, 960, 1280]) expect(html).toContain(`${U}&w=${w} ${w}w`);
+    // banner 8/12 × 1180 = 787 px (split 2 kolom → 393 px); about 4/12 = 393 px (< 768 → satu kolom penuh).
+    expect(html).toContain('sizes="(min-width: 720px) 393px, 100vw"');
+    expect(html.match(/sizes="\(min-width: 720px\) 393px, 100vw"/g)?.length).toBe(2);
   });
 });

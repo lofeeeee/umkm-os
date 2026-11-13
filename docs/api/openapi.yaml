@@ -9656,6 +9656,14 @@ paths:
         required: true
         schema:
           type: string
+      - name: w
+        in: query
+        description: 'Lebar varian srcset: 320 | 640 | 960 | 1280'
+        required: false
+        schema:
+          type: integer
+          format: int32
+          minimum: 0
       responses:
         '200':
           description: Byte gambar

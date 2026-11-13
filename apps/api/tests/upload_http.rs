@@ -448,3 +448,56 @@ async fn uploaded_photo_metadata_is_stripped_before_storage(pool: PgPool) {
         .unwrap();
     assert_eq!(size as usize, f.bytes.len());
 }
+
+/// P9-7: varian lebar untuk srcset — dibuat sekali, disimpan, disajikan ulang; lebar liar ditolak; gambar kecil
+/// disajikan asli; tetap butuh signature.
+#[sqlx::test(migrator = "MIGRATOR")]
+async fn width_variants_are_generated_once_and_bounded(pool: PgPool) {
+    use image::{ImageBuffer, Rgb, codecs::jpeg::JpegEncoder};
+    let a = app(&pool).await;
+    let t = tenant(&pool, "toko-a").await;
+    let owner = member(&pool, t, "Owner").await;
+    let img = ImageBuffer::from_fn(2000, 1000, |x, y| Rgb([(x / 8) as u8, (y / 4) as u8, 90]));
+    let mut big = Vec::new();
+    JpegEncoder::new_with_quality(&mut big, 60)
+        .encode_image(&img)
+        .unwrap();
+    let r = upload(&a.router, t, &owner, big.clone()).await;
+    assert_eq!(r.status, 201, "{}", r.json());
+    let url = r.json()["data"]["url"].as_str().unwrap().to_owned();
+    let get = |u: String| {
+        let router = a.router.clone();
+        async move { send(&router, Method::GET, &u, None, None, None, vec![]).await }
+    };
+
+    let v = get(format!("{url}&w=640")).await;
+    assert_eq!(v.status, 200);
+    assert_eq!(v.headers["content-type"], "image/jpeg");
+    assert_eq!(
+        v.headers["content-security-policy"],
+        "default-src 'none'; sandbox"
+    );
+    assert!(v.headers["etag"].to_str().unwrap().ends_with("-w640\""));
+    let d = image::load_from_memory(&v.bytes).unwrap();
+    assert_eq!((d.width(), d.height()), (640, 320));
+    assert!(v.bytes.len() < big.len());
+    // Kedua kali: dari tabel varian (satu baris, byte identik).
+    let again = get(format!("{url}&w=640")).await;
+    assert_eq!(again.bytes, v.bytes);
+    let rows: i64 =
+        sqlx::query_scalar("SELECT count(*) FROM stored_object_variants WHERE tenant_id = $1")
+            .bind(t)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    assert_eq!(rows, 1);
+    // Lebar di luar daftar → 404 (bukan resize sembarang); tanpa signature → 404.
+    assert_eq!(get(format!("{url}&w=641")).await.status, 404);
+    let unsigned = url.split("&sig=").next().unwrap().to_owned();
+    assert_eq!(get(format!("{unsigned}&w=640")).await.status, 404);
+    // Gambar kecil (1×1): lebih kecil dari lebar diminta → asli.
+    let small = upload(&a.router, t, &owner, png()).await;
+    let su = small.json()["data"]["url"].as_str().unwrap().to_owned();
+    let s = get(format!("{su}&w=320")).await;
+    assert_eq!((s.status, s.bytes.clone()), (200, png()));
+}

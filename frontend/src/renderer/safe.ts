@@ -77,3 +77,16 @@ export function waLink(n: string | null | undefined): string | undefined {
   if (d.startsWith("0")) d = "62" + d.slice(1);
   return d.length >= 8 ? `https://wa.me/${d}` : undefined;
 }
+
+/** Lebar varian yang disediakan server (`/files/{id}?…&w=`; sama dengan image_variant::WIDTHS). */
+export const IMAGE_WIDTHS = [320, 640, 960, 1280] as const;
+
+/** `srcset` untuk URL file bertanda tangan; URL lain (blob, data, eksternal) → tanpa srcset. */
+export function srcSet(url: string | undefined): string | undefined {
+  if (!url || !/\/files\/[0-9a-f-]{36}\?/i.test(url)) return undefined;
+  return IMAGE_WIDTHS.map((w) => `${url}&w=${w} ${w}w`).join(", ");
+}
+
+/** `sizes`: di desktop gambar menempati `px` (lebar slot × porsi), di ponsel selebar layar × `mobile`. */
+export const sizesFor = (px: number, mobile = 1) => `(min-width: 720px) ${Math.max(160, Math.round(px))}px, ${Math.round(mobile * 100)}vw`;
+

@@ -2,10 +2,10 @@
 // preview dashboard, sehingga preview = hasil publik. Semua teks dirender sebagai teks
 // (React escaping); tidak ada dangerouslySetInnerHTML (dijaga ESLint + tes).
 
-import type { CSSProperties, ReactNode } from "react";
+import { createContext, useContext, type CSSProperties, type ReactNode } from "react";
 
 import { T, useEditing } from "./edit";
-import { fontStack, primaryVars, safeColor, safeHref, text, waLink } from "./safe";
+import { fontStack, primaryVars, safeColor, safeHref, sizesFor, srcSet, text, waLink } from "./safe";
 import type { Business, Json, OpenStatus, PageContent, Section } from "./types";
 
 export interface SiteProps {
@@ -18,7 +18,15 @@ export interface SiteProps {
   preview?: boolean;
   /** Produk aktif untuk section product_grid (situs publik). `undefined` = preview/placeholder. */
   products?: GridProduct[];
+  /** Lebar slot desktop (px) untuk `sizes` gambar (Studio: lebar blok; v1: lebar halaman). */
+  slotWidth?: number;
 }
+
+/** P9-7: lebar slot tempat section dirender, agar browser memilih varian gambar terkecil yang cukup. */
+const SlotWidth = createContext(1180);
+/** Porsi lebar gambar = aturan container query di site.css (split 2 kolom ≥ 768; grid 2/3/4 kolom). */
+const splitShare = (slot: number) => (slot >= 768 ? 0.5 : 1);
+const gridShare = (slot: number) => (slot >= 1024 ? 1 / 4 : slot >= 768 ? 1 / 3 : 1 / 2);
 
 /** Bentuk minimal produk publik untuk grid (gambar sudah URL absolut). */
 export interface GridProduct {
@@ -48,11 +56,18 @@ function list(v: Json | undefined): { [k: string]: Json }[] {
 }
 
 /** `priority`: gambar LCP (banner) dimuat segera; lainnya lazy. Semua didekode async (P9-7). */
-function Img({ r, alt, assetUrl, className, priority }: { r: Json | undefined; alt: string; assetUrl: SiteProps["assetUrl"]; className?: string; priority?: boolean }) {
+function Img({ r, alt, assetUrl, className, priority, share = () => 1, mobile = 1 }: {
+  r: Json | undefined; alt: string; assetUrl: SiteProps["assetUrl"]; className?: string; priority?: boolean;
+  /** Porsi lebar slot yang ditempati gambar di desktop, dari lebar slot (container query). */
+  share?: (slot: number) => number; mobile?: number;
+}) {
+  const slot = useContext(SlotWidth);
   const src = typeof r === "string" ? assetUrl(r) : undefined;
+  const set = srcSet(src);
   return src ? (
     // eslint-disable-next-line @next/next/no-img-element -- static export, gambar dari API bertanda tangan
-    <img className={className} src={src} alt={alt} decoding="async" loading={priority ? "eager" : "lazy"} fetchPriority={priority ? "high" : undefined} />
+    <img className={className} src={src} srcSet={set} sizes={set ? sizesFor(slot * share(slot), mobile) : undefined} alt={alt}
+      decoding="async" loading={priority ? "eager" : "lazy"} fetchPriority={priority ? "high" : undefined} />
   ) : null;
 }
 
@@ -130,7 +145,7 @@ function SectionBody({ s, props }: { s: Section; props: SiteProps }) {
             <Subtitle v={d.subtitle} />
             <Cta cta={d.cta} />
           </div>
-          <Img r={d.image ?? b.profile.cover ?? undefined} alt={text(d.image_alt)} assetUrl={assetUrl} className="s-hero-img" priority />
+          <Img r={d.image ?? b.profile.cover ?? undefined} alt={text(d.image_alt)} assetUrl={assetUrl} className="s-hero-img" priority share={splitShare} />
         </div>
       );
     case "about":
@@ -140,11 +155,12 @@ function SectionBody({ s, props }: { s: Section; props: SiteProps }) {
             <Title v={d.title} />
             <Paragraphs v={d.body} />
           </div>
-          <Img r={d.image} alt={text(d.image_alt)} assetUrl={assetUrl} className="s-media" />
+          <Img r={d.image} alt={text(d.image_alt)} assetUrl={assetUrl} className="s-media" share={splitShare} />
         </div>
       );
     case "product_grid": {
       const limit = typeof d.limit === "number" ? d.limit : 8;
+      const slot = props.slotWidth ?? 1180;
       const items = (props.products ?? []).slice(0, limit);
       return (
         <div>
@@ -156,7 +172,7 @@ function SectionBody({ s, props }: { s: Section; props: SiteProps }) {
               <a key={p.slug} className="s-product" href={`/produk/${p.slug}`}>
                 {p.image ? (
                   // eslint-disable-next-line @next/next/no-img-element -- static export, gambar bertanda tangan
-                  <img src={p.image} alt="" loading="lazy" decoding="async" />
+                  <img src={p.image} srcSet={srcSet(p.image)} sizes={srcSet(p.image) ? sizesFor(slot * gridShare(slot), 0.5) : undefined} alt="" loading="lazy" decoding="async" />
                 ) : (
                   <span className="s-product-noimg" aria-hidden="true" />
                 )}
@@ -179,7 +195,7 @@ function SectionBody({ s, props }: { s: Section; props: SiteProps }) {
             <Paragraphs v={d.body} />
             <Cta cta={d.cta} />
           </div>
-          <Img r={d.image} alt={text(d.image_alt)} assetUrl={assetUrl} className="s-media" />
+          <Img r={d.image} alt={text(d.image_alt)} assetUrl={assetUrl} className="s-media" share={splitShare} />
         </div>
       );
     case "gallery":
@@ -189,7 +205,7 @@ function SectionBody({ s, props }: { s: Section; props: SiteProps }) {
           <div className="s-gallery">
             {list(d.images).map((g, i) => (
               <figure key={i}>
-                <Img r={g.asset} alt={text(g.alt) || text(g.caption)} assetUrl={assetUrl} />
+                <Img r={g.asset} alt={text(g.alt) || text(g.caption)} assetUrl={assetUrl} share={gridShare} mobile={0.5} />
                 <Caption v={g.caption} path={`images.${i}.caption`} />
               </figure>
             ))}
@@ -311,6 +327,7 @@ export function Site(props: SiteProps) {
   } as CSSProperties;
   const sections = (content.sections ?? []).filter((s) => preview || s.enabled);
   return (
+    <SlotWidth.Provider value={props.slotWidth ?? 1180}>
     <div className="site" style={style} data-template={content.template}>
       {sections.map((s) => (
         <section
@@ -326,5 +343,6 @@ export function Site(props: SiteProps) {
         </section>
       ))}
     </div>
+    </SlotWidth.Provider>
   );
 }

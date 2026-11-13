@@ -31,5 +31,6 @@ serde_json.workspace = true
 sqlx.workspace = true
 
 [dev-dependencies]
+image.workspace = true
 redis.workspace = true
 http-body-util.workspace = true

@@ -115,6 +115,58 @@ fn meta(r: &sqlx::postgres::PgRow) -> StoredObjectMeta {
     }
 }
 
+/// Varian lebar (P9-7, tabel stored_object_variants; RLS per tenant).
+impl PgObjectStorage {
+    pub async fn get_variant(
+        &self,
+        tenant: TenantId,
+        id: Uuid,
+        width: u32,
+    ) -> Result<Option<(String, Vec<u8>)>, StorageError> {
+        let mut tx = umkm_database::begin_tenant_tx(&self.pool, tenant)
+            .await
+            .map_err(db_err)?;
+        let row: Option<(String, Vec<u8>)> = sqlx::query_as(
+            "SELECT content_type, bytes FROM stored_object_variants
+             WHERE tenant_id = $1 AND object_id = $2 AND width = $3",
+        )
+        .bind(tenant.as_uuid())
+        .bind(id)
+        .bind(i32::try_from(width).unwrap_or(i32::MAX))
+        .fetch_optional(&mut *tx)
+        .await?;
+        tx.commit().await?;
+        Ok(row)
+    }
+
+    /// Simpan varian; balapan dua request untuk varian yang sama aman (yang kedua diabaikan).
+    pub async fn put_variant(
+        &self,
+        tenant: TenantId,
+        id: Uuid,
+        width: u32,
+        content_type: &str,
+        bytes: &[u8],
+    ) -> Result<(), StorageError> {
+        let mut tx = umkm_database::begin_tenant_tx(&self.pool, tenant)
+            .await
+            .map_err(db_err)?;
+        sqlx::query(
+            "INSERT INTO stored_object_variants (tenant_id, object_id, width, content_type, bytes)
+             VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING",
+        )
+        .bind(tenant.as_uuid())
+        .bind(id)
+        .bind(i32::try_from(width).unwrap_or(i32::MAX))
+        .bind(content_type)
+        .bind(bytes)
+        .execute(&mut *tx)
+        .await?;
+        tx.commit().await?;
+        Ok(())
+    }
+}
+
 impl ObjectStorage for PgObjectStorage {
     async fn put(
         &self,
