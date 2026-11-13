@@ -279,3 +279,15 @@ pub async fn upload(app: &Router, tenant: Uuid, who: &Who, bytes: Vec<u8>) -> Re
     )
     .await
 }
+
+/// Langganan Pro aktif 30 hari (P7, ADR-0016) — untuk uji yang memerlukan kuota AI platform / banyak anggota.
+pub async fn pro(pool: &PgPool, tenant: Uuid) {
+    sqlx::query(
+        "UPDATE subscriptions SET plan_code = 'pro', status = 'active', current_period_end = now() + interval '30 days'
+          WHERE tenant_id = $1",
+    )
+    .bind(tenant)
+    .execute(pool)
+    .await
+    .unwrap();
+}

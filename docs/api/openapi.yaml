@@ -12944,6 +12944,7 @@ components:
           type: object
           required:
           - plan
+          - usage
           - status
           properties:
             current_period_end:
@@ -12959,6 +12960,9 @@ components:
               type:
               - string
               - 'null'
+            usage:
+              $ref: '#/components/schemas/UsageView'
+              description: Pemakaian saat ini terhadap batas paket
         meta:
           $ref: '#/components/schemas/Meta'
         success:
@@ -14258,6 +14262,32 @@ components:
         name:
           type: string
       additionalProperties: false
+    UsageView:
+      type: object
+      required:
+      - platform_tokens
+      - byok_tokens
+      properties:
+        byok_budget:
+          type:
+          - integer
+          - 'null'
+          format: int64
+        byok_tokens:
+          type: integer
+          format: int64
+          minimum: 0
+        platform_quota:
+          type:
+          - integer
+          - 'null'
+          format: int64
+          minimum: 0
+        platform_tokens:
+          type: integer
+          format: int64
+          description: Token bulan berjalan (zona Asia/Jakarta)
+          minimum: 0
     VariantDto:
       type: object
       required:

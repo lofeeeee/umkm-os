@@ -99,6 +99,7 @@ async fn every_available_prd_category_is_audited(pool: PgPool) {
         .unwrap()
         .parse()
         .unwrap();
+    pro(&a.owner, t).await; // kategori AI + anggota tambahan (ADR-0016)
     assert_eq!(
         raw(
             &a,

@@ -130,6 +130,14 @@ pub async fn upload(
         &["website.edit", "products.update", "tenant.update"],
     )?;
     let f = files(&state)?;
+    // P7-2: kuota penyimpanan paket (total byte file tenant).
+    let plan = crate::billing::plan_of(&state, actor.tenant_id).await?;
+    if let Some(max) = plan.plan.limits.storage_bytes {
+        let used = crate::billing::usage(&state, actor.tenant_id).await?;
+        if used.storage_bytes.max(0) as u64 + body.len() as u64 > max {
+            return Err(crate::billing::over_limit("storage_bytes", max));
+        }
+    }
     let m = f
         .store
         .put(&actor, &body, (Some(id.as_str()), Some(&ip)))

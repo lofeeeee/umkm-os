@@ -157,10 +157,21 @@ export const ERROR_TEXT: Record<string, string> = {
   platform_fields_not_allowed: "AI platform tidak memakai URL/kunci sendiri",
 };
 
+export const LIMIT_TEXT: Record<string, string> = {
+  max_products: "produk", max_members: "anggota tim", storage_bytes: "penyimpanan file (byte)",
+  conversations_monthly: "percakapan per bulan", platform_ai_tokens_monthly: "token AI per bulan",
+};
+
 export function describe(e: unknown): string {
   if (e instanceof ApiError) {
     const f = e.fieldErrors;
     if (f.length) return f.map((x) => `${x.path || "dokumen"}: ${ERROR_TEXT[x.code] ?? x.code}`).join("; ");
+    const reason = (e.details as { reason?: string; limit?: string; max?: number } | null)?.reason;
+    if (e.status === 403 && reason === "plan_limit") {
+      const d = e.details as { limit?: string; max?: number };
+      return `Batas paket tercapai (${LIMIT_TEXT[d.limit ?? ""] ?? d.limit}: maks ${d.max}). Tingkatkan paket di menu Langganan.`;
+    }
+    if (e.status === 403 && reason === "subscription_expired") return "Langganan toko sudah berakhir. Perpanjang di menu Langganan.";
     if (e.status === 403) return "Anda tidak punya izin untuk aksi ini.";
     if (e.status === 409) return e.message;
     return e.message;

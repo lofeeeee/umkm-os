@@ -677,6 +677,8 @@ pub async fn checkout_config(
     ReqId(id): ReqId,
     HostTenant(t): HostTenant,
 ) -> Result<Response, ApiError> {
+    // ADR-0016: langganan habis → website/katalog/checkout publik nonaktif.
+    crate::billing::require_operational(&state, t).await?;
     let p = pool(&state)?;
     let s = repo::settings(p, t).await.map_err(internal)?;
     let info = umkm_infrastructure::business_repo::load(p, t)
@@ -718,6 +720,8 @@ pub async fn checkout(
     headers: HeaderMap,
     Json(req): Json<CheckoutRequest>,
 ) -> Result<Response, ApiError> {
+    // ADR-0016: langganan habis → website/katalog/checkout publik nonaktif.
+    crate::billing::require_operational(&state, t).await?;
     check_shop_origin(&state, &headers)?;
     let key = headers
         .get(IDEMPOTENCY_HEADER)

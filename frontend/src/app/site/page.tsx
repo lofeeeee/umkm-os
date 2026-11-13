@@ -30,11 +30,13 @@ function toGrid(p: PublicProduct): GridProduct {
 function WebsitePage({ slug }: { slug: string }) {
   const [site, setSite] = useState<PublicSite | null>(null);
   const [products, setProducts] = useState<GridProduct[] | undefined>(undefined);
-  const [state, setState] = useState<"loading" | "missing" | "error">("loading");
+  const [state, setState] = useState<"loading" | "missing" | "inactive" | "error">("loading");
   useEffect(() => {
     fetch(`/_api/public/site?page=${encodeURIComponent(slug)}`, { credentials: "omit" })
       .then(async (r) => {
         if (r.status === 404) return setState("missing");
+        // ADR-0016: langganan toko habis.
+        if (r.status === 403) return setState("inactive");
         const body = await r.json();
         if (!r.ok || !body?.success) return setState("error");
         const data = body.data as PublicSite;
@@ -67,11 +69,12 @@ function WebsitePage({ slug }: { slug: string }) {
   return <Fallback state={state} />;
 }
 
-function Fallback({ state }: { state: "loading" | "missing" | "error" }) {
+function Fallback({ state }: { state: "loading" | "missing" | "inactive" | "error" }) {
   return (
     <main className="d-narrow" aria-busy={state === "loading"}>
       {state === "loading" && <p className="d-muted">Memuat…</p>}
       {state === "missing" && <><h1>Halaman tidak ditemukan</h1><p className="d-muted">Situs ini belum tersedia.</p></>}
+      {state === "inactive" && <><h1>Toko sedang tidak aktif</h1><p className="d-muted">Silakan kembali lagi nanti.</p></>}
       {state === "error" && <><h1>Terjadi gangguan</h1><p className="d-muted">Coba muat ulang beberapa saat lagi.</p></>}
     </main>
   );

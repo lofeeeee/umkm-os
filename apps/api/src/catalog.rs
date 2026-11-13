@@ -496,6 +496,10 @@ pub async fn create_product(
 ) -> Result<(StatusCode, Json<SuccessEnvelope<ProductView>>), ApiError> {
     actor.require("products.create")?;
     let d = validate(req)?;
+    // P7-2: batas jumlah produk paket (produk archived tidak dihitung).
+    let plan = crate::billing::plan_of(&state, actor.tenant_id).await?;
+    let used = crate::billing::usage(&state, actor.tenant_id).await?;
+    crate::billing::check_count("max_products", plan.plan.limits.max_products, used.products)?;
     let p = repo::create_product(pool(&state)?, &actor, &d, (Some(id.as_str()), Some(&ip)))
         .await
         .map_err(repo_err)?;
@@ -684,6 +688,8 @@ pub async fn public_products(
     HostTenant(t): HostTenant,
     Query(q): Query<PublicQuery>,
 ) -> Result<Response, ApiError> {
+    // ADR-0016: langganan habis → website/katalog/checkout publik nonaktif.
+    crate::billing::require_operational(&state, t).await?;
     let (limit, offset) = Page {
         limit: q.limit,
         offset: q.offset,
@@ -711,6 +717,8 @@ pub async fn public_product(
     HostTenant(t): HostTenant,
     Path(slug): Path<String>,
 ) -> Result<Response, ApiError> {
+    // ADR-0016: langganan habis → website/katalog/checkout publik nonaktif.
+    crate::billing::require_operational(&state, t).await?;
     if !catalog::is_valid_slug(&slug) {
         return Err(not_found());
     }
@@ -732,6 +740,8 @@ pub async fn public_categories(
     ReqId(id): ReqId,
     HostTenant(t): HostTenant,
 ) -> Result<Response, ApiError> {
+    // ADR-0016: langganan habis → website/katalog/checkout publik nonaktif.
+    crate::billing::require_operational(&state, t).await?;
     let list = repo::list_categories(pool(&state)?, t)
         .await
         .map_err(internal)?;

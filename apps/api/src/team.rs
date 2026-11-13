@@ -402,6 +402,14 @@ pub async fn invite(
 ) -> Result<(StatusCode, Json<SuccessEnvelope<Vec<InvitationView>>>), ApiError> {
     actor.require("members.invite")?;
     let email = Email::parse(&req.email).map_err(|_| one("email", "invalid_email"))?;
+    // P7-2: anggota aktif + undangan tertunda (kursi yang dipesan) tidak boleh melebihi paket.
+    let plan = crate::billing::plan_of(&state, actor.tenant_id).await?;
+    let used = crate::billing::usage(&state, actor.tenant_id).await?;
+    crate::billing::check_count(
+        "max_members",
+        plan.plan.limits.max_members,
+        used.active_members + used.pending_invitations,
+    )?;
     let p = pool(&state)?;
     repo::invite(
         p,

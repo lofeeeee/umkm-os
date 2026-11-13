@@ -95,3 +95,46 @@ pub async fn current(pool: &PgPool, t: TenantId) -> Result<TenantPlan, BillingEr
         current_period_end: r.get("current_period_end"),
     })
 }
+
+/// Pemakaian tenant untuk batas paket (P7-2). Bulan = bulan kalender Asia/Jakarta.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Usage {
+    pub active_members: i64,
+    pub pending_invitations: i64,
+    /// Produk selain `archived`.
+    pub products: i64,
+    pub storage_bytes: i64,
+    /// Percakapan baru bulan ini (dari agregat P6-6, tidak berkurang saat purge).
+    pub conversations_month: i64,
+    /// Token AI platform bulan ini (giliran chat & uji coba).
+    pub platform_tokens_month: i64,
+}
+
+pub async fn usage(pool: &PgPool, t: TenantId) -> Result<Usage, BillingError> {
+    let mut tx = tenant_tx(pool, t).await?;
+    let r = sqlx::query(
+        "SELECT
+           (SELECT count(*) FROM tenant_memberships WHERE tenant_id = $1 AND status = 'active') AS members,
+           (SELECT count(*) FROM invitations WHERE tenant_id = $1 AND accepted_at IS NULL AND revoked_at IS NULL
+                AND expires_at > now()) AS invites,
+           (SELECT count(*) FROM products WHERE tenant_id = $1 AND status <> 'archived') AS products,
+           (SELECT coalesce(sum(byte_size), 0)::bigint FROM stored_objects WHERE tenant_id = $1) AS storage,
+           (SELECT coalesce(sum(started), 0)::bigint FROM conversation_daily_stats WHERE tenant_id = $1
+                AND date_trunc('month', day) = date_trunc('month', app.jkt_day(now()))) AS conv,
+           (SELECT coalesce(sum(prompt_tokens + completion_tokens), 0)::bigint FROM ai_runs WHERE tenant_id = $1
+                AND source = 'platform'
+                AND date_trunc('month', app.jkt_day(created_at)) = date_trunc('month', app.jkt_day(now()))) AS tokens",
+    )
+    .bind(t.as_uuid())
+    .fetch_one(&mut *tx)
+    .await?;
+    tx.commit().await?;
+    Ok(Usage {
+        active_members: r.get("members"),
+        pending_invitations: r.get("invites"),
+        products: r.get("products"),
+        storage_bytes: r.get("storage"),
+        conversations_month: r.get("conv"),
+        platform_tokens_month: r.get("tokens"),
+    })
+}

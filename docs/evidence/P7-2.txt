@@ -1,0 +1,58 @@
+P7-2 — Backend limit enforcement (PRD.md §4.15, §12; FR-SUB-001, AC-SUB-001; ADR-0016)
+Tanggal: 2026-11-13
+
+Artefak
+- crates/infrastructure/src/billing_repo.rs  usage: anggota aktif, undangan tertunda, produk non-archived, total byte
+  file, percakapan bulan ini (agregat P6-6, tidak berkurang saat purge), token AI platform bulan ini (WIB).
+- apps/api/src/billing.rs  over_limit (403 reason=plan_limit + limit + max), expired (403 reason=
+  subscription_expired), require_operational, check_count; GET subscription kini memuat usage.
+- Titik penegakan (batas dibaca dari plans.limits_json setiap permintaan):
+  - produk: POST /tenants/{t}/products (max_products);
+  - anggota: POST /tenants/{t}/invitations (anggota aktif + undangan tertunda ≤ max_members);
+  - file: POST /tenants/{t}/uploads (total byte + file baru ≤ storage_bytes);
+  - percakapan: POST /public/chat/conversations (conversations_monthly);
+  - AI: runtime — token platform = min(batas paket, kuota operator); BYOK hanya bila byok_allowed; paket tak
+    terbaca → kuota 0 (fail-closed) → quota_exceeded tanpa memanggil provider.
+  - langganan habis (uji coba/periode lewat): /public/site, /public/products(/slug), /public/categories,
+    /public/checkout-config, /public/checkout, chat start/messages → 403 subscription_expired; chat config enabled
+    = false. Dashboard tetap dapat dibuka (kelola & bayar).
+- frontend: pesan batas paket & langganan habis di dashboard (describe), situs publik "Toko sedang tidak aktif".
+- Test lama yang memerlukan AI platform / > 2 anggota memakai helper pro() (Pro aktif): ai_http, audit_http,
+  chat_http, conversation_staff_http, team_http, ai_runtime — konsekuensi keputusan: uji coba = batas Starter
+  (0 token AI platform).
+
+Hasil
+- fmt, clippy -D warnings bersih; cargo test --workspace --no-fail-fast: 438 lulus, 0 gagal (dua run berturut-turut).
+  Catatan: satu run sebelumnya menunjukkan 5 kegagalan chat_http pada pembuatan percakapan saat beban suite penuh;
+  tidak terulang di dua run penuh berikutnya maupun saat dijalankan sendiri (pesan error tidak tertangkap).
+- Frontend tsc/eslint/vitest 24 lulus. Playwright ops, shop, mfa 3/3; spesifikasi ai & chat butuh paket Pro →
+  dijalankan ulang di P7-3 setelah aktivasi Pro oleh Super Admin tersedia.
+
+Cakupan apps/api/tests/plan_limits_http.rs (3)
+- product_member_storage_limits_follow_plan_data (AC-SUB-001): max_products 2 → produk ke-3 403 plan_limit (max 2);
+  data dinaikkan ke 3 → langsung diterima; archived tidak dihitung; Pro → batas Pro. Anggota: owner + 1 undangan
+  = 2 → undangan berikutnya 403; max_members null → diterima. Penyimpanan 10 byte → upload 403; dinaikkan → 201.
+- ai_quota_comes_from_plan: uji coba Starter → quota_exceeded; token Starter dinaikkan di data → tidak lagi
+  quota_exceeded; kunci paket rusak → fail-closed quota_exceeded.
+- expired_subscription_disables_public_store_and_chat_quota: conversations_monthly 1 → percakapan ke-2 403;
+  dinaikkan → 201; uji coba habis → site/products/categories/checkout-config 403 subscription_expired, checkout
+  gagal, chat config disabled, chat start 403; dashboard subscription 200 (expired, usage percakapan 2), produk
+  dashboard 200; Pro aktif → toko hidup lagi.
+
+Negative control (mutasi sementara, dikembalikan; test terkait GAGAL)
+  == NEGCTL: batas produk tidak ditegakkan
+      expired_subscription_disables_public_store_and_chat_quota ... FAILED
+      product_member_storage_limits_follow_plan_data ... FAILED
+      result: FAILED. 1 passed; 2 failed;
+  == NEGCTL: kuota AI platform dari config operator, bukan paket
+      ai_quota_comes_from_plan ... FAILED
+      result: FAILED. 2 passed; 1 failed;
+  == NEGCTL: langganan habis tidak menonaktifkan toko publik
+      expired_subscription_disables_public_store_and_chat_quota ... FAILED
+      result: FAILED. 2 passed; 1 failed;
+Setelah dikembalikan: plan_limits_http 3 lulus.
+
+Catatan
+- Pemeriksaan hitung-lalu-tulis tidak di dalam satu transaksi dengan penulisannya: permintaan bersamaan dapat
+  melewati batas dengan selisih kecil (fair-use); bukan batas keamanan.
+- Mengaktifkan kembali anggota nonaktif / produk archived belum dicek terhadap batas.

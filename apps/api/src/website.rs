@@ -655,6 +655,8 @@ pub async fn public_site(
     HostTenant(t): HostTenant,
     Query(q): Query<SiteQuery>,
 ) -> Result<Response, ApiError> {
+    // ADR-0016: langganan habis → website/katalog/checkout publik nonaktif.
+    crate::billing::require_operational(&state, t).await?;
     let slug = q.page.unwrap_or_else(|| repo::HOME.into());
     slug_ok(&slug)?;
     let p = pool(&state)?;

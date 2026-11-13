@@ -465,6 +465,7 @@ async fn platform_provider_permissions_isolation_and_tools(pool: PgPool) {
 async fn test_turn_usage_and_knowledge_endpoints(pool: PgPool) {
     let a = app(&pool).await;
     let t = tenant(&pool, "toko-ai").await;
+    pro(&pool, t).await; // kuota AI platform (ADR-0016)
     let owner = member(&pool, t, "Owner").await;
     let manager = member(&pool, t, "Manager").await;
     // Tanpa provider utama → 409 jelas.

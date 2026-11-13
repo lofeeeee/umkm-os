@@ -82,6 +82,7 @@ async fn chat_app(pool: &PgPool, port: u16) -> TestApp {
 
 /// Chatbot aktif dengan provider platform `m1`.
 async fn enable_chat(pool: &PgPool, t: Uuid, mode: &str, with_provider: bool, welcome: &str) {
+    pro(pool, t).await; // kuota AI platform (ADR-0016: uji coba Starter = 0 token)
     let prov: Option<Uuid> = if with_provider {
         Some(
             sqlx::query_scalar(

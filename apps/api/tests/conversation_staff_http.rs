@@ -75,6 +75,7 @@ async fn chat_app(pool: &PgPool, port: u16) -> TestApp {
 }
 
 async fn enable_chat(pool: &PgPool, t: Uuid, mode: &str) {
+    pro(pool, t).await; // kuota AI platform (ADR-0016: uji coba Starter = 0 token)
     let prov: Uuid = sqlx::query_scalar(
         "INSERT INTO ai_providers (tenant_id, name, source, provider_type, model, capabilities)
          VALUES ($1, 'Platform', 'platform', 'platform', 'm1', '{\"chat\":true}') RETURNING id",

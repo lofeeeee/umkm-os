@@ -134,6 +134,12 @@ async fn setup(pool: &PgPool, mode: &str, enabled: bool, timeout_ms: i32) -> Ten
     .fetch_one(pool)
     .await
     .unwrap();
+    // Paket Pro aktif: kuota AI platform berasal dari paket (P7-2, ADR-0016).
+    sqlx::query("UPDATE subscriptions SET plan_code = 'pro', status = 'active', current_period_end = now() + interval '30 days' WHERE tenant_id = $1")
+        .bind(t)
+        .execute(pool)
+        .await
+        .unwrap();
     let p: Uuid = sqlx::query_scalar("INSERT INTO products (tenant_id, name, slug, status, available) VALUES ($1, 'Kopi Gayo 250g', 'kopi-gayo', 'active', true) RETURNING id")
         .bind(t)
         .fetch_one(pool)

@@ -271,12 +271,27 @@ impl AiRuntime {
         Ok(n.max(0) as u64)
     }
 
-    fn limit(&self, cfg: &ChatbotConfig, source: ProviderSource) -> Limit {
-        match source {
-            ProviderSource::Platform => {
-                Limit(Some(self.platform.as_ref().map_or(0, |p| p.monthly_quota)))
+    /// Kuota bulan berjalan (P7-2, ADR-0016): token platform = batas paket, dibatasi juga kuota operator;
+    /// BYOK hanya bila paket mengizinkan (lalu anggaran tenant). Paket tak terbaca → 0 (fail-closed).
+    fn limit(
+        &self,
+        cfg: &ChatbotConfig,
+        source: ProviderSource,
+        plan: Option<&umkm_domain::billing::PlanLimits>,
+    ) -> Limit {
+        match (source, plan) {
+            (_, None) => Limit(Some(0)),
+            (ProviderSource::Platform, Some(p)) => {
+                let operator = self.platform.as_ref().map_or(0, |p| p.monthly_quota);
+                Limit(Some(
+                    p.platform_ai_tokens_monthly
+                        .map_or(operator, |l| l.min(operator)),
+                ))
             }
-            ProviderSource::Byok => Limit(cfg.monthly_token_budget.map(|b| b.max(0) as u64)),
+            (ProviderSource::Byok, Some(p)) if !p.byok_allowed => Limit(Some(0)),
+            (ProviderSource::Byok, Some(_)) => {
+                Limit(cfg.monthly_token_budget.map(|b| b.max(0) as u64))
+            }
         }
     }
 
@@ -308,6 +323,14 @@ impl AiRuntime {
         if purpose == "chat" && !cfg.enabled {
             return Err(AiRunError::Disabled);
         }
+        // Batas paket (P7-2). Gagal dibaca → None → kuota 0 (fail-closed), dicatat.
+        let plan = match crate::billing_repo::current(&self.pool, t).await {
+            Ok(p) => Some(p.plan.limits),
+            Err(e) => {
+                tracing::error!(error = %e, "plan limits unavailable; AI quota fail-closed");
+                None
+            }
+        };
         let providers = ai_repo::list_providers(&self.pool, t).await?;
         let find = |id: Option<Uuid>| {
             id.and_then(|id| {
@@ -388,7 +411,7 @@ impl AiRuntime {
             }
         }
         if !self
-            .limit(&cfg, primary.source)
+            .limit(&cfg, primary.source, plan.as_ref())
             .allows(self.month_usage(t, primary.source).await?)
         {
             return self

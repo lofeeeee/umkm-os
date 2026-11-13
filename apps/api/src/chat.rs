@@ -199,9 +199,12 @@ pub async fn config(
     HostTenant(t): HostTenant,
 ) -> Result<Json<SuccessEnvelope<ChatConfigView>>, ApiError> {
     let cfg = chat_enabled(&state, t).await?;
+    // Langganan habis → widget tidak tampil (ADR-0016).
+    let operational = crate::billing::plan_of(&state, t).await?.status
+        != umkm_domain::billing::SubscriptionStatus::Expired;
     Ok(Json(SuccessEnvelope::new(
         ChatConfigView {
-            enabled: cfg.enabled,
+            enabled: cfg.enabled && operational,
             consent_version: consent::VERSION.into(),
             consent_text: consent::TEXT.into(),
         },
@@ -240,6 +243,19 @@ pub async fn start(
         return Err(Reject::from(one("consent_version", "outdated")));
     }
     let cfg = chat_enabled(&state, t).await.map_err(Reject::from)?;
+    // P7-2: langganan aktif + kuota percakapan bulanan (agregat P6-6, tidak berkurang saat purge).
+    let plan = crate::billing::require_operational(&state, t)
+        .await
+        .map_err(Reject::from)?;
+    let used = crate::billing::usage(&state, t)
+        .await
+        .map_err(Reject::from)?;
+    crate::billing::check_count(
+        "conversations_monthly",
+        plan.plan.limits.conversations_monthly,
+        used.conversations_month,
+    )
+    .map_err(Reject::from)?;
     if !cfg.enabled {
         return Err(Reject::from(conflict(
             "chat_disabled",
@@ -375,6 +391,9 @@ pub async fn send(
     let s = service(&state).map_err(Reject::from)?;
     check_origin(s, &headers).map_err(Reject::from)?;
     enforce(s, &rate_rules::CHAT_MESSAGE_PER_IP, &ip).await?;
+    crate::billing::require_operational(&state, t)
+        .await
+        .map_err(Reject::from)?;
     let sref = chat_session(&state, t, &headers)
         .await
         .map_err(Reject::from)?;

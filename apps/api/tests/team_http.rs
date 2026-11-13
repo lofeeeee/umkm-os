@@ -414,6 +414,7 @@ async fn invitations_are_single_use_and_bound_to_email(pool: PgPool) {
     // AUTH-009/010 (email lewat adapter uji; email nyata menunggu D-08)
     let a = app(&pool).await;
     let t = tenant(&pool, "toko-a").await;
+    pro(&pool, t).await; // > 2 anggota (batas Starter, ADR-0016)
     let o = member(&pool, t, "Owner").await;
     let support = role_id(&a, t, &o, "Support Agent").await;
     let r = call(
