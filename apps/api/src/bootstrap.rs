@@ -189,7 +189,7 @@ pub async fn migrate() -> Result<(), BoxError> {
     init_tracing(settings.observability.log_format);
     let secrets = Secrets::from_env()?;
     let pool = umkm_database::connect_lazy(&secrets.database_url, &settings.database)?;
-    umkm_database::MIGRATOR.run(&pool).await?;
+    umkm_database::deploy_migrator().run(&pool).await?;
     tracing::info!("migrations applied");
     Ok(())
 }

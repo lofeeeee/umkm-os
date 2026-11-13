@@ -25,6 +25,17 @@ pub const CRATE: &str = "umkm-database";
 /// Migration ter-embed dari `migrations/` (versioned, reversible).
 pub static MIGRATOR: Migrator = sqlx::migrate!("../../migrations");
 
+/// Migrator untuk perintah `migrate` di deploy (runbook deploy & rollback, P8-5).
+/// Bedanya dengan [`MIGRATOR`]: migrasi yang SUDAH diterapkan tetapi tidak dikenal binary ini (milik rilis yang
+/// lebih baru) diabaikan, sehingga rollback ke image sebelumnya tidak macet di langkah migrate. Aman karena
+/// kebijakan expand/contract: skema rilis N tetap kompatibel dengan binary N-1. Checksum migrasi yang dikenal
+/// tetap diverifikasi (file yang sudah diterapkan tidak boleh diedit).
+pub fn deploy_migrator() -> Migrator {
+    let mut m = sqlx::migrate!("../../migrations");
+    m.set_ignore_missing(true);
+    m
+}
+
 pub const TENANT_SETTING: &str = "app.tenant_id";
 
 #[derive(Debug, thiserror::Error)]

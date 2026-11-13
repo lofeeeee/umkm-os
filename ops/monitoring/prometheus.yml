@@ -6,6 +6,12 @@ global:
 rule_files:
   - /etc/prometheus/alerts.yml
 
+# Alertmanager (profile monitoring). Tujuan notifikasi: ops/monitoring/alertmanager.yml.
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ["alertmanager:9093"]
+
 scrape_configs:
   - job_name: umkm-api
     static_configs:
@@ -14,5 +20,7 @@ scrape_configs:
     static_configs:
       - targets: ["worker:9090"]
 
-# Alertmanager (tujuan notifikasi: email/chat on-call) belum ditetapkan.
-# Disk/RAM/CPU host (PRD.md §14.3) butuh node-exporter: P8-5.
+  # Metrik host (disk/RAM/CPU, PRD.md §14.3).
+  - job_name: node
+    static_configs:
+      - targets: ["node-exporter:9100"]

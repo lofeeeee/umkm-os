@@ -37,7 +37,7 @@ services:
       target: web
       args:
         PUBLIC_API_ORIGIN: ${PUBLIC_API_ORIGIN:-http://api.${ROOT_DOMAIN}}
-    image: umkm-os/web:local
+    image: ${WEB_IMAGE:-umkm-os/web:local}
     restart: unless-stopped
     read_only: true
     cap_drop: [ALL]
@@ -233,6 +233,51 @@ services:
       resources:
         limits: { memory: 200M, cpus: "0.50" }
 
+  alertmanager:
+    image: prom/alertmanager:v0.28.1
+    profiles: [monitoring]
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    logging: *logging
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+    volumes:
+      - ./ops/monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      # URL webhook on-call = secret (bukan di repo). Default = contoh yang sengaja tidak terjangkau.
+      - ${ALERT_WEBHOOK_URL_FILE:-./ops/monitoring/secrets/webhook_url.example}:/etc/alertmanager/secrets/webhook_url:ro
+      - alertmanager_data:/alertmanager
+    # Butuh keluar ke internet untuk mengirim webhook; tidak dipublish.
+    networks: [backend, edge]
+    deploy:
+      resources:
+        limits: { memory: 64M, cpus: "0.25" }
+
+  node-exporter:
+    image: prom/node-exporter:v1.9.1
+    profiles: [monitoring]
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    logging: *logging
+    pid: host
+    command:
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --path.rootfs=/rootfs
+      - --collector.filesystem.mount-points-exclude=^/(dev|proc|sys|run|var/lib/docker/.+)($$|/)
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro,rslave
+    networks: [backend]
+    deploy:
+      resources:
+        limits: { memory: 64M, cpus: "0.25" }
+
 networks:
   edge: {}
   # Postgres/Redis hanya di jaringan internal tanpa port publik (PRD.md §9.6).
@@ -246,3 +291,4 @@ volumes:
   caddy_config:
   prometheus_data:
   backup_data:
+  alertmanager_data:

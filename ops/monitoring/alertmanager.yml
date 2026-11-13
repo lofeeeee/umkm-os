@@ -1,0 +1,27 @@
+# Alertmanager (P8-5, PRD.md §14.3). Semua alert → satu kanal on-call lewat webhook.
+# URL webhook TIDAK disimpan di repo: dibaca dari file secret yang di-mount (lihat docker-compose.yml,
+# env ALERT_WEBHOOK_URL_FILE). Kanal (Telegram/Slack/email gateway) menunggu keputusan ops — sampai itu file
+# contoh menunjuk alamat yang sengaja tidak ada, sehingga kegagalan kirim terlihat di log Alertmanager.
+route:
+  receiver: oncall
+  group_by: [alertname, severity]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  routes:
+    # Critical diulang lebih sering.
+    - matchers: [severity="critical"]
+      receiver: oncall
+      repeat_interval: 1h
+
+inhibit_rules:
+  # Disk critical menahan warning disk yang sama.
+  - source_matchers: [alertname="HostDiskSpaceCritical"]
+    target_matchers: [alertname="HostDiskSpaceLow"]
+    equal: [mountpoint]
+
+receivers:
+  - name: oncall
+    webhook_configs:
+      - url_file: /etc/alertmanager/secrets/webhook_url
+        send_resolved: true

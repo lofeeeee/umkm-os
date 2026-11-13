@@ -1,0 +1,34 @@
+P8-5 — Production hardening (bagian repo) + runbook deploy/rollback (PRD.md §14.3)
+Tanggal: 2026-11-13. Status: SEBAGIAN — artefak & uji lokal selesai; drill rollback di VPS staging/produksi BELUM
+(menunggu VPS + DNS). Checklist V1.0 #25 dan #28 tetap "Sebagian".
+
+Artefak
+- docs/governance/runbook-deploy-rollback.md  prinsip (image bertag, backup sebelum migrasi, expand/contract, .down.sql
+  bukan alat rollback produksi), prasyarat, deploy, rollback aplikasi, rollback data (restore), kegagalan umum, drill.
+- crates/database/src/lib.rs  deploy_migrator(): migrator untuk perintah `umkm-api migrate` yang MENGABAIKAN migrasi
+  lebih baru yang sudah diterapkan (set_ignore_missing). TEMUAN: sebelumnya `MIGRATOR.run` bawaan menolak
+  ("previously applied but is missing") sehingga image lama tidak bisa start (api depends_on migrate sukses) —
+  rollback aplikasi akan macet. apps/api/src/bootstrap.rs memakai deploy_migrator(); uji tetap memakai MIGRATOR ketat.
+- docker-compose.yml  image web dapat dipilih (`WEB_IMAGE`), profil monitoring + `alertmanager` (prom/alertmanager
+  v0.28.1, URL webhook dari file secret `ALERT_WEBHOOK_URL_FILE`, bukan di repo) + `node-exporter` (v1.9.1, metrik host).
+- ops/monitoring/prometheus.yml (alerting → alertmanager, scrape node), alerts.yml (+HostDiskSpaceLow/Critical,
+  HostMemoryLow), alerts_test.yml (+2 kasus termasuk negatif), alertmanager.yml (route, critical diulang 1 jam,
+  inhibit disk), secrets/webhook_url.example (sengaja tak terjangkau), .gitignore (secret asli tidak ter-commit),
+  .env.example (ALERT_WEBHOOK_URL_FILE).
+- .github/workflows/ci.yml  + amtool check-config, + `compose --profile monitoring config`.
+
+Hasil
+- crates/database/tests/deploy_migrator.rs (2): DB berisi migrasi rilis lebih baru → deploy_migrator jalan, MIGRATOR
+  ketat menolak ("missing"); checksum migrasi dikenal yang diubah → tetap ditolak.
+- promtool check config: SUCCESS (9 rules); promtool test rules: SUCCESS. amtool check-config: SUCCESS.
+- docker compose config (default, monitoring, backup): valid.
+- cargo fmt/clippy bersih; cargo test --workspace --no-fail-fast: 446 lulus, 0 gagal. target/ 5,1 GB.
+
+Negative control
+- deploy_migrator dengan set_ignore_missing(false) → older_binary_tolerates_newer_applied_migrations FAILED.
+- HostMemoryLow ambang 0.10 → 0.01 → promtool test rules FAILED (HostMemoryLow tidak firing pada 5%).
+- Catatan: amtool tidak memeriksa keberadaan file url_file (diverifikasi saat runtime Alertmanager).
+
+Belum
+- Drill deploy → rollback → restore di VPS dengan waktu terukur (butuh VPS, DNS/TLS, backup luar VPS D-07, target RPO/RTO).
+- Kanal on-call nyata; dashboard Grafana (opsional PRD §19).

@@ -31,3 +31,47 @@ tests:
       - eval_time: 12m
         alertname: ApiHigh5xxRate
         exp_alerts: []
+  # Host: disk 10% tersisa → warning saja; 3% → warning + critical; memori 5% → HostMemoryLow; 50% → tidak.
+  - interval: 1m
+    input_series:
+      - series: 'node_filesystem_avail_bytes{fstype="ext4",mountpoint="/"}'
+        values: "10x20"
+      - series: 'node_filesystem_size_bytes{fstype="ext4",mountpoint="/"}'
+        values: "100x20"
+      - series: 'node_memory_MemAvailable_bytes'
+        values: "5x20"
+      - series: 'node_memory_MemTotal_bytes'
+        values: "100x20"
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: HostDiskSpaceLow
+        exp_alerts:
+          - exp_labels: { severity: warning, fstype: ext4, mountpoint: / }
+            exp_annotations: { summary: "Disk / tersisa < 15%" }
+      - eval_time: 15m
+        alertname: HostDiskSpaceCritical
+        exp_alerts: []
+      - eval_time: 15m
+        alertname: HostMemoryLow
+        exp_alerts:
+          - exp_labels: { severity: warning }
+            exp_annotations: { summary: "Memori tersedia host < 10% selama 10 menit" }
+  - interval: 1m
+    input_series:
+      - series: 'node_filesystem_avail_bytes{fstype="ext4",mountpoint="/"}'
+        values: "3x20"
+      - series: 'node_filesystem_size_bytes{fstype="ext4",mountpoint="/"}'
+        values: "100x20"
+      - series: 'node_memory_MemAvailable_bytes'
+        values: "50x20"
+      - series: 'node_memory_MemTotal_bytes'
+        values: "100x20"
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: HostDiskSpaceCritical
+        exp_alerts:
+          - exp_labels: { severity: critical, fstype: ext4, mountpoint: / }
+            exp_annotations: { summary: "Disk / tersisa < 5%" }
+      - eval_time: 15m
+        alertname: HostMemoryLow
+        exp_alerts: []

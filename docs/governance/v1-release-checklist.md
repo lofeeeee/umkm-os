@@ -37,10 +37,10 @@ Arti status:
 | 22 | AI platform | Knowledge base dan tenant-scoped RAG | Terpenuhi | `P5-7.txt` | |
 | 23 | AI platform | Chat ID dan conversation viewer | Terpenuhi | `P6-1.txt`, `P6-2.txt`, `P6-3.txt` | |
 | 24 | AI platform | AI-to-human handover | Terpenuhi | `P6-4.txt`, `P6-5.txt` | |
-| 25 | Production | Rust API dan worker deployment | Sebagian | `P0-6.txt`, `Dockerfile`, `docker-compose.yml` | Image multi-stage + Compose ada dan diuji lokal. **Belum** dideploy ke VPS; TLS wildcard `*.ryasai.my.id` menunggu provider DNS (DNS-01); runbook rollback (P8-5) belum. |
+| 25 | Production | Rust API dan worker deployment | Sebagian | `P0-6.txt`, `P8-5.txt`, `docs/governance/runbook-deploy-rollback.md` | Image multi-stage + Compose (image bertag `API_IMAGE`/`WORKER_IMAGE`/`WEB_IMAGE`) + runbook deploy/rollback; `migrate` tidak memblokir rollback (diuji). **Belum** dideploy & drill di VPS; TLS wildcard menunggu provider DNS. |
 | 26 | Production | VPS resource limits | Sebagian | `docker-compose.yml` (`deploy.resources.limits`) | Batas memori/CPU per service terdefinisi untuk VPS ±8 GB; **belum divalidasi** di bawah beban (P8-2). |
 | 27 | Production | Automated external backups | Terblokir | `P0-10.txt`, `docs/governance/runbook-restore.md` | Backup harian terenkripsi + rotasi ada; **salinan luar VPS menunggu D-07 (provider eksternal)** — tanpa itu `backup.sh` sengaja keluar dengan kode 3. RPO aktual ±24 jam (tanpa WAL archiving). |
-| 28 | Production | Monitoring dan alerting | Sebagian | `P0-8.txt`, `ops/monitoring/{prometheus,alerts,alerts_test}.yml` | 16 metric + aturan alert teruji `promtool`. **Belum ada tujuan notifikasi** (Alertmanager/kanal on-call) dan dashboard. |
+| 28 | Production | Monitoring dan alerting | Sebagian | `P0-8.txt`, `P8-5.txt`, `ops/monitoring/` | 16 metric aplikasi + metrik host (node-exporter) + 9 aturan alert (termasuk 3 untuk disk/memori host) teruji `promtool`; Alertmanager ter-wire (`amtool` OK). **Kanal on-call belum ditetapkan** (URL webhook masih contoh) dan belum ada dashboard. |
 | 29 | Production | Security assessment | Sebagian | `docs/security/threat-model.md` (STRIDE, P8-1 bagian internal) | Threat model & kontrol terpetakan; **pentest/assessment pihak ketiga belum** (syarat P8-1: zero critical/high). |
 | 30 | Production | Load dan recovery testing | Terblokir | `P0-10.txt` (restore lokal) | Load 5 skenario (P8-2) butuh lingkungan, dataset, ambang & denominator yang **disetujui**; drill restore dengan target RPO/RTO (P8-4) butuh **target RPO/RTO** dan backup luar VPS (D-07). |
 
@@ -59,3 +59,4 @@ Arti status:
 
 ## Riwayat
 - 2026-11-13: dokumen dibuat (P8-6 bagian checklist). Gate P0–P7 lulus.
+- 2026-11-13: #25/#28 diperbarui setelah P8-5 bagian repo (runbook, deploy migrator, Alertmanager, node-exporter).

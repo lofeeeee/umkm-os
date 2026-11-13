@@ -21,3 +21,7 @@ out/
 .idea/
 .vscode/
 *.swp
+
+# Secret monitoring (URL webhook on-call) — hanya contoh yang di-commit.
+ops/monitoring/secrets/*
+!ops/monitoring/secrets/webhook_url.example
