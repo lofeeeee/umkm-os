@@ -90,6 +90,8 @@ test("web chat: persetujuan AI, jawaban AI, realtime, handover, akhiri", async (
   // P6-4: pemilik membalas dari dashboard (ambil alih) → pelanggan menerima lewat SSE tanpa reload;
   // pesan pelanggan berikutnya muncul di dashboard lewat ping SSE tenant.
   await page.goto(`${APP}/conversations${q}`);
+  // P6-5: inbox membuka antrean "Menunggu staf" dengan hitungan.
+  await expect(page.getByRole("tab", { name: "Menunggu staf (1)" })).toHaveAttribute("aria-selected", "true");
   await page.getByRole("list", { name: "Daftar percakapan" }).getByRole("button").first().click();
   const actions = page.getByRole("region", { name: "Tindakan staf" });
   await actions.getByLabel("Balas pelanggan").fill("Halo kak, saya pemilik toko. Ada yang bisa dibantu?");
@@ -102,6 +104,11 @@ test("web chat: persetujuan AI, jawaban AI, realtime, handover, akhiri", async (
   await panel.getByRole("button", { name: "Kirim" }).click();
   await expect(page.getByRole("region", { name: "Timeline" })).toContainText("Terima kasih, saya tunggu");
   await expect(page.getByRole("region", { name: "Status percakapan" })).toContainText("Ditangani staf");
+  // Tiket dari percakapan (ticket ≠ conversation).
+  await actions.getByLabel("Subjek tiket").fill("Tanya promo");
+  await actions.getByRole("button", { name: "Buat tiket" }).click();
+  await expect(actions.getByText("Tiket dibuat.")).toBeVisible();
+  await expect(page.getByRole("region", { name: "Tiket" })).toContainText("Tanya promo");
 
   // Ponsel: panel muat tanpa scroll horizontal.
   await a.setViewportSize({ width: 360, height: 740 });
@@ -116,6 +123,7 @@ test("web chat: persetujuan AI, jawaban AI, realtime, handover, akhiri", async (
 
   // P6-3: pemilik membuka Conversation Viewer — timeline, jejak AI, riwayat handover (tanpa masking).
   await page.goto(`${APP}/conversations${q}`);
+  await page.getByRole("tab", { name: "Selesai" }).click();
   const list = page.getByRole("list", { name: "Daftar percakapan" });
   await expect(list).toContainText("Selesai");
   await list.getByRole("button").first().click();

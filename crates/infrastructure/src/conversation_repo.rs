@@ -111,6 +111,9 @@ pub async fn start(
     .execute(&mut *tx)
     .await
     .map_err(map_err)?;
+    if input.initial == ConversationStatus::WaitingHuman {
+        notify_handover(&mut tx, t, conversation_id, "start").await?;
+    }
     tx.commit().await?;
     Ok(Started {
         conversation_id,
@@ -327,10 +330,10 @@ pub async fn transition(
     .execute(&mut *tx)
     .await
     .map_err(map_err)?;
-    sqlx::query(
+    let ev = sqlx::query(
         "INSERT INTO conversation_events
              (tenant_id, conversation_id, kind, from_status, to_status, actor_type, actor_user_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)",
+         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id",
     )
     .bind(t.as_uuid())
     .bind(conversation_id)
@@ -339,11 +342,35 @@ pub async fn transition(
     .bind(to.as_str())
     .bind(actor_type)
     .bind(actor_user)
-    .execute(&mut *tx)
+    .fetch_one(&mut *tx)
     .await
     .map_err(map_err)?;
+    if to == ConversationStatus::WaitingHuman {
+        let ev: Uuid = ev.get("id");
+        notify_handover(&mut tx, t, conversation_id, &ev.to_string()).await?;
+    }
     tx.commit().await?;
     Ok(to)
+}
+
+/// Notifikasi "AI handover" (PRD.md §4.13) lewat transactional outbox — commit bersama perubahan status.
+async fn notify_handover(
+    tx: &mut crate::pgx::Tx,
+    t: TenantId,
+    conversation_id: Uuid,
+    key: &str,
+) -> Result<(), sqlx::Error> {
+    crate::outbox::enqueue(
+        &mut **tx,
+        &umkm_application::notify::OutboxEvent {
+            tenant_id: Some(*t.as_uuid()),
+            event_type: crate::notification_repo::AI_HANDOVER,
+            payload: serde_json::json!({ "conversation_id": conversation_id }),
+            idempotency_key: format!("ai_handover:{conversation_id}:{key}"),
+        },
+    )
+    .await?;
+    Ok(())
 }
 
 /// Purge retensi ADR-0012 (lintas tenant lewat fungsi SECURITY DEFINER).
@@ -470,6 +497,8 @@ fn ts(c: &str) -> String {
 pub struct ListFilter {
     pub status: Option<ConversationStatus>,
     pub assignee: Option<Uuid>,
+    /// Antrean FIFO (pesan terakhir terlama dulu) — untuk WAITING_HUMAN.
+    pub oldest_first: bool,
     pub limit: i64,
     pub offset: i64,
 }
@@ -561,8 +590,9 @@ pub async fn list(
     .fetch_one(&mut *tx)
     .await?;
     let rows = sqlx::query(sqlx::AssertSqlSafe(format!(
-        "SELECT {} {SUMMARY_FROM} {filter} ORDER BY c.last_message_at DESC, c.id LIMIT $4 OFFSET $5",
-        summary_cols()
+        "SELECT {} {SUMMARY_FROM} {filter} ORDER BY c.last_message_at {}, c.id LIMIT $4 OFFSET $5",
+        summary_cols(),
+        if f.oldest_first { "ASC" } else { "DESC" }
     )))
     .bind(t.as_uuid())
     .bind(f.status.map(|s| s.as_str()))
@@ -998,4 +1028,128 @@ pub async fn decide_draft(
     .await?;
     tx.commit().await?;
     Ok(sent)
+}
+
+// ------------------------------------------------------------------ inbox (P6-5)
+
+/// Jumlah percakapan per status + yang ditangani `me`.
+#[derive(Debug, Clone, Default)]
+pub struct Counts {
+    pub ai: i64,
+    pub waiting_human: i64,
+    pub human: i64,
+    pub closed: i64,
+    pub mine: i64,
+}
+
+pub async fn counts(pool: &PgPool, t: TenantId, me: Uuid) -> Result<Counts, ConversationError> {
+    let mut tx = tenant_tx(pool, t).await?;
+    let r = sqlx::query(
+        "SELECT count(*) FILTER (WHERE status = 'AI') AS ai,
+                count(*) FILTER (WHERE status = 'WAITING_HUMAN') AS waiting,
+                count(*) FILTER (WHERE status = 'HUMAN') AS human,
+                count(*) FILTER (WHERE status = 'CLOSED') AS closed,
+                count(*) FILTER (WHERE status = 'HUMAN' AND assignee_user_id = $2) AS mine
+           FROM conversations WHERE tenant_id = $1",
+    )
+    .bind(t.as_uuid())
+    .bind(me)
+    .fetch_one(&mut *tx)
+    .await?;
+    tx.commit().await?;
+    Ok(Counts {
+        ai: r.get("ai"),
+        waiting_human: r.get("waiting"),
+        human: r.get("human"),
+        closed: r.get("closed"),
+        mine: r.get("mine"),
+    })
+}
+
+/// Tugaskan percakapan ke anggota lain (status HUMAN, assignee = `to`). Anggota aktif dicek trigger DB.
+pub async fn assign(
+    pool: &PgPool,
+    t: TenantId,
+    conversation_id: Uuid,
+    to: Uuid,
+    by: Uuid,
+) -> Result<ConversationStatus, ConversationError> {
+    let mut tx = tenant_tx(pool, t).await?;
+    let row = sqlx::query(
+        "SELECT status, assignee_user_id FROM conversations WHERE tenant_id = $1 AND id = $2 FOR UPDATE",
+    )
+    .bind(t.as_uuid())
+    .bind(conversation_id)
+    .fetch_optional(&mut *tx)
+    .await?
+    .ok_or(ConversationError::NotFound)?;
+    let from = status_of(row.get::<&str, _>("status"));
+    let prev: Option<Uuid> = row.get("assignee_user_id");
+    if from == ConversationStatus::Closed {
+        return Err(ConversationError::Closed);
+    }
+    sqlx::query(
+        "UPDATE conversations SET status = 'HUMAN', assignee_user_id = $3, human_involved = true
+          WHERE tenant_id = $1 AND id = $2",
+    )
+    .bind(t.as_uuid())
+    .bind(conversation_id)
+    .bind(to)
+    .execute(&mut *tx)
+    .await
+    .map_err(map_err)?;
+    sqlx::query(
+        "INSERT INTO conversation_events
+             (tenant_id, conversation_id, kind, from_status, to_status, actor_type, actor_user_id, data)
+         VALUES ($1, $2, 'assigned', $3, 'HUMAN', 'staff', $4,
+                 jsonb_build_object('to_user_id', $5::text, 'from_user_id', $6::text))",
+    )
+    .bind(t.as_uuid())
+    .bind(conversation_id)
+    .bind(from.as_str())
+    .bind(by)
+    .bind(to)
+    .bind(prev)
+    .execute(&mut *tx)
+    .await?;
+    tx.commit().await?;
+    Ok(ConversationStatus::Human)
+}
+
+#[derive(Debug, Clone)]
+pub struct LinkedTicket {
+    pub id: Uuid,
+    pub code: String,
+    pub subject: String,
+    pub status: String,
+    pub created_at: String,
+}
+
+/// Ticket yang dibuat dari percakapan ini (FR-TKT-006: satu percakapan → ≥ 1 ticket).
+pub async fn tickets(
+    pool: &PgPool,
+    t: TenantId,
+    conversation_id: Uuid,
+) -> Result<Vec<LinkedTicket>, ConversationError> {
+    let mut tx = tenant_tx(pool, t).await?;
+    let rows = sqlx::query(sqlx::AssertSqlSafe(format!(
+        "SELECT id, code, subject, status, {} AS created_at FROM tickets
+          WHERE tenant_id = $1 AND conversation_id = $2 ORDER BY created_at",
+        ts("created_at")
+    )))
+    .bind(t.as_uuid())
+    .bind(conversation_id)
+    .fetch_all(&mut *tx)
+    .await?;
+    tx.commit().await?;
+    Ok(rows
+        .iter()
+        .map(|r| LinkedTicket {
+            id: r.get("id"),
+            code: r.get("code"),
+            subject: r.get("subject"),
+            status: r.get("status"),
+            created_at: r.get("created_at"),
+        })
+        .collect())
 }

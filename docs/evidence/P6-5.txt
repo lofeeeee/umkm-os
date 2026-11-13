@@ -1,0 +1,54 @@
+P6-5 — Admin inbox + ticket dari percakapan (PRD.md §4.8, §4.12, §4.13; FR-TKT-006, AC-TKT-006)
+Tanggal: 2026-11-13
+
+Artefak
+- crates/infrastructure/src/conversation_repo.rs
+  - notifikasi "AI handover" (PRD.md §4.13): setiap transisi ke WAITING_HUMAN dan percakapan yang dimulai menunggu
+    staf (Human Only) menulis event outbox ai.handover DALAM transaksi yang sama (transactional outbox; kunci
+    idempoten per event riwayat). Aturan penerima (conversations.takeover) sudah ada sejak P4-4, kini dipicu.
+  - counts (per status + "mine"), list FIFO untuk antrean menunggu, assign (status HUMAN, assignee baru, event
+    assigned dengan dari/ke), tickets tertaut.
+- apps/api/src/inbox.rs  GET daftar kini membawa counts + filter mine=true; POST /conversations/{id}/assign
+  (conversations.takeover; target wajib anggota aktif ber-conversations.reply, selain itu 422); POST
+  /conversations/{id}/tickets (conversations.read + tickets.reply; sumber chat, pelanggan & percakapan tertaut,
+  ditugaskan ke pembuatnya agar Support Agent — yang hanya melihat ticket miliknya (P4-3) — bisa menindaklanjuti);
+  detail memuat tickets terkait (subjek dimasking untuk pembaca termasking).
+- frontend/src/app/conversations/page.tsx  tab antrean (Menunggu staf / Ditangani saya / Dijawab AI / Ditangani
+  staf / Selesai / Semua) dengan hitungan, default "Menunggu staf"; form "Tugaskan ke" (bila punya members.read),
+  form "Buat tiket dari percakapan"; panel "Tiket terkait" di viewer.
+- OpenAPI: 2 operasi baru.
+
+Hasil
+- fmt, clippy -D warnings bersih; cargo test --workspace --no-fail-fast: 427 lulus, 0 gagal. check-rtm OK.
+- Frontend tsc/eslint/vitest 24 lulus. Playwright stack nyata (chat diperluas: tab "Menunggu staf (1)", buat tiket
+  dari percakapan, tab Selesai), ai, ops, shop, mfa — 5/5 lulus, tanpa error CSP/JS.
+
+Cakupan apps/api/tests/conversation_inbox_http.rs (3)
+- inbox_queue_counts_and_assignment: counts {ai 1, waiting 2, human 0, closed 0, mine 0} (toko lain tidak
+  terhitung); antrean WAITING_HUMAN FIFO; Viewer assign 403; assign ke Catalog Manager / anggota toko lain / user
+  acak 422; assign ke agen → HUMAN, mine=true hanya untuk agen; pemberi tugas kini 409 assigned_to_other; re-assign
+  oleh pemegang takeover; 2 event assigned; tertutup 409; toko lain 404.
+- handover_notifies_takeover_staff_once: 2 handover (AI→menunggu, Human Only) = 2 event outbox; takeover tidak
+  memicu; worker → notifikasi in-app "Percakapan perlu diambil alih" (tautan /conversations) untuk agen; Viewer dan
+  tenant lain tidak menerima.
+- tickets_from_conversation_are_independent (AC-TKT-006): Viewer 403; subjek kosong / prioritas tak dikenal 422;
+  2 ticket dari 1 percakapan (sumber chat, prioritas, conversation_id, pelanggan, ASSIGNED ke pembuat); ticket
+  ditutup → percakapan tetap AI; percakapan ditutup → ticket lain tetap ASSIGNED; toko lain 404.
+
+Negative control (mutasi sementara, dikembalikan; test terkait GAGAL)
+  == NEGCTL: assign ke anggota tanpa conversations.reply
+      inbox_queue_counts_and_assignment ... FAILED
+      result: FAILED. 2 passed; 1 failed;
+  == NEGCTL: handover tanpa notifikasi outbox
+      handover_notifies_takeover_staff_once ... FAILED
+      result: FAILED. 2 passed; 1 failed;
+  == NEGCTL: antrean menunggu tidak FIFO
+      inbox_queue_counts_and_assignment ... FAILED
+      result: FAILED. 2 passed; 1 failed;
+  == NEGCTL: menutup percakapan ikut menutup ticket (bukan entitas terpisah)
+      tickets_from_conversation_are_independent ... FAILED
+      result: FAILED. 2 passed; 1 failed;
+Setelah dikembalikan: conversation_inbox_http 3 lulus.
+
+Catatan
+- Penugasan percakapan ke staf lain tidak mengirim notifikasi pribadi (bukan bagian 9 event PRD §4.13).

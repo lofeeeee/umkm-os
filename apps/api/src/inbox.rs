@@ -86,6 +86,18 @@ pub struct ConversationList {
     pub total: i64,
     /// Data sensitif disamarkan untuk pembaca ini.
     pub masked: bool,
+    /// Ringkasan antrean inbox (seluruh tenant, bukan hanya halaman ini).
+    pub counts: InboxCounts,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct InboxCounts {
+    pub ai: i64,
+    pub waiting_human: i64,
+    pub human: i64,
+    pub closed: i64,
+    /// HUMAN yang ditangani pemanggil
+    pub mine: i64,
 }
 
 #[derive(Debug, Serialize, ToSchema)]
@@ -164,7 +176,18 @@ pub struct ConversationDetailView {
     pub approvals: Vec<ApprovalView>,
     /// Draft balasan AI (mode Assisted); tidak terlihat pelanggan.
     pub drafts: Vec<DraftView>,
+    /// Ticket dari percakapan ini (ticket ≠ conversation, FR-TKT-006).
+    pub tickets: Vec<LinkedTicketView>,
     pub masked: bool,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct LinkedTicketView {
+    pub id: Uuid,
+    pub code: String,
+    pub subject: String,
+    pub status: String,
+    pub created_at: String,
 }
 
 #[derive(Debug, Serialize, ToSchema)]
@@ -256,6 +279,8 @@ pub struct ConversationQuery {
     /// `AI` | `WAITING_HUMAN` | `HUMAN` | `CLOSED`
     pub status: Option<String>,
     pub assignee_user_id: Option<Uuid>,
+    /// `true` = hanya yang ditangani pemanggil (mengabaikan `assignee_user_id`).
+    pub mine: Option<bool>,
     pub limit: Option<i64>,
     pub offset: Option<i64>,
 }
@@ -294,7 +319,13 @@ pub async fn list(
         actor.tenant_id,
         &ListFilter {
             status,
-            assignee: q.assignee_user_id,
+            assignee: if q.mine == Some(true) {
+                Some(actor.user_id)
+            } else {
+                q.assignee_user_id
+            },
+            // Antrean menunggu staf dilayani FIFO.
+            oldest_first: status == Some(ConversationStatus::WaitingHuman),
             limit,
             offset,
         },
@@ -309,6 +340,18 @@ pub async fn list(
             items: items.into_iter().map(|s| m.summary(s)).collect(),
             total,
             masked: !m.full,
+            counts: {
+                let c = repo::counts(pool(&state)?, actor.tenant_id, actor.user_id)
+                    .await
+                    .map_err(repo_err)?;
+                InboxCounts {
+                    ai: c.ai,
+                    waiting_human: c.waiting_human,
+                    human: c.human,
+                    closed: c.closed,
+                    mine: c.mine,
+                }
+            },
         },
         &id,
     )))
@@ -397,6 +440,18 @@ pub async fn detail(
                 ai_run_id: x.ai_run_id,
                 decided_by_user_id: x.decided_by_user_id,
                 sent_message_id: x.sent_message_id,
+                created_at: x.created_at,
+            })
+            .collect(),
+        tickets: repo::tickets(pool(&state)?, actor.tenant_id, conversation_id)
+            .await
+            .map_err(repo_err)?
+            .into_iter()
+            .map(|x| LinkedTicketView {
+                id: x.id,
+                code: x.code,
+                subject: m.text(x.subject),
+                status: x.status,
                 created_at: x.created_at,
             })
             .collect(),
@@ -755,6 +810,144 @@ pub async fn discard_draft(
     Ok(StatusCode::NO_CONTENT)
 }
 
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
+pub struct AssignInput {
+    /// Anggota aktif yang punya `conversations.reply`
+    pub user_id: Uuid,
+}
+
+/// Tugaskan percakapan ke anggota lain (status HUMAN). Butuh `conversations.takeover`.
+#[utoipa::path(
+    post, path = "/api/v1/tenants/{tenant_id}/conversations/{conversation_id}/assign", tag = "conversations",
+    params(("tenant_id" = Uuid, Path), ("conversation_id" = Uuid, Path)), request_body = AssignInput,
+    responses(
+        (status = 200, description = "Ditugaskan", body = SuccessEnvelope<StaffActionView>),
+        (status = 403, description = "Permission kurang", body = umkm_shared::http::ErrorEnvelope),
+        (status = 409, description = "Percakapan ditutup", body = umkm_shared::http::ErrorEnvelope),
+        (status = 422, description = "`user_id` bukan anggota aktif yang dapat membalas", body = umkm_shared::http::ErrorEnvelope)
+    )
+)]
+pub async fn assign(
+    State(state): State<AppState>,
+    ReqId(id): ReqId,
+    Member(actor): Member,
+    Path((_, conv)): Path<(Uuid, Uuid)>,
+    Json(req): Json<AssignInput>,
+) -> Ok<StaffActionView> {
+    actor.require("conversations.takeover")?;
+    let target =
+        umkm_infrastructure::rbac_repo::load_actor(pool(&state)?, req.user_id, actor.tenant_id)
+            .await
+            .map_err(internal)?;
+    if !target.is_some_and(|a| a.has("conversations.reply")) {
+        return Err(one("user_id", "not_a_member"));
+    }
+    load(&state, &actor, conv).await?;
+    let s = repo::assign(
+        pool(&state)?,
+        actor.tenant_id,
+        conv,
+        req.user_id,
+        actor.user_id,
+    )
+    .await
+    .map_err(|e| match e {
+        ConversationError::InvalidReference => one("user_id", "not_a_member"),
+        e => repo_err(e),
+    })?;
+    emit_status(&state, actor.tenant_id, conv, s).await;
+    Ok(action_view(s, None, &id))
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
+pub struct TicketFromConversation {
+    pub subject: String,
+    pub description: Option<String>,
+    /// `low` | `normal` | `high` | `urgent` (default `normal`)
+    pub priority: Option<String>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct CreatedTicket {
+    pub id: Uuid,
+}
+
+/// Buat ticket dari percakapan (sumber `chat`, pelanggan ikut tertaut, ditugaskan ke pembuat). Butuh `conversations.read` +
+/// `tickets.reply`. Ticket berdiri sendiri: menutup salah satunya tidak menutup yang lain (AC-TKT-006).
+#[utoipa::path(
+    post, path = "/api/v1/tenants/{tenant_id}/conversations/{conversation_id}/tickets", tag = "conversations",
+    params(("tenant_id" = Uuid, Path), ("conversation_id" = Uuid, Path)), request_body = TicketFromConversation,
+    responses(
+        (status = 201, description = "Ticket dibuat", body = SuccessEnvelope<CreatedTicket>),
+        (status = 403, description = "Permission kurang", body = umkm_shared::http::ErrorEnvelope),
+        (status = 404, description = "Percakapan tidak ada", body = umkm_shared::http::ErrorEnvelope),
+        (status = 422, description = "Input tidak valid", body = umkm_shared::http::ErrorEnvelope)
+    )
+)]
+pub async fn create_ticket(
+    State(state): State<AppState>,
+    ReqId(id): ReqId,
+    ClientIp(ip): ClientIp,
+    Member(actor): Member,
+    Path((_, conv)): Path<(Uuid, Uuid)>,
+    Json(req): Json<TicketFromConversation>,
+) -> Result<(StatusCode, Json<SuccessEnvelope<CreatedTicket>>), ApiError> {
+    use umkm_domain::tickets::{BODY_MAX, Priority, SUBJECT_MAX, Source};
+    actor.require("conversations.read")?;
+    actor.require("tickets.reply")?;
+    let subject = req.subject.trim().to_owned();
+    if subject.is_empty() || subject.chars().count() > SUBJECT_MAX {
+        return Err(one(
+            "subject",
+            if subject.is_empty() {
+                "required"
+            } else {
+                "too_long"
+            },
+        ));
+    }
+    let description = req
+        .description
+        .map(|d| d.trim().to_owned())
+        .filter(|d| !d.is_empty());
+    if description
+        .as_ref()
+        .is_some_and(|d| d.chars().count() > BODY_MAX)
+    {
+        return Err(one("description", "too_long"));
+    }
+    let priority = Priority::parse(req.priority.as_deref().unwrap_or("normal"))
+        .ok_or_else(|| one("priority", "invalid"))?;
+    let c = load(&state, &actor, conv).await?;
+    let tid = umkm_infrastructure::ticket_repo::create(
+        pool(&state)?,
+        actor.tenant_id,
+        &umkm_infrastructure::ticket_repo::NewTicket {
+            source: Source::Chat,
+            customer_id: c.customer_id,
+            order_id: None,
+            conversation_id: Some(conv),
+            subject,
+            description,
+            priority,
+            tags: vec![],
+            // Ditugaskan ke pembuatnya agar staf chat dapat menindaklanjuti (tanpa tickets.assign hanya
+            // ticket miliknya yang terlihat, P4-3). Menugaskan orang lain tetap lewat modul ticket.
+            assignee: Some(actor.user_id),
+        },
+        Some(&actor),
+        (Some(id.as_str()), Some(&ip)),
+    )
+    .await
+    .map_err(internal)?;
+    Ok((
+        StatusCode::CREATED,
+        Json(SuccessEnvelope::new(CreatedTicket { id: tid }, &id)),
+    ))
+}
+
 pub fn routes() -> Router<AppState> {
     let t = "/api/v1/tenants/{tenant_id}/conversations";
     let c = format!("{t}/{{conversation_id}}");
@@ -765,6 +958,8 @@ pub fn routes() -> Router<AppState> {
         .route(&format!("{c}/release"), post(release))
         .route(&format!("{c}/messages"), post(reply))
         .route(&format!("{c}/close"), post(close))
+        .route(&format!("{c}/assign"), post(assign))
+        .route(&format!("{c}/tickets"), post(create_ticket))
         .route(&format!("{c}/drafts/{{draft_id}}/send"), post(send_draft))
         .route(
             &format!("{c}/drafts/{{draft_id}}/discard"),

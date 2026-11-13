@@ -14,6 +14,17 @@ export default function ConversationsPage() {
   return <WithTenant>{(ctx) => <Conversations ctx={ctx} />}</WithTenant>;
 }
 
+interface Counts { ai: number; waiting_human: number; human: number; closed: number; mine: number }
+type Tab = "waiting" | "mine" | "ai" | "human" | "closed" | "all";
+const TABS: Record<Tab, { label: string; query: string; count?: (c: Counts) => number }> = {
+  waiting: { label: "Menunggu staf", query: "&status=WAITING_HUMAN", count: (c) => c.waiting_human },
+  mine: { label: "Ditangani saya", query: "&mine=true", count: (c) => c.mine },
+  ai: { label: "Dijawab AI", query: "&status=AI", count: (c) => c.ai },
+  human: { label: "Ditangani staf", query: "&status=HUMAN", count: (c) => c.human },
+  closed: { label: "Selesai", query: "&status=CLOSED" },
+  all: { label: "Semua", query: "" },
+};
+
 const REASON: Record<string, string> = {
   assigned_to_other: "Percakapan sedang ditangani staf lain.",
   conversation_closed: "Percakapan sudah ditutup.",
@@ -52,14 +63,15 @@ function Conversations({ ctx }: { ctx: TenantCtx }) {
   const base = `/api/v1/tenants/${ctx.tenant.id}/conversations`;
   const [items, setItems] = useState<ConversationSummary[]>([]);
   const [masked, setMasked] = useState(false);
-  const [status, setStatus] = useState("");
+  const [tab, setTab] = useState<Tab>("waiting");
+  const [counts, setCounts] = useState<Counts | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
   const [open, setOpen] = useState<ConversationDetail | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const load = useCallback(
-    () => api<{ items: ConversationSummary[]; masked: boolean }>("GET", `${base}?limit=100${status ? `&status=${status}` : ""}`)
-      .then((r) => { setItems(r.items); setMasked(r.masked); }, (e) => setErr(describe(e))),
-    [base, status],
+    () => api<{ items: ConversationSummary[]; masked: boolean; counts: Counts }>("GET", `${base}?limit=100${TABS[tab].query}`)
+      .then((r) => { setItems(r.items); setMasked(r.masked); setCounts(r.counts); }, (e) => setErr(describe(e))),
+    [base, tab],
   );
   const loadOne = useCallback(
     (id: string) => api<ConversationDetail>("GET", `${base}/${id}`).then(setOpen, (e) => setErr(describe(e))),
@@ -96,11 +108,12 @@ function Conversations({ ctx }: { ctx: TenantCtx }) {
       <h1>Percakapan</h1>
       <Alert kind="error">{err}</Alert>
       {masked && <p className="d-muted">Data sensitif disamarkan untuk peran Anda.</p>}
-      <div className="d-row" style={{ marginBottom: 12 }}>
-        <select aria-label="Status" value={status} onChange={(e) => setStatus(e.target.value)}>
-          <option value="">Semua status</option>
-          {Object.entries(CONV_STATUS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-        </select>
+      <div className="d-row cv-tabs" role="tablist" aria-label="Antrean" style={{ marginBottom: 12 }}>
+        {(Object.keys(TABS) as Tab[]).map((k) => (
+          <button key={k} role="tab" aria-selected={tab === k} className={`d-btn d-btn-sm${tab === k ? " d-btn-primary" : ""}`} onClick={() => setTab(k)}>
+            {TABS[k].label}{counts && TABS[k].count ? ` (${TABS[k].count(counts)})` : ""}
+          </button>
+        ))}
       </div>
       {items.length === 0 ? <p className="d-muted">Belum ada percakapan.</p> : (
         <ul className="cv-list" aria-label="Daftar percakapan">
@@ -191,6 +204,28 @@ function StaffPanel({ ctx, d, url, onDone }: { ctx: TenantCtx; d: ConversationDe
           {d.status !== "HUMAN" && <span className="d-muted"> Membalas = mengambil alih (AI berhenti).</span>}
         </form>
       )}
+      {canTake && !closed && <AssignForm ctx={ctx} d={d} url={url} run={run} busy={busy} />}
+      {ctx.can("tickets.reply") && (
+        <form className="cv-ticket" onSubmit={(e) => {
+          e.preventDefault();
+          const form = e.currentTarget;
+          const f = new FormData(form);
+          void run(async () => {
+            await api("POST", `${url}/tickets`, { json: { subject: f.get("subject"), priority: f.get("priority"), description: f.get("description") || null } });
+            form.reset();
+          }, "Tiket dibuat.");
+        }}>
+          <h3>Buat tiket dari percakapan</h3>
+          <label className="d-field"><span>Subjek tiket</span><input name="subject" maxLength={200} required /></label>
+          <label className="d-field"><span>Prioritas</span>
+            <select name="priority" defaultValue="normal">
+              <option value="low">Rendah</option><option value="normal">Normal</option><option value="high">Tinggi</option><option value="urgent">Mendesak</option>
+            </select>
+          </label>
+          <label className="d-field"><span>Keterangan (opsional)</span><textarea name="description" rows={2} maxLength={5000} /></label>
+          <button className="d-btn" disabled={busy}>Buat tiket</button>
+        </form>
+      )}
       <div className="d-row" style={{ marginTop: 12 }}>
         {canTake && !closed && d.status !== "HUMAN" && (
           <button className="d-btn" disabled={busy} onClick={() => void run(() => api("POST", `${url}/takeover`), "Percakapan Anda tangani.")}>Ambil alih</button>
@@ -203,5 +238,35 @@ function StaffPanel({ ctx, d, url, onDone }: { ctx: TenantCtx; d: ConversationDe
         )}
       </div>
     </section>
+  );
+}
+
+interface MemberRow { user_id: string; email: string; status: string; role_name: string }
+
+/** Tugaskan ke anggota lain (butuh daftar anggota; tanpa `members.read` form tidak tampil). */
+function AssignForm({ ctx, d, url, run, busy }: {
+  ctx: TenantCtx; d: ConversationDetail; url: string; busy: boolean;
+  run: (fn: () => Promise<unknown>, ok: string) => Promise<void>;
+}) {
+  const [members, setMembers] = useState<MemberRow[] | null>(null);
+  const [to, setTo] = useState("");
+  useEffect(() => {
+    if (!ctx.can("members.read")) return;
+    api<MemberRow[]>("GET", `/api/v1/tenants/${ctx.tenant.id}/members`).then(
+      (m) => setMembers(m.filter((x) => x.status === "active" && x.user_id !== d.assignee_user_id)),
+      () => setMembers(null),
+    );
+  }, [ctx, d.assignee_user_id]);
+  if (!members || members.length === 0) return null;
+  return (
+    <div className="d-row" style={{ marginTop: 12 }}>
+      <label className="d-field" style={{ margin: 0 }}><span>Tugaskan ke</span>
+        <select value={to} onChange={(e) => setTo(e.target.value)}>
+          <option value="">Pilih anggota…</option>
+          {members.map((m) => <option key={m.user_id} value={m.user_id}>{m.email} ({m.role_name})</option>)}
+        </select>
+      </label>
+      <button className="d-btn" disabled={busy || !to} onClick={() => void run(() => api("POST", `${url}/assign`, { json: { user_id: to } }), "Percakapan ditugaskan.")}>Tugaskan</button>
+    </div>
   );
 }

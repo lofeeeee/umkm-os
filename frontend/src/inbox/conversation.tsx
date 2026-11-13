@@ -25,6 +25,7 @@ export interface ConversationDetail extends ConversationSummary {
   history: { kind: string; from_status: string | null; to_status: string | null; actor_type: string; actor_email: string | null; created_at: string }[];
   approvals: { id: string; status: string; action: string; summary: string; current_step: number; created_at: string }[];
   drafts: { id: string; body: string; status: string; ai_run_id: string | null; created_at: string }[];
+  tickets: { id: string; code: string; subject: string; status: string; created_at: string }[];
   masked: boolean;
 }
 
@@ -129,6 +130,12 @@ export function ConversationView({ d }: { d: ConversationDetail }) {
               </li>
             ))}
           </ol>
+        </section>
+        <section className="d-card" aria-label="Tiket">
+          <h2>Tiket terkait</h2>
+          {d.tickets.length === 0 ? <p className="d-muted">Belum ada.</p> : (
+            <ul>{d.tickets.map((x) => <li key={x.id}><strong>{x.code}</strong> {x.subject} — {x.status}</li>)}</ul>
+          )}
         </section>
         <section className="d-card" aria-label="Approval">
           <h2>Approval</h2>

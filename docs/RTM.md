@@ -230,7 +230,7 @@ Arah balik: TC → AC lewat nomor yang sama (Test Plan §4); AC → FR lewat FSD
 | FR-TKT-003 | AC-TKT-003 | TC-TKT-003 | POST /tickets/{id}/assign, PATCH /tickets/{id} | — | `docs/evidence/P4-3.txt` | Verified |
 | FR-TKT-004 | AC-TKT-004 | TC-TKT-004 | POST /tickets/{id}/messages, /attachments | — | `docs/evidence/P4-3.txt` | Verified |
 | FR-TKT-005 | AC-TKT-005 | TC-TKT-005 | GET /tickets (filter/q), GET /tickets/{id} (events, SLA) | — | `docs/evidence/P4-3.txt` | Verified |
-| FR-TKT-006 | AC-TKT-006 | TC-TKT-006 | ditetapkan di OpenAPI saat task | — | — | Planned |
+| FR-TKT-006 | AC-TKT-006 | TC-TKT-006 | POST /api/v1/tenants/{tenant_id}/conversations/{conversation_id}/tickets | ADR-0006 | `docs/evidence/P6-5.txt` | Verified |
 | FR-APR-001 | AC-APR-001 | TC-APR-001 | /tenants/{tenant_id}/approval-policies, /approvals | — | `docs/evidence/P4-2.txt` | Verified |
 | FR-APR-002 | AC-APR-002 | TC-APR-002 | POST /approvals/{id}/approve, /reject, /cancel, /approval-delegations | — | `docs/evidence/P4-2.txt` | Verified |
 | FR-APR-003 | AC-APR-003 | TC-APR-003 | 202 dari endpoint stok/refund/harga/pengaturan/keputusan order | — | `docs/evidence/P4-2.txt` | Verified |

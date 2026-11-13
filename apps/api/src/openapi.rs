@@ -43,6 +43,8 @@ use crate::{
         crate::inbox::close,
         crate::inbox::send_draft,
         crate::inbox::discard_draft,
+        crate::inbox::assign,
+        crate::inbox::create_ticket,
         crate::chat::config,
         crate::chat::start,
         crate::chat::current,

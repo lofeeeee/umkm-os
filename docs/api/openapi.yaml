@@ -4476,6 +4476,14 @@ paths:
           - string
           - 'null'
           format: uuid
+      - name: mine
+        in: path
+        description: '`true` = hanya yang ditangani pemanggil (mengabaikan `assignee_user_id`).'
+        required: true
+        schema:
+          type:
+          - boolean
+          - 'null'
       - name: limit
         in: path
         required: true
@@ -4595,6 +4603,82 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
         '413':
           description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/conversations/{conversation_id}/assign:
+    post:
+      tags:
+      - conversations
+      summary: Tugaskan percakapan ke anggota lain (status HUMAN). Butuh `conversations.takeover`.
+      operationId: assign
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: conversation_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignInput'
+        required: true
+      responses:
+        '200':
+          description: Ditugaskan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_StaffActionView'
+        '403':
+          description: Permission kurang
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: Percakapan ditutup
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '422':
+          description: '`user_id` bukan anggota aktif yang dapat membalas'
           content:
             application/json:
               schema:
@@ -5017,6 +5101,84 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
         '413':
           description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/conversations/{conversation_id}/tickets:
+    post:
+      tags:
+      - conversations
+      summary: |-
+        Buat ticket dari percakapan (sumber `chat`, pelanggan ikut tertaut, ditugaskan ke pembuat). Butuh `conversations.read` +
+        `tickets.reply`. Ticket berdiri sendiri: menutup salah satunya tidak menutup yang lain (AC-TKT-006).
+      operationId: create_ticket
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: conversation_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TicketFromConversation'
+        required: true
+      responses:
+        '201':
+          description: Ticket dibuat
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_CreatedTicket'
+        '403':
+          description: Permission kurang
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '404':
+          description: Percakapan tidak ada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '422':
+          description: Input tidak valid
           content:
             application/json:
               schema:
@@ -9698,6 +9860,31 @@ components:
           type: string
           description: '`HH:MM`'
       additionalProperties: false
+    InboxCounts:
+      type: object
+      required:
+      - ai
+      - waiting_human
+      - human
+      - closed
+      - mine
+      properties:
+        ai:
+          type: integer
+          format: int64
+        closed:
+          type: integer
+          format: int64
+        human:
+          type: integer
+          format: int64
+        mine:
+          type: integer
+          format: int64
+          description: HUMAN yang ditangani pemanggil
+        waiting_human:
+          type: integer
+          format: int64
     InviteInput:
       type: object
       required:
@@ -9737,6 +9924,26 @@ components:
         reserved:
           type: integer
           format: int64
+    LinkedTicketView:
+      type: object
+      required:
+      - id
+      - code
+      - subject
+      - status
+      - created_at
+      properties:
+        code:
+          type: string
+        created_at:
+          type: string
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+        subject:
+          type: string
     LoginMfaRequest:
       type: object
       required:
@@ -11061,6 +11268,7 @@ components:
             - history
             - approvals
             - drafts
+            - tickets
             - masked
             properties:
               approvals:
@@ -11091,6 +11299,11 @@ components:
                 items:
                   $ref: '#/components/schemas/AiRunView'
                 description: Run AI tanpa pesan terkirim (mis. handover / antre staf).
+              tickets:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LinkedTicketView'
+                description: Ticket dari percakapan ini (ticket ≠ conversation, FR-TKT-006).
               timeline:
                 type: array
                 items:
@@ -11112,7 +11325,11 @@ components:
           - items
           - total
           - masked
+          - counts
           properties:
+            counts:
+              $ref: '#/components/schemas/InboxCounts'
+              description: Ringkasan antrean inbox (seluruh tenant, bukan hanya halaman ini).
             items:
               type: array
               items:
@@ -11123,6 +11340,25 @@ components:
             total:
               type: integer
               format: int64
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
+    SuccessEnvelope_CreatedTicket:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - id
+          properties:
+            id:
+              type: string
+              format: uuid
         meta:
           $ref: '#/components/schemas/Meta'
         success:
@@ -13364,6 +13600,23 @@ components:
       - message
       properties:
         message:
+          type: string
+      additionalProperties: false
+    TicketFromConversation:
+      type: object
+      required:
+      - subject
+      properties:
+        description:
+          type:
+          - string
+          - 'null'
+        priority:
+          type:
+          - string
+          - 'null'
+          description: '`low` | `normal` | `high` | `urgent` (default `normal`)'
+        subject:
           type: string
       additionalProperties: false
     TicketInput:
