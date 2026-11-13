@@ -142,6 +142,10 @@ pub async fn serve() -> Result<(), BoxError> {
         );
     }
 
+    {
+        let wait = metrics.db_pool_wait.clone();
+        umkm_database::set_acquire_observer(move |d| wait.observe(d.as_secs_f64()));
+    }
     let on_scrape: OnScrape = {
         let metrics = metrics.clone();
         Arc::new(move || {

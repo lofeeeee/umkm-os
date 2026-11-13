@@ -5,7 +5,10 @@
 //!   context tidak tertinggal di koneksi pool setelah commit/rollback.
 //! - Query repository tetap wajib menyertakan `tenant_id` sebagai defense-in-depth.
 
-use std::time::Duration;
+use std::{
+    sync::OnceLock,
+    time::{Duration, Instant},
+};
 
 use sqlx::{
     PgPool, Postgres, Transaction,
@@ -57,12 +60,27 @@ pub fn connect_lazy(url: &SecretString, settings: &DatabaseSettings) -> Result<P
         .connect_lazy_with(opts))
 }
 
-/// Mulai transaksi dengan tenant context transaction-local.
+type AcquireObserver = Box<dyn Fn(Duration) + Send + Sync>;
+static ACQUIRE_OBSERVER: OnceLock<AcquireObserver> = OnceLock::new();
+
+/// Daftarkan pencatat lama tunggu koneksi pool (sekali per proses; panggilan berikutnya diabaikan).
+/// Dipakai API untuk histogram `db_pool_wait_seconds` (saturasi pool, PRD §13.4).
+pub fn set_acquire_observer(observer: impl Fn(Duration) + Send + Sync + 'static) {
+    let _ = ACQUIRE_OBSERVER.set(Box::new(observer));
+}
+
+/// Mulai transaksi dengan tenant context transaction-local. Lama menunggu koneksi dari pool
+/// dilaporkan ke observer (bila terdaftar) terpisah dari `BEGIN`.
 pub async fn begin_tenant_tx(
     pool: &PgPool,
     tenant: TenantId,
 ) -> Result<Transaction<'static, Postgres>, DbError> {
-    let mut tx = pool.begin().await?;
+    let started = Instant::now();
+    let conn = pool.acquire().await?;
+    if let Some(observe) = ACQUIRE_OBSERVER.get() {
+        observe(started.elapsed());
+    }
+    let mut tx = Transaction::begin(conn, None).await?;
     set_tenant(&mut tx, tenant).await?;
     Ok(tx)
 }
