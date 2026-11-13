@@ -308,18 +308,33 @@ async fn concurrent_workers_never_double_send(pool: PgPool) {
     for w in 0..4 {
         let (pool, sender) = (pool.clone(), sender.clone());
         set.spawn(async move {
+            // Jeda coba ulang 0: kegagalan sementara di bawah beban (mis. pool DB penuh) dijadwalkan ulang
+            // dan harus tetap terkirim tepat sekali. Worker berhenti hanya saat antrean benar-benar kosong
+            // (bukan saat sesaat tidak ada yang bisa diklaim) — sama seperti worker produksi yang terus berjalan.
             let c = WorkerConfig {
                 batch: 3,
+                base_backoff: Duration::ZERO,
+                max_attempts: 10,
                 ..cfg(&format!("w{w}"))
             };
             let m = Metrics::new();
             let mut total = 0;
+            let deadline = tokio::time::Instant::now() + Duration::from_secs(30);
             loop {
                 let t = process_once(&pool, sender.as_ref(), &c, &m).await.unwrap();
-                if t.claimed == 0 {
-                    break total;
-                }
                 total += t.sent;
+                if t.claimed == 0 {
+                    let open: i64 = sqlx::query_scalar(
+                        "SELECT count(*) FROM notification_outbox WHERE status IN ('pending', 'processing')",
+                    )
+                    .fetch_one(&pool)
+                    .await
+                    .unwrap();
+                    if open == 0 || tokio::time::Instant::now() > deadline {
+                        break total;
+                    }
+                    tokio::time::sleep(Duration::from_millis(20)).await;
+                }
             }
         });
     }
