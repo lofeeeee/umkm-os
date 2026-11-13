@@ -200,7 +200,22 @@ pub mod rate_rules {
         window: MIN15,
     };
 
-    pub const ALL: [RateRule; 10] = [
+    /// Web chat publik (P6-2): percakapan baru per IP.
+    pub const CHAT_START_PER_IP: RateRule = RateRule {
+        name: "chat_start_ip",
+        limit: 10,
+        window: MIN15,
+    };
+    /// Web chat publik: pesan pelanggan per IP (tiap pesan dapat memicu panggilan AI berbayar).
+    pub const CHAT_MESSAGE_PER_IP: RateRule = RateRule {
+        name: "chat_msg_ip",
+        limit: 40,
+        window: MIN15,
+    };
+
+    pub const ALL: [RateRule; 12] = [
+        CHAT_START_PER_IP,
+        CHAT_MESSAGE_PER_IP,
         CHECKOUT_PER_IP,
         MFA_PER_IP,
         MFA_PER_USER,

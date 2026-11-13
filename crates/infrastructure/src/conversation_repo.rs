@@ -351,3 +351,107 @@ pub async fn purge(pool: &PgPool, older_than: Duration) -> Result<i64, sqlx::Err
         .fetch_one(pool)
         .await
 }
+
+/// Ringkasan satu percakapan untuk alur chat.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ConversationRef {
+    pub id: Uuid,
+    pub status: ConversationStatus,
+    pub customer_id: Option<Uuid>,
+}
+
+pub async fn get(
+    pool: &PgPool,
+    t: TenantId,
+    conversation_id: Uuid,
+) -> Result<Option<ConversationRef>, ConversationError> {
+    let mut tx = tenant_tx(pool, t).await?;
+    let row = sqlx::query(
+        "SELECT id, status, customer_id FROM conversations WHERE tenant_id = $1 AND id = $2",
+    )
+    .bind(t.as_uuid())
+    .bind(conversation_id)
+    .fetch_optional(&mut *tx)
+    .await?;
+    tx.commit().await?;
+    Ok(row.map(|r| ConversationRef {
+        id: r.get("id"),
+        status: status_of(r.get::<&str, _>("status")),
+        customer_id: r.get("customer_id"),
+    }))
+}
+
+/// `limit` pesan terakhir, urut naik (riwayat untuk konteks AI).
+pub async fn recent(
+    pool: &PgPool,
+    t: TenantId,
+    conversation_id: Uuid,
+    limit: i64,
+) -> Result<Vec<Message>, ConversationError> {
+    let mut tx = tenant_tx(pool, t).await?;
+    let rows = sqlx::query(sqlx::AssertSqlSafe(format!(
+        "SELECT * FROM (SELECT {MESSAGE_COLS} FROM conversation_messages
+          WHERE tenant_id = $1 AND conversation_id = $2 ORDER BY seq DESC LIMIT $3) m ORDER BY seq"
+    )))
+    .bind(t.as_uuid())
+    .bind(conversation_id)
+    .bind(limit.clamp(1, 200))
+    .fetch_all(&mut *tx)
+    .await?;
+    tx.commit().await?;
+    Ok(rows.iter().map(message).collect())
+}
+
+/// Sesi masih aktif (dicek ulang per event SSE; tanpa memperpanjang masa berlaku).
+pub async fn session_active(
+    pool: &PgPool,
+    t: TenantId,
+    session_id: Uuid,
+) -> Result<bool, ConversationError> {
+    let mut tx = tenant_tx(pool, t).await?;
+    let ok: Option<bool> = sqlx::query_scalar(
+        "SELECT true FROM conversation_sessions s JOIN conversations c
+             ON c.tenant_id = s.tenant_id AND c.id = s.conversation_id
+          WHERE s.tenant_id = $1 AND s.id = $2 AND s.revoked_at IS NULL AND s.expires_at > now()",
+    )
+    .bind(t.as_uuid())
+    .bind(session_id)
+    .fetch_optional(&mut *tx)
+    .await?;
+    tx.commit().await?;
+    Ok(ok.unwrap_or(false))
+}
+
+/// Cabut sesi chat (pelanggan mengakhiri percakapan).
+pub async fn revoke_session(
+    pool: &PgPool,
+    t: TenantId,
+    session_id: Uuid,
+) -> Result<(), ConversationError> {
+    let mut tx = tenant_tx(pool, t).await?;
+    sqlx::query("UPDATE conversation_sessions SET revoked_at = now() WHERE tenant_id = $1 AND id = $2 AND revoked_at IS NULL")
+        .bind(t.as_uuid())
+        .bind(session_id)
+        .execute(&mut *tx)
+        .await?;
+    tx.commit().await?;
+    Ok(())
+}
+
+/// Customer milik akun pelanggan terverifikasi (ADR-0005), bila ada.
+pub async fn customer_for_account(
+    pool: &PgPool,
+    t: TenantId,
+    account_id: Uuid,
+) -> Result<Option<Uuid>, ConversationError> {
+    let mut tx = tenant_tx(pool, t).await?;
+    let id: Option<Uuid> = sqlx::query_scalar(
+        "SELECT id FROM customers WHERE tenant_id = $1 AND account_id = $2 ORDER BY created_at LIMIT 1",
+    )
+    .bind(t.as_uuid())
+    .bind(account_id)
+    .fetch_optional(&mut *tx)
+    .await?;
+    tx.commit().await?;
+    Ok(id)
+}

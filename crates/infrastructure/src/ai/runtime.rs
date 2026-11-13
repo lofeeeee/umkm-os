@@ -82,6 +82,12 @@ pub struct RunResult {
     pub outcome: TurnOutcome,
 }
 
+/// Konteks pencatatan satu giliran (latensi diukur sejak giliran dimulai).
+struct RecordCtx {
+    conversation_id: Option<Uuid>,
+    started: Instant,
+}
+
 pub fn decision_str(d: Decision) -> &'static str {
     match d {
         Decision::SendAuto => "send_auto",
@@ -282,6 +288,22 @@ impl AiRuntime {
         input: TurnInput,
         purpose: &str,
     ) -> Result<RunResult, AiRunError> {
+        self.answer_in(t, business_name, input, purpose, None).await
+    }
+
+    /// `answer` untuk satu percakapan (P6-2): `ai_runs.conversation_id` terisi untuk viewer/analitik.
+    pub async fn answer_in(
+        &self,
+        t: TenantId,
+        business_name: &str,
+        input: TurnInput,
+        purpose: &str,
+        conversation_id: Option<Uuid>,
+    ) -> Result<RunResult, AiRunError> {
+        let rc = RecordCtx {
+            conversation_id,
+            started: Instant::now(),
+        };
         let cfg = ai_repo::get_config(&self.pool, t).await?;
         if purpose == "chat" && !cfg.enabled {
             return Err(AiRunError::Disabled);
@@ -334,7 +356,7 @@ impl AiRuntime {
             )
             .await;
             let id = self
-                .record(t, None, ProviderSource::Platform, "-", purpose, &o)
+                .record(t, &rc, None, ProviderSource::Platform, "-", purpose, &o)
                 .await?;
             return Ok(RunResult {
                 run_id: id,
@@ -352,7 +374,15 @@ impl AiRuntime {
                 Some(f) => primary = f,
                 None => {
                     return self
-                        .short_circuit(t, &cfg, &primary, purpose, "circuit_open", "circuit_open")
+                        .short_circuit(
+                            &rc,
+                            t,
+                            &cfg,
+                            &primary,
+                            purpose,
+                            "circuit_open",
+                            "circuit_open",
+                        )
                         .await;
                 }
             }
@@ -363,6 +393,7 @@ impl AiRuntime {
         {
             return self
                 .short_circuit(
+                    &rc,
                     t,
                     &cfg,
                     &primary,
@@ -446,7 +477,7 @@ impl AiRuntime {
         };
         let model = used.map_or("-", |p| p.model.as_str()).to_owned();
         let id = self
-            .record(t, used.map(|p| p.id), source, &model, purpose, &o)
+            .record(t, &rc, used.map(|p| p.id), source, &model, purpose, &o)
             .await?;
         Ok(RunResult {
             run_id: id,
@@ -454,8 +485,10 @@ impl AiRuntime {
         })
     }
 
+    #[allow(clippy::too_many_arguments)]
     async fn short_circuit(
         &self,
+        rc: &RecordCtx,
         t: TenantId,
         cfg: &ChatbotConfig,
         p: &ProviderRow,
@@ -474,7 +507,7 @@ impl AiRuntime {
             llm_calls: 0,
         };
         let id = self
-            .record(t, Some(p.id), p.source, &p.model, purpose, &o)
+            .record(t, rc, Some(p.id), p.source, &p.model, purpose, &o)
             .await?;
         Ok(RunResult {
             run_id: id,
@@ -482,9 +515,11 @@ impl AiRuntime {
         })
     }
 
+    #[allow(clippy::too_many_arguments)]
     async fn record(
         &self,
         t: TenantId,
+        rc: &RecordCtx,
         provider: Option<Uuid>,
         source: ProviderSource,
         model: &str,
@@ -498,8 +533,8 @@ impl AiRuntime {
         };
         let id: Uuid = sqlx::query_scalar(
             "INSERT INTO ai_runs (tenant_id, provider_id, source, model, purpose, status, decision, prompt_tokens,
-                completion_tokens, latency_ms, error_code)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 0, $10) RETURNING id",
+                completion_tokens, latency_ms, error_code, conversation_id)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $11, $10, $12) RETURNING id",
         )
         .bind(t.as_uuid())
         .bind(provider)
@@ -511,6 +546,8 @@ impl AiRuntime {
         .bind(o.usage.prompt_tokens.min(i32::MAX as u32) as i32)
         .bind(o.usage.completion_tokens.min(i32::MAX as u32) as i32)
         .bind(o.error_code)
+        .bind(rc.started.elapsed().as_millis().min(i32::MAX as u128) as i32)
+        .bind(rc.conversation_id)
         .fetch_one(&mut *tx)
         .await?;
         for c in &o.tool_calls {

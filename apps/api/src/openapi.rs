@@ -35,6 +35,13 @@ use crate::{
         auth::session_handler,
         auth::logout_handler,
         auth::verify_email_handler,
+        crate::chat::config,
+        crate::chat::start,
+        crate::chat::current,
+        crate::chat::send,
+        crate::chat::handover,
+        crate::chat::end,
+        crate::chat::chat_stream,
         crate::mfa::login_mfa,
         crate::mfa::mfa_status,
         crate::mfa::mfa_setup,
@@ -188,7 +195,8 @@ use crate::{
         (name = "team", description = "Anggota, role kustom, undangan (PRD.md §3, P4-1)"),
         (name = "crm", description = "Customer, tag, catatan internal, hapus/export (PRD.md §4.6, ADR-0005)"),
         (name = "inventory", description = "Stok, movement ledger, ambang low-stock (PRD.md §4.5)"),
-        (name = "files", description = "Upload gambar tenant + signed URL ber-expiry (ADR-0009)")
+        (name = "files", description = "Upload gambar tenant + signed URL ber-expiry (ADR-0009)"),
+        (name = "chat", description = "Web chat publik toko: tenant dari Host, cookie sesi chat host-only (ADR-0006, P6-2)")
     )
 )]
 pub struct ApiDoc;

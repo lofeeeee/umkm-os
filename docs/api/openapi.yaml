@@ -890,6 +890,405 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
       security:
       - sessionCookie: []
+  /api/v1/public/chat/config:
+    get:
+      tags:
+      - chat
+      summary: Konfigurasi widget chat + teks pemberitahuan AI (D-12).
+      operationId: config
+      responses:
+        '200':
+          description: Konfigurasi widget
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_ChatConfigView'
+        '404':
+          description: Host bukan toko aktif
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/public/chat/conversation:
+    get:
+      tags:
+      - chat
+      summary: Percakapan aktif pelanggan ini (dari cookie) + pesan setelah `after`.
+      operationId: current
+      parameters:
+      - name: after
+        in: path
+        description: Hanya pesan dengan seq lebih besar (default 0)
+        required: true
+        schema:
+          type:
+          - integer
+          - 'null'
+          format: int64
+      responses:
+        '200':
+          description: Percakapan + pesan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_ChatConversationView'
+        '401':
+          description: Tidak ada sesi chat
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/public/chat/conversations:
+    post:
+      tags:
+      - chat
+      summary: Mulai percakapan setelah pelanggan menyetujui pemberitahuan AI. Set cookie sesi chat.
+      operationId: start
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartChat'
+        required: true
+      responses:
+        '201':
+          description: Percakapan baru; cookie sesi chat di-set
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_ChatConversationView'
+        '403':
+          description: Origin bukan situs toko
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: Chat tidak aktif di toko ini
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '422':
+          description: Persetujuan tidak diberikan / versi berbeda
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '429':
+          description: Rate limit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/public/chat/end:
+    post:
+      tags:
+      - chat
+      summary: 'Pelanggan mengakhiri percakapan: CLOSED + sesi dicabut + cookie dihapus.'
+      operationId: end
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmptyBody'
+        required: true
+      responses:
+        '204':
+          description: Percakapan berakhir
+        '401':
+          description: Tidak ada sesi chat
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/public/chat/handover:
+    post:
+      tags:
+      - chat
+      summary: Pelanggan meminta staf (tombol "Bicara dengan admin").
+      operationId: handover
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmptyBody'
+        required: true
+      responses:
+        '200':
+          description: Diteruskan ke staf
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_ChatConversationView'
+        '401':
+          description: Tidak ada sesi chat
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: Sudah ditangani staf / berakhir
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/public/chat/messages:
+    post:
+      tags:
+      - chat
+      summary: Kirim pesan pelanggan. Status `AI` → asisten menjawab dalam respons yang sama.
+      operationId: send
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendChat'
+        required: true
+      responses:
+        '200':
+          description: Pesan pelanggan + balasan (bila ada) dan status terbaru
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_ChatConversationView'
+        '401':
+          description: Tidak ada sesi chat
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '403':
+          description: Origin bukan situs toko
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: Percakapan sudah berakhir
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '422':
+          description: Isi pesan tidak valid; `details.errors[0].path = body`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '429':
+          description: Rate limit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/public/chat/stream:
+    get:
+      tags:
+      - chat
+      summary: SSE pesan & status untuk percakapan pelanggan ini saja.
+      operationId: chat_stream
+      responses:
+        '200':
+          description: 'text/event-stream: `chat.message`, `chat.status` percakapan ini'
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        '401':
+          description: Tidak ada sesi chat
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: Batas koneksi realtime tercapai
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
   /api/v1/public/checkout:
     post:
       tags:
@@ -8054,6 +8453,28 @@ components:
           type: integer
           format: int32
       additionalProperties: false
+    ChatMessageView:
+      type: object
+      required:
+      - id
+      - seq
+      - sender
+      - body
+      - created_at
+      properties:
+        body:
+          type: string
+        created_at:
+          type: string
+        id:
+          type: string
+          format: uuid
+        sender:
+          type: string
+          description: '`CUSTOMER` | `AI` | `ADMIN` | `SYSTEM` (identitas staf tidak ditampilkan ke pelanggan)'
+        seq:
+          type: integer
+          format: int64
     CheckResult:
       type: object
       required:
@@ -8386,6 +8807,9 @@ components:
           type: string
         title:
           type: string
+      additionalProperties: false
+    EmptyBody:
+      type: object
       additionalProperties: false
     ErrorBody:
       type: object
@@ -9416,6 +9840,14 @@ components:
         template_key:
           type: string
       additionalProperties: false
+    SendChat:
+      type: object
+      required:
+      - body
+      properties:
+        body:
+          type: string
+      additionalProperties: false
     SessionResponse:
       type: object
       required:
@@ -9478,6 +9910,19 @@ components:
           type: string
         url:
           type: string
+      additionalProperties: false
+    StartChat:
+      type: object
+      required:
+      - consent_version
+      - accept
+      properties:
+        accept:
+          type: boolean
+          description: Pelanggan menyetujui pemberitahuan AI.
+        consent_version:
+          type: string
+          description: Harus sama dengan `consent_version` dari `/public/chat/config`.
       additionalProperties: false
     StatusChange:
       type: object
@@ -9658,6 +10103,60 @@ components:
             position:
               type: integer
               format: int32
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
+    SuccessEnvelope_ChatConfigView:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - enabled
+          - consent_version
+          - consent_text
+          properties:
+            consent_text:
+              type: string
+              description: 'D-12: wajib ditampilkan sebelum pesan pertama.'
+            consent_version:
+              type: string
+            enabled:
+              type: boolean
+              description: Widget chat aktif (asisten diaktifkan pemilik toko).
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
+    SuccessEnvelope_ChatConversationView:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - conversation_id
+          - status
+          - messages
+          properties:
+            conversation_id:
+              type: string
+              format: uuid
+            messages:
+              type: array
+              items:
+                $ref: '#/components/schemas/ChatMessageView'
+            status:
+              type: string
+              description: '`AI` | `WAITING_HUMAN` | `HUMAN` | `CLOSED`'
         meta:
           $ref: '#/components/schemas/Meta'
         success:
@@ -12244,3 +12743,5 @@ tags:
   description: Stok, movement ledger, ambang low-stock (PRD.md §4.5)
 - name: files
   description: Upload gambar tenant + signed URL ber-expiry (ADR-0009)
+- name: chat
+  description: 'Web chat publik toko: tenant dari Host, cookie sesi chat host-only (ADR-0006, P6-2)'

@@ -1,0 +1,66 @@
+P6-2 — Web chat channel + SSE (PRD.md §4.12, §7.5; ADR-0006 web chat dulu; D-12 pemberitahuan AI)
+Tanggal: 2026-11-13
+
+Artefak
+- apps/api/src/chat.rs  endpoint publik (tenant dari Host, ADR-0014):
+  GET /public/chat/config (enabled + teks/versi pemberitahuan AI), POST /public/chat/conversations (wajib
+  accept=true + versi terkini; set cookie host-only HttpOnly `__Host-umkm_chat`, dev `umkm_chat`; token hanya hash di
+  DB), GET /public/chat/conversation?after=, POST /public/chat/messages, POST /public/chat/handover,
+  POST /public/chat/end (CLOSED + sesi dicabut + cookie dihapus), GET /public/chat/stream (SSE).
+  Mutasi: Origin harus situs toko itu sendiri + body JSON; rate limit chat_start_ip 10/15 mnt, chat_msg_ip 40/15 mnt
+  (fail-closed). Mode Human Only → percakapan mulai WAITING_HUMAN. Akun pelanggan terverifikasi (ADR-0005) →
+  percakapan ditautkan ke customer (tool get_customer_orders memakai konteks ini).
+- Giliran AI hanya bila status AI (ConversationStatus::ai_may_reply). Keputusan: SendAuto → pesan AI (ai_run_id);
+  Handover → pesan fallback + WAITING_HUMAN + pesan SYSTEM; DraftForAdmin/HumanQueue → WAITING_HUMAN (penyimpanan &
+  persetujuan draft Assisted di P6-4). Provider nonaktif/chatbot mati/AI tidak tersedia → diteruskan ke staf, chat
+  tidak macet. Riwayat 12 pesan terakhir (CUSTOMER=user, AI/ADMIN=assistant, SYSTEM tidak dikirim ke LLM).
+- crates/infrastructure/src/ai/runtime.rs  answer_in(.., conversation_id): ai_runs.conversation_id terisi dan
+  latency_ms kini diukur (sebelumnya selalu 0) — dasar viewer P6-3 & analitik P6-6.
+- Realtime: event `chat.message`/`chat.status` (permission conversations.read untuk SSE staf). SSE pelanggan:
+  hanya tenant Host + jenis chat.* + conversation_id miliknya, sesi dicek ulang per event (dicabut → stream
+  berakhir), hanya bagian `customer` yang dikirim (tanpa conversation_id/ai_run_id/id staf). Batas koneksi bersama
+  hub (RealtimeHub::connect).
+- ops/caddy/Caddyfile  /_api/public/chat/* meneruskan cookie (seperti akun pelanggan & checkout); endpoint publik
+  lain tetap tanpa cookie.
+- frontend/src/chat/widget.tsx + chat.css  tombol "Chat" kiri bawah (keranjang di kanan), pemberitahuan AI sebelum
+  kotak pesan, label pengirim (Anda/Asisten AI/Staf toko/Info), isi dirender sebagai teks, EventSource same-origin,
+  "Bicara dengan admin", "Akhiri chat"; tampil di semua halaman situs toko bila asisten aktif.
+- OpenAPI diperbarui (tag chat, 7 operasi).
+
+Hasil
+- cargo fmt --check, clippy -D warnings: bersih. cargo test --workspace --no-fail-fast: 416 lulus, 0 gagal.
+- frontend: tsc, eslint, vitest 24/24 (widget merge/label 2 baru).
+- Playwright stack nyata (Caddy + API + worker release, PostgreSQL + Redis, provider platform = e2e/mock-llm.py,
+  domain umkm.test): chat, ai, shop, ops, mfa — 5/5 lulus, tanpa error CSP/JS. Tangkapan ponsel 360px diperiksa:
+  tanpa scroll horizontal.
+- check-rtm OK.
+
+Cakupan apps/api/tests/chat_http.rs (6)
+- consent_gate_cookie_and_tenant_scope: chat nonaktif 409; teks pemberitahuan memuat 4 elemen wajib D-12; tanpa
+  persetujuan / versi lama 422, Origin toko lain 403, tidak ada percakapan dibuat; cookie __Host- HttpOnly Secure
+  SameSite=Lax Path=/ tanpa Domain, token tidak di body; versi consent tersimpan; cookie toko A di host B 401.
+- ai_answers_and_run_is_linked_to_conversation (mode auto): CUSTOMER → AI, provider dipanggil 1×, pelanggan tidak
+  menerima id staf/run; ai_runs.conversation_id + purpose chat + latency; pesan AI menunjuk run; after=seq.
+- handover_and_takeover_stop_auto_response: frasa "bicara dengan admin" → WAITING_HUMAN tanpa provider; pesan
+  berikutnya tanpa AI; tombol handover (ulang 409); takeover staf (HUMAN) → AI tidak dipanggil; kontrol Hybrid
+  memanggil provider.
+- human_only_and_unconfigured_never_call_ai: Human Only mulai WAITING_HUMAN tanpa balasan AI (AC-AIC-004);
+  provider nonaktif → pesan SYSTEM + WAITING_HUMAN, provider 0×.
+- end_closes_conversation_and_revokes_session: Origin asing 403; 204 + Max-Age=0; cookie lama 401; status CLOSED.
+- stream_delivers_only_own_conversation: tanpa cookie 401; pesan percakapan lain (tenant sama & tenant lain) tidak
+  sampai; pesan sendiri + balasan AI sampai tanpa conversation_id; sesi dicabut → event tidak diteruskan.
+
+Negative control (mutasi sementara pada apps/api/src/chat.rs, dikembalikan; test terkait GAGAL)
+== NEGCTL: AI tetap membalas setelah handover/takeover
+    human_only_and_unconfigured_never_call_ai ... FAILED
+    handover_and_takeover_stop_auto_response ... FAILED
+== NEGCTL: tanpa persetujuan pemberitahuan AI
+    consent_gate_cookie_and_tenant_scope ... FAILED
+== NEGCTL: SSE tanpa filter percakapan
+    stream_delivers_only_own_conversation ... FAILED
+Setelah dikembalikan: chat_http 6 lulus.
+
+Catatan
+- "20 chat session" (PRD.md §13.4) adalah skenario benchmark, bukan kapasitas terjamin; belum diukur di task ini.
+- Draft mode Assisted belum disimpan untuk staf (P6-4); saat ini percakapan langsung menunggu staf.
+- Balasan staf, inbox, viewer + masking: P6-3..P6-5.

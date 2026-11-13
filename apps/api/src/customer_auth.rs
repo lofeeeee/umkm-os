@@ -80,7 +80,7 @@ fn forbidden(msg: &str) -> ApiError {
 
 /// Origin wajib situs toko itu sendiri (bukan dashboard, bukan toko lain). Tanpa Origin =
 /// klien non-browser (tidak dapat menjadi korban CSRF).
-fn check_origin(s: &AuthService, h: &HeaderMap) -> Result<(), ApiError> {
+pub(crate) fn check_origin(s: &AuthService, h: &HeaderMap) -> Result<(), ApiError> {
     let Some(origin) = h.get(header::ORIGIN).and_then(|o| o.to_str().ok()) else {
         return Ok(());
     };

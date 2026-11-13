@@ -144,10 +144,20 @@ impl RealtimeHub {
     pub fn open_connections(&self) -> usize {
         self.open.load(Ordering::Relaxed)
     }
+
+    /// Ambil satu slot koneksi (batas `PRD.md §7.5`) + penerima event; `None` = penuh.
+    pub(crate) fn connect(&self) -> Option<(broadcast::Receiver<TenantEvent>, ConnGuard)> {
+        let prev = self.open.fetch_add(1, Ordering::Relaxed);
+        let guard = ConnGuard(self.open.clone());
+        if prev >= self.max_connections {
+            return None;
+        }
+        Some((self.tx.subscribe(), guard))
+    }
 }
 
 /// Menurunkan hitungan koneksi saat stream di-drop (klien putus).
-struct ConnGuard(Arc<AtomicUsize>);
+pub(crate) struct ConnGuard(Arc<AtomicUsize>);
 
 impl Drop for ConnGuard {
     fn drop(&mut self) {

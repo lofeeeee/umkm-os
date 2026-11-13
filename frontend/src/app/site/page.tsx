@@ -12,6 +12,7 @@ import type { PublicSite } from "@/renderer/types";
 import { fileUrl, shopApi, type PublicProduct } from "@/shop/api";
 import { route } from "@/shop/route";
 import { AccountPage, CartFab, CartPage, LegalPage, OrderPage, ProductPage, VerifyPage } from "@/shop/views";
+import { ChatWidget } from "@/chat/widget";
 import "@/shop/shop.css";
 
 function toGrid(p: PublicProduct): GridProduct {
@@ -83,6 +84,17 @@ export default function PublicSitePage() {
   const path = useSyncExternalStore(noop, () => window.location.pathname, () => null);
   if (path === null) return <Fallback state="loading" />;
   const r = route(path);
+  if (r.kind === "missing") return <Fallback state="missing" />;
+  return (
+    <>
+      <RoutePage r={r} />
+      {/* Web chat (P6-2): tampil hanya bila pemilik toko mengaktifkan asisten. */}
+      <ChatWidget />
+    </>
+  );
+}
+
+function RoutePage({ r }: { r: Exclude<ReturnType<typeof route>, { kind: "missing" }> }) {
   switch (r.kind) {
     case "page": return <WebsitePage slug={r.slug} />;
     case "product": return <ProductPage slug={r.slug} />;
@@ -92,6 +104,5 @@ export default function PublicSitePage() {
     case "verify": return <VerifyPage />;
     case "privacy": return <LegalPage kind="privacy" />;
     case "terms": return <LegalPage kind="terms" />;
-    case "missing": return <Fallback state="missing" />;
   }
 }
