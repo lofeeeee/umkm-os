@@ -679,6 +679,7 @@ async fn deletion_request_anonymizes_after_grace_and_export_is_audited(pool: PgP
         closed_tenant_grace: Duration::from_secs(30 * 86_400),
         auth_artifacts: Duration::from_secs(30 * 86_400),
         outbox: Duration::from_secs(30 * 86_400),
+        conversations: Duration::from_secs(30 * 86_400),
     };
     assert_eq!(run_purge(&app_db, &policy).await.unwrap().customers, 0);
     sqlx::query(

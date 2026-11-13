@@ -247,7 +247,12 @@ async fn audit(
 
 fn map_write(e: sqlx::Error) -> TicketError {
     match violation(&e) {
-        Some((c, n)) if c == "23503" && (n == "fk_tickets_customer" || n == "fk_tickets_order") => {
+        Some((c, n))
+            if c == "23503"
+                && (n == "fk_tickets_customer"
+                    || n == "fk_tickets_order"
+                    || n == "fk_tickets_conversation") =>
+        {
             TicketError::InvalidReference
         }
         Some((c, n)) if c == "23514" && n == "ck_tickets_assignee_member" => {

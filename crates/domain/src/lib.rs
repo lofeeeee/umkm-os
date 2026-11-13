@@ -9,6 +9,7 @@ pub mod auth;
 pub mod business;
 pub mod catalog;
 pub mod commerce;
+pub mod conversation;
 pub mod crm;
 pub mod inventory;
 pub mod mfa;

@@ -204,7 +204,30 @@ async fn tickets_from_every_source_stay_in_tenant(pool: PgPool) {
     repo::create(&db, tid, &mk(Source::System, None), None, (None, None))
         .await
         .unwrap();
-    let conv = Uuid::new_v4();
+    // Conversation nyata (P6-1); id acak / milik tenant lain = rujukan tidak valid.
+    assert!(matches!(
+        repo::create(
+            &db,
+            tid,
+            &mk(Source::Chat, Some(Uuid::new_v4())),
+            None,
+            (None, None)
+        )
+        .await,
+        Err(umkm_infrastructure::ticket_repo::TicketError::InvalidReference)
+    ));
+    let conv = umkm_infrastructure::conversation_repo::start(
+        &db,
+        tid,
+        &umkm_infrastructure::conversation_repo::StartInput {
+            consent_version: umkm_domain::ai::consent::VERSION,
+            customer_id: None,
+            initial: umkm_domain::conversation::ConversationStatus::Ai,
+        },
+    )
+    .await
+    .unwrap()
+    .conversation_id;
     repo::create(&db, tid, &mk(Source::Chat, Some(conv)), None, (None, None))
         .await
         .unwrap();

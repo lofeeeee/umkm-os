@@ -233,6 +233,8 @@ Prefix `/api/v1`; envelope sukses/gagal; `meta.request_id`; cursor pagination; r
 
 **Blokir:** D-04 messaging channel, D-03 untuk `get_customer_orders`.
 
+**Status:** D-04 (ADR-0006) dan D-03 (ADR-0005) sudah diputus. P6-1 selesai 2026-11-13 (`docs/evidence/P6-1.txt`; migrasi aktual `0027_conversations`).
+
 | Task | Requirement | File | Uji |
 |---|---|---|---|
 | P6-1 Conversation/session/message UUID | `PRD.md §4.12` | `migrations/0017_conversations.sql`, `crates/domain/src/conversation/` | uniqueness + tenant scope； bukti: `docs/evidence/<task>.txt`|

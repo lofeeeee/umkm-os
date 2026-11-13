@@ -18,6 +18,7 @@ fn policy() -> RetentionPolicy {
         closed_tenant_grace: Duration::from_secs(30 * DAY),
         auth_artifacts: Duration::from_secs(30 * DAY),
         outbox: Duration::from_secs(30 * DAY),
+        conversations: Duration::from_secs(30 * 86_400),
     }
 }
 

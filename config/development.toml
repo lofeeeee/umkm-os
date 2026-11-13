@@ -36,8 +36,9 @@ verify_url_base = "http://localhost:3000/verify-email"
 # ADR-0012. Angka di sini, bukan di kode. Batas bawah keamanan juga dipaksa di fungsi DB.
 audit_days = 365
 closed_tenant_grace_days = 30
-# Belum dipakai: tabel terkait dibuat di P6 (percakapan), P2-6 (file), P3 (pelanggan).
+# Percakapan: sejak pesan terakhir (app.purge_conversations, P6-1).
 conversation_days = 30
+# Belum dipakai: purge file/pelanggan saat ini mengikuti closed_tenant_grace_days.
 file_grace_days = 30
 customer_data_grace_days = 30
 # Minimalisasi data (bukan ADR): sesi/token tidak berlaku & event outbox selesai.

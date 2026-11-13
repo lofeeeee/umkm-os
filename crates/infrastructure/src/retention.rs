@@ -14,6 +14,8 @@ pub struct RetentionPolicy {
     pub closed_tenant_grace: Duration,
     pub auth_artifacts: Duration,
     pub outbox: Duration,
+    /// Percakapan: sejak pesan terakhir (ADR-0012, P6-1).
+    pub conversations: Duration,
 }
 
 const DAY: u64 = 86_400;
@@ -25,6 +27,7 @@ impl From<&RetentionSettings> for RetentionPolicy {
             closed_tenant_grace: Duration::from_secs(u64::from(r.closed_tenant_grace_days) * DAY),
             auth_artifacts: Duration::from_secs(u64::from(r.auth_artifact_days) * DAY),
             outbox: Duration::from_secs(u64::from(r.outbox_days) * DAY),
+            conversations: Duration::from_secs(u64::from(r.conversation_days) * DAY),
         }
     }
 }
@@ -38,6 +41,7 @@ pub struct PurgeReport {
     pub outbox_events: i64,
     /// Customer yang diminta hapus, dianonimkan setelah grace (ADR-0012, AC-CRM-006).
     pub customers: i64,
+    pub conversations: i64,
 }
 
 pub async fn run_purge(pool: &PgPool, p: &RetentionPolicy) -> Result<PurgeReport, sqlx::Error> {
@@ -65,7 +69,9 @@ pub async fn run_purge(pool: &PgPool, p: &RetentionPolicy) -> Result<PurgeReport
             .await?;
     // Grace sama dengan data pelanggan saat tenant tutup: +30 hari (ADR-0012).
     let customers = crate::crm_repo::purge(pool, p.closed_tenant_grace.as_secs() as i64).await?;
+    let conversations = crate::conversation_repo::purge(pool, p.conversations).await?;
     Ok(PurgeReport {
+        conversations,
         customers,
         audit_rows,
         tenants,
@@ -89,6 +95,7 @@ pub async fn purge_job(pool: &PgPool, p: &RetentionPolicy, metrics: &Metrics) {
             tokens = r.tokens,
             outbox_events = r.outbox_events,
             customers = r.customers,
+            conversations = r.conversations,
             "retention purge"
         ),
         Err(e) => {

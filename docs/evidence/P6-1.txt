@@ -1,0 +1,63 @@
+P6-1 — Conversation / session / message UUID (PRD.md §4.12; FR-CNV-001, AC-CNV-001; ADR-0006, ADR-0012)
+Tanggal: 2026-11-13
+
+Artefak
+- migrations/0027_conversations.{up,down}.sql
+  - conversations: channel ('web', ADR-0006), status AI | WAITING_HUMAN | HUMAN | CLOSED, customer_id (FK komposit
+    tenant), assignee_user_id (trigger: anggota aktif tenant yang sama), consent_version + consented_at wajib (D-12),
+    human_involved (dasar analitik P6-6), last_message_at (dasar retensi).
+  - conversation_sessions: token sesi chat acak, hanya hash SHA-256 (unik per tenant), expires_at sliding 7 hari.
+  - conversation_messages: UUID + seq, sender_type CHECK tepat 4 nilai (CUSTOMER/AI/ADMIN/SYSTEM), ADMIN ⇔
+    sender_user_id, ai_run_id hanya untuk AI (FK komposit ke ai_runs), isi 1..4000 karakter; trigger menolak pesan ke
+    percakapan CLOSED/tak ada dan memperbarui last_message_at.
+  - conversation_events: riwayat created/assigned/unassigned/handover_requested/taken_over/released/closed.
+  - Lifecycle trigger = cermin ConversationStatus::can_transition; status awal hanya AI/WAITING_HUMAN; CLOSED final.
+  - RLS ENABLE+FORCE pada 4 tabel; pesan & event append-only (REVOKE UPDATE/DELETE), conversations/sessions tanpa
+    DELETE untuk role aplikasi.
+  - ai_runs.conversation_id & tickets.conversation_id kini FK komposit (ON DELETE SET NULL). CHECK permanen
+    ck_tickets_source_ref diganti: rujukan order tetap CHECK; rujukan chat wajib saat INSERT (trigger
+    ck_tickets_chat_ref) agar ticket tetap ada setelah percakapan dipurge (ticket != conversation).
+  - app.purge_conversations(cutoff) SECURITY DEFINER, batas bawah 7 hari; dipanggil job retensi (30 hari setelah
+    pesan terakhir, config retention.conversation_days).
+- crates/domain/src/conversation.rs  SenderType (4), ConversationStatus + transisi + ai_may_reply, validate_body.
+- crates/infrastructure/src/conversation_repo.rs  start (conversation + sesi + event, token dikembalikan sekali),
+  resolve_session (hash, belum dicabut/kedaluwarsa, sliding), append, messages (after_seq), transition (+event,
+  HUMAN hanya oleh staf → assignee), purge.
+- crates/infrastructure/src/retention.rs  PurgeReport.conversations; ticket_repo memetakan fk_tickets_conversation
+  → InvalidReference.
+
+Hasil
+- cargo fmt --check, cargo clippy --workspace --all-targets -D warnings: bersih.
+- cargo test --workspace --no-fail-fast: 410 lulus, 0 gagal (conversation_schema 4, domain conversation 3,
+  rls 9 dengan 56 tabel tenant, retention 5, ticket_http 4).
+- sqlx migrate run → revert --target-version 0 → run pada DB kosong: exit 0.
+- check-rtm: OK.
+
+Cakupan (crates/infrastructure/tests/conversation_schema.rs)
+- separate_uuids_sender_types_and_session_token: conversation, session, 4 pesan = 6 UUID berbeda; token hanya hash
+  32 byte; token salah → tidak ada sesi; consent versi tersimpan; 4 sender type urut seq; AC-CNV-001: "BOT",
+  "customer", "STAFF", "" ditolak DB (23514); ADMIN tanpa user, CUSTOMER dengan user/ai_run, isi kosong ditolak.
+- tenant_scope_and_append_only: tenant B melihat 0 baris di 4 tabel; append/messages/resolve_session dengan token A
+  dari tenant B gagal; baris B tidak bisa merujuk conversation A; insert tenant_id A dari konteks B → 42501;
+  assignee dari tenant lain ditolak; UPDATE/DELETE pesan/event dan DELETE conversation/sesi → 42501.
+- lifecycle_parity_takeover_and_close: 16 kombinasi Rust == app.conversation_transition_allowed; status awal
+  HUMAN/CLOSED ditolak (repo & DB); HUMAN oleh AI ditolak; AI → WAITING_HUMAN → HUMAN (staf jadi assignee,
+  ai_may_reply false) → CLOSED; pesan ke CLOSED ditolak; bypass SQL membuka CLOSED ditolak trigger; riwayat event.
+- retention_purges_after_last_message_and_keeps_tickets: cutoff 1 hari ditolak; 30 hari → 1 percakapan terhapus
+  (idempoten 0), pesan ikut terhapus, percakapan baru tetap; ticket & ai_run tetap dengan conversation_id NULL;
+  ticket chat tanpa conversation tetap ditolak saat dibuat.
+
+Negative control (mutasi sementara pada migrasi 0027, dikembalikan; test terkait GAGAL)
+== NEGCTL: sender_type menerima nilai ke-5 (BOT)
+    separate_uuids_sender_types_and_session_token ... FAILED
+== NEGCTL: conversation_messages tanpa RLS
+    tenant_scope_and_append_only ... FAILED
+== NEGCTL: pesan tidak append-only
+    tenant_scope_and_append_only ... FAILED
+== NEGCTL: trigger transisi DB berbeda dari Rust (HUMAN -> AI dilarang)
+    lifecycle_parity_takeover_and_close ... FAILED
+Setelah dikembalikan: conversation_schema 4 lulus.
+
+Belum di task ini
+- Endpoint widget chat + SSE (P6-2), viewer + masking (P6-3), handover/balasan staf (P6-4), inbox + ticket dari
+  percakapan (P6-5), analitik (P6-6).
