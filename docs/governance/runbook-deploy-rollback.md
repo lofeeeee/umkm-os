@@ -22,7 +22,7 @@ produksi** (drill rollback menunggu VPS + DNS, lihat checklist V1.0 #25). Jangan
 | DNS `*.ryasai.my.id` + TLS wildcard (DNS-01) | ADR-0001, `ops/caddy/Caddyfile` | Menunggu provider DNS |
 | `.env` produksi (dari `.env.example`, permission 600) | secret dari generator acak; `DATA_KEK` disimpan juga di luar VPS | — |
 | Backup terenkripsi + salinan luar VPS | `ops/backup/`, `BACKUP_OFFSITE_CMD` | Menunggu D-07 |
-| Monitoring (`--profile monitoring`) + kanal alert | `ops/monitoring/`, `ALERT_WEBHOOK_URL_FILE` | Kanal menunggu keputusan |
+| Monitoring (`--profile monitoring`) + alert Telegram | `ops/monitoring/alertmanager.yml` (salin, isi `chat_id`) → `ALERTMANAGER_CONFIG`; token bot → `ALERT_TELEGRAM_BOT_TOKEN_FILE` | Menunggu token bot & chat on-call |
 | Config produksi: `[billing].payment_instructions`, `[ai.platform]` harga, teks legal final | `config/production.toml` | Placeholder |
 
 ## 2. Deploy rilis baru

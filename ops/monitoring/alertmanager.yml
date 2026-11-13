@@ -1,9 +1,12 @@
-# Alertmanager (P8-5, PRD.md §14.3). Semua alert → satu kanal on-call lewat webhook.
-# URL webhook TIDAK disimpan di repo: dibaca dari file secret yang di-mount (lihat docker-compose.yml,
-# env ALERT_WEBHOOK_URL_FILE). Kanal (Telegram/Slack/email gateway) menunggu keputusan ops — sampai itu file
-# contoh menunjuk alamat yang sengaja tidak ada, sehingga kegagalan kirim terlihat di log Alertmanager.
+# Alertmanager (P8-5, PRD.md §14.3). Kanal on-call: TELEGRAM (keputusan 2026-11-13); email & WhatsApp menyusul.
+#
+# Produksi: salin file ini (mis. /etc/umkm/alertmanager.yml), isi `chat_id` grup/akun on-call, lalu set
+#   ALERTMANAGER_CONFIG=/etc/umkm/alertmanager.yml
+#   ALERT_TELEGRAM_BOT_TOKEN_FILE=/etc/umkm/secrets/telegram_bot_token   (token dari @BotFather, permission 600)
+# Token TIDAK pernah disimpan di repo. Nilai di bawah adalah contoh: tanpa token & chat_id asli, pengiriman gagal
+# dan terlihat di log Alertmanager (sengaja, bukan diam).
 route:
-  receiver: oncall
+  receiver: oncall-telegram
   group_by: [alertname, severity]
   group_wait: 30s
   group_interval: 5m
@@ -11,7 +14,7 @@ route:
   routes:
     # Critical diulang lebih sering.
     - matchers: [severity="critical"]
-      receiver: oncall
+      receiver: oncall-telegram
       repeat_interval: 1h
 
 inhibit_rules:
@@ -21,7 +24,14 @@ inhibit_rules:
     equal: [mountpoint]
 
 receivers:
-  - name: oncall
-    webhook_configs:
-      - url_file: /etc/alertmanager/secrets/webhook_url
+  - name: oncall-telegram
+    telegram_configs:
+      - bot_token_file: /etc/alertmanager/secrets/telegram_bot_token
+        # ID chat contoh (grup Telegram on-call). GANTI di salinan produksi.
+        chat_id: -1001234567890
+        parse_mode: HTML
         send_resolved: true
+        message: |-
+          {{ if eq .Status "firing" }}🔴{{ else }}✅{{ end }} <b>{{ .CommonLabels.alertname }}</b> [{{ .CommonLabels.severity }}] — {{ .Status }}
+          {{ range .Alerts }}• {{ .Annotations.summary }}
+          {{ end }}

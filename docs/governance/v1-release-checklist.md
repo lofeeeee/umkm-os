@@ -40,7 +40,7 @@ Arti status:
 | 25 | Production | Rust API dan worker deployment | Sebagian | `P0-6.txt`, `P8-5.txt`, `docs/governance/runbook-deploy-rollback.md` | Image multi-stage + Compose (image bertag `API_IMAGE`/`WORKER_IMAGE`/`WEB_IMAGE`) + runbook deploy/rollback; `migrate` tidak memblokir rollback (diuji). **Belum** dideploy & drill di VPS; TLS wildcard menunggu provider DNS. |
 | 26 | Production | VPS resource limits | Sebagian | `docker-compose.yml` (`deploy.resources.limits`) | Batas memori/CPU per service terdefinisi untuk VPS ±8 GB; **belum divalidasi** di bawah beban (P8-2). |
 | 27 | Production | Automated external backups | Terblokir | `P0-10.txt`, `docs/governance/runbook-restore.md` | Backup harian terenkripsi + rotasi ada; **salinan luar VPS menunggu D-07 (provider eksternal)** — tanpa itu `backup.sh` sengaja keluar dengan kode 3. RPO aktual ±24 jam (tanpa WAL archiving). |
-| 28 | Production | Monitoring dan alerting | Sebagian | `P0-8.txt`, `P8-5.txt`, `ops/monitoring/` | 16 metric aplikasi + metrik host (node-exporter) + 9 aturan alert (termasuk 3 untuk disk/memori host) teruji `promtool`; Alertmanager ter-wire (`amtool` OK). **Kanal on-call belum ditetapkan** (URL webhook masih contoh) dan belum ada dashboard. |
+| 28 | Production | Monitoring dan alerting | Sebagian | `P0-8.txt`, `P8-5.txt`, `ops/monitoring/` | 16 metric aplikasi + metrik host (node-exporter) + 9 aturan alert (termasuk 3 untuk disk/memori host) teruji `promtool`; Alertmanager → **Telegram** (keputusan 2026-11-13; pengiriman diuji ke API tiruan). **Sisa:** token bot & chat on-call asli saat deploy; dashboard. |
 | 29 | Production | Security assessment | Sebagian | `docs/security/threat-model.md` (STRIDE, P8-1 bagian internal) | Threat model & kontrol terpetakan; **pentest/assessment pihak ketiga belum** (syarat P8-1: zero critical/high). |
 | 30 | Production | Load dan recovery testing | Terblokir | `P0-10.txt` (restore lokal) | Load 5 skenario (P8-2) butuh lingkungan, dataset, ambang & denominator yang **disetujui**; drill restore dengan target RPO/RTO (P8-4) butuh **target RPO/RTO** dan backup luar VPS (D-07). |
 
@@ -52,7 +52,7 @@ Arti status:
 | Target RPO/RTO yang disetujui | #30 | Product + Ops |
 | Lingkungan uji beban + dataset + ambang (NFR) | #26, #30 | Product + Ops |
 | Provider DNS untuk TLS wildcard + VPS produksi | #25 | Ops |
-| Kanal alert on-call (mis. email/Telegram/Slack) | #28 | Ops |
+| Token bot Telegram + chat on-call (kanal diputus: Telegram) | #28 | Ops |
 | Pentest/assessment pihak ketiga | #29 | Security |
 | D-08 email provider (bukan butir checklist, tetapi gate go-live: semua keputusan final) | #1, #18 catatan | Ops + Product |
 | D-12 sign-off legal (privacy, terms, consent AI, billing — teks masih placeholder) | Gate go-live | Legal |

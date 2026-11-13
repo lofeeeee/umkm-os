@@ -24,4 +24,4 @@ out/
 
 # Secret monitoring (URL webhook on-call) — hanya contoh yang di-commit.
 ops/monitoring/secrets/*
-!ops/monitoring/secrets/webhook_url.example
+!ops/monitoring/secrets/telegram_bot_token.example

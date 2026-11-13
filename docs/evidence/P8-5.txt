@@ -32,3 +32,11 @@ Negative control
 Belum
 - Drill deploy → rollback → restore di VPS dengan waktu terukur (butuh VPS, DNS/TLS, backup luar VPS D-07, target RPO/RTO).
 - Kanal on-call nyata; dashboard Grafana (opsional PRD §19).
+
+Tambahan 2026-11-13 — kanal alert Telegram (keputusan Gate H)
+- ops/monitoring/alertmanager.yml: receiver `oncall-telegram` (telegram_configs, bot_token_file dari secret,
+  chat_id di salinan config produksi via ALERTMANAGER_CONFIG), pesan HTML ringkas, critical diulang 1 jam.
+- Uji end-to-end lokal: Alertmanager v0.28.1 dengan api_url → server tiruan API Telegram; POST alert
+  HostDiskSpaceCritical → diterima `/bot<TOKEN-dari-file>/sendMessage` dengan chat_id -1001234567890 dan teks
+  "🔴 <b>HostDiskSpaceCritical</b> [critical] — firing • Disk / tersisa &lt; 5%". amtool check-config SUCCESS.
+- Email & WhatsApp: menyusul (keputusan pemilik).

@@ -245,11 +245,11 @@ services:
       - --config.file=/etc/alertmanager/alertmanager.yml
       - --storage.path=/alertmanager
     volumes:
-      - ./ops/monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
-      # URL webhook on-call = secret (bukan di repo). Default = contoh yang sengaja tidak terjangkau.
-      - ${ALERT_WEBHOOK_URL_FILE:-./ops/monitoring/secrets/webhook_url.example}:/etc/alertmanager/secrets/webhook_url:ro
+      # Kanal on-call Telegram (2026-11-13). Config & token produksi di luar repo; default = contoh.
+      - ${ALERTMANAGER_CONFIG:-./ops/monitoring/alertmanager.yml}:/etc/alertmanager/alertmanager.yml:ro
+      - ${ALERT_TELEGRAM_BOT_TOKEN_FILE:-./ops/monitoring/secrets/telegram_bot_token.example}:/etc/alertmanager/secrets/telegram_bot_token:ro
       - alertmanager_data:/alertmanager
-    # Butuh keluar ke internet untuk mengirim webhook; tidak dipublish.
+    # Butuh keluar ke internet (api.telegram.org); tidak dipublish.
     networks: [backend, edge]
     deploy:
       resources:

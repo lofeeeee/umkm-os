@@ -108,7 +108,7 @@ jobs:
       - name: amtool check-config (Alertmanager)
         run: |
           docker run --rm -v "$PWD/ops/monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro" \
-            -v "$PWD/ops/monitoring/secrets/webhook_url.example:/etc/alertmanager/secrets/webhook_url:ro" \
+            -v "$PWD/ops/monitoring/secrets/telegram_bot_token.example:/etc/alertmanager/secrets/telegram_bot_token:ro" \
             --entrypoint amtool prom/alertmanager:v0.28.1 check-config /etc/alertmanager/alertmanager.yml
       - run: docker compose --env-file .env.example --profile monitoring config -q
       - run: docker build --target api -t umkm-os/api:ci .
