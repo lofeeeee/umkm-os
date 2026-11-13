@@ -23,6 +23,12 @@ pub mod actions {
     pub const AUTH_MFA_FAILED: &str = "auth.mfa.failed";
     pub const AUTH_MFA_RECOVERY_REGENERATED: &str = "auth.mfa.recovery_regenerated";
     pub const TENANT_SECURITY_UPDATED: &str = "tenant.security_updated";
+    // P7-3: langganan (anggota tenant) & akses platform admin.
+    pub const SUBSCRIPTION_INVOICE_CREATED: &str = "subscription.invoice_created";
+    pub const SUBSCRIPTION_PROOF_SUBMITTED: &str = "subscription.proof_submitted";
+    pub const PLATFORM_INVOICE_APPROVED: &str = "platform.invoice_approved";
+    pub const PLATFORM_INVOICE_REJECTED: &str = "platform.invoice_rejected";
+    pub const PLATFORM_PROOF_VIEWED: &str = "platform.proof_viewed";
     pub const TENANT_GUARD_PROBE_PROCESSED: &str = "tenant.guard_probe.processed";
     pub const INVENTORY_ADJUSTED: &str = "inventory.adjusted";
     pub const ORDER_CREATED: &str = "order.created";
@@ -87,7 +93,11 @@ pub const PRD_CATEGORIES: [(&str, &[&str], Option<&str>); 10] = [
         &["approval.approved", "approval.rejected"],
         Some("P6 (handover)"),
     ),
-    ("Platform admin access", &[], Some("P7")),
+    (
+        "Platform admin access",
+        &["platform.invoice_approved", "platform.proof_viewed"],
+        None,
+    ),
 ];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -140,6 +150,13 @@ impl AuditEvent {
 
     pub fn by_user(mut self, user_id: Uuid) -> Self {
         self.actor_type = ActorType::User;
+        self.actor_user_id = Some(user_id);
+        self
+    }
+
+    /// Pelaku = admin platform (bukan anggota tenant), mis. verifikasi tagihan langganan (P7-3).
+    pub fn by_platform(mut self, user_id: Uuid) -> Self {
+        self.actor_type = ActorType::Platform;
         self.actor_user_id = Some(user_id);
         self
     }
@@ -280,6 +297,11 @@ mod tests {
             actions::AUTH_MFA_FAILED,
             actions::AUTH_MFA_RECOVERY_REGENERATED,
             actions::TENANT_SECURITY_UPDATED,
+            actions::SUBSCRIPTION_INVOICE_CREATED,
+            actions::SUBSCRIPTION_PROOF_SUBMITTED,
+            actions::PLATFORM_INVOICE_APPROVED,
+            actions::PLATFORM_INVOICE_REJECTED,
+            actions::PLATFORM_PROOF_VIEWED,
         ] {
             let parts: Vec<&str> = a.split('.').collect();
             assert!(

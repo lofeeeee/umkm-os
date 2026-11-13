@@ -490,6 +490,58 @@ async fn every_available_prd_category_is_audited(pool: PgPool) {
     )
     .await;
 
+    // --- 10 platform admin: tagihan langganan → bukti dilihat & disetujui super admin (sesi MFA)
+    let inv = call(
+        &a,
+        Method::POST,
+        format!("{base}/subscription/invoices"),
+        &o,
+        Some(json!({"plan_code": "pro"})),
+    )
+    .await
+    .json()["data"]["id"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    let r = send(
+        &a.router,
+        Method::POST,
+        &format!("{base}/subscription/invoices/{inv}/proof"),
+        Some(&o),
+        None,
+        Some("application/octet-stream"),
+        png(),
+    )
+    .await;
+    assert_eq!(r.status, 200, "{}", String::from_utf8_lossy(&r.bytes));
+    let admin = platform_admin(&a.owner, true).await;
+    assert_eq!(
+        send(
+            &a.router,
+            Method::GET,
+            &format!("/api/v1/platform/invoices/{inv}/proof"),
+            Some(&admin),
+            None,
+            None,
+            vec![]
+        )
+        .await
+        .status,
+        200
+    );
+    assert_eq!(
+        call(
+            &a,
+            Method::POST,
+            format!("/api/v1/platform/invoices/{inv}/approve"),
+            &admin,
+            Some(json!({}))
+        )
+        .await
+        .status,
+        200
+    );
+
     // --- cakupan
     let actions: Vec<String> = sqlx::query_scalar("SELECT DISTINCT action FROM audit_logs WHERE tenant_id = $1 OR tenant_id IS NULL OR actor_user_id = $2")
         .bind(t).bind(o.user).fetch_all(&a.owner).await.unwrap();
@@ -509,7 +561,7 @@ async fn every_available_prd_category_is_audited(pool: PgPool) {
         }
         covered += 1;
     }
-    assert_eq!(covered, 9, "9 dari 10 kategori aktif (platform admin P7)");
+    assert_eq!(covered, 10, "10 dari 10 kategori PRD §6.9 aktif");
     assert!(actions.len() >= 25, "{} jenis event", actions.len());
 
     // API: hanya audit.read; filter awalan; tenant lain tidak terlihat

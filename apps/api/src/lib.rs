@@ -23,6 +23,7 @@ pub mod mfa;
 pub mod middleware;
 pub mod notifications;
 pub mod openapi;
+pub mod platform;
 pub mod readiness;
 pub mod realtime;
 pub mod router;

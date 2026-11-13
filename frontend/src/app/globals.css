@@ -113,3 +113,7 @@ table.d-table th, table.d-table td { text-align: left; padding: 6px 4px; border-
 .an-caption { text-align: left; font-weight: 600; padding-bottom: 6px; }
 .an-table th[scope="row"] { white-space: nowrap; }
 .an-value { font-size: 1.4rem; }
+
+/* Langganan & admin platform (P7-3) */
+.sub-feat { margin: 8px 0 12px; padding-left: 18px; font-size: 0.9rem; }
+.pf-proof { display: block; max-width: 100%; max-height: 360px; height: auto; border: 1px solid var(--line); border-radius: 8px; margin: 8px 0; }

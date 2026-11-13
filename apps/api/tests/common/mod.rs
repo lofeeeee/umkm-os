@@ -291,3 +291,30 @@ pub async fn pro(pool: &PgPool, tenant: Uuid) {
     .await
     .unwrap();
 }
+
+/// Super admin platform; `mfa` = sesi sudah lolos langkah kedua (AUTH-011).
+pub async fn platform_admin(pool: &PgPool, mfa: bool) -> Who {
+    let u: Uuid = sqlx::query_scalar(
+        "INSERT INTO users (email, password_hash, platform_role) VALUES ($1, '$argon2id$x', 'super_admin') RETURNING id",
+    )
+    .bind(format!("admin-{}@x.id", Uuid::new_v4().simple()))
+    .fetch_one(pool)
+    .await
+    .unwrap();
+    let (token, hash) = new_token().unwrap();
+    auth_repo::create_session(pool, u, hash, Duration::from_secs(3600), None)
+        .await
+        .unwrap();
+    if mfa {
+        sqlx::query("UPDATE user_sessions SET mfa_verified_at = now() WHERE user_id = $1")
+            .bind(u)
+            .execute(pool)
+            .await
+            .unwrap();
+    }
+    Who {
+        user: u,
+        cookie: format!("__Host-umkm_session={token}"),
+        csrf: csrf_token(&token),
+    }
+}

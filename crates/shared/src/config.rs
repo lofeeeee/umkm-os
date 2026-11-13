@@ -105,6 +105,17 @@ pub struct Settings {
     /// P5 AI (ADR-0011). Tanpa section = AI platform nonaktif.
     #[serde(default)]
     pub ai: AiSettings,
+    /// P7-3 (ADR-0016): instruksi pembayaran langganan manual. Tanpa section = belum diatur.
+    #[serde(default)]
+    pub billing: BillingSettings,
+}
+
+/// Pembayaran langganan manual (ADR-0016). Bukan rahasia: rekening/QRIS tujuan ditampilkan ke pemilik toko.
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(deny_unknown_fields, default)]
+pub struct BillingSettings {
+    /// Teks instruksi (rekening/QRIS platform). Kosong = "hubungi admin platform".
+    pub payment_instructions: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]

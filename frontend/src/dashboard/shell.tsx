@@ -38,6 +38,7 @@ export function TopBar({ tenant }: { tenant?: TenantView | null }) {
         {can("members.read") && <Link href={`/team${q}`}>Tim</Link>}
         {can("audit.read") && <Link href={`/audit${q}`}>Audit</Link>}
         {can("ai_config.read") && <Link href={`/ai${q}`}>Asisten AI</Link>}
+        {can("tenant.read") && <Link href={`/subscription${q}`}>Langganan</Link>}
         <Link href={`/security${q}`}>Keamanan</Link>
         {tenant && <Bell tenantId={tenant.id} />}
         <button type="button" className="d-btn d-btn-sm" onClick={logout}>Keluar</button>

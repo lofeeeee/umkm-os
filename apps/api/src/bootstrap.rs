@@ -119,6 +119,7 @@ pub async fn serve() -> Result<(), BoxError> {
     .with_db(pool.clone())
     .with_rt_publisher(rt_publisher)
     .with_ai(ai)
+    .with_billing_instructions(&settings.billing.payment_instructions)
     .with_files(Arc::new(crate::state::FileService {
         store: PgObjectStorage::new(
             pool.clone(),

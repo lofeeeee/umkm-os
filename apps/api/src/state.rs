@@ -29,6 +29,8 @@ pub struct AppState {
     pub rt_publisher: Option<umkm_infrastructure::realtime::RtPublisher>,
     /// AI (P5, ADR-0011): master key + provider platform. `None` -> endpoint AI 503.
     pub ai: Option<Arc<AiService>>,
+    /// Instruksi pembayaran langganan manual (P7-3, ADR-0016). Kosong = belum diatur operator.
+    pub billing_instructions: Arc<str>,
 }
 
 /// Rahasia & konfigurasi AI tingkat proses.
@@ -81,6 +83,7 @@ impl AppState {
             files: None,
             rt_publisher: None,
             ai: None,
+            billing_instructions: Arc::from(""),
         }
     }
 
@@ -91,6 +94,11 @@ impl AppState {
 
     pub fn with_rt_publisher(mut self, p: umkm_infrastructure::realtime::RtPublisher) -> Self {
         self.rt_publisher = Some(p);
+        self
+    }
+
+    pub fn with_billing_instructions(mut self, text: &str) -> Self {
+        self.billing_instructions = Arc::from(text);
         self
     }
 

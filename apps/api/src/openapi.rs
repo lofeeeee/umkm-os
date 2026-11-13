@@ -38,6 +38,16 @@ use crate::{
         crate::analytics::conversations,
         crate::billing::list_plans,
         crate::billing::subscription,
+        crate::billing::list_invoices,
+        crate::billing::create_invoice,
+        crate::billing::upload_proof,
+        crate::billing::get_proof,
+        crate::billing::cancel_invoice,
+        crate::platform::me,
+        crate::platform::invoices,
+        crate::platform::proof,
+        crate::platform::approve,
+        crate::platform::reject,
         crate::inbox::list,
         crate::inbox::detail,
         crate::inbox::takeover,
@@ -212,6 +222,7 @@ use crate::{
         (name = "conversations", description = "Conversation viewer staf; data sensitif dimasking sesuai permission (PRD.md §4.12, P6-3)"),
         (name = "analytics", description = "Analitik percakapan dari agregat harian yang bertahan setelah purge (PRD.md §4.12, P6-6)"),
         (name = "billing", description = "Paket Starter/Pro & langganan toko; batas paket = data (PRD.md §4.15, ADR-0016)"),
+        (name = "platform", description = "Admin platform (super_admin + sesi MFA): verifikasi pembayaran langganan lintas toko, diaudit (ADR-0016)"),
         (name = "chat", description = "Web chat publik toko: tenant dari Host, cookie sesi chat host-only (ADR-0006, P6-2)")
     )
 )]

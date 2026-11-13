@@ -11,6 +11,7 @@ export default function Home() {
   const router = useRouter();
   const [items, setItems] = useState<Membership[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [platform, setPlatform] = useState(false);
   useEffect(() => {
     (async () => {
       const session = await loadSession();
@@ -23,6 +24,8 @@ export default function Home() {
         return;
       }
       setItems(await api<Membership[]>("GET", "/api/v1/tenants"));
+      // Admin platform (super_admin + sesi MFA) — 403 untuk pengguna lain, diabaikan.
+      api("GET", "/api/v1/platform/me").then(() => setPlatform(true), () => setPlatform(false));
     })().catch(() => setError("Tidak dapat menghubungi server."));
   }, [router]);
   return (
@@ -30,6 +33,7 @@ export default function Home() {
       <TopBar />
       <main className="d-main">
         <h1>Toko saya</h1>
+        {platform && <p><Link className="d-btn" href="/platform">Admin platform</Link></p>}
         {error && <div className="d-alert d-alert-error" role="alert">{error}</div>}
         {!items && !error && <p className="d-muted" aria-busy="true">Memuat…</p>}
         {items?.length === 0 && <p className="d-muted">Anda belum menjadi anggota toko mana pun.</p>}

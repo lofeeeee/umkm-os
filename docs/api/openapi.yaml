@@ -889,6 +889,267 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
       security: []
+  /api/v1/platform/invoices:
+    get:
+      tags:
+      - platform
+      summary: Antrean tagihan langganan lintas toko (maks 200, terlama dulu).
+      operationId: invoices
+      parameters:
+      - name: status
+        in: path
+        description: default `submitted` (menunggu verifikasi); `all` = semua
+        required: true
+        schema:
+          type:
+          - string
+          - 'null'
+      responses:
+        '200':
+          description: Tagihan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_Vec_InvoiceView'
+        '403':
+          description: Bukan admin platform
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/platform/invoices/{invoice_id}/approve:
+    post:
+      tags:
+      - platform
+      summary: Setujui pembayaran → langganan aktif/diperpanjang + notifikasi toko (atomik).
+      operationId: approve
+      parameters:
+      - name: invoice_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Langganan aktif
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_DecisionView'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: Tagihan tidak menunggu verifikasi
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/platform/invoices/{invoice_id}/proof:
+    get:
+      tags:
+      - platform
+      summary: Bukti bayar untuk verifikasi (akses diaudit).
+      operationId: proof
+      parameters:
+      - name: invoice_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Gambar
+          content:
+            image/png: {}
+        '404':
+          description: Tidak ada
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/platform/invoices/{invoice_id}/reject:
+    post:
+      tags:
+      - platform
+      summary: Tolak pembayaran (alasan wajib, terlihat oleh toko).
+      operationId: reject
+      parameters:
+      - name: invoice_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RejectInput'
+        required: true
+      responses:
+        '200':
+          description: Ditolak
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_DecisionView'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: Tagihan tidak menunggu verifikasi
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '422':
+          description: Alasan kosong / terlalu panjang
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/platform/me:
+    get:
+      tags:
+      - platform
+      summary: Cek akses admin platform (dipakai dashboard untuk menampilkan menu).
+      operationId: me
+      responses:
+        '200':
+          description: Super admin dengan sesi MFA
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_PlatformMe'
+        '403':
+          description: Bukan admin platform / belum MFA
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
   /api/v1/public/categories:
     get:
       tags:
@@ -7737,6 +7998,294 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
       security:
       - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/subscription/invoices:
+    get:
+      tags:
+      - billing
+      summary: Tagihan langganan toko + instruksi pembayaran. Butuh `tenant.read`.
+      operationId: list_invoices
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Tagihan (terbaru dulu)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_InvoiceList'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+    post:
+      tags:
+      - billing
+      summary: Buat tagihan paket (Owner, `tenant.update`). Nominal dari katalog; tagihan lama yang belum dibayar dibatalkan.
+      operationId: create_invoice
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvoiceInput'
+        required: true
+      responses:
+        '201':
+          description: Tagihan dibuat
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_InvoiceView'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: Masih ada pembayaran menunggu verifikasi
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '422':
+          description: Paket tidak tersedia
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/subscription/invoices/{invoice_id}/cancel:
+    post:
+      tags:
+      - billing
+      summary: Batalkan tagihan yang belum diputus. Butuh `tenant.update`.
+      operationId: cancel_invoice
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: invoice_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '204':
+          description: Dibatalkan
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: Sudah diputus
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/subscription/invoices/{invoice_id}/proof:
+    get:
+      tags:
+      - billing
+      summary: Bukti bayar yang diunggah toko ini. Butuh `tenant.read`.
+      operationId: get_proof
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: invoice_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Gambar
+          content:
+            image/png: {}
+        '404':
+          description: Tidak ada
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+    post:
+      tags:
+      - billing
+      summary: Unggah bukti bayar (gambar PNG/JPEG/WebP ≤ 2 MB, body mentah). Butuh `tenant.update`.
+      operationId: upload_proof
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: invoice_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/octet-stream:
+            schema:
+              type: array
+              items:
+                type: integer
+                format: int32
+                minimum: 0
+        required: true
+      responses:
+        '200':
+          description: Menunggu verifikasi platform
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_InvoiceView'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: Tagihan sudah diputus/dibatalkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '422':
+          description: Bukan gambar yang diizinkan / terlalu besar
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
   /api/v1/tenants/{tenant_id}/tickets:
     get:
       tags:
@@ -10092,6 +10641,69 @@ components:
           type: string
           format: uuid
       additionalProperties: false
+    InvoiceInput:
+      type: object
+      required:
+      - plan_code
+      properties:
+        plan_code:
+          type: string
+          description: '`starter` | `pro`'
+      additionalProperties: false
+    InvoiceView:
+      type: object
+      required:
+      - id
+      - code
+      - plan_code
+      - amount_idr
+      - period_days
+      - status
+      - has_proof
+      - created_at
+      properties:
+        amount_idr:
+          type: integer
+          format: int32
+        code:
+          type: string
+        created_at:
+          type: string
+        has_proof:
+          type: boolean
+        id:
+          type: string
+          format: uuid
+        period_days:
+          type: integer
+          format: int32
+        period_end:
+          type:
+          - string
+          - 'null'
+        plan_code:
+          type: string
+        rejection_reason:
+          type:
+          - string
+          - 'null'
+        status:
+          type: string
+          description: '`awaiting_payment` | `submitted` | `paid` | `rejected` | `cancelled`'
+        tenant_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+          description: Hanya pada daftar platform
+        tenant_name:
+          type:
+          - string
+          - 'null'
+        tenant_slug:
+          type:
+          - string
+          - 'null'
     LevelView:
       type: object
       required:
@@ -10985,6 +11597,14 @@ components:
           - 'null'
           description: Kosong = dibuat otomatis dari nama bisnis.
       additionalProperties: false
+    RejectInput:
+      type: object
+      required:
+      - reason
+      properties:
+        reason:
+          type: string
+      additionalProperties: false
     RequestView:
       type: object
       required:
@@ -11824,6 +12444,37 @@ components:
           $ref: '#/components/schemas/Meta'
         success:
           type: boolean
+    SuccessEnvelope_DecisionView:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - invoice_id
+          - tenant_id
+          - status
+          properties:
+            invoice_id:
+              type: string
+              format: uuid
+            period_end:
+              type:
+              - string
+              - 'null'
+            status:
+              type: string
+              description: '`paid` | `rejected`'
+            tenant_id:
+              type: string
+              format: uuid
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
     SuccessEnvelope_DraftView:
       type: object
       required:
@@ -11855,6 +12506,95 @@ components:
             revision:
               type: integer
               format: int32
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
+    SuccessEnvelope_InvoiceList:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - items
+          - payment_instructions
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/InvoiceView'
+            payment_instructions:
+              type: string
+              description: Instruksi pembayaran platform (rekening/QRIS); kosong = belum diatur operator
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
+    SuccessEnvelope_InvoiceView:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - id
+          - code
+          - plan_code
+          - amount_idr
+          - period_days
+          - status
+          - has_proof
+          - created_at
+          properties:
+            amount_idr:
+              type: integer
+              format: int32
+            code:
+              type: string
+            created_at:
+              type: string
+            has_proof:
+              type: boolean
+            id:
+              type: string
+              format: uuid
+            period_days:
+              type: integer
+              format: int32
+            period_end:
+              type:
+              - string
+              - 'null'
+            plan_code:
+              type: string
+            rejection_reason:
+              type:
+              - string
+              - 'null'
+            status:
+              type: string
+              description: '`awaiting_payment` | `submitted` | `paid` | `rejected` | `cancelled`'
+            tenant_id:
+              type:
+              - string
+              - 'null'
+              format: uuid
+              description: Hanya pada daftar platform
+            tenant_name:
+              type:
+              - string
+              - 'null'
+            tenant_slug:
+              type:
+              - string
+              - 'null'
         meta:
           $ref: '#/components/schemas/Meta'
         success:
@@ -12154,6 +12894,28 @@ components:
               format: uuid
             status:
               type: string
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
+    SuccessEnvelope_PlatformMe:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - user_id
+          - platform_role
+          properties:
+            platform_role:
+              type: string
+            user_id:
+              type: string
+              format: uuid
         meta:
           $ref: '#/components/schemas/Meta'
         success:
@@ -13470,6 +14232,73 @@ components:
           $ref: '#/components/schemas/Meta'
         success:
           type: boolean
+    SuccessEnvelope_Vec_InvoiceView:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            required:
+            - id
+            - code
+            - plan_code
+            - amount_idr
+            - period_days
+            - status
+            - has_proof
+            - created_at
+            properties:
+              amount_idr:
+                type: integer
+                format: int32
+              code:
+                type: string
+              created_at:
+                type: string
+              has_proof:
+                type: boolean
+              id:
+                type: string
+                format: uuid
+              period_days:
+                type: integer
+                format: int32
+              period_end:
+                type:
+                - string
+                - 'null'
+              plan_code:
+                type: string
+              rejection_reason:
+                type:
+                - string
+                - 'null'
+              status:
+                type: string
+                description: '`awaiting_payment` | `submitted` | `paid` | `rejected` | `cancelled`'
+              tenant_id:
+                type:
+                - string
+                - 'null'
+                format: uuid
+                description: Hanya pada daftar platform
+              tenant_name:
+                type:
+                - string
+                - 'null'
+              tenant_slug:
+                type:
+                - string
+                - 'null'
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
     SuccessEnvelope_Vec_MemberView:
       type: object
       required:
@@ -14401,5 +15230,7 @@ tags:
   description: Analitik percakapan dari agregat harian yang bertahan setelah purge (PRD.md §4.12, P6-6)
 - name: billing
   description: Paket Starter/Pro & langganan toko; batas paket = data (PRD.md §4.15, ADR-0016)
+- name: platform
+  description: 'Admin platform (super_admin + sesi MFA): verifikasi pembayaran langganan lintas toko, diaudit (ADR-0016)'
 - name: chat
   description: 'Web chat publik toko: tenant dari Host, cookie sesi chat host-only (ADR-0006, P6-2)'

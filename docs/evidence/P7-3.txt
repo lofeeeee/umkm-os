@@ -1,0 +1,71 @@
+P7-3 — Subscription + pembayaran manual (PRD.md §4.15, §3.1; ADR-0016; D-12 legal billing bersyarat)
+Tanggal: 2026-11-13
+
+Artefak
+- migrations/0032_subscription_invoices.{up,down}.sql
+  - subscription_invoices (per tenant, RLS): kode INV-…, snapshot nominal & periode, status awaiting_payment →
+    submitted → paid/rejected (atau cancelled), bukti gambar (PNG/JPEG/WebP ≤ 2 MB, sha256). Satu tagihan terbuka
+    per tenant. Tanpa DELETE untuk role aplikasi.
+  - Trigger: nominal & periode SELALU dari katalog plans (klien tidak menentukan); toko tidak dapat menandai lunas,
+    mengubah nominal/paket/periode, atau mengubah tagihan yang sudah diputus (42501).
+  - Area platform lewat fungsi SECURITY DEFINER sempit: app.platform_list_invoices, app.platform_invoice_proof,
+    app.platform_decide_invoice (atomik: tagihan paid + langganan active; perpanjangan paket sama yang masih aktif
+    mulai dari akhir periode berjalan, selain itu mulai sekarang; atau rejected + alasan).
+- crates/infrastructure/src/billing_repo.rs  create/list/submit_proof/cancel/proof (tenant) + platform_invoices,
+  platform_proof (diaudit platform.proof_viewed), platform_decide (keputusan + audit platform.invoice_* + outbox
+  subscription.status ke toko dalam SATU transaksi).
+- apps/api/src/billing.rs  GET/POST /tenants/{t}/subscription/invoices (+ instruksi pembayaran dari config
+  [billing].payment_instructions — placeholder), POST/GET …/proof, POST …/cancel. Lihat: tenant.read; ubah:
+  tenant.update (Owner).
+- apps/api/src/platform.rs  PlatformAdmin: platform_role super_admin aktif + sesi lolos MFA (gerbang AUTH-011 +
+  pemeriksaan kedua). GET /platform/me, GET /platform/invoices?status, GET …/proof, POST …/approve, POST …/reject.
+- crates/domain/src/audit.rs  aktor , aksi subscription.* & platform.*; kategori PRD §6.9 "Platform admin
+  access" aktif → 10 dari 10 kategori (audit_http menuntut 10).
+- frontend: /subscription (paket & status, pemakaian vs batas, pilih paket → tagihan + instruksi → unggah bukti,
+  riwayat), /platform (antrean verifikasi, gambar bukti, setujui/tolak dengan alasan), tautan "Langganan" dan
+  "Admin platform" (beranda, hanya super admin).
+- Cargo.toml (commit terpisah 8001777): profil dev/test hemat disk — ditemukan target/debug 104 GB di WSL saat
+  task ini; full suite kini ±3,7 GB.
+
+Hasil
+- fmt, clippy -D warnings bersih; cargo test --workspace --no-fail-fast: 440 lulus (439 + rls setelah tabel baru
+  didaftarkan; tidak ada kegagalan lain). sqlx migrate run → revert 0 → run: exit 0. check-rtm OK.
+- Frontend tsc/eslint/vitest 24 lulus. Playwright stack nyata (dua batch karena rate limit registrasi 5/jam/IP):
+  billing (baru), chat, ai, ops, shop, mfa — 6/6 lulus, tanpa error CSP/JS. Untuk ai/chat (toko uji coba baru) data
+  paket Starter di DB dev dinaikkan sementara ke 1.000.000 token AI (memperagakan AC-SUB-001) lalu dikembalikan ke 0.
+  Tangkapan ponsel 360px halaman Langganan diperiksa.
+
+Cakupan apps/api/tests/subscription_billing_http.rs (2) + audit_http (10/10 kategori)
+- manual_payment_activates_and_renews_pro: Manager 403; field amount_idr dari klien 422; paket tak ada 422;
+  tagihan Pro Rp100.000/30 hari; bukan gambar 422; PNG → submitted; bukti terlihat toko (nosniff); tagihan baru
+  saat menunggu 409; pengguna biasa dengan sesi MFA 403 (bukan mfa_required), super admin tanpa MFA 403
+  mfa_required; antrean memuat toko; bukti 200; approve → Pro aktif ±30 hari, approve ulang 409; perpanjangan →
+  ±60 hari; audit platform.proof_viewed & 2× platform.invoice_approved (aktor platform, tenant tercatat);
+  2 notifikasi subscription.status.
+- reject_cancel_and_no_self_approval: role aplikasi tidak bisa menandai paid / mengubah nominal / menyisipkan tagihan
+  paid (42501); toko lain 404/kosong; reject tanpa alasan 422; alasan terlihat toko; langganan tetap uji coba;
+  bukti tidak bisa diganti setelah diputus; tagihan baru membatalkan yang belum dibayar; cancel 204 lalu 409;
+  approve non-submitted 409, id acak 404.
+
+Negative control (mutasi sementara, dikembalikan; test terkait GAGAL)
+  == NEGCTL: toko dapat menandai tagihannya lunas
+      reject_cancel_and_no_self_approval ... FAILED
+      result: FAILED. 1 passed; 1 failed;
+  == NEGCTL: nominal dari klien, bukan katalog
+      manual_payment_activates_and_renews_pro ... FAILED
+      result: FAILED. 1 passed; 1 failed;
+  == NEGCTL: perpanjangan selalu mulai sekarang
+      manual_payment_activates_and_renews_pro ... FAILED
+      result: FAILED. 1 passed; 1 failed;
+  == NEGCTL: area platform tanpa cek super_admin (test diperkuat: pengguna biasa dengan sesi MFA)
+      manual_payment_activates_and_renews_pro ... FAILED
+      result: FAILED. 1 passed; 1 failed;
+Catatan jujur: percobaan pertama mutasi "tanpa cek super_admin" TIDAK membuat test gagal karena pemilik toko
+tanpa sesi MFA sudah ditolak pemeriksaan MFA; test diperkuat (pengguna biasa dengan sesi MFA) lalu diulang → GAGAL.
+
+Belum / catatan
+- Tidak ada job yang menandai langganan expired di DB maupun pengingat sebelum berakhir; status efektif dihitung
+  saat dibaca (P7-1). Pengingat = tindak lanjut.
+- Instruksi pembayaran & teks penagihan = placeholder (D-12 legal billing bersyarat); wajib diganti sebelum go-live.
+- Fungsi platform dapat dieksekusi role aplikasi; otorisasi super_admin+MFA ditegakkan di API (pola sama dengan
+  fungsi SECURITY DEFINER lain di repo).

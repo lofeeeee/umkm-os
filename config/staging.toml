@@ -83,3 +83,7 @@ models = []
 embedding_model = ""
 # Kuota bulanan per tenant dalam satuan token (prompt + completion); angka final mengikuti D-10.
 monthly_quota = 200000
+
+[billing]
+# ADR-0016: pembayaran langganan manual. PLACEHOLDER — isi rekening/QRIS platform yang sah sebelum go-live.
+payment_instructions = "Transfer ke rekening platform (placeholder; diganti sebelum go-live), lalu unggah bukti bayar."
