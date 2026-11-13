@@ -47,10 +47,13 @@ function list(v: Json | undefined): { [k: string]: Json }[] {
   return Array.isArray(v) ? (v.map(obj).filter(Boolean) as { [k: string]: Json }[]) : [];
 }
 
-function Img({ r, alt, assetUrl, className }: { r: Json | undefined; alt: string; assetUrl: SiteProps["assetUrl"]; className?: string }) {
+/** `priority`: gambar LCP (banner) dimuat segera; lainnya lazy. Semua didekode async (P9-7). */
+function Img({ r, alt, assetUrl, className, priority }: { r: Json | undefined; alt: string; assetUrl: SiteProps["assetUrl"]; className?: string; priority?: boolean }) {
   const src = typeof r === "string" ? assetUrl(r) : undefined;
-  // eslint-disable-next-line @next/next/no-img-element -- static export, gambar dari API bertanda tangan
-  return src ? <img className={className} src={src} alt={alt} loading="lazy" /> : null;
+  return src ? (
+    // eslint-disable-next-line @next/next/no-img-element -- static export, gambar dari API bertanda tangan
+    <img className={className} src={src} alt={alt} decoding="async" loading={priority ? "eager" : "lazy"} fetchPriority={priority ? "high" : undefined} />
+  ) : null;
 }
 
 function hasImg(r: Json | undefined, assetUrl: SiteProps["assetUrl"]): boolean {
@@ -127,7 +130,7 @@ function SectionBody({ s, props }: { s: Section; props: SiteProps }) {
             <Subtitle v={d.subtitle} />
             <Cta cta={d.cta} />
           </div>
-          <Img r={d.image ?? b.profile.cover ?? undefined} alt={text(d.image_alt)} assetUrl={assetUrl} className="s-hero-img" />
+          <Img r={d.image ?? b.profile.cover ?? undefined} alt={text(d.image_alt)} assetUrl={assetUrl} className="s-hero-img" priority />
         </div>
       );
     case "about":
@@ -153,7 +156,7 @@ function SectionBody({ s, props }: { s: Section; props: SiteProps }) {
               <a key={p.slug} className="s-product" href={`/produk/${p.slug}`}>
                 {p.image ? (
                   // eslint-disable-next-line @next/next/no-img-element -- static export, gambar bertanda tangan
-                  <img src={p.image} alt="" loading="lazy" />
+                  <img src={p.image} alt="" loading="lazy" decoding="async" />
                 ) : (
                   <span className="s-product-noimg" aria-hidden="true" />
                 )}

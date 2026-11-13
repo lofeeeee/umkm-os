@@ -50,5 +50,8 @@ describe("renderer publik Studio (v2)", () => {
     expect(html).toMatch(/src="\/f\/asset:2" alt=""/);
     expect(html).toContain('alt="Etalase"');
     expect(html).toContain('alt="Barista"');
+    // P9-7: banner (LCP) dimuat segera dengan prioritas tinggi; foto lain lazy; semua decoding async.
+    expect(html).toMatch(/alt="Kopi &quot;susu&quot; &lt;b&gt;" decoding="async" loading="eager" fetchPriority="high"|alt="Kopi &quot;susu&quot; &lt;b&gt;" decoding="async" loading="eager" fetchpriority="high"/);
+    expect(html).toMatch(/src="\/f\/asset:2" alt="" decoding="async" loading="lazy"/);
   });
 });
