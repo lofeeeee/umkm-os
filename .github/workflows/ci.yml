@@ -111,7 +111,8 @@ jobs:
             -v "$PWD/ops/monitoring/secrets/telegram_bot_token.example:/etc/alertmanager/secrets/telegram_bot_token:ro" \
             --entrypoint amtool prom/alertmanager:v0.28.1 check-config /etc/alertmanager/alertmanager.yml
       - run: docker compose --env-file .env.example --profile monitoring config -q
-      - run: docker build --target api -t umkm-os/api:ci .
+      # ADR-0018: image api membawa site.html dari build frontend → butuh origin API yang sama dengan web.
+      - run: docker build --target api --build-arg PUBLIC_API_ORIGIN=https://api.ryasai.my.id -t umkm-os/api:ci .
       - run: docker build --target worker -t umkm-os/worker:ci .
       - run: docker build -f ops/backup/Dockerfile -t umkm-os/backup:ci .
       - run: docker build --target web --build-arg PUBLIC_API_ORIGIN=https://api.ryasai.my.id -t umkm-os/web:ci .
