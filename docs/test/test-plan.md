@@ -126,7 +126,7 @@ Perintah gate P2: `cargo fmt --check && cargo clippy --workspace -- -D warnings 
 | TC-NTF-001 | AC-NTF-001 | Integration+Workflow | `apps/api/tests/notification_http.rs` | Verified |
 | TC-NTF-002 | AC-NTF-002 | Integration+Workflow | `apps/api/tests/notification_http.rs` | Verified |
 | TC-NTF-003 | AC-NTF-003 | Integration+Workflow | `apps/api/tests/notification_http.rs` | Verified |
-| TC-ANL-001 | AC-ANL-001 | lihat §2 | ditetapkan saat task | Planned |
-| TC-ANL-002 | AC-ANL-002 | lihat §2 | ditetapkan saat task | Planned |
+| TC-ANL-001 | AC-ANL-001 | Integration+E2E | `apps/api/tests/analytics_overview_http.rs`, `frontend/e2e/chat.spec.ts` | Verified |
+| TC-ANL-002 | AC-ANL-002 | Integration+E2E | `apps/api/tests/analytics_overview_http.rs`, `frontend/e2e/billing.spec.ts` | Verified |
 | TC-SUB-001 | AC-SUB-001 | Unit+Integration | `crates/domain/src/billing.rs`, `apps/api/tests/billing_http.rs`, `apps/api/tests/plan_limits_http.rs` | Verified |
 | TC-SUB-002 | AC-SUB-002 | lihat §2 | ditetapkan saat task | Planned |

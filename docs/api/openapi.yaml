@@ -889,6 +889,74 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
       security: []
+  /api/v1/platform/analytics:
+    get:
+      tags:
+      - platform
+      summary: Analitik platform (6 metrik). Hanya super admin dengan sesi MFA (AC-ANL-002).
+      operationId: analytics
+      parameters:
+      - name: from
+        in: path
+        description: '`YYYY-MM-DD` (Asia/Jakarta), default 29 hari sebelum `to`'
+        required: true
+        schema:
+          type:
+          - string
+          - 'null'
+      - name: to
+        in: path
+        description: '`YYYY-MM-DD` (inklusif), default hari ini; rentang maks 366 hari'
+        required: true
+        schema:
+          type:
+          - string
+          - 'null'
+      responses:
+        '200':
+          description: Agregat platform
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_PlatformAnalyticsView'
+        '403':
+          description: Bukan admin platform (termasuk Owner toko)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '422':
+          description: Rentang tidak valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
   /api/v1/platform/invoices:
     get:
       tags:
@@ -3511,6 +3579,80 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SuccessEnvelope_ConversationAnalyticsView'
+        '403':
+          description: Permission kurang
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '422':
+          description: Tanggal/rentang tidak valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/analytics/overview:
+    get:
+      tags:
+      - analytics
+      summary: Ringkasan analitik toko (9 metrik). Butuh `analytics.read`.
+      operationId: overview
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: from
+        in: path
+        description: '`YYYY-MM-DD` (Asia/Jakarta), default 29 hari sebelum `to`'
+        required: true
+        schema:
+          type:
+          - string
+          - 'null'
+      - name: to
+        in: path
+        description: '`YYYY-MM-DD` (inklusif), default hari ini; rentang maks 366 hari'
+        required: true
+        schema:
+          type:
+          - string
+          - 'null'
+      responses:
+        '200':
+          description: Ringkasan toko
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_TenantOverviewView'
         '403':
           description: Permission kurang
           content:
@@ -9695,7 +9837,6 @@ paths:
     get:
       tags:
       - ops
-      summary: 'Readiness: semua dependensi terdaftar siap. Gagal -> 503 tanpa detail internal.'
       operationId: readyz
       responses:
         '200':
@@ -9813,6 +9954,31 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ToolCallView'
+    ApiUsageView:
+      type: object
+      required:
+      - requests_total
+      - responses_2xx
+      - responses_4xx
+      - responses_5xx
+      properties:
+        requests_total:
+          type: integer
+          format: int64
+          description: Sejak proses API ini mulai (per instance; agregasi lintas instance lewat Prometheus/Grafana)
+          minimum: 0
+        responses_2xx:
+          type: integer
+          format: int64
+          minimum: 0
+        responses_4xx:
+          type: integer
+          format: int64
+          minimum: 0
+        responses_5xx:
+          type: integer
+          format: int64
+          minimum: 0
     ApprovalView:
       type: object
       required:
@@ -10553,6 +10719,24 @@ components:
           - string
           - 'null'
       additionalProperties: false
+    HealthView:
+      type: object
+      required:
+      - checks
+      - outbox_pending
+      - outbox_dead
+      properties:
+        checks:
+          type: array
+          items:
+            $ref: '#/components/schemas/CheckResult'
+          description: Hasil readiness check (postgres, redis, …)
+        outbox_dead:
+          type: integer
+          format: int64
+        outbox_pending:
+          type: integer
+          format: int64
     HistoryEventView:
       type: object
       required:
@@ -11859,6 +12043,24 @@ components:
             type: string
             format: uuid
       additionalProperties: false
+    StockAlertView:
+      type: object
+      required:
+      - product
+      - variant
+      - available
+      - min_stock
+      properties:
+        available:
+          type: integer
+          format: int64
+        min_stock:
+          type: integer
+          format: int64
+        product:
+          type: string
+        variant:
+          type: string
     StockRow:
       allOf:
       - $ref: '#/components/schemas/LevelView'
@@ -12898,6 +13100,52 @@ components:
           $ref: '#/components/schemas/Meta'
         success:
           type: boolean
+    SuccessEnvelope_PlatformAnalyticsView:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - from
+          - to
+          - tenants
+          - subscriptions
+          - api_usage
+          - ai
+          - health
+          properties:
+            ai:
+              type: object
+              description: 4 & 5. Pemakaian AI (token per sumber) dan error provider (jumlah + kode)
+            api_usage:
+              $ref: '#/components/schemas/ApiUsageView'
+              description: 3. Pemakaian API
+            from:
+              type: string
+            health:
+              $ref: '#/components/schemas/HealthView'
+              description: 6. Kesehatan infrastruktur
+            provider_error_rate:
+              type:
+              - number
+              - 'null'
+              format: double
+            subscriptions:
+              type: object
+              description: 2. Distribusi langganan per paket & status efektif
+            tenants:
+              type: object
+              description: 1. Toko aktif/ditangguhkan/ditutup + toko baru di rentang
+            to:
+              type: string
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
     SuccessEnvelope_PlatformMe:
       type: object
       required:
@@ -13750,6 +13998,120 @@ components:
             version:
               type: integer
               format: int32
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
+    SuccessEnvelope_TenantOverviewView:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - from
+          - to
+          - revenue
+          - orders
+          - paid_orders
+          - top_products
+          - stock_alerts
+          - stock_alert_items
+          - customers_total
+          - customers_new
+          - tickets_created
+          - tickets_resolved
+          - conversations
+          - ai_resolved
+          - human_resolved
+          - ai_platform_tokens
+          - ai_byok_tokens
+          - ai_turns
+          properties:
+            ai_byok_tokens:
+              type: integer
+              format: int64
+            ai_platform_tokens:
+              type: integer
+              format: int64
+              description: 9. Pemakaian AI (token) & giliran chat
+            ai_resolved:
+              type: integer
+              format: int64
+            ai_turns:
+              type: integer
+              format: int64
+            average_order_value:
+              type:
+              - string
+              - 'null'
+              description: 2. Rata-rata nilai pesanan terbayar (Rupiah 2 desimal); `null` bila belum ada
+            avg_ticket_resolution_ms:
+              type:
+              - integer
+              - 'null'
+              format: int64
+            cancellation_rate:
+              type:
+              - number
+              - 'null'
+              format: double
+              description: 6. Tingkat pembatalan (dibatalkan/kedaluwarsa/ditolak ÷ pesanan), 0..1
+            conversations:
+              type: integer
+              format: int64
+              description: 8. AI resolution / handover (agregat percakapan P6-6)
+            customers_new:
+              type: integer
+              format: int64
+            customers_total:
+              type: integer
+              format: int64
+              description: 5. Pertumbuhan pelanggan
+            from:
+              type: string
+            handover_rate:
+              type:
+              - number
+              - 'null'
+              format: double
+            human_resolved:
+              type: integer
+              format: int64
+            orders:
+              type: integer
+              format: int64
+            paid_orders:
+              type: integer
+              format: int64
+            revenue:
+              type: string
+              description: 1. Omzet (pesanan terbayar, Rupiah 2 desimal) & volume pesanan
+            stock_alert_items:
+              type: array
+              items:
+                $ref: '#/components/schemas/StockAlertView'
+            stock_alerts:
+              type: integer
+              format: int64
+              description: 4. Varian dengan stok tersedia ≤ ambang minimum
+            tickets_created:
+              type: integer
+              format: int64
+              description: 7. Volume tiket & rata-rata waktu penyelesaian (ms)
+            tickets_resolved:
+              type: integer
+              format: int64
+            to:
+              type: string
+            top_products:
+              type: array
+              items:
+                $ref: '#/components/schemas/TopProductView'
+              description: 3. Produk terlaris (maks 5, dari snapshot item pesanan terbayar)
         meta:
           $ref: '#/components/schemas/Meta'
         success:
@@ -15083,6 +15445,20 @@ components:
           items:
             $ref: '#/components/schemas/ToolState'
       additionalProperties: false
+    TopProductView:
+      type: object
+      required:
+      - name
+      - quantity
+      - revenue
+      properties:
+        name:
+          type: string
+        quantity:
+          type: integer
+          format: int64
+        revenue:
+          type: string
     UpdateTenantRequest:
       type: object
       required:

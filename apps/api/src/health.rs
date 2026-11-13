@@ -14,7 +14,7 @@ pub struct Status {
     pub status: &'static str,
 }
 
-#[derive(Serialize, ToSchema)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct CheckResult {
     pub name: &'static str,
     pub ok: bool,
@@ -38,19 +38,8 @@ pub async fn healthz(ReqId(id): ReqId) -> impl IntoResponse {
 }
 
 /// Readiness: semua dependensi terdaftar siap. Gagal -> 503 tanpa detail internal.
-#[utoipa::path(
-    get,
-    path = "/readyz",
-    tag = "ops",
-    responses(
-        (status = 200, description = "Semua dependensi siap", body = SuccessEnvelope<Readiness>),
-        (status = 503, description = "Ada dependensi tidak siap; `details.failing_checks` berisi nama check", body = ErrorEnvelope)
-    )
-)]
-pub async fn readyz(
-    State(state): State<AppState>,
-    ReqId(id): ReqId,
-) -> Result<Json<SuccessEnvelope<Readiness>>, ApiError> {
+/// Jalankan semua readiness check paralel (dipakai `/readyz` dan ringkasan platform P7-5).
+pub async fn run_checks(state: &AppState) -> Vec<CheckResult> {
     // Semua check paralel; total latensi <= CHECK_TIMEOUT.
     let mut set = tokio::task::JoinSet::new();
     for (idx, c) in state.readiness.iter().cloned().enumerate() {
@@ -72,6 +61,23 @@ pub async fn readyz(
     let mut results: Vec<(usize, CheckResult)> = set.join_all().await;
     results.sort_by_key(|(idx, _)| *idx);
     let checks: Vec<CheckResult> = results.into_iter().map(|(_, c)| c).collect();
+    checks
+}
+
+#[utoipa::path(
+    get,
+    path = "/readyz",
+    tag = "ops",
+    responses(
+        (status = 200, description = "Semua dependensi siap", body = SuccessEnvelope<Readiness>),
+        (status = 503, description = "Ada dependensi tidak siap; `details.failing_checks` berisi nama check", body = ErrorEnvelope)
+    )
+)]
+pub async fn readyz(
+    State(state): State<AppState>,
+    ReqId(id): ReqId,
+) -> Result<Json<SuccessEnvelope<Readiness>>, ApiError> {
+    let checks = run_checks(&state).await;
     if checks.iter().all(|c| c.ok) {
         return Ok(Json(SuccessEnvelope::new(
             Readiness {

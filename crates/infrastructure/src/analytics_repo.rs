@@ -158,3 +158,239 @@ pub async fn conversations(
         daily,
     })
 }
+
+// ------------------------------------------------------------------ ringkasan toko & platform (P7-5)
+
+/// Rentang tanggal WIB tervalidasi (default 30 hari terakhir, maks `MAX_DAYS`).
+async fn resolve_range<'e>(
+    db: impl sqlx::PgExecutor<'e>,
+    from: Option<&str>,
+    to: Option<&str>,
+) -> Result<(String, String), AnalyticsError> {
+    let r = sqlx::query(
+        "SELECT to_char(f, 'YYYY-MM-DD') AS f, to_char(t, 'YYYY-MM-DD') AS t, (t - f) AS span FROM (
+            SELECT coalesce($1::date, app.jkt_day(now()) - 29) AS f, coalesce($2::date, app.jkt_day(now())) AS t) x",
+    )
+    .bind(from)
+    .bind(to)
+    .fetch_one(db)
+    .await
+    .map_err(|e| match sqlstate(&e).as_deref() {
+        Some("22007" | "22008" | "22P02") => AnalyticsError::InvalidRange,
+        _ => AnalyticsError::Db(e),
+    })?;
+    let span: i32 = r.get("span");
+    if !(0..MAX_DAYS).contains(&span) {
+        return Err(AnalyticsError::InvalidRange);
+    }
+    Ok((r.get("f"), r.get("t")))
+}
+
+/// Status pesanan yang dihitung sebagai omzet (pembayaran sudah dikonfirmasi; belum dibatalkan/dikembalikan).
+pub const REVENUE_STATUSES: [&str; 7] = [
+    "PAID",
+    "APPROVAL_PENDING",
+    "APPROVED",
+    "PROCESSING",
+    "READY_FOR_PICKUP",
+    "SHIPPED",
+    "COMPLETED",
+];
+/// Status pesanan gagal untuk tingkat pembatalan.
+pub const CANCELLED_STATUSES: [&str; 3] = ["CANCELLED", "EXPIRED", "REJECTED"];
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TopProduct {
+    pub name: String,
+    pub quantity: i64,
+    pub revenue: String,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct StockAlert {
+    pub product: String,
+    pub variant: String,
+    pub available: i64,
+    pub min_stock: i64,
+}
+
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct TenantOverview {
+    pub from: String,
+    pub to: String,
+    pub orders: i64,
+    pub paid_orders: i64,
+    /// Rupiah, 2 desimal (string agar tidak kehilangan presisi).
+    pub revenue: String,
+    pub cancelled_orders: i64,
+    pub top_products: Vec<TopProduct>,
+    pub stock_alerts: i64,
+    pub stock_alert_items: Vec<StockAlert>,
+    pub customers_total: i64,
+    pub customers_new: i64,
+    pub tickets_created: i64,
+    pub tickets_resolved: i64,
+    pub ticket_resolution_ms_sum: i64,
+    pub conversations: i64,
+    pub ai_resolved: i64,
+    pub human_resolved: i64,
+    pub handed_over: i64,
+    pub ai_platform_tokens: i64,
+    pub ai_byok_tokens: i64,
+    pub ai_turns: i64,
+}
+
+/// Ringkasan 9 metrik toko (FR-ANL-001) — semua dalam tenant context (RLS) + filter tenant eksplisit.
+pub async fn tenant_overview(
+    pool: &PgPool,
+    t: TenantId,
+    from: Option<&str>,
+    to: Option<&str>,
+) -> Result<TenantOverview, AnalyticsError> {
+    let mut tx = tenant_tx(pool, t).await?;
+    let (f, to_s) = resolve_range(&mut *tx, from, to).await?;
+    let in_range = "app.jkt_day(created_at) BETWEEN $2::date AND $3::date";
+    let o = sqlx::query(sqlx::AssertSqlSafe(format!(
+        "SELECT count(*) AS orders,
+                count(*) FILTER (WHERE status = ANY($4)) AS paid,
+                coalesce(sum(total) FILTER (WHERE status = ANY($4)), 0)::numeric(14,2)::text AS revenue,
+                count(*) FILTER (WHERE status = ANY($5)) AS cancelled
+           FROM orders WHERE tenant_id = $1 AND {in_range}"
+    )))
+    .bind(t.as_uuid())
+    .bind(&f)
+    .bind(&to_s)
+    .bind(&REVENUE_STATUSES[..])
+    .bind(&CANCELLED_STATUSES[..])
+    .fetch_one(&mut *tx)
+    .await?;
+    let top_products = sqlx::query(
+        "SELECT i.product_name AS name, sum(i.quantity)::bigint AS qty, sum(i.line_total)::numeric(14,2)::text AS revenue
+           FROM order_items i JOIN orders o ON o.tenant_id = i.tenant_id AND o.id = i.order_id
+          WHERE o.tenant_id = $1 AND app.jkt_day(o.created_at) BETWEEN $2::date AND $3::date AND o.status = ANY($4)
+          GROUP BY 1 ORDER BY qty DESC, name LIMIT 5",
+    )
+    .bind(t.as_uuid())
+    .bind(&f)
+    .bind(&to_s)
+    .bind(&REVENUE_STATUSES[..])
+    .fetch_all(&mut *tx)
+    .await?
+    .iter()
+    .map(|r| TopProduct {
+        name: r.get("name"),
+        quantity: r.get("qty"),
+        revenue: r.get("revenue"),
+    })
+    .collect();
+    let alerts = "FROM inventory_levels l
+        JOIN product_variants v ON v.tenant_id = l.tenant_id AND v.id = l.variant_id
+        JOIN products p ON p.tenant_id = v.tenant_id AND p.id = v.product_id
+       WHERE l.tenant_id = $1 AND l.min_stock IS NOT NULL AND (l.on_hand - l.reserved) <= l.min_stock
+         AND p.status <> 'archived'";
+    let stock_alerts: i64 =
+        sqlx::query_scalar(sqlx::AssertSqlSafe(format!("SELECT count(*) {alerts}")))
+            .bind(t.as_uuid())
+            .fetch_one(&mut *tx)
+            .await?;
+    let stock_alert_items = sqlx::query(sqlx::AssertSqlSafe(format!(
+        "SELECT p.name AS product, v.name AS variant, (l.on_hand - l.reserved)::bigint AS available,
+                l.min_stock::bigint AS min_stock {alerts} ORDER BY (l.on_hand - l.reserved) - l.min_stock, p.name LIMIT 10"
+    )))
+    .bind(t.as_uuid())
+    .fetch_all(&mut *tx)
+    .await?
+    .iter()
+    .map(|r| StockAlert {
+        product: r.get("product"),
+        variant: r.get("variant"),
+        available: r.get("available"),
+        min_stock: r.get("min_stock"),
+    })
+    .collect();
+    let c = sqlx::query(sqlx::AssertSqlSafe(format!(
+        "SELECT count(*) FILTER (WHERE anonymized_at IS NULL) AS total,
+                count(*) FILTER (WHERE {in_range}) AS new
+           FROM customers WHERE tenant_id = $1"
+    )))
+    .bind(t.as_uuid())
+    .bind(&f)
+    .bind(&to_s)
+    .fetch_one(&mut *tx)
+    .await?;
+    let tk = sqlx::query(
+        "SELECT count(*) FILTER (WHERE app.jkt_day(created_at) BETWEEN $2::date AND $3::date) AS created,
+                count(*) FILTER (WHERE resolved_at IS NOT NULL AND app.jkt_day(resolved_at) BETWEEN $2::date AND $3::date) AS resolved,
+                coalesce(sum(app.ms_between(created_at, resolved_at)) FILTER (
+                    WHERE resolved_at IS NOT NULL AND app.jkt_day(resolved_at) BETWEEN $2::date AND $3::date), 0)::bigint AS res_ms
+           FROM tickets WHERE tenant_id = $1",
+    )
+    .bind(t.as_uuid())
+    .bind(&f)
+    .bind(&to_s)
+    .fetch_one(&mut *tx)
+    .await?;
+    let cs = sqlx::query(
+        "SELECT coalesce(sum(started), 0)::bigint AS started, coalesce(sum(closed_ai), 0)::bigint AS cai,
+                coalesce(sum(closed_human), 0)::bigint AS chu, coalesce(sum(handed_over), 0)::bigint AS handed
+           FROM conversation_daily_stats WHERE tenant_id = $1 AND day BETWEEN $2::date AND $3::date",
+    )
+    .bind(t.as_uuid())
+    .bind(&f)
+    .bind(&to_s)
+    .fetch_one(&mut *tx)
+    .await?;
+    let ai = sqlx::query(sqlx::AssertSqlSafe(format!(
+        "SELECT count(*) FILTER (WHERE purpose = 'chat') AS turns,
+                coalesce(sum(prompt_tokens + completion_tokens) FILTER (WHERE source = 'platform'), 0)::bigint AS platform,
+                coalesce(sum(prompt_tokens + completion_tokens) FILTER (WHERE source = 'byok'), 0)::bigint AS byok
+           FROM ai_runs WHERE tenant_id = $1 AND {in_range}"
+    )))
+    .bind(t.as_uuid())
+    .bind(&f)
+    .bind(&to_s)
+    .fetch_one(&mut *tx)
+    .await?;
+    tx.commit().await?;
+    Ok(TenantOverview {
+        from: f,
+        to: to_s,
+        orders: o.get("orders"),
+        paid_orders: o.get("paid"),
+        revenue: o.get("revenue"),
+        cancelled_orders: o.get("cancelled"),
+        top_products,
+        stock_alerts,
+        stock_alert_items,
+        customers_total: c.get("total"),
+        customers_new: c.get("new"),
+        tickets_created: tk.get("created"),
+        tickets_resolved: tk.get("resolved"),
+        ticket_resolution_ms_sum: tk.get("res_ms"),
+        conversations: cs.get("started"),
+        ai_resolved: cs.get("cai"),
+        human_resolved: cs.get("chu"),
+        handed_over: cs.get("handed"),
+        ai_platform_tokens: ai.get("platform"),
+        ai_byok_tokens: ai.get("byok"),
+        ai_turns: ai.get("turns"),
+    })
+}
+
+/// Agregat platform (FR-ANL-002) lewat `app.platform_overview` — HANYA dipanggil setelah otorisasi platform di API.
+pub async fn platform_overview(
+    pool: &PgPool,
+    from: Option<&str>,
+    to: Option<&str>,
+) -> Result<(String, String, serde_json::Value), AnalyticsError> {
+    let mut tx = pool.begin().await?;
+    let (f, to_s) = resolve_range(&mut *tx, from, to).await?;
+    let v: serde_json::Value =
+        sqlx::query_scalar("SELECT app.platform_overview($1::date, $2::date)")
+            .bind(&f)
+            .bind(&to_s)
+            .fetch_one(&mut *tx)
+            .await?;
+    tx.commit().await?;
+    Ok((f, to_s, v))
+}

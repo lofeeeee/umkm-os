@@ -239,10 +239,132 @@ async fn decide(
     )))
 }
 
+// ------------------------------------------------------------------ analitik platform (P7-5, FR-ANL-002)
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct ApiUsageView {
+    /// Sejak proses API ini mulai (per instance; agregasi lintas instance lewat Prometheus/Grafana)
+    pub requests_total: u64,
+    pub responses_2xx: u64,
+    pub responses_4xx: u64,
+    pub responses_5xx: u64,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct HealthView {
+    /// Hasil readiness check (postgres, redis, …)
+    pub checks: Vec<crate::health::CheckResult>,
+    pub outbox_pending: i64,
+    pub outbox_dead: i64,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct PlatformAnalyticsView {
+    pub from: String,
+    pub to: String,
+    /// 1. Toko aktif/ditangguhkan/ditutup + toko baru di rentang
+    #[schema(value_type = Object)]
+    pub tenants: serde_json::Value,
+    /// 2. Distribusi langganan per paket & status efektif
+    #[schema(value_type = Object)]
+    pub subscriptions: serde_json::Value,
+    /// 3. Pemakaian API
+    pub api_usage: ApiUsageView,
+    /// 4 & 5. Pemakaian AI (token per sumber) dan error provider (jumlah + kode)
+    #[schema(value_type = Object)]
+    pub ai: serde_json::Value,
+    pub provider_error_rate: Option<f64>,
+    /// 6. Kesehatan infrastruktur
+    pub health: HealthView,
+}
+
+/// Jumlahkan `http_requests_total` dari eksposisi OpenMetrics proses ini.
+pub fn api_usage(exposition: &str) -> ApiUsageView {
+    let mut v = ApiUsageView {
+        requests_total: 0,
+        responses_2xx: 0,
+        responses_4xx: 0,
+        responses_5xx: 0,
+    };
+    for line in exposition
+        .lines()
+        .filter(|l| l.starts_with("http_requests_total{"))
+    {
+        let Some((labels, n)) = line.rsplit_once(' ') else {
+            continue;
+        };
+        let n: u64 = n.trim().parse::<f64>().map(|x| x as u64).unwrap_or(0);
+        v.requests_total += n;
+        let status = labels
+            .split("status=\"")
+            .nth(1)
+            .and_then(|s| s.chars().next());
+        match status {
+            Some('2') => v.responses_2xx += n,
+            Some('4') => v.responses_4xx += n,
+            Some('5') => v.responses_5xx += n,
+            _ => {}
+        }
+    }
+    v
+}
+
+/// Analitik platform (6 metrik). Hanya super admin dengan sesi MFA (AC-ANL-002).
+#[utoipa::path(
+    get, path = "/api/v1/platform/analytics", tag = "platform", params(crate::analytics::RangeQuery),
+    responses(
+        (status = 200, description = "Agregat platform", body = SuccessEnvelope<PlatformAnalyticsView>),
+        (status = 403, description = "Bukan admin platform (termasuk Owner toko)", body = umkm_shared::http::ErrorEnvelope),
+        (status = 422, description = "Rentang tidak valid", body = umkm_shared::http::ErrorEnvelope)
+    )
+)]
+pub async fn analytics(
+    State(state): State<AppState>,
+    ReqId(id): ReqId,
+    _admin: PlatformAdmin,
+    Query(q): Query<crate::analytics::RangeQuery>,
+) -> Result<Json<SuccessEnvelope<PlatformAnalyticsView>>, ApiError> {
+    crate::analytics::check_dates(&q)?;
+    let (from, to, v) = umkm_infrastructure::analytics_repo::platform_overview(
+        pool(&state)?,
+        q.from.as_deref(),
+        q.to.as_deref(),
+    )
+    .await
+    .map_err(crate::analytics::range_err)?;
+    let num = |path: &[&str]| {
+        path.iter()
+            .fold(&v, |acc, k| &acc[*k])
+            .as_i64()
+            .unwrap_or(0)
+    };
+    let calls = num(&["ai", "provider_calls"]);
+    let errors = num(&["ai", "provider_errors"]);
+    Ok(Json(SuccessEnvelope::new(
+        PlatformAnalyticsView {
+            from,
+            to,
+            tenants: v["tenants"].clone(),
+            subscriptions: v["subscriptions"].clone(),
+            api_usage: api_usage(&state.metrics.encode()),
+            ai: v["ai"].clone(),
+            provider_error_rate: (calls > 0)
+                .then(|| ((errors as f64 / calls as f64) * 10_000.0).round() / 10_000.0),
+            health: HealthView {
+                checks: crate::health::run_checks(&state).await,
+                outbox_pending: num(&["outbox", "pending"]),
+                outbox_dead: num(&["outbox", "dead"]),
+            },
+        },
+        &id,
+    )))
+}
+
 pub fn routes() -> Router<AppState> {
     let p = "/api/v1/platform";
     Router::new()
         .route(&format!("{p}/me"), get(me))
+        .route(&format!("{p}/analytics"), get(analytics))
         .route(&format!("{p}/invoices"), get(invoices))
         .route(&format!("{p}/invoices/{{invoice_id}}/proof"), get(proof))
         .route(
@@ -250,4 +372,28 @@ pub fn routes() -> Router<AppState> {
             post(approve),
         )
         .route(&format!("{p}/invoices/{{invoice_id}}/reject"), post(reject))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::api_usage;
+
+    #[test]
+    fn api_usage_sums_by_status_class() {
+        let text = "# TYPE http_requests counter\n\
+http_requests_total{method=\"GET\",route=\"/a\",status=\"200\"} 5\n\
+http_requests_total{method=\"POST\",route=\"/b\",status=\"422\"} 2\n\
+http_requests_total{method=\"GET\",route=\"/c\",status=\"503\"} 1\n\
+http_request_errors_total{method=\"GET\",route=\"/c\",status=\"503\"} 1\n";
+        let v = api_usage(text);
+        assert_eq!(
+            (
+                v.requests_total,
+                v.responses_2xx,
+                v.responses_4xx,
+                v.responses_5xx
+            ),
+            (8, 5, 2, 1)
+        );
+    }
 }

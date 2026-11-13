@@ -99,3 +99,15 @@ Keputusan produk yang tidak membutuhkan ADR. Entri tidak ditimpa; perubahan = en
 - D-10: **DISETUJUI** — Starter Rp50.000/bulan, Pro Rp100.000/bulan, tanpa paket gratis, uji coba 14 hari dengan batas
   Starter, pembayaran manual diverifikasi Super Admin (ADR-0016). Angka batas = usulan engineering, disimpan sebagai data.
 - D-12 legal billing: **DISETUJUI bersyarat** — teks placeholder; wajib diganti teks final hasil review legal sebelum go-live.
+
+## 2026-11-13 — Definisi metrik analitik toko & platform (P7-5)
+
+- Omzet: total pesanan berstatus PAID/APPROVAL_PENDING/APPROVED/PROCESSING/READY_FOR_PICKUP/SHIPPED/COMPLETED yang
+  dibuat di rentang (refund parsial belum dikurangi). Rata-rata nilai pesanan = omzet ÷ pesanan terbayar.
+- Tingkat pembatalan: (CANCELLED + EXPIRED + REJECTED) ÷ semua pesanan dibuat di rentang.
+- Produk terlaris: jumlah unit dari snapshot item pesanan terbayar (5 teratas).
+- Peringatan stok: varian produk non-archived dengan stok tersedia (on_hand − reserved) ≤ stok minimum.
+- Tiket: dibuat di rentang; rata-rata penyelesaian dari tiket yang diselesaikan di rentang.
+- Platform: pemakaian API = counter http_requests_total instance API sejak proses mulai; error provider = panggilan
+  provider error/timeout ÷ panggilan provider.
+- Dapat diubah pemilik produk; perubahan = entri baru.

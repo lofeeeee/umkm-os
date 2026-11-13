@@ -1,0 +1,55 @@
+P7-5 — Analytics tenant + platform (PRD.md §4.14; FR-ANL-001/002, AC-ANL-001/002)
+Tanggal: 2026-11-13
+
+Artefak
+- crates/infrastructure/src/analytics_repo.rs  tenant_overview (tenant context RLS + filter eksplisit) dan
+  platform_overview (lewat app.platform_overview). Rentang tanggal WIB divalidasi (maks 366 hari).
+- migrations/0033_platform_analytics.{up,down}.sql  app.platform_overview(from, to) SECURITY DEFINER: hanya angka
+  agregat (toko per status, distribusi langganan per paket & status efektif, pemakaian/error AI, antrean outbox).
+- apps/api/src/analytics.rs  GET /tenants/{t}/analytics/overview (analytics.read) — 9 metrik toko:
+  1 omzet & volume pesanan, 2 rata-rata nilai pesanan (hitung sen, tanpa float), 3 produk terlaris (snapshot item
+  pesanan terbayar), 4 peringatan stok (tersedia ≤ min_stock), 5 pertumbuhan pelanggan, 6 tingkat pembatalan
+  (dibatalkan/kedaluwarsa/ditolak ÷ pesanan), 7 volume tiket & rata-rata penyelesaian, 8 AI vs staf + handover
+  (agregat P6-6), 9 pemakaian AI (token platform/BYOK, giliran chat).
+- apps/api/src/platform.rs  GET /platform/analytics (PlatformAdmin) — 6 metrik platform: toko aktif/ditangguhkan,
+  distribusi langganan, pemakaian API (counter http_requests_total instance ini; agregasi lintas instance di
+  Prometheus), pemakaian AI, error provider (rasio + kode), kesehatan infrastruktur (readiness check + outbox
+  pending/dead). apps/api/src/health.rs: run_checks diekstrak dari /readyz.
+- frontend: /analytics menampilkan "Ringkasan toko" (+ produk terlaris, peringatan stok) di atas analitik
+  percakapan; /platform menampilkan "Ringkasan platform".
+- Definisi metrik dicatat di product-decision-log 2026-11-13.
+
+Hasil
+- fmt, clippy -D warnings bersih; cargo test --workspace --no-fail-fast: 442 lulus, 1 gagal pada run terakhir —
+  crates/infrastructure/tests/outbox.rs::concurrent_workers_never_double_send (test P1 yang sudah ada, flaky di bawah
+  beban suite penuh: 16/20 terkirim sebelum worker berhenti; lulus 3/3 saat dijalankan sendiri; tidak terkait P7-5).
+  Satu run sebelumnya menunjukkan test analitik P6-6 rapuh terhadap jam antar-transaksi → fixture diperbaiki
+  (balasan staf = pesan pelanggan pertama + 5 detik).
+- sqlx migrate run → revert 0 → run: exit 0. check-rtm OK. Frontend tsc/eslint/vitest lulus.
+- Playwright stack nyata (dua batch): billing (+ ringkasan platform), chat (+ ringkasan toko), ai, ops, shop, mfa — 6/6.
+- target/ setelah semua build & test: 5,0 GB (profil hemat disk).
+
+Cakupan apps/api/tests/analytics_overview_http.rs (+ unit money_avg, api_usage)
+- tenant_overview_nine_metrics_scoped: omzet 175.000 dari 3 pesanan terbayar (6 pesanan), AOV 58.333,33; terlaris
+  Kopi Gayo 3 pcs (pesanan batal 50 pcs tidak dihitung); 1 peringatan stok; pelanggan 2 (+1 baru); pembatalan
+  0,3333; tiket 2 / 1 selesai ±2 jam; percakapan 2, AI 1, handover 0,5; token platform 110 / BYOK 10.
+  AC-ANL-001: toko B (nilai ×10) hanya datanya; B ke path A 404. Viewer 200, Support Agent 403, tanggal salah 422,
+  rentang kosong → AOV/pembatalan null.
+- platform_analytics_only_for_platform_admin: AC-ANL-002 — Owner (sesi MFA) 403 bukan karena MFA; super admin tanpa
+  MFA 403; super admin: toko aktif 1 / ditangguhkan 1 / baru 2, distribusi starter·trialing & pro·active, token,
+  error provider 1/3 (giliran '-' tidak dihitung), kode error, api_usage, health; tidak memuat nama/email/produk.
+
+Negative control (mutasi sementara, dikembalikan; test terkait GAGAL)
+  == NEGCTL: omzet menghitung semua status pesanan
+      tenant_overview_nine_metrics_scoped ... FAILED
+      result: FAILED. 1 passed; 1 failed;
+  == NEGCTL: terlaris termasuk pesanan batal
+      tenant_overview_nine_metrics_scoped ... FAILED
+      result: FAILED. 1 passed; 1 failed;
+  == NEGCTL: analitik platform tanpa extractor PlatformAdmin
+      platform_analytics_only_for_platform_admin ... FAILED
+      result: FAILED. 1 passed; 1 failed;
+
+Catatan
+- Omzet = total pesanan berstatus terbayar yang DIBUAT di rentang (belum dikurangi refund parsial).
+- Pemakaian API per instance sejak proses mulai; untuk multi-instance gunakan Prometheus.

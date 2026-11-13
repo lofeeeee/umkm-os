@@ -92,6 +92,11 @@ test("langganan: pilih Pro, unggah bukti, super admin (MFA) menyetujui", async (
   await ap.getByRole("button", { name: "Aktifkan" }).click();
   await expect(ap.getByRole("list", { name: "Kode pemulihan" })).toBeVisible();
   await ap.goto(`${APP}/platform`);
+  // P7-5: ringkasan platform (agregat lintas toko, hanya admin platform).
+  const stats = ap.getByRole("region", { name: "Ringkasan platform" });
+  await expect(stats).toContainText("Toko aktif");
+  await expect(stats).toContainText("starter · trialing");
+  await expect(stats).toContainText("Permintaan API");
   const queue = ap.getByRole("list", { name: "Tagihan langganan" });
   const item = queue.getByRole("listitem").filter({ hasText: code });
   await expect(item).toContainText(`Toko ${slug}`);

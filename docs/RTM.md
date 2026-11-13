@@ -249,7 +249,7 @@ Arah balik: TC → AC lewat nomor yang sama (Test Plan §4); AC → FR lewat FSD
 | FR-NTF-001 | AC-NTF-001 | TC-NTF-001 | GET /tenants/{tenant_id}/notifications | ADR-0010 (D-08) | `docs/evidence/P4-4.txt` | Verified (email nyata menunggu D-08) |
 | FR-NTF-002 | AC-NTF-002 | TC-NTF-002 | worker: notification_repo::deliver | ADR-0010 (D-08) | `docs/evidence/P4-4.txt` | Verified (email nyata menunggu D-08) |
 | FR-NTF-003 | AC-NTF-003 | TC-NTF-003 | worker: outbox + notification_deliveries | ADR-0010 (D-08) | `docs/evidence/P4-4.txt` | Verified (email nyata menunggu D-08) |
-| FR-ANL-001 | AC-ANL-001 | TC-ANL-001 | ditetapkan di OpenAPI saat task | — | — | Planned |
-| FR-ANL-002 | AC-ANL-002 | TC-ANL-002 | ditetapkan di OpenAPI saat task | — | — | Planned |
+| FR-ANL-001 | AC-ANL-001 | TC-ANL-001 | GET /api/v1/tenants/{tenant_id}/analytics/overview | ADR-0016 | `docs/evidence/P7-5.txt` | Verified |
+| FR-ANL-002 | AC-ANL-002 | TC-ANL-002 | GET /api/v1/platform/analytics | ADR-0016 | `docs/evidence/P7-5.txt` | Verified |
 | FR-SUB-001 | AC-SUB-001 | TC-SUB-001 | GET /api/v1/plans; GET /api/v1/tenants/{tenant_id}/subscription; batas di endpoint produk/undangan/upload/chat | ADR-0016 | `docs/evidence/P7-2.txt` | Verified |
 | FR-SUB-002 | AC-SUB-002 | TC-SUB-002 | ditetapkan di OpenAPI saat task | D-10 | — | Planned |

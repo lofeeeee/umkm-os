@@ -18,6 +18,21 @@ interface Analytics {
 
 const nf = new Intl.NumberFormat("id-ID");
 
+interface Overview {
+  revenue: string; orders: number; paid_orders: number; average_order_value: string | null;
+  top_products: { name: string; quantity: number; revenue: string }[];
+  stock_alerts: number; stock_alert_items: { product: string; variant: string; available: number; min_stock: number }[];
+  customers_total: number; customers_new: number; cancellation_rate: number | null;
+  tickets_created: number; tickets_resolved: number; avg_ticket_resolution_ms: number | null;
+  conversations: number; ai_resolved: number; human_resolved: number; handover_rate: number | null;
+  ai_platform_tokens: number; ai_byok_tokens: number; ai_turns: number;
+}
+
+function rp(v: string | null): string {
+  if (v === null) return "—";
+  return `Rp${Number(v).toLocaleString("id-ID", { maximumFractionDigits: 0 })}`;
+}
+
 function pct(v: number | null): string {
   return v === null ? "—" : `${(v * 100).toLocaleString("id-ID", { maximumFractionDigits: 1 })}%`;
 }
@@ -50,6 +65,7 @@ function View({ ctx }: { ctx: TenantCtx }) {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [a, setA] = useState<Analytics | null>(null);
+  const [ov, setOv] = useState<Overview | null>(null);
   const [err, setErr] = useState<string | null>(null);
   // Rentang yang diterapkan (berubah hanya lewat tombol "Terapkan").
   const [range, setRange] = useState({ from: "", to: "" });
@@ -59,9 +75,13 @@ function View({ ctx }: { ctx: TenantCtx }) {
     if (range.to) q.set("to", range.to);
     (async () => {
       try {
-        const r = await api<Analytics>("GET", `/api/v1/tenants/${ctx.tenant.id}/analytics/conversations?${q}`);
+        const [r, o] = await Promise.all([
+          api<Analytics>("GET", `/api/v1/tenants/${ctx.tenant.id}/analytics/conversations?${q}`),
+          api<Overview>("GET", `/api/v1/tenants/${ctx.tenant.id}/analytics/overview?${q}`),
+        ]);
         setErr(null);
         setA(r);
+        setOv(o);
         setFrom(r.from);
         setTo(r.to);
       } catch (e) {
@@ -75,7 +95,7 @@ function View({ ctx }: { ctx: TenantCtx }) {
   if (!ctx.can("analytics.read")) return <Alert kind="error">Anda tidak punya izin melihat analitik.</Alert>;
   return (
     <>
-      <h1>Analitik percakapan</h1>
+      <h1>Analitik</h1>
       <form className="d-row" style={{ marginBottom: 12 }} onSubmit={(e) => { e.preventDefault(); setRange({ from, to }); }}>
         <label className="d-field" style={{ margin: 0 }}><span>Dari</span><input type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></label>
         <label className="d-field" style={{ margin: 0 }}><span>Sampai</span><input type="date" value={to} onChange={(e) => setTo(e.target.value)} /></label>
@@ -83,8 +103,38 @@ function View({ ctx }: { ctx: TenantCtx }) {
       </form>
       <Alert kind="error">{err}</Alert>
       {!a && !err && <p className="d-muted" aria-busy="true">Memuat…</p>}
+      {ov && (
+        <>
+          <h2>Toko</h2>
+          <section className="an-grid" aria-label="Ringkasan toko">
+            <Tile label="Omzet (pesanan terbayar)" value={rp(ov.revenue)} note={`${nf.format(ov.paid_orders)} dari ${nf.format(ov.orders)} pesanan`} />
+            <Tile label="Rata-rata nilai pesanan" value={rp(ov.average_order_value)} />
+            <Tile label="Tingkat pembatalan" value={pct(ov.cancellation_rate)} note="batal, kedaluwarsa, ditolak" />
+            <Tile label="Pelanggan" value={nf.format(ov.customers_total)} note={`+${nf.format(ov.customers_new)} baru`} />
+            <Tile label="Stok menipis" value={nf.format(ov.stock_alerts)} note="varian ≤ stok minimum" />
+            <Tile label="Tiket" value={nf.format(ov.tickets_created)} note={`${nf.format(ov.tickets_resolved)} selesai · rata-rata ${duration(ov.avg_ticket_resolution_ms)}`} />
+            <Tile label="Diselesaikan AI / staf" value={`${nf.format(ov.ai_resolved)} / ${nf.format(ov.human_resolved)}`} note={`handover ${pct(ov.handover_rate)}`} />
+            <Tile label="Pemakaian AI" value={`${nf.format(ov.ai_platform_tokens + ov.ai_byok_tokens)} token`} note={`platform ${nf.format(ov.ai_platform_tokens)} · kunci sendiri ${nf.format(ov.ai_byok_tokens)}`} />
+          </section>
+          <div className="d-grid2">
+            <section className="d-card" aria-label="Produk terlaris">
+              <h3>Produk terlaris</h3>
+              {ov.top_products.length === 0 ? <p className="d-muted">Belum ada pesanan terbayar.</p> : (
+                <ol>{ov.top_products.map((p) => <li key={p.name}>{p.name} — {nf.format(p.quantity)} terjual · {rp(p.revenue)}</li>)}</ol>
+              )}
+            </section>
+            <section className="d-card" aria-label="Peringatan stok">
+              <h3>Peringatan stok</h3>
+              {ov.stock_alert_items.length === 0 ? <p className="d-muted">Tidak ada.</p> : (
+                <ul>{ov.stock_alert_items.map((s) => <li key={`${s.product}-${s.variant}`}>{s.product} ({s.variant}): tersisa {s.available}, minimum {s.min_stock}</li>)}</ul>
+              )}
+            </section>
+          </div>
+        </>
+      )}
       {a && (
         <>
+          <h2>Percakapan</h2>
           <section className="an-grid" aria-label="Ringkasan">
             <Tile label="Total percakapan" value={nf.format(a.total_conversations)} />
             <Tile label="Selesai oleh AI" value={nf.format(a.ai_resolved)} />

@@ -148,7 +148,7 @@ async fn eight_metrics_tenant_scoped_and_survive_purge(pool: PgPool) {
     .unwrap();
     {
         let mut tx = begin_tenant_tx(&app_db, tid).await.unwrap();
-        sqlx::query("INSERT INTO conversation_messages (tenant_id, conversation_id, sender_type, sender_user_id, body, created_at) VALUES ($1, $2, 'ADMIN', $3, 'halo', now() - interval '15 seconds')")
+        sqlx::query("INSERT INTO conversation_messages (tenant_id, conversation_id, sender_type, sender_user_id, body, created_at) VALUES ($1, $2, 'ADMIN', $3, 'halo', (SELECT first_customer_at FROM conversations WHERE id = $2) + interval '5 seconds')")
             .bind(ta).bind(c2).bind(staff.user).execute(&mut *tx).await.unwrap();
         tx.commit().await.unwrap();
     }

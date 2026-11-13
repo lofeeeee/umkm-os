@@ -44,6 +44,8 @@ use crate::{
         crate::billing::get_proof,
         crate::billing::cancel_invoice,
         crate::platform::me,
+        crate::platform::analytics,
+        crate::analytics::overview,
         crate::platform::invoices,
         crate::platform::proof,
         crate::platform::approve,

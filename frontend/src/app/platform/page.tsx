@@ -15,6 +15,17 @@ interface Invoice {
 }
 
 const rupiah = (n: number) => `Rp${n.toLocaleString("id-ID")}`;
+const nf = new Intl.NumberFormat("id-ID");
+
+interface PlatformStats {
+  from: string; to: string;
+  tenants: { active: number; suspended: number; closed: number; new_in_range: number };
+  subscriptions: { plan: string; status: string; count: number }[];
+  api_usage: { requests_total: number; responses_2xx: number; responses_4xx: number; responses_5xx: number };
+  ai: { runs: number; platform_tokens: number; byok_tokens: number; provider_calls: number; provider_errors: number };
+  provider_error_rate: number | null;
+  health: { checks: { name: string; ok: boolean }[]; outbox_pending: number; outbox_dead: number };
+}
 
 export default function PlatformPage() {
   const router = useRouter();
@@ -23,6 +34,7 @@ export default function PlatformPage() {
   const [filter, setFilter] = useState("submitted");
   const [msg, setMsg] = useState<{ ok?: string; err?: string }>({});
   const [reasons, setReasons] = useState<Record<string, string>>({});
+  const [stats, setStats] = useState<PlatformStats | null>(null);
 
   const load = useCallback(async () => {
     setItems(await api<Invoice[]>("GET", `/api/v1/platform/invoices?status=${filter}`));
@@ -37,6 +49,7 @@ export default function PlatformPage() {
       try {
         await api("GET", "/api/v1/platform/me");
         await load();
+        setStats(await api<PlatformStats>("GET", "/api/v1/platform/analytics"));
         setState("ready");
       } catch (e) {
         if (isMfaRequired(e)) {
@@ -70,6 +83,29 @@ export default function PlatformPage() {
         <Alert kind="ok">{msg.ok}</Alert>
         {state === "loading" && !msg.err && <p className="d-muted" aria-busy="true">Memuat…</p>}
         {state === "denied" && <Alert kind="error">Halaman ini khusus admin platform.</Alert>}
+        {state === "ready" && stats && (
+          <section aria-label="Ringkasan platform">
+            <p className="d-muted">Periode {stats.from} s.d. {stats.to} (WIB). Pemakaian API dihitung sejak instance API ini berjalan.</p>
+            <div className="an-grid">
+              <div className="an-tile"><div className="an-label">Toko aktif</div><div className="an-value">{nf.format(stats.tenants.active)}</div>
+                <div className="an-note">{nf.format(stats.tenants.suspended)} ditangguhkan · +{nf.format(stats.tenants.new_in_range)} baru</div></div>
+              <div className="an-tile"><div className="an-label">Langganan</div>
+                <ul className="sub-feat">{stats.subscriptions.map((s) => <li key={`${s.plan}-${s.status}`}>{s.plan} · {s.status}: {nf.format(s.count)}</li>)}</ul></div>
+              <div className="an-tile"><div className="an-label">Permintaan API</div><div className="an-value">{nf.format(stats.api_usage.requests_total)}</div>
+                <div className="an-note">4xx {nf.format(stats.api_usage.responses_4xx)} · 5xx {nf.format(stats.api_usage.responses_5xx)}</div></div>
+              <div className="an-tile"><div className="an-label">Token AI</div><div className="an-value">{nf.format(stats.ai.platform_tokens + stats.ai.byok_tokens)}</div>
+                <div className="an-note">platform {nf.format(stats.ai.platform_tokens)} · kunci toko {nf.format(stats.ai.byok_tokens)}</div></div>
+              <div className="an-tile"><div className="an-label">Error provider AI</div>
+                <div className="an-value">{stats.provider_error_rate === null ? "—" : `${(stats.provider_error_rate * 100).toLocaleString("id-ID", { maximumFractionDigits: 1 })}%`}</div>
+                <div className="an-note">{nf.format(stats.ai.provider_errors)} dari {nf.format(stats.ai.provider_calls)} panggilan</div></div>
+              <div className="an-tile"><div className="an-label">Kesehatan</div>
+                <ul className="sub-feat">
+                  {stats.health.checks.map((c) => <li key={c.name}>{c.name}: {c.ok ? "OK" : "GAGAL"}</li>)}
+                  <li>Antrean notifikasi: {nf.format(stats.health.outbox_pending)} · gagal: {nf.format(stats.health.outbox_dead)}</li>
+                </ul></div>
+            </div>
+          </section>
+        )}
         {state === "ready" && (
           <>
             <div className="d-row" style={{ marginBottom: 12 }}>
