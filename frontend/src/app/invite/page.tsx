@@ -2,6 +2,7 @@
 
 // Terima undangan tim (P4-1, AUTH-009/010). Token di fragment URL (tidak terkirim ke server/log).
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useSyncExternalStore, type FormEvent } from "react";
 
@@ -37,11 +38,19 @@ export default function InvitePage() {
       setBusy(false);
     }
   }
-  if (t === undefined) return <main className="d-narrow d-muted" aria-busy="true">Memuat…</main>;
+  if (t === undefined) return <main id="main" className="d-narrow d-muted" aria-busy="true">Memuat…</main>;
   return (
-    <main className="d-narrow">
+    <main id="main" className="d-narrow">
       <h1>Terima undangan</h1>
-      {!t && <Alert kind="error">Tautan undangan tidak valid.</Alert>}
+      {!t && (
+        <>
+          <Alert kind="error">
+            Tautan undangan tidak valid atau sudah kedaluwarsa. Undangan hanya berlaku 7 hari dan sekali pakai.
+          </Alert>
+          <p className="d-muted">Minta pemilik toko mengirim ulang undangan, lalu buka tautan terbaru dari email.</p>
+          <p><Link className="d-btn" href="/">Kembali ke beranda</Link></p>
+        </>
+      )}
       {t && (
         <form onSubmit={accept}>
           <p className="d-muted">Sudah punya akun? Masuk dulu, lalu buka tautan ini lagi. Belum punya akun? Buat password di bawah.</p>

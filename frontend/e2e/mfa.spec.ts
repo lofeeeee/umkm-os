@@ -103,7 +103,7 @@ test("MFA: aktifkan, login dua langkah, kode pemulihan, kebijakan toko", async (
   await expect(page.getByRole("heading", { name: "Verifikasi dua langkah" })).toBeVisible();
   await page.getByLabel("Kode verifikasi").fill(totp(secret, 1));
   await page.getByRole("button", { name: "Verifikasi" }).click();
-  await expect(page.getByRole("heading", { name: "Toko saya" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Beranda" })).toBeVisible();
   await page.goto(`${APP}/orders${q}`);
   await expect(page.getByRole("heading", { name: "Pesanan" })).toBeVisible();
 
@@ -113,7 +113,7 @@ test("MFA: aktifkan, login dua langkah, kode pemulihan, kebijakan toko", async (
   await login();
   await page.getByLabel("Kode verifikasi").fill(recovery.toUpperCase());
   await page.getByRole("button", { name: "Verifikasi" }).click();
-  await expect(page.getByRole("heading", { name: "Toko saya" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Beranda" })).toBeVisible();
   await page.goto(`${APP}/security${q}`);
   await expect(page.getByText(/sisa kode pemulihan: 9/)).toBeVisible();
 

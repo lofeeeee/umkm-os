@@ -63,6 +63,23 @@ export function isMfaRequired(e: unknown): boolean {
     && (e.details as { reason?: string } | null)?.reason === "mfa_required";
 }
 export interface Membership { tenant_id: string; name: string; slug: string; role: string }
+
+/**
+ * Nama peran dalam bahasa Indonesia. Satu sumber untuk sidebar, home, dan Tim —
+ * dulu home punya peta sendiri yang tidak kena karena API mengirim huruf besar.
+ */
+const ROLE_TEXT: Record<string, string> = {
+  owner: "Pemilik",
+  admin: "Admin",
+  manager: "Manajer",
+  catalog_manager: "Pengelola katalog",
+  support_agent: "Agen dukungan",
+  staff: "Staf",
+  viewer: "Pengamat",
+};
+export function roleLabel(role: string): string {
+  return ROLE_TEXT[role.trim().toLowerCase()] ?? role;
+}
 export interface TenantView {
   id: string; name: string; slug: string; status: string;
   primary_hostname: string | null; my_role: string; my_permissions: string[];
@@ -161,6 +178,38 @@ export const LIMIT_TEXT: Record<string, string> = {
   max_products: "produk", max_members: "anggota tim", storage_bytes: "penyimpanan file (byte)",
   conversations_monthly: "percakapan per bulan", platform_ai_tokens_monthly: "token AI per bulan",
 };
+
+/**
+ * Pesan validasi per-field untuk ditampilkan inline di bawah input.
+ *
+ * Kunci mengikuti `path` dari API (mis. `variants[0].price`). Pesan memakai
+ * kalimat Indonesia yang bisa dibaca pemilik toko — bukan path JSON mentah.
+ * Path yang tidak punya padanan ramah ditampilkan apa adanya agar tidak hilang.
+ */
+export function fieldErrors(e: unknown): Map<string, string> {
+  const out = new Map<string, string>();
+  if (!(e instanceof ApiError)) return out;
+  for (const f of e.fieldErrors) {
+    const path = f.path || "";
+    out.set(path, ERROR_TEXT[f.code] ?? f.code);
+  }
+  return out;
+}
+
+/** Label ramah untuk path error API. */
+export function fieldLabel(path: string): string {
+  if (path === "name") return "Nama produk";
+  if (path === "slug") return "Slug URL";
+  if (path === "options") return "Opsi varian";
+  const v = path.match(/^variants\[(\d+)\]\.(\w+)$/);
+  if (v) {
+    const n = Number(v[1] ?? 0) + 1;
+    const part: Record<string, string> = { sku: "SKU", price: "Harga", promo_price: "Harga promo", option_values: "Nilai opsi", name: "Nama varian" };
+    const key = v[2] ?? "";
+    return `Varian ${n} · ${part[key] ?? key}`;
+  }
+  return path;
+}
 
 export function describe(e: unknown): string {
   if (e instanceof ApiError) {

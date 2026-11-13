@@ -38,7 +38,7 @@ test("operasional: tiket, notifikasi realtime, role kustom, audit", async ({ bro
   // Tab A menunggu notifikasi (lonceng tanpa angka)
   await page.goto(`${APP}/orders${q}`);
   const bell = page.getByRole("button", { name: /^Notifikasi/ });
-  await expect(bell).toHaveText("Notifikasi");
+  await expect(bell).toHaveAccessibleName("Notifikasi");
 
   // Tab B membuat tiket
   const b = await ctx.newPage();
@@ -49,7 +49,7 @@ test("operasional: tiket, notifikasi realtime, role kustom, audit", async ({ bro
   await expect(b.getByRole("cell", { name: "Pesanan belum sampai" })).toBeVisible();
 
   // Tab A: lonceng bertambah TANPA reload (outbox → worker → Redis → bridge → SSE)
-  await expect(bell).toHaveText("Notifikasi (1)", { timeout: 20_000 });
+  await expect(bell).toHaveAccessibleName("Notifikasi (1)", { timeout: 20_000 });
   await bell.click();
   await expect(page.getByRole("dialog", { name: "Notifikasi" })).toContainText("Ticket baru");
 

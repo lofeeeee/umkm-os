@@ -29,17 +29,17 @@ export const SOCIAL_PLATFORMS = ["instagram", "facebook", "tiktok", "youtube", "
 export const FONT_PRESETS = ["inter", "poppins", "nunito", "merriweather", "system"];
 
 export const SECTION_LABELS: Record<SectionType, string> = {
-  header: "Header & navigasi",
-  hero: "Hero / banner",
+  header: "Kepala halaman & navigasi",
+  hero: "Banner utama",
   about: "Tentang",
-  product_grid: "Grid produk",
+  product_grid: "Daftar produk",
   promotion: "Promo",
   gallery: "Galeri",
   testimonials: "Testimoni",
   business_hours: "Jam buka",
   location: "Lokasi",
-  contact: "Kontak & sosial",
-  footer: "Footer",
+  contact: "Kontak & media sosial",
+  footer: "Kaki halaman",
 };
 
 export const FIELDS: Record<SectionType, Field[]> = {

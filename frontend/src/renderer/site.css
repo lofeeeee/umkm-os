@@ -4,7 +4,7 @@
 .site {
   container-type: inline-size;
   --s-ink: #111827;
-  --s-muted: #6b7280;
+  --s-muted: #61687a;
   --s-bg: #ffffff;
   --s-soft: #f3f4f6;
   font-family: var(--s-font);
