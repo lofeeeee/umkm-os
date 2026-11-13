@@ -25,3 +25,6 @@ out/
 # Secret monitoring (URL webhook on-call) — hanya contoh yang di-commit.
 ops/monitoring/secrets/*
 !ops/monitoring/secrets/telegram_bot_token.example
+
+# Dibuat otomatis oleh next dev (Next.js 16); bukan bagian proyek.
+frontend/AGENTS.md
