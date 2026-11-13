@@ -471,7 +471,7 @@ a.d-stat:hover { background: var(--bg-subtle); }
 /* ============================================================
    Form
    ============================================================ */
-.d-field { display: grid; gap: 6px; margin-bottom: var(--sp-4); font-size: 0.8125rem; min-width: 0; }
+.d-field { display: grid; gap: 6px; align-content: start; margin-bottom: var(--sp-4); font-size: 0.8125rem; min-width: 0; }
 .d-field > span:first-child, .d-field > .d-label { font-weight: 550; color: var(--ink-2); }
 .d-hint { font-size: 0.75rem; color: var(--muted); font-weight: 400; }
 .d-field-error { display: block; font-size: 0.75rem; font-weight: 500; color: var(--danger); }
@@ -589,7 +589,7 @@ input[aria-invalid="true"]:focus-visible, textarea[aria-invalid="true"]:focus-vi
 .d-table td.d-actions { text-align: right; white-space: nowrap; }
 .d-table td.d-actions .d-row { justify-content: flex-end; flex-wrap: nowrap; }
 .d-table caption { caption-side: top; text-align: left; font-weight: 600; padding: var(--sp-3) var(--sp-4); color: var(--ink); }
-.d-table input, .d-table select { min-width: 90px; }
+.d-table input:not([type="checkbox"]):not([type="radio"]), .d-table select { min-width: 90px; }
 .d-table .d-strong { font-weight: 600; color: var(--ink); }
 .d-table .d-nowrap, .d-table .d-num { white-space: nowrap; }
 @media (max-width: 640px) {
@@ -1123,3 +1123,11 @@ details.d-details[open] > summary { margin-bottom: var(--sp-3); }
 .e-tpl-thumb { aspect-ratio: 16 / 9; border-radius: var(--radius); display: grid; place-items: center; margin: calc(var(--sp-5) * -1 + 6px) calc(var(--sp-5) * -1 + 6px) 4px; background: linear-gradient(135deg, var(--brand-soft), var(--bg-subtle)); border: 1px solid var(--line); }
 .e-tpl-thumb span { font-size: 2.5rem; font-weight: 800; color: var(--brand); opacity: 0.6; }
 @media (max-width: 1199px) { .e-preview-col { position: static; } }
+.d-input-suffix { position: relative; }
+.d-input-suffix > input { padding-right: 56px; }
+.d-input-suffix > em { position: absolute; right: 10px; top: 50%; translate: 0 -50%; font-style: normal; color: var(--muted); font-size: 0.8125rem; pointer-events: none; }
+.d-savebar { position: sticky; bottom: 0; z-index: 5; display: flex; align-items: center; gap: var(--sp-3); justify-content: flex-end; padding: var(--sp-3) 0; background: linear-gradient(to top, var(--bg) 70%, transparent); }
+.d-savebar .d-muted { margin-right: auto; }
+.d-hours th { width: 120px; font-weight: 600; }
+.d-hours td:nth-child(2) { width: 140px; }
+.d-hours input[type="time"] { width: 130px; flex: none; }

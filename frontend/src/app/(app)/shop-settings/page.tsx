@@ -8,6 +8,8 @@ import { useEffect, useState } from "react";
 import { useUploads } from "@/dashboard/assets";
 import { Assets, ImagePicker } from "@/dashboard/editor/fields";
 import { Alert, WithTenant, type TenantCtx } from "@/dashboard/shell";
+import { Badge, BusyButton, Card, PageHeader, PageSkeleton } from "@/ui/page";
+import { toast } from "@/ui/toast";
 import { api, describe } from "@/lib/api";
 
 interface Settings {
@@ -24,41 +26,60 @@ function Form({ ctx }: { ctx: TenantCtx }) {
   const can = ctx.can("tenant.update");
   const assets = useUploads(ctx.tenant.id, can);
   const [s, setS] = useState<Settings | null>(null);
-  const [msg, setMsg] = useState<{ ok?: string; err?: string }>({});
-  useEffect(() => { api<Settings>("GET", url).then(setS, (e) => setMsg({ err: describe(e) })); }, [url]);
-  if (!s) return <><Alert kind="error">{msg.err}</Alert><p className="d-muted" aria-busy="true">Memuat…</p></>;
+  const [err, setErr] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => { api<Settings>("GET", url).then(setS, (e) => setErr(describe(e))); }, [url]);
+  if (!s) return <><Alert kind="error">{err}</Alert>{!err && <PageSkeleton />}</>;
   async function save() {
-    setMsg({});
-    try { setS(await api<Settings>("PUT", url, { json: s })); setMsg({ ok: "Tersimpan." }); } catch (e) { setMsg({ err: describe(e) }); }
+    setErr(null);
+    setBusy(true);
+    try { setS(await api<Settings>("PUT", url, { json: s })); toast.ok("Tersimpan."); } catch (e) { setErr(describe(e)); } finally { setBusy(false); }
   }
+  const ready = !!s.qris && s.checkout_enabled;
   return (
     <Assets.Provider value={assets}>
-      <h1>Toko online</h1>
-      <div className="d-card">
-        <h2>Pembayaran QRIS</h2>
-        <p className="d-muted">
-          Unggah gambar QRIS merchant GoPay milik toko. Pembeli membayar langsung ke rekening toko; Anda
-          mengonfirmasi setiap pembayaran di menu Pesanan. Platform tidak memegang dana.
-        </p>
-        <Alert kind="error">{msg.err}</Alert>
-        <Alert kind="ok">{msg.ok}</Alert>
-        <ImagePicker label="Gambar QRIS" value={s.qris ?? undefined} onChange={(v) => setS({ ...s, qris: v ?? null })} />
-        <label className="d-field"><span>Nama penerima (tampil di halaman bayar)</span>
-          <input disabled={!can} maxLength={80} value={s.qris_receiver_name ?? ""} onChange={(e) => setS({ ...s, qris_receiver_name: e.target.value || null })} />
-        </label>
-        <label className="d-check"><input type="checkbox" disabled={!can} checked={s.checkout_enabled} onChange={(e) => setS({ ...s, checkout_enabled: e.target.checked })} /> Terima pesanan online</label>
-        <h2>Pengiriman & pesanan</h2>
-        <label className="d-field"><span>Ongkir datar untuk pengiriman (Rp)</span>
-          <input disabled={!can} inputMode="decimal" value={s.delivery_fee} onChange={(e) => setS({ ...s, delivery_fee: e.target.value })} />
-        </label>
-        <p className="d-muted">Pilihan ambil di toko / dikirim diatur di Profil bisnis.</p>
-        <label className="d-field"><span>Batas waktu pembayaran (menit, 15–1440)</span>
-          <input disabled={!can} type="number" min={15} max={1440} value={s.reservation_ttl_minutes} onChange={(e) => setS({ ...s, reservation_ttl_minutes: Number(e.target.value) })} />
-        </label>
-        <label className="d-check"><input type="checkbox" disabled={!can} checked={s.order_approval_required} onChange={(e) => setS({ ...s, order_approval_required: e.target.checked })} /> Pesanan yang sudah dibayar perlu disetujui sebelum diproses</label>
-        <label className="d-check"><input type="checkbox" disabled={!can} checked={s.separation_of_duties} onChange={(e) => setS({ ...s, separation_of_duties: e.target.checked })} /> Penyetuju harus berbeda dari staf yang mengonfirmasi pembayaran</label>
-        {can && <button className="d-btn d-btn-primary" onClick={save}>Simpan</button>}
-      </div>
+      <PageHeader
+        title="Pembayaran & pengiriman"
+        description="Cara pembeli membayar dan menerima pesanan dari website toko."
+        actions={<Badge tone={ready ? "ok" : "warn"}>{ready ? "Pesanan online aktif" : "Pesanan online belum aktif"}</Badge>}
+      />
+      {!can && <Alert kind="info">Anda hanya dapat melihat. Hanya pemilik toko yang dapat mengubah pengaturan ini.</Alert>}
+      <Alert kind="error">{err}</Alert>
+      <form onSubmit={(e) => { e.preventDefault(); void save(); }}>
+        <Card title="Pembayaran QRIS" description="Unggah QRIS merchant milik toko. Pembeli membayar langsung ke rekening toko; Anda mengonfirmasi setiap pembayaran di menu Pesanan. Platform tidak memegang dana.">
+          <div className="d-grid">
+            <ImagePicker label="Gambar QRIS" value={s.qris ?? undefined} onChange={(v) => setS({ ...s, qris: v ?? null })} />
+            <label className="d-field"><span>Nama penerima (tampil di halaman bayar)</span>
+              <input disabled={!can} maxLength={80} placeholder="mis. Kopi Senja" value={s.qris_receiver_name ?? ""} onChange={(e) => setS({ ...s, qris_receiver_name: e.target.value || null })} />
+            </label>
+          </div>
+          <label className="d-switch">
+            <input type="checkbox" disabled={!can} checked={s.checkout_enabled} onChange={(e) => setS({ ...s, checkout_enabled: e.target.checked })} />
+            <span><strong>Terima pesanan online</strong><span className="d-muted">Tombol beli dan keranjang muncul di website.</span></span>
+          </label>
+        </Card>
+        <Card title="Pengiriman & pesanan" description="Pilihan ambil di toko / diantar diatur di Profil bisnis.">
+          <div className="d-grid">
+            <label className="d-field"><span>Ongkir datar untuk pengiriman</span>
+              <div className="d-input-prefix"><span aria-hidden="true">Rp</span><input aria-label="Ongkir datar untuk pengiriman (Rp)" disabled={!can} inputMode="decimal" value={s.delivery_fee} onChange={(e) => setS({ ...s, delivery_fee: e.target.value })} /></div>
+            </label>
+            <label className="d-field"><span>Batas waktu pembayaran</span>
+              <div className="d-input-suffix"><input aria-label="Batas waktu pembayaran (menit, 15–1440)" disabled={!can} type="number" min={15} max={1440} value={s.reservation_ttl_minutes} onChange={(e) => setS({ ...s, reservation_ttl_minutes: Number(e.target.value) })} /><em aria-hidden="true">menit</em></div>
+              <span className="d-hint">15–1440 menit. Stok ditahan selama waktu ini.</span>
+            </label>
+          </div>
+          <label className="d-switch"><input type="checkbox" disabled={!can} checked={s.order_approval_required} onChange={(e) => setS({ ...s, order_approval_required: e.target.checked })} />
+            <span><strong>Pesanan yang sudah dibayar perlu disetujui sebelum diproses</strong><span className="d-muted">Cocok bila stok/produksi perlu dicek manual.</span></span></label>
+          <label className="d-switch"><input type="checkbox" disabled={!can} checked={s.separation_of_duties} onChange={(e) => setS({ ...s, separation_of_duties: e.target.checked })} />
+            <span><strong>Penyetuju harus berbeda dari staf yang mengonfirmasi pembayaran</strong><span className="d-muted">Mencegah satu orang mengonfirmasi dan menyetujui sendiri.</span></span></label>
+        </Card>
+        {can && (
+          <div className="d-savebar">
+            <span className="d-muted d-small">Perubahan QRIS tercatat di log aktivitas.</span>
+            <BusyButton busy={busy}>Simpan</BusyButton>
+          </div>
+        )}
+      </form>
     </Assets.Provider>
   );
 }
