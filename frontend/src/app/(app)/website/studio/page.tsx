@@ -8,7 +8,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
-  ArrowLeft, ChatCircleDots, Check, Copy, DesktopTower, DeviceMobile, MagnifyingGlass, Plus, PuzzlePiece, Sparkle, Trash,
+  ArrowLeft, ArrowsIn, ArrowsOut, CaretDown, CaretUp, ChatCircleDots, Check, Copy, DesktopTower, DeviceMobile, MagnifyingGlass, Plus, PuzzlePiece, Sparkle, Trash, X,
 } from "@phosphor-icons/react/ssr";
 
 import { useUploads } from "@/dashboard/assets";
@@ -18,10 +18,10 @@ import { api } from "@/lib/api";
 import { Site, type GridProduct } from "@/renderer/Site";
 import { FIELDS, FONT_PRESETS, defaultData } from "@/renderer/sections";
 import type { Business, Json, PageContent, SectionType } from "@/renderer/types";
-import { Canvas, DESIGN_WIDTH, GAP, ROW } from "@/studio/Canvas";
+import { Canvas, DESIGN_WIDTH, GAP, ROW, rowsFor } from "@/studio/Canvas";
 import { insert, mobileOrder, place, type Cell } from "@/studio/grid";
 import { CELL_STYLES, PALETTES, PLUGINS, pluginDef, type CellStyle, type PluginKind } from "@/studio/plugins";
-import { confirm } from "@/ui/dialog";
+import { confirm, Sheet } from "@/ui/dialog";
 import { Badge } from "@/ui/page";
 import { toast } from "@/ui/toast";
 
@@ -30,6 +30,10 @@ interface StudioCell extends Cell {
   data: { [k: string]: Json };
   style: CellStyle;
   layout?: string;
+  /** Tinggi mengikuti isi (bawaan). Mati bila tinggi diubah manual. */
+  autoH?: boolean;
+  /** Chatbot: terbuka (maksimal) atau diminimalkan — juga keadaan awal di situs. */
+  chatOpen?: boolean;
 }
 interface Studio {
   primary: string;
@@ -55,6 +59,8 @@ function cellFor(kind: PluginKind, data?: { [k: string]: Json }): StudioCell {
     data: data ?? (kind === "chatbot" ? { title: "Tanya kami", welcome: "Halo! Ada yang bisa kami bantu?" } : defaultData(kind as SectionType)),
     style: kind === "promotion" ? "tint" : kind === "chatbot" ? "card" : "plain",
     layout: d.layouts?.[0]?.value,
+    autoH: true,
+    chatOpen: true,
   };
 }
 
@@ -102,19 +108,24 @@ function Studio({ ctx }: { ctx: TenantCtx }) {
   });
   const scale = Math.min(1, stageW / DESIGN_WIDTH);
 
-  /** Sesuaikan tinggi plugin dengan isinya (diukur dari DOM setelah render). */
-  const fit = useCallback((id: string) => {
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-      const el = document.querySelector<HTMLElement>(`[data-fit="${CSS.escape(id)}"]`);
-      if (!el) return;
-      const rows = Math.max(2, Math.ceil((el.scrollHeight + 34) / (ROW + GAP)));
-      setSt((s) => {
-        if (!s) return s;
-        const c = s.cells.find((x) => x.id === id);
-        return c ? { ...s, cells: place(s.cells, { ...c, h: rows }) as StudioCell[] } : s;
-      });
-    }));
+  /** Tinggi otomatis: isi diukur oleh kanvas; baris disesuaikan bila berbeda. */
+  const [clipped, setClipped] = useState<Record<string, boolean>>({});
+  const onMeasure = useCallback((id: string, px: number) => {
+    setSt((s) => {
+      if (!s) return s;
+      const c = s.cells.find((x) => x.id === id);
+      if (!c) return s;
+      const rows = rowsFor(px);
+      setClipped((m) => (m[id] === (rows > c.h) ? m : { ...m, [id]: rows > c.h }));
+      if (c.autoH === false || rows === c.h) return s;
+      return { ...s, cells: place(s.cells, { ...c, h: rows }) as StudioCell[] };
+    });
   }, []);
+  const onResizeH = useCallback((id: string) => {
+    setSt((s) => (s ? { ...s, cells: s.cells.map((c) => (c.id === id && c.autoH !== false ? { ...c, autoH: false } : c)) } : s));
+  }, []);
+  const [full, setFull] = useState<string | null>(null);
+
   useEffect(() => {
     let saved: Studio | null = null;
     try { saved = JSON.parse(localStorage.getItem(key(ctx.tenant.id)) ?? "null") as Studio | null; } catch { saved = null; }
@@ -125,12 +136,11 @@ function Studio({ ctx }: { ctx: TenantCtx }) {
     ]).then(([b, p, draft]) => {
       setBusiness(b);
       setProducts(p.items.map((x) => ({ slug: x.slug, name: x.name, image: x.images[0], price: x.variants[0]?.price ?? "0.00", promo_price: x.variants[0]?.promo_price ?? null, available: x.available })));
-      const next = saved ?? fromDraft(draft);
-      setSt(next);
-      // Layout baru dari draf: tinggi tiap plugin disesuaikan dengan isinya.
-      if (!saved) for (const c of next.cells) fit(c.id);
+      // Batas ukuran selalu dari katalog terbaru (layout tersimpan bisa memakai versi lama).
+      const norm = saved && { ...saved, cells: saved.cells.map((c) => ({ ...c, minW: pluginDef(c.kind).minW, minH: pluginDef(c.kind).minH })) };
+      setSt(norm || fromDraft(draft));
     });
-  }, [base, ctx.tenant.id, fit]);
+  }, [base, ctx.tenant.id]);
 
   const update = useCallback((fn: (s: Studio) => Studio) => { setSt((s) => (s ? fn(s) : s)); setDirty(true); }, []);
   const setCells = useCallback((cells: StudioCell[]) => update((s) => ({ ...s, cells })), [update]);
@@ -141,7 +151,6 @@ function Studio({ ctx }: { ctx: TenantCtx }) {
     const c = cellFor(kind);
     update((s) => ({ ...s, installed: s.installed.includes(kind) ? s.installed : [...s.installed, kind], cells: insert(s.cells, c, at) as StudioCell[] }));
     setSel(c.id);
-    fit(c.id);
   }
   function remove(id: string) {
     update((s) => ({ ...s, cells: s.cells.filter((c) => c.id !== id) }));
@@ -155,10 +164,15 @@ function Studio({ ctx }: { ctx: TenantCtx }) {
   const primary = st?.primary ?? "#4F46E5";
   const font = st?.font ?? FONT_PRESETS[0]!;
   const theme = useMemo(() => ({ primary, font }), [primary, font]);
+  const setChatOpen = useCallback((id: string, open: boolean) => {
+    setSt((s) => (s ? { ...s, cells: s.cells.map((c) => (c.id === id ? { ...c, chatOpen: open } : c)) } : s));
+    setDirty(true);
+  }, []);
   const renderCell = useCallback((c: StudioCell) => (
-    <div className={`st-content st-style-${c.style}${c.layout ? ` st-layout-${c.layout}` : ""}`} data-fit={c.id}>
+    <div className={`st-content st-style-${c.style}${c.layout ? ` st-layout-${c.layout}` : ""}`}>
       {c.kind === "chatbot" ? (
-        <ChatPreview primary={theme.primary} title={String(c.data.title ?? "Tanya kami")} welcome={String(c.data.welcome ?? "")} />
+        <ChatPreview primary={theme.primary} title={String(c.data.title ?? "Tanya kami")} welcome={String(c.data.welcome ?? "")}
+          open={c.chatOpen !== false} onToggle={() => setChatOpen(c.id, c.chatOpen === false)} />
       ) : (
         <Site
           content={{ schema_version: 1, template: "studio", theme, sections: [{ id: c.id, type: c.kind, enabled: true, data: c.data }] }}
@@ -168,7 +182,7 @@ function Studio({ ctx }: { ctx: TenantCtx }) {
         />
       )}
     </div>
-  ), [theme, business, products, assets.url]);
+  ), [theme, business, products, assets.url, setChatOpen]);
 
   const shownPlugins = useMemo(() => {
     const t = q.trim().toLowerCase();
@@ -220,10 +234,14 @@ function Studio({ ctx }: { ctx: TenantCtx }) {
                 <div className="d-seg" role="group" aria-label="Lebar" style={{ width: "100%" }}>
                   {[[3, "¼"], [4, "⅓"], [6, "½"], [8, "⅔"], [12, "Penuh"]].map(([w, l]) => (
                     <button key={w} type="button" style={{ flex: 1 }} aria-pressed={selected.w === w} disabled={(w as number) < (selected.minW ?? 2)}
-                      onClick={() => { setCells(place(st.cells, { ...selected, w: w as number }) as StudioCell[]); fit(selected.id); }}>{l}</button>
+                      onClick={() => setCells(place(st.cells, { ...selected, w: w as number }) as StudioCell[])}>{l}</button>
                   ))}
                 </div>
-                <button type="button" className="d-btn d-btn-sm" style={{ marginTop: 8 }} onClick={() => fit(selected.id)}>Pas-kan tinggi dengan isi</button>
+                <label className="d-switch" style={{ marginTop: 10 }}>
+                  <input type="checkbox" checked={selected.autoH !== false} onChange={(e) => setCells(st.cells.map((c) => (c.id === selected.id ? { ...c, autoH: e.target.checked } : c)))} />
+                  <span><strong>Tinggi otomatis</strong><span className="d-muted">Kotak mengikuti panjang isi sehingga tidak terpotong. Mati otomatis bila tinggi ditarik manual.</span></span>
+                </label>
+                <button type="button" className="d-btn d-btn-sm" onClick={() => setFull(selected.id)}><ArrowsOut weight="bold" aria-hidden="true" />Lihat penuh</button>
               </div>
               <div className="st-section">
                 <h3>Gaya</h3>
@@ -236,10 +254,25 @@ function Studio({ ctx }: { ctx: TenantCtx }) {
                     <div className="d-seg" role="group" aria-label="Tata letak" style={{ width: "100%" }}>
                       {pluginDef(selected.kind).layouts!.map((l) => (
                         <button key={l.value} type="button" style={{ flex: 1 }} aria-pressed={selected.layout === l.value}
-                          onClick={() => { setCells(st.cells.map((c) => (c.id === selected.id ? { ...c, layout: l.value } : c))); fit(selected.id); }}>{l.label}</button>
+                          onClick={() => {
+                            if (selected.kind === "chatbot" && l.value === "inline" && selected.layout === "floating") {
+                              // Kembali ke grid: taruh di bawah agar tidak menimpa plugin lain.
+                              const grid = st.cells.filter((c) => c.id !== selected.id);
+                              setCells(insert(grid, { ...selected, layout: "inline" } as StudioCell) as StudioCell[]);
+                            } else setCells(st.cells.map((c) => (c.id === selected.id ? { ...c, layout: l.value } : c)));
+                          }}>{l.label}</button>
                       ))}
                     </div>
-                    {selected.kind === "chatbot" && selected.layout === "floating" && <p className="d-hint" style={{ marginTop: 6 }}>Di situs publik, chatbot melayang tampil sebagai tombol di pojok kanan bawah; kotak di kanvas ini hanya penanda posisi urutan.</p>}
+                    {selected.kind === "chatbot" && (
+                      <>
+                        <h3 style={{ marginTop: 12 }}>Keadaan awal</h3>
+                        <div className="d-seg" role="group" aria-label="Keadaan chatbot" style={{ width: "100%" }}>
+                          <button type="button" style={{ flex: 1 }} aria-pressed={selected.chatOpen !== false} onClick={() => setChatOpen(selected.id, true)}><ArrowsOut weight="bold" aria-hidden="true" /> Maksimal</button>
+                          <button type="button" style={{ flex: 1 }} aria-pressed={selected.chatOpen === false} onClick={() => setChatOpen(selected.id, false)}><ArrowsIn weight="bold" aria-hidden="true" /> Minimal</button>
+                        </div>
+                        {selected.layout === "floating" && <p className="d-hint" style={{ marginTop: 6 }}>Melayang di pojok kanan bawah halaman, di luar grid. Klik gelembungnya untuk membuka/menutup.</p>}
+                      </>
+                    )}
                   </>
                 )}
               </div>
@@ -329,8 +362,21 @@ function Studio({ ctx }: { ctx: TenantCtx }) {
           {device === "desktop" ? (
             <Canvas
               scale={scale}
-              cells={st.cells}
-              onChange={setCells}
+              cells={st.cells.filter((c) => !(c.kind === "chatbot" && c.layout === "floating"))}
+              onMeasure={onMeasure}
+              onResizeH={onResizeH}
+              toolbar={(c) => (
+                <>
+                  {clipped[c.id] && c.autoH === false && <span className="st-clip" title="Isi lebih panjang dari kotak">Terpotong</span>}
+                  {c.kind === "chatbot" && (
+                    <button type="button" className="st-tool" onClick={() => setChatOpen(c.id, c.chatOpen === false)} aria-label={c.chatOpen === false ? "Maksimalkan chatbot" : "Minimalkan chatbot"} title={c.chatOpen === false ? "Maksimalkan" : "Minimalkan"}>
+                      {c.chatOpen === false ? <CaretUp weight="bold" /> : <CaretDown weight="bold" />}
+                    </button>
+                  )}
+                  <button type="button" className="st-tool" onClick={() => setFull(c.id)} aria-label={`Lihat penuh ${pluginDef(c.kind).name}`} title="Lihat penuh"><ArrowsOut weight="bold" /></button>
+                </>
+              )}
+              onChange={(cells) => update((s) => ({ ...s, cells: [...cells, ...s.cells.filter((c) => c.kind === "chatbot" && c.layout === "floating")] }))}
               selected={sel}
               onSelect={setSel}
               onRemove={remove}
@@ -340,28 +386,72 @@ function Studio({ ctx }: { ctx: TenantCtx }) {
             />
           ) : (
             <div className="st-phone">
-              {mobileOrder(st.cells).map((c) => <div key={c.id} className="st-phone-cell">{renderCell(c)}</div>)}
+              {mobileOrder(st.cells.filter((c) => !(c.kind === "chatbot" && c.layout === "floating"))).map((c) => <div key={c.id} className="st-phone-cell">{renderCell(c)}</div>)}
+              <FloatingChat cell={st.cells.find((c) => c.kind === "chatbot" && c.layout === "floating")} primary={st.primary} onToggle={setChatOpen} onSelect={setSel} selected={sel} />
             </div>
           )}
+          {device === "desktop" && <FloatingChat cell={st.cells.find((c) => c.kind === "chatbot" && c.layout === "floating")} primary={st.primary} onToggle={setChatOpen} onSelect={setSel} selected={sel} />}
           {st.cells.length === 0 && <p className="st-empty">Tarik plugin dari panel kiri ke sini.</p>}
         </div>
 
       </div>
+      <Sheet open={!!full} onClose={() => setFull(null)} wide
+        title={full ? `Pratinjau penuh — ${pluginDef(st.cells.find((c) => c.id === full)?.kind ?? "hero").name}` : ""}
+        description="Seluruh isi plugin tanpa terpotong, pada lebar yang sama dengan di kanvas.">
+        {full && (() => {
+          const c = st.cells.find((x) => x.id === full);
+          if (!c) return null;
+          return (
+            <div className="st-stage st-full" data-surface={surface} style={{ ["--s-primary" as string]: st.primary }}>
+              <div style={{ width: `${(c.layout === "floating" ? 4 : c.w) / 12 * 100}%`, minWidth: 320, margin: "0 auto" }}>{renderCell({ ...c, chatOpen: true })}</div>
+            </div>
+          );
+        })()}
+      </Sheet>
     </Assets.Provider>
   );
 }
 
-/** Pratinjau chatbot (statis di editor; di situs publik memakai widget chat sungguhan). */
-function ChatPreview({ primary, title, welcome }: { primary: string; title: string; welcome: string }) {
+/** Chatbot melayang: gelembung di pojok kanan bawah panggung; klik untuk buka/tutup. */
+function FloatingChat({ cell, primary, onToggle, onSelect, selected }: {
+  cell: StudioCell | undefined; primary: string; onToggle: (id: string, open: boolean) => void; onSelect: (id: string) => void; selected: string | null;
+}) {
+  if (!cell) return null;
+  const open = cell.chatOpen !== false;
   return (
-    <div className="st-chat" style={{ ["--c" as string]: primary }}>
-      <div className="st-chat-head"><span className="st-chat-dot" aria-hidden="true" />{title}<em>Asisten AI · online</em></div>
-      <div className="st-chat-log">
-        <p className="st-chat-msg">{welcome}</p>
-        <p className="st-chat-msg st-chat-me">Kopi susu masih ada?</p>
-        <p className="st-chat-msg">Masih, kak! Kopi Susu Gula Aren tersedia ukuran Regular dan Large 😊</p>
+    <div className={`st-float${selected === cell.id ? " st-selected" : ""}`} onPointerDown={() => onSelect(cell.id)}>
+      {open && (
+        <div className="st-float-panel">
+          <ChatPreview primary={primary} title={String(cell.data.title ?? "Tanya kami")} welcome={String(cell.data.welcome ?? "")} open onToggle={() => onToggle(cell.id, false)} />
+        </div>
+      )}
+      <button type="button" className="st-float-bubble" style={{ ["--c" as string]: primary }} onClick={() => onToggle(cell.id, !open)} aria-label={open ? "Minimalkan chatbot" : "Buka chatbot"}>
+        {open ? <X weight="bold" /> : <ChatCircleDots weight="fill" />}
+      </button>
+    </div>
+  );
+}
+
+/** Pratinjau chatbot (statis di editor; di situs publik memakai widget chat sungguhan). */
+function ChatPreview({ primary, title, welcome, open, onToggle }: { primary: string; title: string; welcome: string; open: boolean; onToggle: () => void }) {
+  return (
+    <div className={`st-chat${open ? "" : " st-chat-min"}`} style={{ ["--c" as string]: primary }}>
+      <div className="st-chat-head">
+        <span className="st-chat-dot" aria-hidden="true" />{title}<em>Asisten AI · online</em>
+        <button type="button" data-interactive className="st-chat-toggle" onClick={onToggle} aria-label={open ? "Minimalkan chatbot" : "Maksimalkan chatbot"} title={open ? "Minimalkan" : "Maksimalkan"}>
+          {open ? <CaretDown weight="bold" /> : <CaretUp weight="bold" />}
+        </button>
       </div>
-      <div className="st-chat-input"><span>Tulis pesan…</span><b aria-hidden="true">➤</b></div>
+      {open && (
+        <>
+          <div className="st-chat-log">
+            <p className="st-chat-msg">{welcome}</p>
+            <p className="st-chat-msg st-chat-me">Kopi susu masih ada?</p>
+            <p className="st-chat-msg">Masih, kak! Kopi Susu Gula Aren tersedia ukuran Regular dan Large 😊</p>
+          </div>
+          <div className="st-chat-input"><span>Tulis pesan…</span><b aria-hidden="true">➤</b></div>
+        </>
+      )}
     </div>
   );
 }

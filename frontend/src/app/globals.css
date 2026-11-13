@@ -1208,18 +1208,30 @@ main.d-legal { max-width: 720px; }
 .st-dragging .st-item:not(.st-active) { pointer-events: none; }
 .st-dragging, .st-dragging * { cursor: grabbing !important; user-select: none; }
 .st-slot, .st-ghost { position: absolute; top: 0; left: 0; border-radius: 16px; background: color-mix(in srgb, var(--brand) 12%, transparent); border: 2px dashed color-mix(in srgb, var(--brand) 55%, transparent); transition: transform 120ms var(--ease-out), width 120ms var(--ease-out), height 120ms var(--ease-out); pointer-events: none; }
-.st-handle { position: absolute; z-index: 3; top: -12px; left: 12px; display: flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px; border-radius: 999px; background: var(--brand); color: #fff; font-size: 0.6875rem; font-weight: 600; cursor: grab; opacity: 0; transform: translateY(4px); transition: opacity var(--dur-fast) ease, transform var(--dur-fast) var(--ease-out); box-shadow: var(--shadow-sm); }
-.st-handle svg { width: 12px; height: 12px; }
-.st-handle em { font-style: normal; opacity: 0.75; }
-.st-item:hover .st-handle, .st-selected .st-handle, .st-active .st-handle { opacity: 1; transform: none; }
-.st-resize { position: absolute; z-index: 3; right: -6px; bottom: -6px; width: 18px; height: 18px; border-radius: 6px; background: #fff; border: 2px solid var(--brand); cursor: nwse-resize; opacity: 0; transition: opacity var(--dur-fast) ease; }
+.st-item { cursor: grab; }
+.st-bar { position: absolute; z-index: 4; top: -36px; left: 0; right: 0; display: flex; align-items: center; gap: 4px; pointer-events: none; opacity: 0; transform: translateY(-2px); transition: opacity var(--dur-fast) ease, transform var(--dur-fast) var(--ease-out); }
+.st-item:hover .st-bar, .st-selected .st-bar, .st-active .st-bar { opacity: 1; transform: none; }
+.st-grip { display: inline-flex; align-items: center; gap: 4px; height: 28px; padding: 0 10px 0 6px; border-radius: 999px; background: var(--brand); color: #fff; font-size: 0.75rem; font-weight: 600; box-shadow: var(--shadow-sm); }
+.st-grip svg { width: 14px; height: 14px; }
+.st-grip em { font-style: normal; opacity: 0.75; margin-left: 2px; }
+.st-tool { pointer-events: auto; display: inline-grid; place-items: center; width: 28px; height: 28px; border: 0; border-radius: 999px; background: #fff; color: #18181b; cursor: pointer; box-shadow: 0 0 0 1px rgb(0 0 0 / 0.08), var(--shadow-sm); transition: transform var(--dur-fast) var(--ease-out); }
+.st-tool:first-of-type { margin-left: auto; }
+.st-tool:hover { background: #f4f4f5; }
+.st-tool:active { transform: scale(0.92); }
+.st-tool svg { width: 14px; height: 14px; }
+.st-clip { margin-left: auto; height: 24px; padding: 0 8px; display: inline-flex; align-items: center; border-radius: 999px; background: #fef3c7; color: #92400e; font-size: 0.6875rem; font-weight: 700; }
+.st-clip + .st-tool { margin-left: 0; }
+.st-resize { position: absolute; z-index: 4; right: -7px; bottom: -7px; width: 20px; height: 20px; border-radius: 6px; background: #fff; border: 2px solid var(--brand); cursor: nwse-resize; opacity: 0; transition: opacity var(--dur-fast) ease; box-shadow: var(--shadow-sm); }
 .st-item:hover .st-resize, .st-selected .st-resize, .st-active .st-resize { opacity: 1; }
-.st-body { flex: 1; min-height: 0; overflow: hidden; border-radius: 16px; }
-@media (pointer: coarse) { .st-handle, .st-resize { opacity: 1; transform: none; } .st-resize { width: 26px; height: 26px; } }
+.st-body { flex: 1; min-height: 0; overflow: hidden; border-radius: 16px; position: relative; }
+/* Saat mengedit, isi plugin tidak menangkap klik (seluruh kotak bisa diseret), kecuali kontrol bertanda. */
+.st-measure-inner * { pointer-events: none; }
+.st-measure-inner [data-interactive], .st-measure-inner [data-interactive] * { pointer-events: auto; cursor: pointer; }
+@media (pointer: coarse) { .st-bar, .st-resize { opacity: 1; transform: none; } .st-resize { width: 28px; height: 28px; } }
 
 /* Gaya plugin */
-.st-content { height: 100%; }
-.st-content .site { height: 100%; background: transparent; }
+.st-content { height: auto; }
+.st-content .site { height: auto; background: transparent; }
 .st-content .s { padding: 28px 24px; background: transparent !important; }
 .st-content .s.s--hero { background: radial-gradient(700px 300px at 0% 0%, var(--s-tint), transparent 70%) !important; }
 .st-style-card { background: var(--s-card, #fff); border-radius: 16px; box-shadow: 0 0 0 1px rgb(15 23 42 / 0.06), 0 12px 32px -18px rgb(15 23 42 / 0.35); }
@@ -1239,10 +1251,10 @@ main.d-legal { max-width: 720px; }
 
 /* Ponsel */
 .st-phone { width: 390px; max-width: 100%; margin: 0 auto; display: grid; gap: 12px; padding: 12px; border-radius: 28px; border: 8px solid #18181b; background: var(--pg-bg); box-shadow: var(--shadow-dialog); }
-.st-phone-cell .st-content { height: auto; }
+.st-phone { position: relative; min-height: 640px; align-content: start; }
 
 /* Pratinjau chatbot */
-.st-chat { height: 100%; display: flex; flex-direction: column; font-family: var(--s-font, inherit); color: #0f172a; background: #fff; border-radius: 16px; overflow: hidden; }
+.st-chat { height: 420px; display: flex; flex-direction: column; font-family: var(--s-font, inherit); color: #0f172a; background: #fff; border-radius: 16px; overflow: hidden; }
 .st-chat-head { display: flex; align-items: center; gap: 8px; padding: 12px 14px; background: var(--c); color: #fff; font-weight: 700; font-size: 0.875rem; }
 .st-chat-head em { margin-left: auto; font-style: normal; font-weight: 500; font-size: 0.6875rem; opacity: 0.85; }
 .st-chat-dot { width: 8px; height: 8px; border-radius: 999px; background: #4ade80; box-shadow: 0 0 0 3px rgb(255 255 255 / 0.25); }
@@ -1252,10 +1264,25 @@ main.d-legal { max-width: 720px; }
 .st-chat-input { display: flex; justify-content: space-between; align-items: center; margin: 10px; padding: 8px 12px; border-radius: 999px; border: 1px solid #e2e8f0; color: #94a3b8; font-size: 0.8125rem; }
 .st-chat-input b { color: var(--c); }
 .st-measure { width: 100%; height: 0; }
-.st-zoom { position: relative; }
+.st-zoom { position: relative; margin-top: 28px; }
 .st-canvas { transform-origin: top left; }
 .st-canvas { background-image: linear-gradient(to right, color-mix(in srgb, var(--brand) 4%, transparent) 0 calc(var(--col) - 12px), transparent 0); }
 .st-dragging.st-canvas, .st-canvas:has(.st-ghost) { background-image: linear-gradient(to right, color-mix(in srgb, var(--brand) 10%, transparent) 0 calc(var(--col) - 12px), transparent 0); }
 /* Heading situs mewarisi warna tema situs, bukan warna tema dasbor (penting di mode gelap dasbor). */
 .site h1, .site h2, .site h3, .site h4 { color: inherit; }
 .st-stage { border-color: var(--line); }
+
+.st-chat-min { height: auto; }
+.st-chat-toggle { margin-left: 8px; display: grid; place-items: center; width: 26px; height: 26px; border: 0; border-radius: 999px; background: rgb(255 255 255 / 0.2); color: #fff; cursor: pointer; }
+.st-chat-toggle:hover { background: rgb(255 255 255 / 0.32); }
+.st-chat-toggle svg { width: 13px; height: 13px; }
+.st-chat-head em { margin-left: auto; }
+/* Chatbot melayang */
+.st-float { position: absolute; right: 20px; bottom: 20px; z-index: 30; display: grid; justify-items: end; gap: 12px; }
+.st-phone .st-float { position: sticky; right: auto; bottom: 12px; justify-self: end; }
+.st-float-panel { width: 340px; max-width: calc(100vw - 48px); border-radius: 18px; overflow: hidden; box-shadow: 0 0 0 1px rgb(15 23 42 / 0.06), 0 24px 56px -12px rgb(15 23 42 / 0.4); transform-origin: bottom right; animation: d-pop-in 200ms var(--ease-out) both; }
+.st-float-bubble { display: grid; place-items: center; width: 56px; height: 56px; border: 0; border-radius: 999px; background: var(--c); color: #fff; cursor: pointer; box-shadow: 0 12px 28px -8px color-mix(in srgb, var(--c) 70%, #000); transition: transform var(--dur-fast) var(--ease-out); }
+.st-float-bubble:active { transform: scale(0.94); }
+.st-float-bubble svg { width: 24px; height: 24px; }
+.st-float.st-selected .st-float-bubble { outline: 3px solid var(--brand); outline-offset: 3px; }
+.st-full { min-height: 0; padding: 24px; }
