@@ -15,8 +15,8 @@ Sumber kode: `frontend/src/lib/labels.ts` (status, format), `frontend/src/ui/*` 
 | Waktu relatif untuk kejadian baru, tanggal untuk lainnya | 5 menit lalu · 13 Nov 2026 | 2026-11-13T07:12Z |
 | Uang selalu `rupiah()` | Rp41.000 | 41000.00 |
 
-Pengecualian lama yang dipertahankan karena dikunci e2e: "Simpan draft" (editor website),
-"Draft tersimpan.", "Role kustom baru", "Simpan role", "Nama role". Ganti bersamaan dengan spesifikasinya.
+Spesifikasi e2e sudah disesuaikan dengan istilah baku (Penyedia, Peran, Draf, "Ubah Banner utama").
+Saat mengganti label yang dipakai e2e (`frontend/e2e/*.spec.ts`), ubah spesifikasinya di commit yang sama.
 
 ## Pola halaman
 
@@ -34,3 +34,10 @@ Pengecualian lama yang dipertahankan karena dikunci e2e: "Simpan draft" (editor 
 - Transisi halaman 240 ms fade + geser 4 px; popover 150 ms dari titik pemicu; dialog skala 0,96 → 1.
 - Command palette (⌘K) tanpa animasi masuk karena sering dipakai.
 - `prefers-reduced-motion` mematikan semua gerak.
+
+## Navigasi
+
+Sidebar dikelompokkan: Penjualan (Pesanan, Produk, Stok, Pelanggan) · Layanan pelanggan (Percakapan, Tiket,
+Asisten AI) · Toko online (Website, Pembayaran & pengiriman, Profil bisnis) · Laporan (Analitik, Log aktivitas) ·
+Pengaturan (Tim, Persetujuan, Langganan, Keamanan). Satu sumber: `NAV` di `frontend/src/dashboard/shell.tsx`
+(dipakai sidebar, breadcrumb, dan ⌘K). Halaman dasbor ada di route group `src/app/(app)` dengan shell persisten.
