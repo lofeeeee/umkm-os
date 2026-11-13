@@ -33,6 +33,7 @@ export function TopBar({ tenant }: { tenant?: TenantView | null }) {
         {can("tenant.read") && <Link href={`/shop-settings${q}`}>Toko online</Link>}
         {can("tickets.read") && <Link href={`/tickets${q}`}>Tiket</Link>}
         {can("conversations.read") && <Link href={`/conversations${q}`}>Percakapan</Link>}
+        {can("analytics.read") && <Link href={`/analytics${q}`}>Analitik</Link>}
         {can("approvals.read") && <Link href={`/approvals${q}`}>Persetujuan</Link>}
         {can("members.read") && <Link href={`/team${q}`}>Tim</Link>}
         {can("audit.read") && <Link href={`/audit${q}`}>Audit</Link>}

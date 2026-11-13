@@ -18,7 +18,7 @@ use umkm_shared::ids::TenantId;
 use uuid::Uuid;
 
 /// Tabel milik tenant yang WAJIB ber-RLS (selain yang di allowlist katalog).
-const TENANT_TABLES: [&str; 57] = [
+const TENANT_TABLES: [&str; 58] = [
     "audit_logs",
     "tenants",
     "tenant_memberships",
@@ -76,6 +76,7 @@ const TENANT_TABLES: [&str; 57] = [
     "conversation_messages",
     "conversation_events",
     "conversation_drafts",
+    "conversation_daily_stats",
 ];
 /// Tabel dengan kolom tenant_id yang sengaja tanpa RLS + alasannya.
 const RLS_EXEMPT: [(&str, &str); 1] = [(

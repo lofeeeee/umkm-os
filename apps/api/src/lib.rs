@@ -1,6 +1,7 @@
 //! umkm-api — HTTP API (Axum). Lapisan: handler tipis -> application use case (`PRD.md §7.2`).
 
 pub mod ai;
+pub mod analytics;
 pub mod approvals;
 pub mod audit;
 pub mod auth;

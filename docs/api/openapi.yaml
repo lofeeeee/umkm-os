@@ -3176,6 +3176,80 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
       security:
       - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/analytics/conversations:
+    get:
+      tags:
+      - analytics
+      summary: Analitik percakapan tenant (8 metrik + seri harian).
+      operationId: conversations
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: from
+        in: path
+        description: '`YYYY-MM-DD` (Asia/Jakarta), default 29 hari sebelum `to`'
+        required: true
+        schema:
+          type:
+          - string
+          - 'null'
+      - name: to
+        in: path
+        description: '`YYYY-MM-DD` (inklusif), default hari ini; rentang maks 366 hari'
+        required: true
+        schema:
+          type:
+          - string
+          - 'null'
+      responses:
+        '200':
+          description: Metrik percakapan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_ConversationAnalyticsView'
+        '403':
+          description: Permission kurang
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '422':
+          description: Tanggal/rentang tidak valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
   /api/v1/tenants/{tenant_id}/approval-delegations:
     get:
       tags:
@@ -9623,6 +9697,37 @@ components:
         token:
           type: string
       additionalProperties: false
+    DayView:
+      type: object
+      required:
+      - day
+      - started
+      - handed_over
+      - closed_ai
+      - closed_human
+      - ai_turns
+      - tokens
+      properties:
+        ai_turns:
+          type: integer
+          format: int64
+        closed_ai:
+          type: integer
+          format: int64
+        closed_human:
+          type: integer
+          format: int64
+        day:
+          type: string
+        handed_over:
+          type: integer
+          format: int64
+        started:
+          type: integer
+          format: int64
+        tokens:
+          type: integer
+          format: int64
     DecideInput:
       type: object
       required:
@@ -11245,6 +11350,85 @@ components:
               type: array
               items:
                 $ref: '#/components/schemas/ToolState'
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
+    SuccessEnvelope_ConversationAnalyticsView:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - from
+          - to
+          - total_conversations
+          - ai_resolved
+          - human_resolved
+          - tokens
+          - ai_turns
+          - provider_calls
+          - daily
+          properties:
+            ai_resolved:
+              type: integer
+              format: int64
+            ai_turns:
+              type: integer
+              format: int64
+            avg_first_response_ms:
+              type:
+              - integer
+              - 'null'
+              format: int64
+              description: Rata-rata waktu respons pertama (ms); `null` bila belum ada data
+            avg_resolution_ms:
+              type:
+              - integer
+              - 'null'
+              format: int64
+              description: Rata-rata waktu sampai ditutup (ms)
+            daily:
+              type: array
+              items:
+                $ref: '#/components/schemas/DayView'
+            fallback_rate:
+              type:
+              - number
+              - 'null'
+              format: double
+              description: 0..1
+            from:
+              type: string
+            handover_rate:
+              type:
+              - number
+              - 'null'
+              format: double
+              description: 0..1
+            human_resolved:
+              type: integer
+              format: int64
+            provider_calls:
+              type: integer
+              format: int64
+            provider_error_rate:
+              type:
+              - number
+              - 'null'
+              format: double
+              description: 0..1
+            to:
+              type: string
+            tokens:
+              $ref: '#/components/schemas/TokenUsage'
+            total_conversations:
+              type: integer
+              format: int64
         meta:
           $ref: '#/components/schemas/Meta'
         success:
@@ -13788,6 +13972,22 @@ components:
         seq:
           type: integer
           format: int64
+    TokenUsage:
+      type: object
+      required:
+      - prompt
+      - completion
+      - total
+      properties:
+        completion:
+          type: integer
+          format: int64
+        prompt:
+          type: integer
+          format: int64
+        total:
+          type: integer
+          format: int64
     ToolCallView:
       type: object
       required:
@@ -13935,5 +14135,7 @@ tags:
   description: Upload gambar tenant + signed URL ber-expiry (ADR-0009)
 - name: conversations
   description: Conversation viewer staf; data sensitif dimasking sesuai permission (PRD.md §4.12, P6-3)
+- name: analytics
+  description: Analitik percakapan dari agregat harian yang bertahan setelah purge (PRD.md §4.12, P6-6)
 - name: chat
   description: 'Web chat publik toko: tenant dari Host, cookie sesi chat host-only (ADR-0006, P6-2)'

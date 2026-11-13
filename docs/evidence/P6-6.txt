@@ -1,0 +1,57 @@
+P6-6 — Conversation analytics (PRD.md §4.12, §4.14; FR-CNV-004, AC-CNV-004; ADR-0012)
+Tanggal: 2026-11-13
+
+Artefak
+- migrations/0030_conversation_analytics.{up,down}.sql
+  - conversation_daily_stats (tenant, hari Asia/Jakarta): started, handed_over, closed_ai, closed_human,
+    first_response_count/ms_sum, resolution_count/ms_sum. RLS; tanpa FK ke conversations sehingga BERTAHAN setelah
+    purge isi percakapan 30 hari (ADR-0012: "analitik harus memakai agregat yang disimpan terpisah").
+  - Diisi trigger di transaksi yang sama: conversation baru (+started), AI → WAITING_HUMAN pertama kali per
+    percakapan (+handed_over, kolom handed_over), penutupan (+closed_ai bila tak pernah ditangani staf, selain itu
+    closed_human; + durasi resolusi), balasan AI/ADMIN pertama setelah pesan pelanggan pertama (+waktu respons;
+    kolom first_customer_at/first_response_at).
+  - Indeks ai_runs (tenant, purpose, created_at) untuk metrik AI (ai_runs tidak ikut purge percakapan).
+- crates/infrastructure/src/analytics_repo.rs  agregasi rentang (default 30 hari, maks 366, tanggal tidak valid →
+  InvalidRange) + metrik AI dari ai_runs purpose=chat + seri harian (generate_series).
+- apps/api/src/analytics.rs  GET /tenants/{t}/analytics/conversations?from&to (analytics.read): total, AI-resolved,
+  human-resolved, rata-rata respons pertama, rata-rata resolusi, handover rate, fallback rate, token (prompt/
+  completion/total), provider error rate, seri harian. Rasio tanpa penyebut → null (bukan 0/NaN).
+- frontend/src/app/analytics/page.tsx  stat tile (bukan grafik — angka headline) + tabel harian (hanya hari dengan
+  aktivitas, aksesibel), rentang tanggal; tautan "Analitik" untuk analytics.read. Ponsel 360px: 2 kolom tile,
+  tanpa scroll horizontal halaman (tabel menggulir dalam kartu).
+- Definisi metrik dicatat di product-decision-log 2026-11-13.
+
+Hasil
+- fmt, clippy -D warnings bersih; cargo test --workspace --no-fail-fast: 430 lulus, 0 gagal.
+- sqlx migrate run → revert 0 → run: exit 0. Frontend tsc/eslint/vitest 24 lulus.
+- Playwright stack nyata: chat diperluas dengan halaman Analitik (Total 1, Selesai oleh staf 1, handover 100%),
+  ai, ops, shop, mfa — 5/5 lulus, tanpa error CSP/JS.
+
+Cakupan apps/api/tests/conversation_analytics_http.rs
+- eight_metrics_tenant_scoped_and_survive_purge: 3 percakapan tenant A (AI-resolved, human-resolved dengan handover
+  berulang dihitung sekali, terbuka) → total 3, AI 1, staf 1, respons pertama rata-rata ≈4 dtk (3 & 5 dtk),
+  resolusi ≈2100 dtk, handover 0.3333, fallback 1/3 giliran, provider error 1/2 panggilan (giliran Human Only
+  tanpa provider tidak dihitung), token 120 (uji coba admin purpose=test tidak dihitung); seri 30 hari dengan
+  jumlah = total. AC-CNV-004: tenant B (4 percakapan, token besar, error) hanya melihat datanya; B → path A 404.
+  Purge 3 percakapan A (40 hari) → semua metrik identik. Viewer 200, Support Agent (tanpa analytics.read) 403.
+- range_validation: rentang eksplisit 31 hari; tanpa data → avg/rate null; tanggal tidak ada (2026-02-30), format
+  salah, to < from, rentang > 366 hari → 422.
+
+Negative control (mutasi sementara, dikembalikan; test terkait GAGAL)
+  == NEGCTL: metrik dihitung dari tabel conversations (hilang saat purge)
+      eight_metrics_tenant_scoped_and_survive_purge ... FAILED
+      result: FAILED. 1 passed; 1 failed;
+  == NEGCTL: handover dihitung ulang tiap transisi
+      eight_metrics_tenant_scoped_and_survive_purge ... FAILED
+      result: FAILED. 1 passed; 1 failed;
+  == NEGCTL: AI-resolved tidak memperhatikan keterlibatan staf
+      eight_metrics_tenant_scoped_and_survive_purge ... FAILED
+      result: FAILED. 1 passed; 1 failed;
+  == NEGCTL: metrik AI tanpa filter purpose = chat (uji coba admin ikut terhitung; isolasi tenant tetap oleh RLS, diuji rls.rs)
+      eight_metrics_tenant_scoped_and_survive_purge ... FAILED
+      result: FAILED. 1 passed; 1 failed;
+Setelah dikembalikan: conversation_analytics_http 2 lulus.
+
+Catatan
+- Agregat hanya mulai dihitung sejak migrasi 0030; data percakapan sebelumnya tidak di-backfill (lingkungan dev).
+- Waktu respons/resolusi memakai jam dinding (bukan jam operasional toko).

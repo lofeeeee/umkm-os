@@ -141,6 +141,18 @@ test("web chat: persetujuan AI, jawaban AI, realtime, handover, akhiri", async (
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.screenshot({ path: "test-results/conversation-viewer-mobile.png", fullPage: true });
 
+  // P6-6: analitik percakapan dari agregat (1 percakapan, 1 handover, selesai oleh staf).
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto(`${APP}/analytics${q}`);
+  const tiles = page.getByRole("region", { name: "Ringkasan" });
+  await expect(tiles).toContainText("Total percakapan1");
+  await expect(tiles).toContainText("Selesai oleh staf1");
+  await expect(tiles).toContainText("Tingkat handover100%");
+  await expect(page.getByRole("table")).toContainText("Rincian harian");
+  await page.setViewportSize({ width: 360, height: 740 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.screenshot({ path: "test-results/analytics-mobile.png", fullPage: true });
+
   expect(errors).toEqual([]);
   await owner.close();
   await guest.close();

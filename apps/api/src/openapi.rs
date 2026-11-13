@@ -35,6 +35,7 @@ use crate::{
         auth::session_handler,
         auth::logout_handler,
         auth::verify_email_handler,
+        crate::analytics::conversations,
         crate::inbox::list,
         crate::inbox::detail,
         crate::inbox::takeover,
@@ -207,6 +208,7 @@ use crate::{
         (name = "inventory", description = "Stok, movement ledger, ambang low-stock (PRD.md §4.5)"),
         (name = "files", description = "Upload gambar tenant + signed URL ber-expiry (ADR-0009)"),
         (name = "conversations", description = "Conversation viewer staf; data sensitif dimasking sesuai permission (PRD.md §4.12, P6-3)"),
+        (name = "analytics", description = "Analitik percakapan dari agregat harian yang bertahan setelah purge (PRD.md §4.12, P6-6)"),
         (name = "chat", description = "Web chat publik toko: tenant dari Host, cookie sesi chat host-only (ADR-0006, P6-2)")
     )
 )]

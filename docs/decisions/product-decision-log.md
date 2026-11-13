@@ -76,3 +76,16 @@ Keputusan produk yang tidak membutuhkan ADR. Entri tidak ditimpa; perubahan = en
 - Field sensitif: nama/email/telepon pelanggan, email staf, alamat email dan deret ≥ 8 digit di isi pesan & ringkasan
   approval, ringkasan argumen tool. Statistik AI (provider, model, token, latensi, status tool) tidak dianggap sensitif.
 - Dapat diubah pemilik produk; perubahan = entri baru.
+
+## 2026-11-13 — Definisi metrik analitik percakapan (P6-6)
+
+- PRD §4.12 menyebut metrik tanpa definisi; implementasi memakai:
+  - AI-resolved / human-resolved: percakapan ditutup tanpa / dengan pernah ditangani staf.
+  - Waktu respons: pesan pelanggan pertama → balasan AI/staf pertama; waktu resolusi: dibuat → ditutup (jam dinding).
+  - Handover rate: percakapan yang dialihkan AI → staf (sekali per percakapan) / percakapan baru. Mode Human Only
+    (sejak awal menunggu staf) bukan handover.
+  - Fallback rate: giliran AI yang berakhir dengan pesan fallback tenant (keputusan handover) / giliran AI chat.
+  - Provider error rate: panggilan provider error/timeout / panggilan provider (tanpa giliran yang tidak memanggil
+    provider: guardrail, kuota, circuit breaker, Human Only).
+  - Token: prompt + completion giliran chat (uji coba admin tidak dihitung). Hari = tanggal Asia/Jakarta.
+- Dapat diubah pemilik produk; perubahan = entri baru.

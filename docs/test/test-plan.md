@@ -122,7 +122,7 @@ Perintah gate P2: `cargo fmt --check && cargo clippy --workspace -- -D warnings 
 | TC-CNV-001 | AC-CNV-001 | Unit+Integration | `crates/domain/src/conversation.rs`, `crates/infrastructure/tests/conversation_schema.rs` | Verified |
 | TC-CNV-002 | AC-CNV-002 | Unit+Integration+E2E | `apps/api/tests/conversation_viewer_http.rs`, `frontend/e2e/chat.spec.ts` | Verified |
 | TC-CNV-003 | AC-CNV-003 | Unit+Integration | `crates/domain/src/conversation.rs`, `apps/api/tests/conversation_viewer_http.rs` | Verified |
-| TC-CNV-004 | AC-CNV-004 | lihat §2 | ditetapkan saat task | Planned |
+| TC-CNV-004 | AC-CNV-004 | Integration+E2E | `apps/api/tests/conversation_analytics_http.rs`, `frontend/e2e/chat.spec.ts` | Verified |
 | TC-NTF-001 | AC-NTF-001 | Integration+Workflow | `apps/api/tests/notification_http.rs` | Verified |
 | TC-NTF-002 | AC-NTF-002 | Integration+Workflow | `apps/api/tests/notification_http.rs` | Verified |
 | TC-NTF-003 | AC-NTF-003 | Integration+Workflow | `apps/api/tests/notification_http.rs` | Verified |

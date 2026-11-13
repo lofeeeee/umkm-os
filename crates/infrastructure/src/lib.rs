@@ -4,6 +4,7 @@
 
 pub mod ai;
 pub mod ai_repo;
+pub mod analytics_repo;
 pub mod approval_repo;
 pub mod audit_repo;
 pub mod auth;
