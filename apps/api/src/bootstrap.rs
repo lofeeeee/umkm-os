@@ -83,6 +83,8 @@ pub async fn serve() -> Result<(), BoxError> {
         redis.connection_manager_lazy()?,
         KeyNamespace::new(&settings.redis.key_prefix)?,
     );
+    // Fail-closed: KEK tidak valid -> proses tidak start (nilai tidak pernah dicetak).
+    let keyring = umkm_infrastructure::crypto::Keyring::parse(secrets.data_kek.expose())?;
     let auth = Arc::new(AuthService {
         pool: pool.clone(),
         limiter,
@@ -96,9 +98,8 @@ pub async fn serve() -> Result<(), BoxError> {
         secure_cookies: settings.environment != Environment::Development,
         allowed_origins: settings.http.cors_allowed_origins.clone(),
         trust_forwarded_for: settings.http.trust_forwarded_for,
+        keyring: Some(keyring.clone()),
     });
-    // Fail-closed: KEK tidak valid -> proses tidak start (nilai tidak pernah dicetak).
-    let keyring = umkm_infrastructure::crypto::Keyring::parse(secrets.data_kek.expose())?;
     let ai = Arc::new(crate::state::AiService::new(
         pool.clone(),
         keyring,

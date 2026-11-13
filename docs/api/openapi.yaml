@@ -65,6 +65,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SuccessEnvelope_SessionResponse'
+        '202':
+          description: 'Password benar, MFA aktif: lanjutkan ke `/auth/login/mfa` (tanpa cookie)'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_MfaChallengeResponse'
         '401':
           description: Email atau password salah
           content:
@@ -114,6 +120,80 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
       security: []
+  /api/v1/auth/login/mfa:
+    post:
+      tags:
+      - auth
+      summary: Selesaikan login dengan kode MFA. Kode salah 5× membatalkan tantangan.
+      operationId: login_mfa
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginMfaRequest'
+        required: true
+      responses:
+        '200':
+          description: Sesi baru bertanda MFA; cookie di-set
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_SessionResponse'
+        '401':
+          description: Tantangan tidak valid/kedaluwarsa/habis percobaan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '403':
+          description: Origin tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '422':
+          description: Kode salah; `details.field = code`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '429':
+          description: Rate limit; header Retry-After
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: Rate limiter/DB/KEK tidak tersedia
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security: []
   /api/v1/auth/logout:
     post:
       tags:
@@ -153,6 +233,333 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
         '413':
           description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/auth/mfa:
+    get:
+      tags:
+      - auth
+      summary: Status MFA akun pemanggil.
+      operationId: mfa_status
+      responses:
+        '200':
+          description: Status MFA
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_MfaStatusView'
+        '401':
+          description: Tidak ada sesi valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/auth/mfa/disable:
+    post:
+      tags:
+      - auth
+      summary: 'Matikan MFA: butuh password + kode. Ditolak untuk akun yang wajib MFA (AUTH-011).'
+      operationId: mfa_disable
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MfaDisableRequest'
+        required: true
+      responses:
+        '200':
+          description: MFA dimatikan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_MfaDisabledView'
+        '401':
+          description: Tidak ada sesi valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '403':
+          description: Akun wajib MFA, atau CSRF/Origin tidak valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: MFA belum aktif
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '422':
+          description: Password/kode salah; `details.field`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '429':
+          description: Rate limit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/auth/mfa/enable:
+    post:
+      tags:
+      - auth
+      summary: Aktifkan MFA dengan kode authenticator. Sesi lain akun ini dicabut.
+      operationId: mfa_enable
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MfaCodeRequest'
+        required: true
+      responses:
+        '200':
+          description: MFA aktif; kode pemulihan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_RecoveryCodesView'
+        '401':
+          description: Tidak ada sesi valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '403':
+          description: CSRF/Origin tidak valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: Belum setup / sudah aktif
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '422':
+          description: Kode salah
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '429':
+          description: Rate limit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/auth/mfa/recovery-codes:
+    post:
+      tags:
+      - auth
+      summary: Ganti seluruh kode pemulihan (butuh kode authenticator).
+      operationId: mfa_recovery_codes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MfaCodeRequest'
+        required: true
+      responses:
+        '200':
+          description: Kode pemulihan baru
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_RecoveryCodesView'
+        '401':
+          description: Tidak ada sesi valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: MFA belum aktif
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '422':
+          description: Kode salah
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '429':
+          description: Rate limit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/auth/mfa/setup:
+    post:
+      tags:
+      - auth
+      summary: Buat rahasia TOTP baru (belum aktif sampai dikonfirmasi lewat `/auth/mfa/enable`).
+      operationId: mfa_setup
+      responses:
+        '200':
+          description: Rahasia baru
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_MfaSetupView'
+        '401':
+          description: Tidak ada sesi valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '403':
+          description: CSRF/Origin tidak valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: MFA sudah aktif
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '429':
+          description: Rate limit
           content:
             application/json:
               schema:
@@ -251,7 +658,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SuccessEnvelope_SessionResponse'
+                $ref: '#/components/schemas/SuccessEnvelope_SessionStateResponse'
         '401':
           description: Tidak ada sesi valid
           content:
@@ -5892,6 +6299,137 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
       security:
       - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/security:
+    get:
+      tags:
+      - tenants
+      summary: Kebijakan keamanan tenant. Butuh `tenant.read`.
+      operationId: get_security
+      parameters:
+      - name: tenant_id
+        in: path
+        description: Selector tenant; diverifikasi terhadap membership
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Kebijakan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_TenantSecurity'
+        '403':
+          description: Permission kurang / MFA diwajibkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '404':
+          description: Bukan anggota
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+    put:
+      tags:
+      - tenants
+      summary: |-
+        Ubah kebijakan. Butuh `tenant.update`; mewajibkan MFA hanya dari sesi yang sudah lolos MFA
+        (pengubah tidak mengunci dirinya sendiri).
+      operationId: put_security
+      parameters:
+      - name: tenant_id
+        in: path
+        description: Selector tenant; diverifikasi terhadap membership
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TenantSecurity'
+        required: true
+      responses:
+        '200':
+          description: Kebijakan tersimpan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_TenantSecurity'
+        '403':
+          description: Permission kurang / CSRF
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '404':
+          description: Bukan anggota
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: Aktifkan MFA akun Anda dulu
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
   /api/v1/tenants/{tenant_id}/tickets:
     get:
       tags:
@@ -7999,6 +8537,18 @@ components:
         reserved:
           type: integer
           format: int64
+    LoginMfaRequest:
+      type: object
+      required:
+      - mfa_token
+      - code
+      properties:
+        code:
+          type: string
+          description: 6 digit dari authenticator atau kode pemulihan `xxxxx-xxxxx`.
+        mfa_token:
+          type: string
+      additionalProperties: false
     LoginRequest:
       type: object
       required:
@@ -8081,6 +8631,26 @@ components:
           - 'null'
           items:
             type: string
+      additionalProperties: false
+    MfaCodeRequest:
+      type: object
+      required:
+      - code
+      properties:
+        code:
+          type: string
+      additionalProperties: false
+    MfaDisableRequest:
+      type: object
+      required:
+      - password
+      - code
+      properties:
+        code:
+          type: string
+          description: Kode authenticator atau kode pemulihan.
+        password:
+          type: string
       additionalProperties: false
     MovementInput:
       type: object
@@ -9387,6 +9957,98 @@ components:
           $ref: '#/components/schemas/Meta'
         success:
           type: boolean
+    SuccessEnvelope_MfaChallengeResponse:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - mfa_required
+          - mfa_token
+          properties:
+            mfa_required:
+              type: boolean
+            mfa_token:
+              type: string
+              description: Token tantangan sekali pakai (5 menit, 5 percobaan); bukan sesi.
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
+    SuccessEnvelope_MfaDisabledView:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - disabled
+          properties:
+            disabled:
+              type: boolean
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
+    SuccessEnvelope_MfaSetupView:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - secret
+          - otpauth_uri
+          properties:
+            otpauth_uri:
+              type: string
+            secret:
+              type: string
+              description: Kunci manual base32 — ditampilkan sekali; tidak dapat diambil lagi.
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
+    SuccessEnvelope_MfaStatusView:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - enabled
+          - recovery_codes_remaining
+          - session_verified
+          - required_by_platform
+          properties:
+            enabled:
+              type: boolean
+            recovery_codes_remaining:
+              type: integer
+              format: int64
+            required_by_platform:
+              type: boolean
+              description: 'AUTH-011: role platform wajib MFA (tidak bisa dimatikan).'
+            session_verified:
+              type: boolean
+              description: Sesi ini lolos langkah kedua.
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
     SuccessEnvelope_NotificationList:
       type: object
       required:
@@ -9927,6 +10589,27 @@ components:
           $ref: '#/components/schemas/Meta'
         success:
           type: boolean
+    SuccessEnvelope_RecoveryCodesView:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - recovery_codes
+          properties:
+            recovery_codes:
+              type: array
+              items:
+                type: string
+              description: Ditampilkan sekali; hanya hash yang disimpan.
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
     SuccessEnvelope_RegisterResponse:
       type: object
       required:
@@ -10117,6 +10800,40 @@ components:
           $ref: '#/components/schemas/Meta'
         success:
           type: boolean
+    SuccessEnvelope_SessionStateResponse:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - user_id
+          - session_id
+          - csrf_token
+          - mfa_verified
+          - mfa_enrollment_required
+          properties:
+            csrf_token:
+              type: string
+            mfa_enrollment_required:
+              type: boolean
+              description: 'AUTH-011: akun wajib MFA dan sesi belum lolos → hanya halaman Keamanan yang bisa dipakai.'
+            mfa_verified:
+              type: boolean
+              description: Sesi lolos langkah kedua MFA.
+            session_id:
+              type: string
+              format: uuid
+            user_id:
+              type: string
+              format: uuid
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
     SuccessEnvelope_SettingsDto:
       type: object
       required:
@@ -10255,6 +10972,26 @@ components:
             version:
               type: integer
               format: int32
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
+    SuccessEnvelope_TenantSecurity:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - require_admin_mfa
+          properties:
+            require_admin_mfa:
+              type: boolean
+              description: 'AUTH-012: Owner/Manager/Admin wajib MFA untuk mengakses tenant ini.'
+          additionalProperties: false
         meta:
           $ref: '#/components/schemas/Meta'
         success:
@@ -11197,6 +11934,15 @@ components:
           $ref: '#/components/schemas/Meta'
         success:
           type: boolean
+    TenantSecurity:
+      type: object
+      required:
+      - require_admin_mfa
+      properties:
+        require_admin_mfa:
+          type: boolean
+          description: 'AUTH-012: Owner/Manager/Admin wajib MFA untuk mengakses tenant ini.'
+      additionalProperties: false
     TenantSummary:
       type: object
       required:

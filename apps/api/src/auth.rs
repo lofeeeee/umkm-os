@@ -47,6 +47,8 @@ pub struct AuthService {
     pub secure_cookies: bool,
     pub allowed_origins: Vec<String>,
     pub trust_forwarded_for: bool,
+    /// Master key envelope (ADR-0011) untuk rahasia MFA. `None` -> endpoint MFA 503.
+    pub keyring: Option<umkm_infrastructure::crypto::Keyring>,
 }
 
 impl AuthService {
@@ -166,7 +168,7 @@ impl From<Response> for Reject {
     }
 }
 
-fn service(state: &AppState) -> Result<&Arc<AuthService>, ApiError> {
+pub(crate) fn service(state: &AppState) -> Result<&Arc<AuthService>, ApiError> {
     state
         .auth
         .as_ref()
@@ -174,7 +176,11 @@ fn service(state: &AppState) -> Result<&Arc<AuthService>, ApiError> {
 }
 
 /// Rate limit fail-closed: Redis bermasalah -> 503, bukan dilewati.
-async fn enforce(svc: &AuthService, rule: &RateRule, subject: &str) -> Result<(), Reject> {
+pub(crate) async fn enforce(
+    svc: &AuthService,
+    rule: &RateRule,
+    subject: &str,
+) -> Result<(), Reject> {
     match svc.limiter.check(rule, subject).await {
         Ok(d) if d.allowed => Ok(()),
         Ok(d) => {
@@ -194,7 +200,7 @@ async fn enforce(svc: &AuthService, rule: &RateRule, subject: &str) -> Result<()
     }
 }
 
-fn validation(field: &str, message: impl Into<String>) -> ApiError {
+pub(crate) fn validation(field: &str, message: impl Into<String>) -> ApiError {
     ApiError(
         ErrorBody::new(ErrorCode::ValidationFailed)
             .with_message(message)
@@ -273,7 +279,25 @@ pub struct SessionResponse {
     pub csrf_token: String,
 }
 
-fn user_agent(headers: &HeaderMap) -> Option<String> {
+#[derive(Debug, Serialize, ToSchema)]
+pub struct MfaChallengeResponse {
+    pub mfa_required: bool,
+    /// Token tantangan sekali pakai (5 menit, 5 percobaan); bukan sesi.
+    pub mfa_token: String,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct SessionStateResponse {
+    pub user_id: Uuid,
+    pub session_id: Uuid,
+    pub csrf_token: String,
+    /// Sesi lolos langkah kedua MFA.
+    pub mfa_verified: bool,
+    /// AUTH-011: akun wajib MFA dan sesi belum lolos → hanya halaman Keamanan yang bisa dipakai.
+    pub mfa_enrollment_required: bool,
+}
+
+pub(crate) fn user_agent(headers: &HeaderMap) -> Option<String> {
     headers
         .get(header::USER_AGENT)
         .and_then(|v| v.to_str().ok())
@@ -354,6 +378,7 @@ pub async fn register_handler(
     request_body = LoginRequest,
     responses(
         (status = 200, description = "Sesi baru (rotasi); cookie di-set", body = SuccessEnvelope<SessionResponse>),
+        (status = 202, description = "Password benar, MFA aktif: lanjutkan ke `/auth/login/mfa` (tanpa cookie)", body = SuccessEnvelope<MfaChallengeResponse>),
         (status = 401, description = "Email atau password salah", body = umkm_shared::http::ErrorEnvelope),
         (status = 403, description = "Origin tidak diizinkan", body = umkm_shared::http::ErrorEnvelope),
         (status = 429, description = "Rate limit; header Retry-After", body = umkm_shared::http::ErrorEnvelope),
@@ -429,6 +454,28 @@ pub async fn login_handler(
         .reset(&rate_rules::LOGIN_PER_EMAIL, &email.canonical())
         .await;
 
+    // MFA aktif → belum ada sesi; klien menyelesaikan lewat `/auth/login/mfa`.
+    let mfa = umkm_infrastructure::mfa::status(&svc.pool, record.user_id)
+        .await
+        .map_err(|_| Reject::from(ApiError::new(ErrorCode::InternalError)))?;
+    if mfa.enabled {
+        let mfa_token = umkm_infrastructure::mfa::create_challenge(&svc.pool, record.user_id)
+            .await
+            .map_err(|_| Reject::from(ApiError::new(ErrorCode::InternalError)))?;
+        tracing::info!(user_id = %record.user_id, "login password ok; MFA challenge issued");
+        return Ok((
+            StatusCode::ACCEPTED,
+            Json(SuccessEnvelope::new(
+                MfaChallengeResponse {
+                    mfa_required: true,
+                    mfa_token,
+                },
+                &id,
+            )),
+        )
+            .into_response());
+    }
+
     let (token, hash) =
         new_token().map_err(|_| Reject::from(ApiError::new(ErrorCode::InternalError)))?;
     let session_id = auth_repo::create_session(
@@ -464,7 +511,7 @@ pub async fn login_handler(
 #[utoipa::path(
     get, path = "/api/v1/auth/session", tag = "auth",
     responses(
-        (status = 200, description = "Sesi valid", body = SuccessEnvelope<SessionResponse>),
+        (status = 200, description = "Sesi valid", body = SuccessEnvelope<SessionStateResponse>),
         (status = 401, description = "Tidak ada sesi valid", body = umkm_shared::http::ErrorEnvelope)
     )
 )]
@@ -482,10 +529,12 @@ pub async fn session_handler(
         .map_err(|_| ApiError::new(ErrorCode::InternalError))?
         .ok_or_else(|| ApiError::new(ErrorCode::Unauthorized))?;
     Ok(Json(SuccessEnvelope::new(
-        SessionResponse {
+        SessionStateResponse {
             user_id: s.user_id,
             session_id: s.session_id,
             csrf_token: csrf_token(token),
+            mfa_verified: s.mfa_verified,
+            mfa_enrollment_required: s.platform_mfa_required && !s.mfa_verified,
         },
         &id,
     ))
@@ -509,8 +558,9 @@ pub struct LogoutResponse {
 pub async fn logout_handler(
     State(state): State<AppState>,
     ReqId(id): ReqId,
-    // Cek cookie + Origin + CSRF dilakukan oleh extractor (session.rs).
-    user: crate::session::SessionUser,
+    // Cek cookie + Origin + CSRF dilakukan oleh extractor (session.rs). Logout tetap boleh
+    // untuk sesi yang tertahan gerbang MFA platform.
+    crate::session::MfaPendingUser { user, .. }: crate::session::MfaPendingUser,
 ) -> Result<Response, ApiError> {
     let svc = service(&state)?;
     let revoked = auth_repo::revoke_session(&svc.pool, user.user_id, user.session_id)

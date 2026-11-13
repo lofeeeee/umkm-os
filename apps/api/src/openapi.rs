@@ -35,6 +35,14 @@ use crate::{
         auth::session_handler,
         auth::logout_handler,
         auth::verify_email_handler,
+        crate::mfa::login_mfa,
+        crate::mfa::mfa_status,
+        crate::mfa::mfa_setup,
+        crate::mfa::mfa_enable,
+        crate::mfa::mfa_disable,
+        crate::mfa::mfa_recovery_codes,
+        crate::mfa::get_security,
+        crate::mfa::put_security,
         tenants::list_tenants,
         tenants::get_tenant,
         tenants::update_tenant,
@@ -227,13 +235,14 @@ impl Modify for CommonErrors {
 /// `security: []`. Skema auth tenant/admin ditambahkan di P1.
 struct PublicOps;
 
-const PUBLIC_PATHS: [&str; 7] = [
+const PUBLIC_PATHS: [&str; 8] = [
     "/api/v1/public/site",
     "/files/{object_id}",
     "/healthz",
     "/readyz",
     "/api/v1/auth/register",
     "/api/v1/auth/login",
+    "/api/v1/auth/login/mfa",
     "/api/v1/auth/verify-email",
 ];
 

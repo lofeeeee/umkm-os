@@ -28,13 +28,48 @@ use crate::{
 pub struct SessionUser {
     pub user_id: Uuid,
     pub session_id: Uuid,
+    /// Sesi lolos langkah kedua MFA.
+    pub mfa_verified: bool,
 }
 
 fn forbidden(msg: &str) -> ApiError {
     ApiError(ErrorBody::new(ErrorCode::Forbidden).with_message(msg))
 }
 
+/// 403 dengan `details.reason = "mfa_required"`: frontend mengarahkan ke halaman Keamanan akun.
+pub fn mfa_required(msg: &str) -> ApiError {
+    ApiError(
+        ErrorBody::new(ErrorCode::Forbidden)
+            .with_message(msg)
+            .with_details(serde_json::json!({ "reason": "mfa_required" })),
+    )
+}
+
 impl FromRequestParts<AppState> for SessionUser {
+    type Rejection = ApiError;
+
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &AppState,
+    ) -> Result<Self, Self::Rejection> {
+        let s = MfaPendingUser::from_request_parts(parts, state).await?;
+        // AUTH-011: role platform wajib MFA → sesi tanpa langkah kedua hanya boleh mengurus MFA.
+        if s.platform_mfa_required && !s.user.mfa_verified {
+            return Err(mfa_required("Akun ini wajib memakai MFA"));
+        }
+        Ok(s.user)
+    }
+}
+
+/// Sesi valid tanpa gerbang MFA platform — HANYA untuk endpoint pendaftaran/status MFA,
+/// sesi, dan logout (agar pengguna yang wajib MFA bisa mendaftarkannya).
+#[derive(Debug, Clone, Copy)]
+pub struct MfaPendingUser {
+    pub user: SessionUser,
+    pub platform_mfa_required: bool,
+}
+
+impl FromRequestParts<AppState> for MfaPendingUser {
     type Rejection = ApiError;
 
     async fn from_request_parts(
@@ -69,8 +104,12 @@ impl FromRequestParts<AppState> for SessionUser {
             })?
             .ok_or_else(|| ApiError::new(ErrorCode::Unauthorized))?;
         Ok(Self {
-            user_id: s.user_id,
-            session_id: s.session_id,
+            user: SessionUser {
+                user_id: s.user_id,
+                session_id: s.session_id,
+                mfa_verified: s.mfa_verified,
+            },
+            platform_mfa_required: s.platform_mfa_required,
         })
     }
 }
@@ -121,13 +160,23 @@ impl FromRequestParts<AppState> for Member {
             .auth
             .as_ref()
             .ok_or_else(|| ApiError::new(ErrorCode::ServiceUnavailable))?;
-        let actor = rbac_repo::load_actor(&svc.pool, user.user_id, TenantId::from_uuid(tenant_id))
-            .await
-            .map_err(|e| {
-                tracing::error!(error = %e, "actor lookup failed");
-                ApiError::new(ErrorCode::InternalError)
-            })?
-            .ok_or_else(not_found)?;
+        let (actor, require_mfa) = rbac_repo::load_actor_with_policy(
+            &svc.pool,
+            user.user_id,
+            TenantId::from_uuid(tenant_id),
+        )
+        .await
+        .map_err(|e| {
+            tracing::error!(error = %e, "actor lookup failed");
+            ApiError::new(ErrorCode::InternalError)
+        })?
+        .ok_or_else(not_found)?;
+        // AUTH-012: tenant mewajibkan MFA untuk role admin; sesi tanpa langkah kedua ditolak.
+        if umkm_domain::mfa::tenant_requires_mfa(require_mfa, &actor.role_name)
+            && !user.mfa_verified
+        {
+            return Err(mfa_required("Toko ini mewajibkan MFA untuk peran Anda"));
+        }
         Ok(Self(actor))
     }
 }

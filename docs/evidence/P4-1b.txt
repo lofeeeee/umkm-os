@@ -1,0 +1,53 @@
+P4-1b — MFA TOTP (PRD.md §4.1; AUTH-011/012; keputusan Gate F 2026-11-12)
+Tanggal: 2026-11-13
+
+Artefak
+- crates/domain/src/mfa.rs  parameter RFC 6238 (SHA-1, 6 digit, 30 detik, ±1 langkah), base32 RFC 4648, parse kode
+  (6 digit = TOTP; 10 karakter base32 = kode pemulihan, `-`/spasi/huruf besar diterima), jendela + anti-replay
+  (langkah ≤ terakhir diterima ditolak), URI otpauth, kebijakan platform_requires_mfa / tenant_requires_mfa.
+- crates/infrastructure/src/mfa.rs  HOTP/TOTP HMAC-SHA1 (semua kandidat dihitung, tanpa keluar awal), rahasia 160-bit
+  dienkripsi envelope ADR-0011 (AAD terikat user_id), 10 kode pemulihan (hash SHA-256, sekali pakai), tantangan login
+  (hash token, TTL 5 menit, 5 percobaan, sekali pakai), enable mencabut sesi lain + menandai sesi ini mfa_verified.
+- migrations/0026_mfa.{up,down}.sql  kolom envelope + last_used_step di mfa_credentials, mfa_recovery_codes,
+  mfa_challenges, user_sessions.mfa_verified_at, tenants.require_admin_mfa.
+- apps/api/src/mfa.rs  POST /auth/login/mfa; GET /auth/mfa; POST /auth/mfa/{setup,enable,disable,recovery-codes};
+  GET/PUT /tenants/{t}/security. /auth/login → 202 {mfa_required, mfa_token} tanpa cookie bila MFA aktif.
+- apps/api/src/session.rs  SessionUser menolak sesi role platform wajib MFA yang belum lolos (403 reason=mfa_required);
+  MfaPendingUser hanya untuk status/setup/enable MFA, sesi, logout. Member menolak role Owner/Manager/Admin di tenant
+  yang mewajibkan MFA bila sesi belum lolos MFA.
+- Audit: auth.mfa.enabled/disabled/failed/recovery_regenerated, tenant.security_updated (before/after).
+- Rate limit: mfa_ip 30/15 menit, mfa_user 10/15 menit (fail-closed).
+- Dependency baru: sha1 0.11.0 (docs/architecture/dependency-review.md); cargo deny check: advisories/bans/licenses/sources ok.
+- docs/api/openapi.yaml diperbarui (UPDATE_OPENAPI=1); klarifikasi role admin di product-decision-log 2026-11-13.
+
+Hasil
+- cargo fmt --check, cargo clippy --workspace --all-targets -D warnings: bersih.
+- cargo test --workspace --no-fail-fast: 403 lulus, 0 gagal (mfa_http 3, infrastructure mfa 4 termasuk vektor
+  RFC 6238 Lampiran B & RFC 4226 Lampiran D, domain mfa 5).
+- sqlx migrate run → revert --target-version 0 → run pada DB kosong: exit 0 semuanya.
+
+Cakupan (apps/api/tests/mfa_http.rs)
+- totp_enrollment_and_two_step_login: tanpa MFA login satu langkah; setup belum aktif tidak mengubah login; rahasia di
+  DB bukan plaintext/base32; kode salah/format salah 422; setup ulang setelah aktif 409; sesi lain dicabut; login
+  202 tanpa cookie; replay kode yang sudah dipakai ditolak; tantangan sekali pakai; kode pemulihan sekali pakai;
+  5 percobaan salah menghanguskan tantangan; disable butuh password + kode; audit tanpa rahasia/kode.
+- tenant_can_require_mfa_for_admin_roles: Owner tanpa sesi MFA tidak bisa mewajibkan (409); Manager tanpa
+  tenant.update 403; role admin tanpa MFA 403 mfa_required di endpoint tenant, role non-admin tidak terdampak;
+  kebijakan tidak bocor ke tenant lain; audit before/after; mematikan kebijakan memulihkan akses.
+- platform_super_admin_must_enroll_mfa: endpoint biasa 403 sampai MFA terdaftar; logout tetap bisa; MFA tidak bisa
+  dimatikan; login berikutnya selalu dua langkah.
+
+Negative control (mutasi sementara, dikembalikan; test terkait GAGAL)
+== NEGCTL: tanpa anti-replay TOTP (candidate_steps mengabaikan last_used)
+    totp_enrollment_and_two_step_login ... FAILED
+    result: FAILED. 2 passed; 1 failed
+== NEGCTL: tanpa gerbang MFA platform (AUTH-011, SessionUser)
+    platform_super_admin_must_enroll_mfa ... FAILED
+    result: FAILED. 2 passed; 1 failed
+== NEGCTL: tanpa gerbang MFA tenant (AUTH-012, Member)
+    tenant_can_require_mfa_for_admin_roles ... FAILED
+    result: FAILED. 2 passed; 1 failed
+Setelah dikembalikan: mfa_http 3 lulus.
+
+Belum di task ini
+- UI dashboard (langkah kedua login, halaman Keamanan akun, toggle kebijakan tenant) → P4-1b-UI.

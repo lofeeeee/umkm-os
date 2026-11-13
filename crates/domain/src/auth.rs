@@ -187,8 +187,23 @@ pub mod rate_rules {
         window: MIN15,
     };
 
-    pub const ALL: [RateRule; 8] = [
+    /// Langkah kedua MFA per IP (percobaan per tantangan juga dibatasi di DB).
+    pub const MFA_PER_IP: RateRule = RateRule {
+        name: "mfa_ip",
+        limit: 30,
+        window: MIN15,
+    };
+    /// Operasi MFA per akun (setup/aktifkan/matikan/kode pemulihan).
+    pub const MFA_PER_USER: RateRule = RateRule {
+        name: "mfa_user",
+        limit: 10,
+        window: MIN15,
+    };
+
+    pub const ALL: [RateRule; 10] = [
         CHECKOUT_PER_IP,
+        MFA_PER_IP,
+        MFA_PER_USER,
         LOGIN_PER_EMAIL,
         LOGIN_PER_IP,
         RESET_PER_EMAIL,

@@ -15,6 +15,7 @@ pub mod health;
 pub mod http_util;
 pub mod inventory;
 pub mod metrics_server;
+pub mod mfa;
 pub mod middleware;
 pub mod notifications;
 pub mod openapi;

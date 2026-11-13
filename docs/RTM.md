@@ -33,8 +33,8 @@
 | AUTH-008 | User bisa member beberapa tenant | `PRD.md §4.1` | P1-2 | `PRD.md §13.3` Registration / security test | Planned |
 | AUTH-009 | Owner undang anggota via email | `PRD.md §4.1` | P1-2 | `PRD.md §13.3` Registration / security test | Blocked by decision |
 | AUTH-010 | Invitation expiry + one-time | `PRD.md §4.1` | P1-2 | `PRD.md §13.3` Registration / security test | Blocked by decision |
-| AUTH-011 | MFA/TOTP Platform Super Admin | `PRD.md §4.1` | P4-1 | `PRD.md §13.3` Registration / security test | Planned |
-| AUTH-012 | Owner bisa mewajibkan MFA tenant admin | `PRD.md §4.1` | P4-1 | `PRD.md §13.3` Registration / security test | Planned |
+| AUTH-011 | MFA/TOTP Platform Super Admin | `PRD.md §4.1` | P4-1b | `PRD.md §13.3` Registration / security test | Verified (`docs/evidence/P4-1b.txt`) |
+| AUTH-012 | Owner bisa mewajibkan MFA tenant admin | `PRD.md §4.1` | P4-1b | `PRD.md §13.3` Registration / security test | Verified (`docs/evidence/P4-1b.txt`) |
 
 ## 2. TEN — `PRD.md §4.2`
 

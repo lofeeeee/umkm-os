@@ -13,11 +13,22 @@ pub async fn load_actor(
     user_id: Uuid,
     tenant_id: TenantId,
 ) -> Result<Option<Actor>, sqlx::Error> {
+    Ok(load_actor_with_policy(pool, user_id, tenant_id)
+        .await?
+        .map(|(a, _)| a))
+}
+
+/// `load_actor` + `tenants.require_admin_mfa` (AUTH-012) dalam satu query.
+pub async fn load_actor_with_policy(
+    pool: &PgPool,
+    user_id: Uuid,
+    tenant_id: TenantId,
+) -> Result<Option<(Actor, bool)>, sqlx::Error> {
     let mut tx = umkm_database::begin_tenant_tx(pool, tenant_id)
         .await
         .map_err(db_err)?;
     let rows = sqlx::query(
-        "SELECT r.name AS role_name, p.permission_key
+        "SELECT r.name AS role_name, p.permission_key, t.require_admin_mfa
          FROM tenant_memberships m
          JOIN tenants t ON t.id = m.tenant_id
          JOIN roles r ON r.id = m.role_id
@@ -34,10 +45,14 @@ pub async fn load_actor(
         return Ok(None);
     };
     let role_name: String = first.get("role_name");
+    let require_mfa: bool = first.get("require_admin_mfa");
     let perms = rows
         .iter()
         .filter_map(|r| r.get::<Option<String>, _>("permission_key"));
-    Ok(Some(Actor::new(user_id, tenant_id, role_name, perms)))
+    Ok(Some((
+        Actor::new(user_id, tenant_id, role_name, perms),
+        require_mfa,
+    )))
 }
 
 fn db_err(e: umkm_database::DbError) -> sqlx::Error {
@@ -147,4 +162,58 @@ pub async fn rename_tenant(
     .await?;
     tx.commit().await?;
     Ok(true)
+}
+
+/// Kebijakan keamanan tenant (AUTH-012).
+pub async fn get_require_admin_mfa(pool: &PgPool, actor: &Actor) -> Result<bool, sqlx::Error> {
+    let mut tx = umkm_database::begin_tenant_tx(pool, actor.tenant_id)
+        .await
+        .map_err(db_err)?;
+    let v: bool = sqlx::query_scalar("SELECT require_admin_mfa FROM tenants WHERE id = $1")
+        .bind(actor.tenant_id.as_uuid())
+        .fetch_one(&mut *tx)
+        .await?;
+    tx.commit().await?;
+    Ok(v)
+}
+
+/// Ubah kebijakan MFA admin tenant + audit before/after di transaksi yang sama.
+pub async fn set_require_admin_mfa(
+    pool: &PgPool,
+    actor: &Actor,
+    value: bool,
+    request_id: Option<&str>,
+    ip: Option<&str>,
+) -> Result<(), sqlx::Error> {
+    let mut tx = umkm_database::begin_tenant_tx(pool, actor.tenant_id)
+        .await
+        .map_err(db_err)?;
+    let before: bool =
+        sqlx::query_scalar("SELECT require_admin_mfa FROM tenants WHERE id = $1 FOR UPDATE")
+            .bind(actor.tenant_id.as_uuid())
+            .fetch_one(&mut *tx)
+            .await?;
+    sqlx::query("UPDATE tenants SET require_admin_mfa = $2 WHERE id = $1")
+        .bind(actor.tenant_id.as_uuid())
+        .bind(value)
+        .execute(&mut *tx)
+        .await?;
+    crate::audit_repo::record(
+        &mut *tx,
+        &umkm_domain::audit::AuditEvent::new(
+            umkm_domain::audit::actions::TENANT_SECURITY_UPDATED,
+            "tenant",
+        )
+        .by_user(actor.user_id)
+        .in_tenant(actor.tenant_id)
+        .resource(actor.tenant_id)
+        .request(request_id, ip)
+        .with_summary(serde_json::json!({
+            "before": { "require_admin_mfa": before },
+            "after": { "require_admin_mfa": value }
+        })),
+    )
+    .await?;
+    tx.commit().await?;
+    Ok(())
 }

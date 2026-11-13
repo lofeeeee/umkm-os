@@ -361,6 +361,7 @@ async fn invitations_hashed_expiring_single_use_and_tenant_scoped_role(pool: PgP
 async fn sessions_tokens_consents_mfa_constraints(pool: PgPool) {
     let u = user(&pool, "u@x.id").await;
     let h = "'\\x".to_owned() + &"aa".repeat(32) + "'";
+    let dek = "'\\x".to_owned() + &"bb".repeat(72) + "'";
     ok(&pool, &format!("INSERT INTO user_sessions (user_id, token_hash, expires_at) VALUES ('{u}', {h}, now() + interval '30 days')")).await;
     rejected(&pool, &format!("INSERT INTO user_sessions (user_id, token_hash, expires_at) VALUES ('{u}', {h}, now() + interval '30 days')"), UNIQUE).await;
     rejected(&pool, &format!("INSERT INTO user_sessions (user_id, token_hash, expires_at) VALUES ('{u}', 'short'::bytea, now() + interval '1 day')"), CHECK).await;
@@ -379,15 +380,15 @@ async fn sessions_tokens_consents_mfa_constraints(pool: PgPool) {
     )
     .await;
 
-    rejected(&pool, &format!("INSERT INTO mfa_credentials (user_id, encrypted_secret) VALUES ('{u}', 'JBSWY3DP'::bytea)"), CHECK).await;
+    rejected(&pool, &format!("INSERT INTO mfa_credentials (user_id, encrypted_secret, kek_version, wrapped_dek) VALUES ('{u}', 'JBSWY3DP'::bytea, 1, {dek})"), CHECK).await;
     ok(
         &pool,
-        &format!("INSERT INTO mfa_credentials (user_id, encrypted_secret) VALUES ('{u}', {h})"),
+        &format!("INSERT INTO mfa_credentials (user_id, encrypted_secret, kek_version, wrapped_dek) VALUES ('{u}', {h}, 1, {dek})"),
     )
     .await;
     rejected(
         &pool,
-        &format!("INSERT INTO mfa_credentials (user_id, encrypted_secret) VALUES ('{u}', {h})"),
+        &format!("INSERT INTO mfa_credentials (user_id, encrypted_secret, kek_version, wrapped_dek) VALUES ('{u}', {h}, 1, {dek})"),
         UNIQUE,
     )
     .await;

@@ -18,6 +18,11 @@ pub mod actions {
     pub const AUTH_LOGIN_FAILED: &str = "auth.login.failed";
     pub const AUTH_LOGOUT: &str = "auth.logout";
     pub const AUTH_EMAIL_VERIFIED: &str = "auth.email.verified";
+    pub const AUTH_MFA_ENABLED: &str = "auth.mfa.enabled";
+    pub const AUTH_MFA_DISABLED: &str = "auth.mfa.disabled";
+    pub const AUTH_MFA_FAILED: &str = "auth.mfa.failed";
+    pub const AUTH_MFA_RECOVERY_REGENERATED: &str = "auth.mfa.recovery_regenerated";
+    pub const TENANT_SECURITY_UPDATED: &str = "tenant.security_updated";
     pub const TENANT_GUARD_PROBE_PROCESSED: &str = "tenant.guard_probe.processed";
     pub const INVENTORY_ADJUSTED: &str = "inventory.adjusted";
     pub const ORDER_CREATED: &str = "order.created";
@@ -29,6 +34,7 @@ pub mod actions {
 pub const PRD_CATEGORIES: [(&str, &[&str], Option<&str>); 10] = [
     (
         "Login/logout dan security events",
+        // Event MFA (auth.mfa.*, tenant.security_updated) diuji di apps/api/tests/mfa_http.rs.
         &["auth.login.succeeded", "auth.login.failed", "auth.logout"],
         None,
     ),
@@ -269,6 +275,11 @@ mod tests {
             actions::AUTH_LOGIN_FAILED,
             actions::AUTH_LOGOUT,
             actions::AUTH_EMAIL_VERIFIED,
+            actions::AUTH_MFA_ENABLED,
+            actions::AUTH_MFA_DISABLED,
+            actions::AUTH_MFA_FAILED,
+            actions::AUTH_MFA_RECOVERY_REGENERATED,
+            actions::TENANT_SECURITY_UPDATED,
         ] {
             let parts: Vec<&str> = a.split('.').collect();
             assert!(

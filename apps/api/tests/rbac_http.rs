@@ -54,6 +54,7 @@ fn app(pool: PgPool) -> Router {
         secure_cookies: true,
         allowed_origins: vec!["https://app.ryasai.my.id".into()],
         trust_forwarded_for: false,
+        keyring: None,
     };
     build_router(AppState::default().with_auth(Arc::new(svc)), LIMITS)
 }

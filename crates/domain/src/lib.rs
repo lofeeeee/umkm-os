@@ -11,6 +11,7 @@ pub mod catalog;
 pub mod commerce;
 pub mod crm;
 pub mod inventory;
+pub mod mfa;
 pub mod rbac;
 pub mod storage;
 pub mod team;

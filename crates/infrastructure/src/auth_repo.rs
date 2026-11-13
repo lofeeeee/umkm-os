@@ -42,6 +42,10 @@ pub struct LoginRecord {
 pub struct SessionInfo {
     pub session_id: Uuid,
     pub user_id: Uuid,
+    /// Sesi lolos langkah kedua (login MFA atau baru mengaktifkan MFA).
+    pub mfa_verified: bool,
+    /// AUTH-011: role platform user wajib MFA.
+    pub platform_mfa_required: bool,
 }
 
 fn secs(d: Duration) -> f64 {
@@ -128,7 +132,7 @@ pub async fn authenticate_session<'e>(
          FROM users u
          WHERE s.token_hash = $1 AND s.revoked_at IS NULL AND s.expires_at > now()
            AND u.id = s.user_id AND u.status = 'active'
-         RETURNING s.id, s.user_id",
+         RETURNING s.id, s.user_id, s.mfa_verified_at IS NOT NULL AS mfa, u.platform_role",
     )
     .bind(&token.0[..])
     .fetch_optional(db)
@@ -136,6 +140,10 @@ pub async fn authenticate_session<'e>(
     Ok(row.map(|r| SessionInfo {
         session_id: r.get("id"),
         user_id: r.get("user_id"),
+        mfa_verified: r.get("mfa"),
+        platform_mfa_required: umkm_domain::mfa::platform_requires_mfa(
+            r.get::<Option<String>, _>("platform_role").as_deref(),
+        ),
     }))
 }
 

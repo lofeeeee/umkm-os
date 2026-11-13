@@ -17,6 +17,7 @@ pub mod customer_auth_repo;
 pub mod http_client;
 pub mod inventory_repo;
 pub mod metrics;
+pub mod mfa;
 pub mod notification_repo;
 pub mod onboarding_repo;
 pub mod outbox;

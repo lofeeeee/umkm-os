@@ -45,6 +45,7 @@ fn service(pool: PgPool, redis_url: &str, secure: bool) -> Arc<AuthService> {
         secure_cookies: secure,
         allowed_origins: vec![APP.into()],
         trust_forwarded_for: false,
+        keyring: None,
     })
 }
 

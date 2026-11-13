@@ -88,6 +88,7 @@ pub async fn app(pool: &PgPool) -> TestApp {
         secure_cookies: true,
         allowed_origins: vec!["https://app.ryasai.my.id".into()],
         trust_forwarded_for: false,
+        keyring: Some(umkm_infrastructure::crypto::Keyring::parse(TEST_KEK).unwrap()),
     };
     let signer = UrlSigner::new(SecretString::new(SIGNING_KEY), 3600);
     let app_db_ai = app_db.clone();

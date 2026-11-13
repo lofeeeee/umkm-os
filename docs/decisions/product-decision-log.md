@@ -62,3 +62,8 @@ Keputusan produk yang tidak membutuhkan ADR. Entri tidak ditimpa; perubahan = en
 - MFA (AUTH-011/012): **DISETUJUI** — TOTP (RFC 6238, SHA-1, 6 digit, 30 detik, toleransi ±1 langkah) untuk akun
   pengguna; rahasia TOTP dienkripsi envelope (ADR-0011); 10 kode pemulihan sekali pakai (hash disimpan). Owner dapat
   mewajibkan MFA untuk anggota tenant dengan role admin (Owner/Manager); platform Super Admin wajib MFA.
+
+## 2026-11-13 — Klarifikasi implementasi MFA
+
+- "Role admin" untuk AUTH-012 diartikan sebagai role sistem Owner, Manager, dan Admin (role sistem `Admin` ada sejak
+  migrasi 0003). Role kustom tidak terkena kebijakan ini. Entri Gate F tidak diubah.

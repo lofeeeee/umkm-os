@@ -70,6 +70,7 @@ async fn app_with_hub(pool: &PgPool) -> (Router, umkm_api::realtime::RealtimeHub
         secure_cookies: true,
         allowed_origins: vec![],
         trust_forwarded_for: false,
+        keyring: None,
     };
     let state = AppState::default().with_auth(Arc::new(svc));
     let hub = state.realtime.clone();
@@ -363,6 +364,7 @@ async fn t7_sse_connection_limit_enforced(pool: PgPool) {
         secure_cookies: true,
         allowed_origins: vec![],
         trust_forwarded_for: false,
+        keyring: None,
     };
     let mut state = AppState::default().with_auth(Arc::new(svc));
     state.realtime = umkm_api::realtime::RealtimeHub::new(16, 2);
