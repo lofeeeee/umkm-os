@@ -11,7 +11,7 @@ use sqlx::{PgPool, Row};
 use umkm_domain::{
     audit::AuditEvent,
     rbac::Actor,
-    storage::{ImageType, UploadError, inspect_image},
+    storage::{ImageType, UploadError, sanitize_image},
 };
 use umkm_shared::{config::SecretString, ids::TenantId};
 use uuid::Uuid;
@@ -122,7 +122,9 @@ impl ObjectStorage for PgObjectStorage {
         bytes: &[u8],
         (request_id, ip): (Option<&str>, Option<&str>),
     ) -> Result<StoredObjectMeta, StorageError> {
-        let ty = inspect_image(bytes, self.limits.max_object_bytes)?;
+        // P9-9: metadata (GPS kamera, perangkat, waktu) dibuang; yang disimpan & di-hash = hasil bersih.
+        let (ty, clean) = sanitize_image(bytes, self.limits.max_object_bytes)?;
+        let bytes = clean.as_slice();
         let digest = Sha256::digest(bytes);
         let mut tx = umkm_database::begin_tenant_tx(&self.pool, actor.tenant_id)
             .await

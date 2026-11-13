@@ -292,7 +292,7 @@ function SectionBody({ s, props }: { s: Section; props: SiteProps }) {
       return (
         <div className="s-foot">
           <span><T path="text" v={d.text} /></span>
-          <span className="s-muted">© {b.profile.name}</span>
+          <span className="s-muted">© {b.profile.name} · <a href="/kebijakan-privasi">Kebijakan privasi</a> · <a href="/syarat-transaksi">Syarat transaksi</a></span>
         </div>
       );
     default:

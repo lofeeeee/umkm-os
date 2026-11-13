@@ -14,7 +14,7 @@ use umkm_domain::{
     },
     inventory::MovementKind,
     rbac::Actor,
-    storage::{UploadError, inspect_image},
+    storage::{UploadError, sanitize_image},
 };
 use umkm_shared::ids::TenantId;
 use uuid::Uuid;
@@ -295,7 +295,9 @@ pub async fn put_proof(
     bytes: &[u8],
     max_bytes: usize,
 ) -> Result<(), FlowError> {
-    let ty = inspect_image(bytes, max_bytes)?;
+    // P9-9: bukti bayar disimpan tanpa metadata (lokasi/perangkat pembeli).
+    let (ty, clean) = sanitize_image(bytes, max_bytes)?;
+    let bytes = clean.as_slice();
     let mut tx = tenant_tx(pool, t).await?;
     let o = lock_order(&mut tx, t, Key::Token(token_hash)).await?;
     if o.status != OrderStatus::AwaitingPayment {

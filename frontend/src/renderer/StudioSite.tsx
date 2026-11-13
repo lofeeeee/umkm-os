@@ -126,6 +126,14 @@ export function StudioSite(props: StudioSiteProps) {
           </div>
         ))}
       </div>
+      {/* P9-9: kebijakan privasi & syarat selalu bisa dijangkau dari situs (chat & akun mengumpulkan data). */}
+      <footer className="sv2-foot">
+        <span>© {props.business.profile.name}</span>
+        <nav aria-label="Informasi toko">
+          <a href="/kebijakan-privasi">Kebijakan privasi</a>
+          <a href="/syarat-transaksi">Syarat transaksi</a>
+        </nav>
+      </footer>
       {chat && <ChatWidget variant={chat.layout === "bar" ? "bar" : "bubble"} title={text(chat.data.title)} welcome={text(chat.data.welcome)} startOpen={chat.chat_open === true} primary={safeColor(doc.theme.primary)} />}
       {wa && <WhatsAppButton b={wa} business={props.business} floating />}
     </div>

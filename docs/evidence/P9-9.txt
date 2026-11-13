@@ -1,0 +1,26 @@
+P9-9 — Metadata foto dibuang di server + tautan privasi di situs toko — 2026-11-13T23:45:09+07:00
+
+Masalah: prepareImage() mengirim JPEG/PNG/WebP ≤ 1,8 MB apa adanya → EXIF kamera HP (GPS rumah penjual,
+model perangkat, waktu) tersimpan dan tersaji publik lewat signed URL. Klien API langsung juga tidak
+melewati browser. Situs toko tidak menautkan kebijakan privasi kecuali di kotak persetujuan checkout.
+
+Perubahan
+- crates/domain/src/storage.rs: sanitize_image = inspect_image + strip_metadata + inspect ulang hasilnya.
+  JPEG: buang APP1 (Exif/XMP), APP13 (IPTC), COM, data sesudah EOI pertama (gambar MPO tambahan);
+  Orientation dipertahankan dalam EXIF minimal (1 entri) agar foto potret tidak miring; data entropi
+  (stuffing FF00, RST) disalin utuh; segmen tak terurai → ditolak (fail-closed).
+  PNG: buang eXIf/tEXt/zTXt/iTXt/tIME. WebP: buang EXIF/XMP, bersihkan flag VP8X, hitung ulang ukuran RIFF.
+- Dipakai di SEMUA jalur unggah: aset toko (storage.rs), bukti bayar pesanan (payment_repo), lampiran tiket
+  (ticket_repo), bukti bayar langganan (billing.rs). Yang disimpan, di-hash (sha256), dan dihitung byte_size =
+  hasil bersih.
+- Situs Studio: footer tetap "© toko · Kebijakan privasi · Syarat transaksi"; footer v1 juga menautkan keduanya.
+- Fixture JPEG uji diperbaiki (APP0 sebelumnya mengaku 16 byte padahal lebih pendek).
+
+Tes
+- domain storage: JPEG (Exif+XMP+IPTC+COM+MPO tambahan → tidak ada penanda GPS, satu SOI, Orientation=6,
+  entropi utuh, idempoten), JPEG bersih tidak berubah, segmen rusak ditolak, PNG tEXt/eXIf dibuang (chunk gambar
+  identik), WebP EXIF ganjil+padding & XMP dibuang, flag tinggal alpha, ukuran RIFF benar.
+- apps/api/tests/upload_http.rs uploaded_photo_metadata_is_stripped_before_storage: unggah lewat API → ambil lewat
+  signed URL → tidak ada "GPS"/"Pixel"/alamat di komentar; Orientation LE ada; data gambar utuh; byte_size DB =
+  ukuran yang disajikan.
+- payment/ticket/subscription_billing/checkout_http tetap lolos; clippy -D warnings bersih.

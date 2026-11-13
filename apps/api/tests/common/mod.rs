@@ -262,8 +262,10 @@ pub fn png() -> Vec<u8> {
 }
 
 pub fn jpeg() -> Vec<u8> {
+    // JPEG minimal valid (APP0 JFIF panjang 16 benar): pembersih metadata menolak segmen yang tak terurai.
     vec![
-        0xFF, 0xD8, 0xFF, 0xE0, 0, 16, b'J', b'F', b'I', b'F', 0, 1, 0xFF, 0xD9,
+        0xFF, 0xD8, 0xFF, 0xE0, 0, 16, b'J', b'F', b'I', b'F', 0, 1, 1, 0, 0, 1, 0, 1, 0, 0, 0xFF,
+        0xD9,
     ]
 }
 

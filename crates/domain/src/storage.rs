@@ -150,6 +150,214 @@ fn contains_markup(b: &[u8]) -> bool {
     })
 }
 
+// ------------------------------------------------------------------ metadata (P9-9)
+
+/// Validasi + buang metadata yang bisa membocorkan privasi (lokasi GPS kamera, nama perangkat, waktu, komentar)
+/// sebelum gambar disimpan. Yang disimpan, di-hash, dan disajikan adalah hasil bersihnya.
+pub fn sanitize_image(bytes: &[u8], max_bytes: usize) -> Result<(ImageType, Vec<u8>), UploadError> {
+    let ty = inspect_image(bytes, max_bytes)?;
+    let clean = strip_metadata(bytes, ty)?;
+    // Hasil tetap harus lolos aturan yang sama (struktur, tanpa markup).
+    inspect_image(&clean, max_bytes)?;
+    Ok((ty, clean))
+}
+
+/// Buang metadata. JPEG: APP1 (Exif/XMP), APP13 (IPTC), COM, dan data sesudah EOI pertama (gambar tambahan
+/// ala MPO membawa EXIF sendiri); tag Orientation dipertahankan dalam EXIF minimal agar foto potret tidak miring.
+/// PNG: eXIf/tEXt/zTXt/iTXt/tIME. WebP: chunk EXIF/XMP + flag VP8X. Struktur tak terurai → ditolak (fail-closed).
+pub fn strip_metadata(b: &[u8], ty: ImageType) -> Result<Vec<u8>, UploadError> {
+    match ty {
+        ImageType::Jpeg => strip_jpeg(b),
+        ImageType::Png => Ok(strip_png(b)),
+        ImageType::Webp => strip_webp(b),
+    }
+}
+
+fn strip_jpeg(b: &[u8]) -> Result<Vec<u8>, UploadError> {
+    let bad = || UploadError::Malformed;
+    let mut out = Vec::with_capacity(b.len());
+    out.extend_from_slice(&[0xFF, 0xD8]);
+    let mut orientation: Option<u16> = None;
+    let mut wrote_orientation = false;
+    let mut i = 2;
+    loop {
+        // Penanda segmen: satu atau lebih 0xFF (fill) lalu kode.
+        if b.get(i) != Some(&0xFF) {
+            return Err(bad());
+        }
+        while b.get(i) == Some(&0xFF) {
+            i += 1;
+        }
+        let m = *b.get(i).ok_or_else(bad)?;
+        i += 1;
+        match m {
+            0xD9 => {
+                out.extend_from_slice(&[0xFF, 0xD9]);
+                return Ok(out); // data sesudah EOI pertama dibuang
+            }
+            0x01 | 0xD0..=0xD7 => {
+                out.extend_from_slice(&[0xFF, m]);
+                continue;
+            }
+            _ => {}
+        }
+        let len = u16::from_be_bytes([*b.get(i).ok_or_else(bad)?, *b.get(i + 1).ok_or_else(bad)?])
+            as usize;
+        if len < 2 {
+            return Err(bad());
+        }
+        let seg = b.get(i..i + len).ok_or_else(bad)?;
+        let payload = &seg[2..];
+        i += len;
+        let drop = match m {
+            0xE1 => {
+                if payload.starts_with(b"Exif\0\0") {
+                    orientation = orientation.or_else(|| exif_orientation(&payload[6..]));
+                }
+                true
+            }
+            0xED | 0xFE => true,
+            _ => false,
+        };
+        // EXIF minimal (hanya Orientation) ditulis tepat sebelum segmen pertama yang dipertahankan sesudah APP0.
+        if !drop && !wrote_orientation && m != 0xE0 {
+            if let Some(o) = orientation.filter(|o| (2..=8).contains(o)) {
+                out.extend(minimal_exif(o));
+            }
+            wrote_orientation = true;
+        }
+        if !drop {
+            out.extend_from_slice(&[0xFF, m]);
+            out.extend_from_slice(seg);
+        }
+        if m == 0xDA {
+            // Data entropi sesudah SOS: salin sampai penanda berikutnya (bukan stuffing 00 / RST / fill).
+            loop {
+                let x = *b.get(i).ok_or_else(bad)?;
+                if x != 0xFF {
+                    out.push(x);
+                    i += 1;
+                    continue;
+                }
+                let n = *b.get(i + 1).ok_or_else(bad)?;
+                if n == 0x00 || (0xD0..=0xD7).contains(&n) {
+                    out.extend_from_slice(&[0xFF, n]);
+                    i += 2;
+                } else if n == 0xFF {
+                    i += 1;
+                } else {
+                    break; // penanda segmen (EOI, DHT, SOS berikutnya pada JPEG progresif, …)
+                }
+            }
+        }
+    }
+}
+
+/// Nilai tag Orientation (0x0112) dari IFD0 data TIFF di dalam APP1 Exif; None bila tidak terbaca.
+fn exif_orientation(t: &[u8]) -> Option<u16> {
+    let le = match t.get(0..2)? {
+        b"II" => true,
+        b"MM" => false,
+        _ => return None,
+    };
+    let u16_at = |o: usize| -> Option<u16> {
+        let x = [*t.get(o)?, *t.get(o + 1)?];
+        Some(if le {
+            u16::from_le_bytes(x)
+        } else {
+            u16::from_be_bytes(x)
+        })
+    };
+    let u32_at = |o: usize| -> Option<u32> {
+        let x = [*t.get(o)?, *t.get(o + 1)?, *t.get(o + 2)?, *t.get(o + 3)?];
+        Some(if le {
+            u32::from_le_bytes(x)
+        } else {
+            u32::from_be_bytes(x)
+        })
+    };
+    let ifd = u32_at(4)? as usize;
+    let n = u16_at(ifd)? as usize;
+    (0..n.min(256)).find_map(|k| {
+        let e = ifd + 2 + k * 12;
+        (u16_at(e)? == 0x0112 && u16_at(e + 2)? == 3)
+            .then(|| u16_at(e + 8))
+            .flatten()
+    })
+}
+
+/// APP1 Exif berisi satu entri IFD0: Orientation (SHORT). Tanpa GPS, perangkat, waktu.
+fn minimal_exif(orientation: u16) -> Vec<u8> {
+    let mut tiff = b"II*\0".to_vec();
+    tiff.extend(8u32.to_le_bytes()); // offset IFD0
+    tiff.extend(1u16.to_le_bytes()); // 1 entri
+    tiff.extend(0x0112u16.to_le_bytes());
+    tiff.extend(3u16.to_le_bytes()); // SHORT
+    tiff.extend(1u32.to_le_bytes());
+    tiff.extend(orientation.to_le_bytes());
+    tiff.extend([0, 0]);
+    tiff.extend(0u32.to_le_bytes()); // tidak ada IFD berikutnya
+    let mut seg = vec![0xFF, 0xE1];
+    seg.extend(((2 + 6 + tiff.len()) as u16).to_be_bytes());
+    seg.extend(b"Exif\0\0");
+    seg.extend(tiff);
+    seg
+}
+
+fn strip_png(b: &[u8]) -> Vec<u8> {
+    // Struktur sudah diverifikasi check_png (urutan chunk utuh sampai IEND).
+    let mut out = PNG_SIG.to_vec();
+    let mut i = PNG_SIG.len();
+    while let Some(h) = b.get(i..i + 8) {
+        let len = u32::from_be_bytes([h[0], h[1], h[2], h[3]]) as usize;
+        let end = i + 12 + len;
+        let kind = &h[4..8];
+        if !matches!(kind, b"eXIf" | b"tEXt" | b"zTXt" | b"iTXt" | b"tIME") {
+            out.extend_from_slice(&b[i..end]);
+        }
+        i = end;
+        if kind == b"IEND" {
+            break;
+        }
+    }
+    out
+}
+
+fn strip_webp(b: &[u8]) -> Result<Vec<u8>, UploadError> {
+    // body = "WEBP" + chunk-chunk yang dipertahankan; ukuran RIFF dihitung ulang.
+    let mut body = b"WEBP".to_vec();
+    let mut vp8x_flags: Option<usize> = None;
+    let mut i = 12;
+    while i < b.len() {
+        let h = b.get(i..i + 8).ok_or(UploadError::Malformed)?;
+        let len = u32::from_le_bytes([h[4], h[5], h[6], h[7]]) as usize;
+        let padded = len.checked_add(len & 1).ok_or(UploadError::Malformed)?;
+        let end = i
+            .checked_add(8)
+            .and_then(|x| x.checked_add(padded))
+            .ok_or(UploadError::Malformed)?;
+        let chunk = b.get(i..end).ok_or(UploadError::Malformed)?;
+        if !matches!(&h[0..4], b"EXIF" | b"XMP ") {
+            if &h[0..4] == b"VP8X" {
+                vp8x_flags = Some(body.len() + 8); // byte data pertama = flags
+            }
+            body.extend_from_slice(chunk);
+        }
+        i = end;
+    }
+    if let Some(f) = vp8x_flags.and_then(|at| body.get_mut(at)) {
+        *f &= !0x0C; // bit EXIF (0x08) & XMP (0x04)
+    }
+    let mut out = b"RIFF".to_vec();
+    out.extend(
+        u32::try_from(body.len())
+            .map_err(|_| UploadError::Malformed)?
+            .to_le_bytes(),
+    );
+    out.extend(body);
+    Ok(out)
+}
+
 #[cfg(test)]
 pub mod fixtures {
     /// PNG 1x1 valid minimal (IHDR, IDAT, IEND).
@@ -166,9 +374,11 @@ pub mod fixtures {
         chunk(&mut v, b"IEND", &[]);
         v
     }
+    /// JPEG minimal valid: SOI, APP0 JFIF (panjang 16 benar), EOI.
     pub fn jpeg() -> Vec<u8> {
         vec![
-            0xFF, 0xD8, 0xFF, 0xE0, 0, 16, b'J', b'F', b'I', b'F', 0, 1, 0xFF, 0xD9,
+            0xFF, 0xD8, 0xFF, 0xE0, 0, 16, b'J', b'F', b'I', b'F', 0, 1, 1, 0, 0, 1, 0, 1, 0, 0,
+            0xFF, 0xD9,
         ]
     }
     pub fn webp() -> Vec<u8> {
@@ -261,5 +471,142 @@ mod tests {
         let mut big = jpeg();
         big.splice(2..2, std::iter::repeat_n(0u8, MAX));
         assert_eq!(inspect_image(&big, MAX), Err(UploadError::TooLarge(MAX)));
+    }
+
+    // ---------------------------------------------------------- P9-9 metadata
+
+    fn has(h: &[u8], n: &[u8]) -> bool {
+        h.windows(n.len()).any(|w| w == n)
+    }
+
+    /// APP1 Exif big-endian: IFD0 berisi Orientation=6 + entri "GPS" palsu (penanda teks).
+    fn exif_app1() -> Vec<u8> {
+        let mut t = b"MM\0*".to_vec();
+        t.extend(8u32.to_be_bytes());
+        t.extend(2u16.to_be_bytes());
+        t.extend([0x01, 0x12, 0, 3, 0, 0, 0, 1, 0, 6, 0, 0]); // Orientation = 6
+        t.extend([0x88, 0x25, 0, 4, 0, 0, 0, 1, 0, 0, 0, 0]); // GPSInfo IFD pointer
+        t.extend(0u32.to_be_bytes());
+        t.extend(b"GPSDEMO-LAT-6.2-LON-106.8");
+        let mut seg = vec![0xFF, 0xE1];
+        seg.extend(((2 + 6 + t.len()) as u16).to_be_bytes());
+        seg.extend(b"Exif\0\0");
+        seg.extend(t);
+        seg
+    }
+
+    fn seg(m: u8, payload: &[u8]) -> Vec<u8> {
+        let mut v = vec![0xFF, m];
+        v.extend(((payload.len() + 2) as u16).to_be_bytes());
+        v.extend(payload);
+        v
+    }
+
+    fn photo_jpeg() -> Vec<u8> {
+        let mut v = vec![0xFF, 0xD8];
+        v.extend(seg(
+            0xE0,
+            &[b'J', b'F', b'I', b'F', 0, 1, 1, 0, 0, 1, 0, 1, 0, 0],
+        ));
+        v.extend(exif_app1());
+        v.extend(seg(0xE1, b"http://ns.adobe.com/xap/1.0/\0<x:GPSDEMO/>"));
+        v.extend(seg(0xED, b"Photoshop 3.0\0GPSDEMO-IPTC"));
+        v.extend(seg(0xFE, b"GPSDEMO-comment"));
+        v.extend(seg(0xDB, &[0; 65])); // DQT
+        v.extend(seg(0xDA, &[1, 1, 0, 0, 63, 0])); // SOS
+        v.extend([0x12, 0xFF, 0x00, 0x34, 0xFF, 0xD0, 0x56]); // entropi: stuffing + RST0
+        v.extend([0xFF, 0xD9]);
+        // gambar kedua (MPO) dengan EXIF sendiri
+        v.extend([0xFF, 0xD8]);
+        v.extend(exif_app1());
+        v.extend([0xFF, 0xD9]);
+        v
+    }
+
+    #[test]
+    fn jpeg_metadata_is_removed_but_orientation_kept() {
+        let src = photo_jpeg();
+        assert!(has(&src, b"GPSDEMO"));
+        let (ty, out) = sanitize_image(&src, MAX).unwrap();
+        assert_eq!(ty, ImageType::Jpeg);
+        assert!(
+            !has(&out, b"GPSDEMO"),
+            "GPS/XMP/IPTC/komentar/gambar tambahan harus hilang"
+        );
+        assert!(!has(&out, b"http://ns.adobe.com"));
+        assert_eq!(
+            out.iter().filter(|&&x| x == 0xD8).count(),
+            1,
+            "hanya satu SOI"
+        );
+        // Orientation tetap (foto potret tidak miring), dalam EXIF minimal.
+        let app1 = out.windows(6).position(|w| w == b"Exif\0\0").unwrap();
+        assert_eq!(exif_orientation(&out[app1 + 6..]), Some(6));
+        // Data gambar utuh, termasuk stuffing & RST.
+        assert!(has(
+            &out,
+            &[0x12, 0xFF, 0x00, 0x34, 0xFF, 0xD0, 0x56, 0xFF, 0xD9]
+        ));
+        assert!(out.ends_with(&[0xFF, 0xD9]));
+        assert_eq!(strip_metadata(&out, ty).unwrap(), out, "idempoten");
+    }
+
+    #[test]
+    fn jpeg_without_metadata_is_unchanged_and_broken_segments_rejected() {
+        assert_eq!(sanitize_image(&jpeg(), MAX).unwrap().1, jpeg());
+        let mut broken = jpeg();
+        broken[5] = 200; // panjang APP0 melampaui file
+        assert_eq!(
+            strip_metadata(&broken, ImageType::Jpeg),
+            Err(UploadError::Malformed)
+        );
+    }
+
+    #[test]
+    fn png_text_and_exif_chunks_are_removed() {
+        let base = png();
+        let iend = base.len() - 12;
+        let chunk = |kind: &[u8], data: &[u8]| {
+            let mut v = (data.len() as u32).to_be_bytes().to_vec();
+            v.extend(kind);
+            v.extend(data);
+            v.extend([0, 0, 0, 0]);
+            v
+        };
+        let mut src = base[..iend].to_vec();
+        src.extend(chunk(b"tEXt", b"Comment\0GPSDEMO"));
+        src.extend(chunk(b"eXIf", b"MM\0*GPSDEMO"));
+        src.extend(&base[iend..]);
+        let (_, out) = sanitize_image(&src, MAX).unwrap();
+        assert!(!has(&out, b"GPSDEMO"));
+        assert_eq!(out, base, "chunk gambar tetap");
+    }
+
+    #[test]
+    fn webp_exif_xmp_chunks_and_flags_are_removed() {
+        let vp8 = &webp()[12..];
+        let mut body = b"WEBP".to_vec();
+        body.extend(b"VP8X");
+        body.extend(10u32.to_le_bytes());
+        body.extend([0x10 | 0x08 | 0x04, 0, 0, 0, 0, 0, 0, 0, 0, 0]); // alpha + exif + xmp
+        body.extend(vp8);
+        body.extend(b"EXIF");
+        body.extend(7u32.to_le_bytes());
+        body.extend(b"GPSDEMO\0"); // panjang ganjil + padding
+        body.extend(b"XMP ");
+        body.extend(4u32.to_le_bytes());
+        body.extend(b"GPS!");
+        let mut src = b"RIFF".to_vec();
+        src.extend((body.len() as u32).to_le_bytes());
+        src.extend(body);
+        assert_eq!(inspect_image(&src, MAX), Ok(ImageType::Webp));
+        let (_, out) = sanitize_image(&src, MAX).unwrap();
+        assert!(!has(&out, b"GPSDEMO") && !has(&out, b"GPS!"));
+        assert_eq!(out[20], 0x10, "flag EXIF/XMP dibersihkan, alpha tetap");
+        assert_eq!(
+            u32::from_le_bytes([out[4], out[5], out[6], out[7]]) as usize + 8,
+            out.len()
+        );
+        assert!(has(&out, vp8), "data gambar tetap");
     }
 }

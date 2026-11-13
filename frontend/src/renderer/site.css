@@ -176,3 +176,10 @@
 .s-wa svg { flex: none; }
 .s-wa-float { position: fixed; z-index: 19; right: 16px; bottom: 84px; display: grid; place-items: center; width: 56px; height: 56px; border-radius: 999px; background: #25d366; color: #fff !important; box-shadow: 0 12px 28px -8px rgb(37 211 102 / 0.7); }
 .s-wa-float svg { width: 28px; height: 28px; }
+
+/* P9-9: footer tetap situs Studio (privasi & syarat). */
+.sv2-foot { display: flex; flex-wrap: wrap; gap: 8px 16px; justify-content: space-between; align-items: center; max-width: 1180px; margin: 24px auto 0; padding: 20px; border-top: 1px solid var(--s-line, #e4e4e7); color: var(--s-muted, #71717a); font-size: 0.875rem; font-family: var(--s-font); }
+.sv2-foot nav { display: flex; flex-wrap: wrap; gap: 4px 16px; }
+.sv2-foot a { color: inherit; text-underline-offset: 3px; min-height: 24px; display: inline-flex; align-items: center; }
+.sv2-foot a:hover { color: var(--s-ink, #18181b); }
+

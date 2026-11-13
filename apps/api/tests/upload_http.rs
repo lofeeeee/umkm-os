@@ -389,3 +389,62 @@ async fn concurrent_puts_on_the_port_respect_quota(pool: PgPool) {
         .unwrap();
     assert_eq!(n, MAX_OBJECTS);
 }
+
+/// P9-9: foto HP membawa EXIF (GPS rumah penjual, perangkat, waktu). Yang tersimpan & tersaji publik bersih;
+/// Orientation tetap agar foto potret tidak miring; ukuran tersimpan = ukuran setelah dibersihkan.
+#[sqlx::test(migrator = "MIGRATOR")]
+async fn uploaded_photo_metadata_is_stripped_before_storage(pool: PgPool) {
+    let a = app(&pool).await;
+    let t = tenant(&pool, "toko-a").await;
+    let owner = member(&pool, t, "Owner").await;
+    // JPEG: APP0, APP1 Exif (Orientation=6 + teks GPS), komentar, SOS + data, EOI.
+    let mut tiff = b"MM\0*".to_vec();
+    tiff.extend(8u32.to_be_bytes());
+    tiff.extend(1u16.to_be_bytes());
+    tiff.extend([0x01, 0x12, 0, 3, 0, 0, 0, 1, 0, 6, 0, 0]);
+    tiff.extend(0u32.to_be_bytes());
+    tiff.extend(b"GPS -6.2088,106.8456 Pixel 9");
+    let seg = |m: u8, p: &[u8]| {
+        let mut v = vec![0xFF, m];
+        v.extend(((p.len() + 2) as u16).to_be_bytes());
+        v.extend(p);
+        v
+    };
+    let mut exif = b"Exif\0\0".to_vec();
+    exif.extend(tiff);
+    let mut src = vec![0xFF, 0xD8];
+    src.extend(seg(
+        0xE0,
+        &[b'J', b'F', b'I', b'F', 0, 1, 1, 0, 0, 1, 0, 1, 0, 0],
+    ));
+    src.extend(seg(0xE1, &exif));
+    src.extend(seg(0xFE, b"Rumah Bu Sri, Jl. Melati 3"));
+    src.extend(seg(0xDA, &[1, 1, 0, 0, 63, 0]));
+    src.extend([0x11, 0x22, 0xFF, 0xD9]);
+
+    let r = upload(&a.router, t, &owner, src.clone()).await;
+    assert_eq!(r.status, 201, "{}", r.json());
+    let url = r.json()["data"]["url"].as_str().unwrap().to_owned();
+    let f = send(&a.router, Method::GET, &url, None, None, None, vec![]).await;
+    assert_eq!(f.status, 200);
+    let has = |n: &[u8]| f.bytes.windows(n.len()).any(|w| w == n);
+    assert!(
+        !has(b"GPS") && !has(b"Pixel") && !has(b"Melati"),
+        "metadata bocor"
+    );
+    assert!(
+        has(&[0x12, 0x01, 3, 0, 1, 0, 0, 0, 6, 0]),
+        "Orientation (LE) dipertahankan"
+    );
+    assert!(
+        f.bytes.ends_with(&[0x11, 0x22, 0xFF, 0xD9]),
+        "data gambar utuh"
+    );
+    assert!(f.bytes.len() < src.len());
+    let size: i32 = sqlx::query_scalar("SELECT byte_size FROM stored_objects WHERE tenant_id = $1")
+        .bind(t)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(size as usize, f.bytes.len());
+}

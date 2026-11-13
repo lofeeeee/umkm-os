@@ -6,7 +6,7 @@ use umkm_application::notify::OutboxEvent;
 use umkm_domain::{
     audit::AuditEvent,
     rbac::Actor,
-    storage::{UploadError, inspect_image},
+    storage::{UploadError, sanitize_image},
     tickets::{Priority, Source, TicketStatus, can_reopen},
 };
 use umkm_shared::ids::TenantId;
@@ -837,7 +837,9 @@ pub async fn add_attachment(
     internal: bool,
     uploader: &str,
 ) -> Result<Uuid, TicketError> {
-    let ty = inspect_image(bytes, max)?;
+    // P9-9: lampiran tiket disimpan tanpa metadata.
+    let (ty, clean) = sanitize_image(bytes, max)?;
+    let bytes = clean.as_slice();
     let mut tx = tenant_tx(pool, t).await?;
     lock(&mut tx, t, scope, id).await?;
     let count: i64 = sqlx::query_scalar(

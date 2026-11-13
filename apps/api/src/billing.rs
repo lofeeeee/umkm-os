@@ -369,7 +369,8 @@ pub async fn upload_proof(
     body: Bytes,
 ) -> Result<Json<SuccessEnvelope<InvoiceView>>, ApiError> {
     actor.require("tenant.update")?;
-    let ty = umkm_domain::storage::inspect_image(&body, MAX_PROOF_BYTES)
+    // P9-9: bukti bayar langganan disimpan tanpa metadata.
+    let (ty, body) = umkm_domain::storage::sanitize_image(&body, MAX_PROOF_BYTES)
         .map_err(|e| one("file", e.code()))?;
     let i = repo::submit_proof(
         pool(&state)?,

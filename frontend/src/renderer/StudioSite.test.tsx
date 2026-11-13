@@ -35,6 +35,9 @@ describe("renderer publik Studio (v2)", () => {
     expect(html).toContain("Halo &lt;b&gt;");
     expect(html).not.toContain("<b>");
     expect(html).toContain("wa.me/");
+    // P9-9: tautan privasi & syarat selalu ada.
+    expect(html).toContain('href="/kebijakan-privasi"');
+    expect(html).toContain('href="/syarat-transaksi"');
   });
   it("teks alternatif foto (WCAG 1.1.1): image_alt dirender & di-escape, galeri jatuh ke keterangan", () => {
     const withImg: PageV2 = { ...doc, blocks: [
