@@ -69,11 +69,11 @@ test("operasional: tiket, notifikasi realtime, role kustom, audit", async ({ bro
 
   // Role kustom
   await b.goto(`${APP}/team${q}`);
-  await b.getByRole("button", { name: "Role kustom baru" }).click();
-  await b.getByLabel("Nama role").fill("Kasir");
+  await b.getByRole("button", { name: "Peran kustom baru" }).click();
+  await b.getByLabel("Nama peran").fill("Kasir");
   await b.getByLabel("orders.read").check();
-  await b.getByRole("button", { name: "Simpan role" }).click();
-  await expect(b.getByText("Role tersimpan.")).toBeVisible();
+  await b.getByRole("button", { name: "Simpan peran" }).click();
+  await expect(b.getByText("Peran tersimpan.")).toBeVisible();
   await expect(b.getByRole("listitem").filter({ hasText: "Kasir" })).toContainText("1 izin");
 
   // Audit log memuat aksi-aksi tadi

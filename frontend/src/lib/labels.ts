@@ -167,3 +167,50 @@ export function relatif(iso: string | number | null | undefined, now = Date.now(
   if (s < 604800) return `${Math.floor(s / 86400)} hari lalu`;
   return tanggal(iso);
 }
+
+/* ---------------- Izin (RBAC) ---------------- */
+export const PERMISSION_GROUPS: { label: string; prefix: string[] }[] = [
+  { label: "Toko & tim", prefix: ["tenant", "members"] },
+  { label: "Website", prefix: ["website"] },
+  { label: "Produk & stok", prefix: ["products", "inventory"] },
+  { label: "Pesanan & pembayaran", prefix: ["orders", "payments"] },
+  { label: "Pelanggan & layanan", prefix: ["customers", "conversations", "tickets"] },
+  { label: "Asisten AI", prefix: ["ai_config", "ai_provider"] },
+  { label: "Kontrol", prefix: ["approvals", "analytics", "audit"] },
+];
+export const PERMISSION_TEXT: Record<string, string> = {
+  "tenant.read": "Lihat pengaturan toko", "tenant.update": "Ubah pengaturan toko",
+  "members.read": "Lihat anggota tim", "members.invite": "Undang anggota", "members.manage": "Kelola anggota & peran",
+  "website.read": "Lihat website", "website.edit": "Ubah draf website", "website.publish": "Terbitkan website",
+  "products.read": "Lihat produk", "products.create": "Tambah produk", "products.update": "Ubah produk", "products.archive": "Arsipkan produk",
+  "inventory.read": "Lihat stok", "inventory.adjust": "Catat perubahan stok",
+  "orders.read": "Lihat pesanan", "orders.create": "Buat pesanan", "orders.approve": "Setujui & proses pesanan",
+  "orders.reject": "Tolak pesanan", "orders.cancel": "Batalkan pesanan",
+  "payments.verify": "Konfirmasi pembayaran", "payments.refund": "Catat pengembalian dana",
+  "customers.read": "Lihat pelanggan", "customers.manage": "Kelola data pelanggan",
+  "conversations.read": "Lihat percakapan", "conversations.reply": "Balas percakapan", "conversations.takeover": "Ambil alih / tugaskan percakapan",
+  "tickets.read": "Lihat tiket", "tickets.assign": "Tugaskan tiket", "tickets.reply": "Balas tiket", "tickets.close": "Selesaikan tiket",
+  "ai_config.read": "Lihat pengaturan AI", "ai_config.manage": "Ubah pengaturan AI", "ai_provider.manage": "Kelola penyedia AI",
+  "approvals.read": "Lihat persetujuan", "approvals.decide": "Putuskan persetujuan",
+  "analytics.read": "Lihat analitik", "audit.read": "Lihat log aktivitas",
+};
+
+/** Label ramah untuk kode aksi audit (`ticket.created` → "Tiket dibuat"). */
+const AUDIT_OBJ: Record<string, string> = {
+  auth: "Login", member: "Anggota", role: "Peran", business: "Profil bisnis", website: "Website", commerce: "Pengaturan toko",
+  product: "Produk", inventory: "Stok", order: "Pesanan", payment: "Pembayaran", ticket: "Tiket", approval: "Persetujuan",
+  customer: "Pelanggan", invitation: "Undangan", ai: "Asisten AI", conversation: "Percakapan", subscription: "Langganan", security: "Keamanan",
+};
+const AUDIT_VERB: Record<string, string> = {
+  created: "dibuat", updated: "diubah", deleted: "dihapus", changed: "diubah", published: "diterbitkan", archived: "diarsipkan",
+  confirmed: "dikonfirmasi", rejected: "ditolak", approved: "disetujui", cancelled: "dibatalkan", assigned: "ditugaskan",
+  login: "berhasil", logout: "keluar", failed: "gagal", invited: "diundang", removed: "dikeluarkan", refunded: "dikembalikan",
+  closed: "ditutup", resolved: "diselesaikan", status_changed: "status diubah", adjusted: "disesuaikan", accepted: "diterima",
+};
+export function auditLabel(action: string): string {
+  const [obj = "", ...rest] = action.split(".");
+  const verb = rest.join("_");
+  const o = AUDIT_OBJ[obj];
+  const v = AUDIT_VERB[verb];
+  return o && v ? `${o} ${v}` : o ? `${o} · ${verb.replace(/_/g, " ")}` : action;
+}

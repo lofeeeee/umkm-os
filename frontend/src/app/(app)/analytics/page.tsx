@@ -7,6 +7,8 @@ import { useEffect, useState } from "react";
 
 import { Alert, WithTenant, type TenantCtx } from "@/dashboard/shell";
 import { api, describe } from "@/lib/api";
+import { tanggal } from "@/lib/labels";
+import { Card, PageHeader, PageSkeleton } from "@/ui/page";
 
 interface Analytics {
   from: string; to: string; total_conversations: number; ai_resolved: number; human_resolved: number;
@@ -67,8 +69,16 @@ function View({ ctx }: { ctx: TenantCtx }) {
   const [a, setA] = useState<Analytics | null>(null);
   const [ov, setOv] = useState<Overview | null>(null);
   const [err, setErr] = useState<string | null>(null);
-  // Rentang yang diterapkan (berubah hanya lewat tombol "Terapkan").
+  // Rentang yang diterapkan (berubah hanya lewat tombol "Terapkan" atau preset).
   const [range, setRange] = useState({ from: "", to: "" });
+  const [preset, setPreset] = useState<number | null>(30);
+  const applyPreset = (days: number) => {
+    const end = new Date();
+    const start = new Date(end.getTime() - (days - 1) * 86400000);
+    const iso = (d: Date) => d.toLocaleDateString("en-CA", { timeZone: "Asia/Jakarta" });
+    setPreset(days);
+    setRange({ from: iso(start), to: iso(end) });
+  };
   useEffect(() => {
     const q = new URLSearchParams();
     if (range.from) q.set("from", range.from);
@@ -95,17 +105,25 @@ function View({ ctx }: { ctx: TenantCtx }) {
   if (!ctx.can("analytics.read")) return <Alert kind="error">Anda tidak punya izin melihat analitik.</Alert>;
   return (
     <>
-      <h1>Analitik</h1>
-      <form className="d-row" style={{ marginBottom: 12 }} onSubmit={(e) => { e.preventDefault(); setRange({ from, to }); }}>
-        <label className="d-field" style={{ margin: 0 }}><span>Dari</span><input type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></label>
-        <label className="d-field" style={{ margin: 0 }}><span>Sampai</span><input type="date" value={to} onChange={(e) => setTo(e.target.value)} /></label>
+      <PageHeader
+        title="Analitik"
+        description={a ? `Periode ${tanggal(a.from)} – ${tanggal(a.to)} (WIB).` : "Kinerja toko dan layanan pelanggan."}
+        actions={
+          <div className="d-seg" role="group" aria-label="Rentang cepat">
+            {[7, 30, 90].map((d) => <button key={d} type="button" aria-pressed={preset === d} onClick={() => applyPreset(d)}>{d} hari</button>)}
+          </div>
+        }
+      />
+      <form className="d-toolbar" onSubmit={(e) => { e.preventDefault(); setPreset(null); setRange({ from, to }); }}>
+        <label className="d-row" style={{ flexWrap: "nowrap" }}><span className="d-muted d-small">Dari</span><input type="date" aria-label="Dari" value={from} onChange={(e) => setFrom(e.target.value)} style={{ width: 160 }} /></label>
+        <label className="d-row" style={{ flexWrap: "nowrap" }}><span className="d-muted d-small">Sampai</span><input type="date" aria-label="Sampai" value={to} onChange={(e) => setTo(e.target.value)} style={{ width: 160 }} /></label>
         <button className="d-btn">Terapkan</button>
       </form>
       <Alert kind="error">{err}</Alert>
-      {!a && !err && <p className="d-muted" aria-busy="true">Memuat…</p>}
+      {!a && !err && <PageSkeleton />}
       {ov && (
         <>
-          <h2>Toko</h2>
+          <h2 className="d-section-title" style={{ marginTop: 8 }}>Penjualan & toko</h2>
           <section className="an-grid" aria-label="Ringkasan toko">
             <Tile label="Omzet (pesanan terbayar)" value={rp(ov.revenue)} note={`${nf.format(ov.paid_orders)} dari ${nf.format(ov.orders)} pesanan`} />
             <Tile label="Rata-rata nilai pesanan" value={rp(ov.average_order_value)} />
@@ -117,24 +135,36 @@ function View({ ctx }: { ctx: TenantCtx }) {
             <Tile label="Pemakaian AI" value={`${nf.format(ov.ai_platform_tokens + ov.ai_byok_tokens)} token`} note={`platform ${nf.format(ov.ai_platform_tokens)} · kunci sendiri ${nf.format(ov.ai_byok_tokens)}`} />
           </section>
           <div className="d-grid2">
-            <section className="d-card" aria-label="Produk terlaris">
-              <h3>Produk terlaris</h3>
-              {ov.top_products.length === 0 ? <p className="d-muted">Belum ada pesanan terbayar.</p> : (
-                <ol>{ov.top_products.map((p) => <li key={p.name}>{p.name} — {nf.format(p.quantity)} terjual · {rp(p.revenue)}</li>)}</ol>
+            <Card flush title="Produk terlaris" label="Produk terlaris">
+              {ov.top_products.length === 0 ? <p className="d-muted" style={{ padding: 20, margin: 0 }}>Belum ada pesanan terbayar.</p> : (
+                <ol className="an-rank">
+                  {ov.top_products.map((p) => {
+                    const max = Math.max(...ov.top_products.map((x) => x.quantity), 1);
+                    return (
+                      <li key={p.name}>
+                        <span className="an-rank-name">{p.name}</span>
+                        <span className="an-rank-val">{nf.format(p.quantity)} terjual · {rp(p.revenue)}</span>
+                        <span className="an-rank-bar" aria-hidden="true"><span style={{ transform: `scaleX(${p.quantity / max})` }} /></span>
+                      </li>
+                    );
+                  })}
+                </ol>
               )}
-            </section>
-            <section className="d-card" aria-label="Peringatan stok">
-              <h3>Peringatan stok</h3>
-              {ov.stock_alert_items.length === 0 ? <p className="d-muted">Tidak ada.</p> : (
-                <ul>{ov.stock_alert_items.map((s) => <li key={`${s.product}-${s.variant}`}>{s.product} ({s.variant}): tersisa {s.available}, minimum {s.min_stock}</li>)}</ul>
+            </Card>
+            <Card flush title="Peringatan stok" label="Peringatan stok">
+              {ov.stock_alert_items.length === 0 ? <p className="d-muted" style={{ padding: 20, margin: 0 }}>Semua stok aman.</p> : (
+                <div className="d-table-wrap"><table className="d-table">
+                  <thead><tr><th>Produk</th><th className="d-num">Tersisa</th><th className="d-num">Minimum</th></tr></thead>
+                  <tbody>{ov.stock_alert_items.map((s) => <tr key={`${s.product}-${s.variant}`}><td>{s.product}<span className="d-sub">{s.variant}</span></td><td className="d-num" style={{ color: "var(--warn)", fontWeight: 600 }}>{s.available}</td><td className="d-num d-muted">{s.min_stock}</td></tr>)}</tbody>
+                </table></div>
               )}
-            </section>
+            </Card>
           </div>
         </>
       )}
       {a && (
         <>
-          <h2>Percakapan</h2>
+          <h2 className="d-section-title">Layanan pelanggan</h2>
           <section className="an-grid" aria-label="Ringkasan">
             <Tile label="Total percakapan" value={nf.format(a.total_conversations)} />
             <Tile label="Selesai oleh AI" value={nf.format(a.ai_resolved)} />
@@ -146,19 +176,19 @@ function View({ ctx }: { ctx: TenantCtx }) {
             <Tile label="Token AI" value={nf.format(a.tokens.total)} note={`${nf.format(a.tokens.prompt)} masuk · ${nf.format(a.tokens.completion)} keluar`} />
             <Tile label="Error provider" value={pct(a.provider_error_rate)} note={`dari ${nf.format(a.provider_calls)} panggilan`} />
           </section>
-          <p className="d-muted">Periode {a.from} s.d. {a.to} (WIB). Angka tetap tersedia setelah isi percakapan dihapus sesuai kebijakan retensi.</p>
+          <p className="d-muted d-small">Angka tetap tersedia setelah isi percakapan dihapus sesuai kebijakan retensi.</p>
           {active.length === 0 && <p className="d-muted">Belum ada aktivitas pada periode ini.</p>}
-          {active.length > 0 && <div className="d-card" style={{ overflowX: "auto" }}>
+          {active.length > 0 && <div className="d-table-wrap">
             <table className="d-table an-table">
               <caption className="an-caption">Rincian harian</caption>
               <thead>
-                <tr><th scope="col">Tanggal</th><th scope="col">Baru</th><th scope="col">Handover</th><th scope="col">Selesai AI</th><th scope="col">Selesai staf</th><th scope="col">Giliran AI</th><th scope="col">Token</th></tr>
+                <tr><th scope="col">Tanggal</th><th scope="col" className="d-num">Baru</th><th scope="col" className="d-num">Dialihkan</th><th scope="col" className="d-num">Selesai AI</th><th scope="col" className="d-num">Selesai staf</th><th scope="col" className="d-num">Giliran AI</th><th scope="col" className="d-num">Token</th></tr>
               </thead>
               <tbody>
                 {active.map((d) => (
                   <tr key={d.day}>
-                    <th scope="row">{d.day}</th><td>{nf.format(d.started)}</td><td>{nf.format(d.handed_over)}</td>
-                    <td>{nf.format(d.closed_ai)}</td><td>{nf.format(d.closed_human)}</td><td>{nf.format(d.ai_turns)}</td><td>{nf.format(d.tokens)}</td>
+                    <th scope="row">{tanggal(d.day)}</th><td className="d-num">{nf.format(d.started)}</td><td className="d-num">{nf.format(d.handed_over)}</td>
+                    <td className="d-num">{nf.format(d.closed_ai)}</td><td className="d-num">{nf.format(d.closed_human)}</td><td className="d-num">{nf.format(d.ai_turns)}</td><td className="d-num">{nf.format(d.tokens)}</td>
                   </tr>
                 ))}
               </tbody>

@@ -4,8 +4,14 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+import { Check, UploadSimple } from "@phosphor-icons/react/ssr";
+
 import { Alert, WithTenant, type TenantCtx } from "@/dashboard/shell";
 import { API_ORIGIN, api, describe } from "@/lib/api";
+import { INVOICE_STATUS, SUBSCRIPTION_STATUS, status as statusOf } from "@/lib/labels";
+import { confirm } from "@/ui/dialog";
+import { Badge, Card, PageHeader, PageSkeleton } from "@/ui/page";
+import { toast } from "@/ui/toast";
 
 interface Limits {
   max_members: number | null; max_products: number | null; platform_ai_tokens_monthly: number | null;
@@ -24,7 +30,6 @@ interface Invoice {
 
 const rupiah = (n: number) => `Rp${n.toLocaleString("id-ID")}`;
 const date = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString("id-ID", { dateStyle: "long" }) : "—");
-const STATUS: Record<Subscription["status"], string> = { trialing: "Uji coba", active: "Aktif", expired: "Berakhir" };
 const INV: Record<Invoice["status"], string> = {
   awaiting_payment: "Menunggu pembayaran", submitted: "Menunggu verifikasi", paid: "Lunas", rejected: "Ditolak", cancelled: "Dibatalkan",
 };
@@ -47,7 +52,7 @@ function View({ ctx }: { ctx: TenantCtx }) {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [instructions, setInstructions] = useState("");
-  const [msg, setMsg] = useState<{ ok?: string; err?: string }>({});
+  const [msg, setMsg] = useState<{ err?: string }>({});
   const [busy, setBusy] = useState(false);
   const canPay = ctx.can("tenant.update");
 
@@ -71,99 +76,131 @@ function View({ ctx }: { ctx: TenantCtx }) {
   async function run(fn: () => Promise<unknown>, ok: string) {
     setBusy(true);
     setMsg({});
-    try { await fn(); await load(); setMsg({ ok }); } catch (e) { setMsg({ err: describe(e) }); } finally { setBusy(false); }
+    try { await fn(); await load(); toast.ok(ok); } catch (e) { setMsg({ err: describe(e) }); } finally { setBusy(false); }
   }
 
-  if (!sub) return <><Alert kind="error">{msg.err}</Alert><p className="d-muted" aria-busy="true">Memuat…</p></>;
+  if (!sub) return <><Alert kind="error">{msg.err}</Alert>{!msg.err && <PageSkeleton />}</>;
   const open = invoices.find((x) => x.status === "awaiting_payment" || x.status === "submitted");
   const u = sub.usage;
   const L = sub.plan.limits;
+  const st = statusOf(SUBSCRIPTION_STATUS, sub.status);
+  const meters: { label: string; used: number; max: number | null; fmt?: (n: number | null) => string; none?: boolean }[] = [
+    { label: "Produk", used: u.products, max: L.max_products },
+    { label: "Anggota tim (termasuk undangan)", used: u.members + u.pending_invitations, max: L.max_members },
+    { label: "Penyimpanan file", used: u.storage_bytes, max: L.storage_bytes, fmt: mb },
+    { label: "Percakapan bulan ini", used: u.conversations_month, max: L.conversations_monthly },
+    { label: "Token AI platform bulan ini", used: u.platform_tokens_month, max: L.platform_ai_tokens_monthly, none: L.platform_ai_tokens_monthly === 0 },
+  ];
   return (
     <>
-      <h1>Langganan</h1>
+      <PageHeader title="Langganan" description="Paket toko, pemakaian terhadap batas paket, dan tagihan." />
       <Alert kind="error">{msg.err}</Alert>
-      <Alert kind="ok">{msg.ok}</Alert>
+      {sub.status === "expired" && (
+        <div className="d-alert d-alert-error" role="alert"><div>Langganan berakhir: website, katalog, checkout, dan chat toko sedang nonaktif. Pilih paket dan bayar untuk mengaktifkan kembali.</div></div>
+      )}
       <section className="d-card" aria-label="Paket saat ini">
-        <h2>Paket {sub.plan.name} — {STATUS[sub.status]}</h2>
-        {sub.status === "trialing" && <p>Uji coba berakhir {date(sub.trial_ends_at)}.</p>}
-        {sub.status === "active" && <p>Aktif sampai {date(sub.current_period_end)}.</p>}
-        {sub.status === "expired" && (
-          <div className="d-alert d-alert-error" role="alert">Langganan berakhir: website, katalog, checkout, dan chat toko sedang nonaktif. Pilih paket dan bayar untuk mengaktifkan kembali.</div>
-        )}
-        <table className="d-table">
-          <caption className="an-caption">Pemakaian</caption>
-          <thead><tr><th scope="col">Batas</th><th scope="col">Terpakai</th><th scope="col">Maks</th></tr></thead>
-          <tbody>
-            <tr><th scope="row">Produk</th><td>{u.products}</td><td>{limit(L.max_products)}</td></tr>
-            <tr><th scope="row">Anggota tim (termasuk undangan)</th><td>{u.members + u.pending_invitations}</td><td>{limit(L.max_members)}</td></tr>
-            <tr><th scope="row">Penyimpanan file</th><td>{mb(u.storage_bytes)}</td><td>{mb(L.storage_bytes)}</td></tr>
-            <tr><th scope="row">Percakapan bulan ini</th><td>{u.conversations_month}</td><td>{limit(L.conversations_monthly)}</td></tr>
-            <tr><th scope="row">Token AI platform bulan ini</th><td>{u.platform_tokens_month.toLocaleString("id-ID")}</td><td>{L.platform_ai_tokens_monthly === 0 ? "Tidak termasuk" : limit(L.platform_ai_tokens_monthly)}</td></tr>
-          </tbody>
-        </table>
-        {L.byok_allowed && <p className="d-muted">Asisten AI dapat memakai kunci provider milik toko sendiri (BYOK).</p>}
+        <header className="d-card-head">
+          <div className="d-card-head-text">
+            <h2>Paket {sub.plan.name}</h2>
+            <p>
+              {sub.status === "trialing" && <>Uji coba berakhir {date(sub.trial_ends_at)}.</>}
+              {sub.status === "active" && <>Aktif sampai {date(sub.current_period_end)}.</>}
+              {sub.status === "expired" && <>Berakhir.</>}
+            </p>
+          </div>
+          <Badge tone={st.tone}>{st.label}</Badge>
+        </header>
+        <div className="d-grid2">
+          {meters.map((m) => {
+            const pct = m.max ? Math.min(m.used / m.max, 1) : 0;
+            const f = m.fmt ?? ((n: number | null) => limit(n));
+            return (
+              <div key={m.label} className="d-meter">
+                <div className="d-meter-head"><span>{m.label}</span><span>{m.none ? "Tidak termasuk" : `${m.fmt ? m.fmt(m.used) : m.used.toLocaleString("id-ID")} / ${f(m.max)}`}</span></div>
+                {m.max ? <div className="d-progress"><span style={{ transform: `scaleX(${pct})`, background: pct >= 1 ? "var(--danger)" : pct > 0.8 ? "var(--warn)" : undefined }} /></div> : null}
+              </div>
+            );
+          })}
+        </div>
+        {L.byok_allowed && <p className="d-muted d-small" style={{ marginTop: 16 }}>Asisten AI dapat memakai kunci API milik toko sendiri.</p>}
       </section>
 
       {open ? (
         <section className="d-card" aria-label="Tagihan berjalan">
-          <h2>Tagihan {open.code}</h2>
-          <p>Paket {plans.find((p) => p.code === open.plan_code)?.name ?? open.plan_code} — <strong>{rupiah(open.amount_idr)}</strong> untuk {open.period_days} hari. Status: <strong>{INV[open.status]}</strong>.</p>
-          <div className="d-alert" role="note">
-            <strong>Cara bayar:</strong> {instructions || "Hubungi admin platform untuk instruksi pembayaran."} Cantumkan kode {open.code}.
+          <header className="d-card-head">
+            <div className="d-card-head-text">
+              <h2>Tagihan {open.code}</h2>
+              <p>Paket {plans.find((p) => p.code === open.plan_code)?.name ?? open.plan_code} — <strong>{rupiah(open.amount_idr)}</strong> untuk {open.period_days} hari.</p>
+            </div>
+            <Badge tone={statusOf(INVOICE_STATUS, open.status).tone}>{INV[open.status]}</Badge>
+          </header>
+          <div className="d-alert d-alert-info" role="note">
+            <div><strong>Cara bayar:</strong> {instructions || "Hubungi admin platform untuk instruksi pembayaran."} Cantumkan kode <strong>{open.code}</strong>.</div>
           </div>
           {canPay && (
-            <label className="d-field"><span>{open.has_proof ? "Ganti bukti bayar" : "Unggah bukti bayar"} (PNG/JPEG/WebP, maks 2 MB)</span>
-              <input type="file" accept="image/png,image/jpeg,image/webp" disabled={busy} onChange={(e) => {
+            <label className="d-upload">
+              <UploadSimple weight="bold" aria-hidden="true" />
+              <span><strong>{open.has_proof ? "Ganti bukti bayar" : "Unggah bukti bayar"}</strong><span className="d-muted d-small">PNG, JPEG, atau WebP · maks. 2 MB</span></span>
+              <input type="file" className="sr-only" aria-label={`${open.has_proof ? "Ganti bukti bayar" : "Unggah bukti bayar"} (PNG/JPEG/WebP, maks 2 MB)`} accept="image/png,image/jpeg,image/webp" disabled={busy} onChange={(e) => {
                 const f = e.target.files?.[0];
                 if (f) void run(() => api("POST", `${base}/invoices/${open.id}/proof`, { bytes: f }), "Bukti terkirim. Menunggu verifikasi admin platform.");
               }} />
             </label>
           )}
-          {open.has_proof && <p><a href={`${API_ORIGIN}${base}/invoices/${open.id}/proof`} target="_blank" rel="noreferrer">Lihat bukti yang diunggah</a></p>}
-          {canPay && <button className="d-btn" disabled={busy} onClick={() => void run(() => api("POST", `${base}/invoices/${open.id}/cancel`), "Tagihan dibatalkan.")}>Batalkan tagihan</button>}
+          <div className="d-row" style={{ marginTop: 16 }}>
+            {open.has_proof && <a className="d-btn" href={`${API_ORIGIN}${base}/invoices/${open.id}/proof`} target="_blank" rel="noreferrer">Lihat bukti yang diunggah</a>}
+            {canPay && <button className="d-btn d-btn-ghost" disabled={busy} onClick={async () => {
+              if (await confirm({ title: `Batalkan tagihan ${open.code}?`, body: "Anda bisa memilih paket lagi setelahnya.", confirmLabel: "Batalkan tagihan", cancelLabel: "Kembali", danger: true })) void run(() => api("POST", `${base}/invoices/${open.id}/cancel`), "Tagihan dibatalkan.");
+            }}>Batalkan tagihan</button>}
+          </div>
         </section>
       ) : canPay && (
-        <section className="d-card" aria-label="Pilih paket">
-          <h2>Pilih paket</h2>
-          <div className="an-grid">
-            {plans.map((p) => (
-              <div key={p.code} className="an-tile">
-                <div className="an-label">{p.name}</div>
-                <div className="an-value">{rupiah(p.price_idr)}</div>
-                <div className="an-note">per {p.period_days} hari</div>
-                <ul className="sub-feat">
-                  <li>{limit(p.limits.max_products)} produk</li>
-                  <li>{limit(p.limits.max_members)} anggota tim</li>
-                  <li>{mb(p.limits.storage_bytes)} penyimpanan</li>
-                  <li>{limit(p.limits.conversations_monthly)} percakapan/bulan</li>
-                  <li>{p.limits.platform_ai_tokens_monthly === 0 ? "Tanpa token AI platform" : `${limit(p.limits.platform_ai_tokens_monthly)} token AI/bulan`}</li>
-                </ul>
-                <button className="d-btn d-btn-primary" disabled={busy} onClick={() => void run(() => api("POST", `${base}/invoices`, { json: { plan_code: p.code } }), `Tagihan paket ${p.name} dibuat.`)}>
-                  {sub.status === "active" && sub.plan.code === p.code ? "Perpanjang" : `Pilih ${p.name}`}
-                </button>
-              </div>
-            ))}
+        <section aria-label="Pilih paket" style={{ marginBottom: 16 }}>
+          <h2 className="d-section-title" style={{ marginTop: 8 }}>Pilih paket</h2>
+          <div className="d-plans">
+            {plans.map((p) => {
+              const current = sub.plan.code === p.code;
+              return (
+                <div key={p.code} className="d-card d-plan" data-current={current ? "true" : undefined}>
+                  <div className="d-row d-row-between"><strong>{p.name}</strong>{current && <Badge tone="brand" plain>Paket saat ini</Badge>}</div>
+                  <div className="d-plan-price">{rupiah(p.price_idr)} <small>/ {p.period_days} hari</small></div>
+                  <ul className="d-checklist">
+                    <li><Check weight="bold" aria-hidden="true" />{limit(p.limits.max_products)} produk</li>
+                    <li><Check weight="bold" aria-hidden="true" />{limit(p.limits.max_members)} anggota tim</li>
+                    <li><Check weight="bold" aria-hidden="true" />{mb(p.limits.storage_bytes)} penyimpanan</li>
+                    <li><Check weight="bold" aria-hidden="true" />{limit(p.limits.conversations_monthly)} percakapan/bulan</li>
+                    <li><Check weight="bold" aria-hidden="true" />{p.limits.platform_ai_tokens_monthly === 0 ? "Tanpa token AI platform" : `${limit(p.limits.platform_ai_tokens_monthly)} token AI/bulan`}</li>
+                  </ul>
+                  <button className={`d-btn ${current ? "" : "d-btn-primary"} d-btn-block`} disabled={busy} onClick={() => void run(() => api("POST", `${base}/invoices`, { json: { plan_code: p.code } }), `Tagihan paket ${p.name} dibuat.`)}>
+                    {sub.status === "active" && current ? "Perpanjang" : `Pilih ${p.name}`}
+                  </button>
+                </div>
+              );
+            })}
           </div>
         </section>
       )}
 
       {invoices.length > 0 && (
-        <section className="d-card" aria-label="Riwayat tagihan" style={{ overflowX: "auto" }}>
+        <section className="d-table-wrap" aria-label="Riwayat tagihan">
           <table className="d-table">
             <caption className="an-caption">Riwayat tagihan</caption>
-            <thead><tr><th scope="col">Kode</th><th scope="col">Paket</th><th scope="col">Nominal</th><th scope="col">Status</th></tr></thead>
+            <thead><tr><th scope="col">Kode</th><th scope="col">Paket</th><th scope="col" className="d-num">Nominal</th><th scope="col">Status</th></tr></thead>
             <tbody>
-              {invoices.map((x) => (
-                <tr key={x.id}>
-                  <th scope="row">{x.code}</th><td>{x.plan_code}</td><td>{rupiah(x.amount_idr)}</td>
-                  <td>{INV[x.status]}{x.status === "paid" && x.period_end ? ` (s.d. ${date(x.period_end)})` : ""}{x.rejection_reason ? ` — ${x.rejection_reason}` : ""}</td>
-                </tr>
-              ))}
+              {invoices.map((x) => {
+                const ist = statusOf(INVOICE_STATUS, x.status);
+                return (
+                  <tr key={x.id}>
+                    <th scope="row">{x.code}</th><td>{plans.find((p) => p.code === x.plan_code)?.name ?? x.plan_code}</td><td className="d-num">{rupiah(x.amount_idr)}</td>
+                    <td><Badge tone={ist.tone}>{INV[x.status]}</Badge>{x.status === "paid" && x.period_end && <span className="d-sub">s.d. {date(x.period_end)}</span>}{x.rejection_reason && <span className="d-sub">{x.rejection_reason}</span>}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </section>
       )}
-      <p className="d-muted">Ketentuan paket & pembayaran: lihat <a href="/legal/syarat" target="_blank" rel="noopener">Syarat & Ketentuan</a> bagian 3.</p>
+      <p className="d-muted d-small">Ketentuan paket & pembayaran: lihat <a href="/legal/syarat" target="_blank" rel="noopener">Syarat & Ketentuan</a> bagian 3.</p>
     </>
   );
 }
