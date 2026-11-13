@@ -287,7 +287,7 @@ Sumber: `docs/ux/riset-studio-website-builder.md` §7 Fase 1. Bukti per tugas di
 | P9-5 `<head>` per toko + robots/sitemap + JSON-LD + favicon | G-SEO-01/02/03/05, G-BRD-02 | `apps/api/src/site_head.rs`, `ops/caddy/`, `Dockerfile` | tes HTTP + escape |
 | P9-6 Aksesibilitas: alt text, tombol pindah/ukuran tanpa seret, target 24 px, cek kontras | G-MED-01, G-A11Y-01/02/05/07, G-BRD-01 | studio + renderer | uji keyboard/pointer |
 | P9-7 Performa gambar | G-MED-04/05, G-PRF-02/03 | renderer | ukuran & atribut gambar |
-| P9-8 Plugin Teks + WhatsApp | G-PLG-02/17 | schema v2 + studio + renderer | unit + browser |
+| P9-8 Plugin Teks + WhatsApp | G-PLG-02/17 | schema v2 + studio + renderer | unit + browser — selesai, docs/evidence/P9-8.txt |
 | P9-9 Privasi: buang EXIF, tautan kebijakan otomatis | G-SEC-05, G-PDP-01/03/04 | `frontend/src/lib/image.ts`, renderer | unit |
 | P9-10 Pemeriksa "siap terbit" | G-PUB-05 | studio | unit |
 | P9-11 Gating paket plugin (ADR-0019) | G-ECO-03/04 | API publik + studio | tes HTTP |

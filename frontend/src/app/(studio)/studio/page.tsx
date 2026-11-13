@@ -12,7 +12,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 
 import {
   LockSimple, LockSimpleOpen, ArrowSquareOut, ClockCounterClockwise, WarningCircle, ArrowClockwise, ArrowCounterClockwise, ArrowLeft, ArrowsIn, ArrowsOut, CaretDown, CaretUp, ChatCircleDots, Check, Copy,
-  CornersIn, CornersOut, DesktopTower, DeviceMobile, ImageSquare, MagnifyingGlass, Plus, PuzzlePiece, SidebarSimple, Sparkle, SquaresFour, Trash, X,
+  CornersIn, CornersOut, DesktopTower, DeviceMobile, ImageSquare, MagnifyingGlass, Plus, PuzzlePiece, SidebarSimple, Sparkle, SquaresFour, Trash, WhatsappLogo, X,
 } from "@phosphor-icons/react/ssr";
 
 import { useUploads } from "@/dashboard/assets";
@@ -21,12 +21,14 @@ import { WithTenant, type TenantCtx } from "@/dashboard/shell";
 import { api } from "@/lib/api";
 import { EditContext, type EditApi } from "@/renderer/edit";
 import { Site, type GridProduct } from "@/renderer/Site";
+import { TextBlock, WhatsAppButton } from "@/renderer/StudioSite";
+import { fontStack } from "@/renderer/safe";
 import { FIELDS, FONT_PRESETS, defaultData } from "@/renderer/sections";
 import type { Business, Json, PageContent, SectionType } from "@/renderer/types";
 import { Canvas, DESIGN_WIDTH, GAP, ROW, rowsFor } from "@/studio/Canvas";
 import { COLS, compact, insert, mobileOrder, place } from "@/studio/grid";
 import { commit, redo, silent, start, undo, type History } from "@/studio/history";
-import { CELL_STYLES, PALETTES, PLUGINS, pluginDef, type PluginKind } from "@/studio/plugins";
+import { CELL_STYLES, EXTRA_DATA, PALETTES, PLUGINS, pluginDef, type PluginKind } from "@/studio/plugins";
 import { TEMPLATES, type TplCell } from "@/studio/templates";
 import { fromDoc, isV2, toDoc, type StudioState } from "@/studio/doc";
 import { ApiError, describe } from "@/lib/api";
@@ -50,6 +52,18 @@ let seq = 0;
 const newId = (k: string) => `${k.replace(/_/g, "-")}-${Date.now().toString(36)}${(seq++).toString(36)}`;
 /** Chatbot di luar grid: gelembung bulat atau bilah bawah, keduanya mengikuti layar. */
 const isFloating = (c: StudioCell) => c.kind === "chatbot" && (c.layout === "floating" || c.layout === "bar");
+/** WhatsApp melayang: di luar grid seperti chatbot melayang (server: is_embed). */
+const isFloatingWa = (c: StudioCell) => c.kind === "whatsapp" && c.layout === "floating";
+/** Blok yang tidak menempati grid. */
+const isEmbed = (c: StudioCell) => isFloating(c) || isFloatingWa(c);
+/** Plugin di luar renderer section v1 (data & batas sama dengan validator server schema_v2.rs). */
+const EXTRA_LIMITS: Partial<Record<PluginKind, Record<string, { max: number; required?: boolean }>>> = {
+  chatbot: { title: { max: 40, required: true }, welcome: { max: 300 } },
+  text: { title: { max: 120 }, body: { max: 5000, required: true } },
+  whatsapp: { label: { max: 40, required: true }, message: { max: 300 } },
+};
+/** Satu per halaman (ADR-0019 max_per_page). */
+const SINGLE: PluginKind[] = ["chatbot", "whatsapp"];
 /** Plugin yang punya satu foto utama (diganti saat foto dijatuhkan). Galeri: foto ditambahkan. */
 const IMAGE_KEY: Partial<Record<PluginKind, string>> = { hero: "image", about: "image", promotion: "image" };
 const takesPhoto = (k: PluginKind) => k in IMAGE_KEY || k === "gallery";
@@ -58,7 +72,7 @@ function cellFor(kind: PluginKind, data?: { [k: string]: Json }): StudioCell {
   const d = pluginDef(kind);
   return {
     id: newId(kind), kind, x: 0, y: 0, w: d.w, h: d.h, minW: d.minW, minH: d.minH,
-    data: data ?? (kind === "chatbot" ? { title: "Tanya kami", welcome: "Halo! Ada yang bisa kami bantu?" } : defaultData(kind as SectionType)),
+    data: data ?? (EXTRA_DATA[kind] ? { ...EXTRA_DATA[kind] } : defaultData(kind as SectionType)),
     style: kind === "promotion" ? "tint" : kind === "chatbot" ? "card" : "plain",
     layout: d.layouts?.[0]?.value, autoH: true, chatOpen: true,
   };
@@ -83,7 +97,8 @@ const withInstalled = (s: Studio): Studio => ({ ...s, installed: [...new Set<Plu
 /** Set nilai pada path data ("title", "cta.label", "items.0.quote") dengan batas panjang dari skema field. */
 function setPath(kind: PluginKind, data: { [k: string]: Json }, path: string, value: string): { [k: string]: Json } | string {
   const parts = path.split(".");
-  const fields = kind === "chatbot" ? [] : FIELDS[kind as SectionType];
+  const extra = EXTRA_LIMITS[kind];
+  const fields = extra ? Object.entries(extra).map(([key, f]) => ({ key, ...f, item: undefined })) : FIELDS[kind as SectionType];
   const top = fields.find((f) => f.key === parts[0]);
   const leaf = parts.length === 3 ? top?.item?.find((f) => f.key === parts[2]) : parts.length === 2 && parts[0] === "cta" ? { max: 40, required: true } : top;
   const max = leaf?.max;
@@ -309,7 +324,7 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
   const setChatOpen = useCallback((id: string, open: boolean) => setCell(id, { chatOpen: open }, ""), [setCell]);
 
   function add(kind: PluginKind, at?: { x: number; y: number }) {
-    if (kind === "chatbot" && st?.cells.some((c) => c.kind === "chatbot")) { toast.info("Chatbot sudah ada di halaman."); return; }
+    if (SINGLE.includes(kind) && st?.cells.some((c) => c.kind === kind)) { toast.info(`${pluginDef(kind).name} sudah ada di halaman.`); return; }
     const c = cellFor(kind);
     update((s) => ({ ...s, installed: s.installed.includes(kind) ? s.installed : [...s.installed, kind], cells: insert(s.cells, c, at) as StudioCell[] }), "");
     setSel(c.id);
@@ -366,6 +381,14 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
       {c.kind === "chatbot" ? (
         <ChatPreview primary={th.primary} title={String(c.data.title ?? "Tanya kami")} welcome={String(c.data.welcome ?? "")}
           open={c.chatOpen !== false} onToggle={() => setChatOpen(c.id, c.chatOpen === false)} />
+      ) : c.kind === "text" || c.kind === "whatsapp" ? (
+        <EditContext.Provider value={editable ? editApi(c) : null}>
+          <div className="site s-solo" style={{ ["--s-primary" as string]: th.primary, ["--s-font" as string]: fontStack(th.font) }}>
+            <section className="s"><div className="s-inner">
+              {c.kind === "text" ? <TextBlock b={c} /> : <WhatsAppButton b={c} business={business} />}
+            </div></section>
+          </div>
+        </EditContext.Provider>
       ) : (
         <EditContext.Provider value={editable ? editApi(c) : null}>
           <Site
@@ -420,8 +443,9 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
   }
 
   const selected = st.cells.find((c) => c.id === sel) ?? null;
-  const gridCells = st.cells.filter((c) => !isFloating(c));
+  const gridCells = st.cells.filter((c) => !isEmbed(c));
   const floating = st.cells.find(isFloating);
+  const floatingWa = st.cells.find(isFloatingWa);
 
   return (
     <Assets.Provider value={assets}>
@@ -463,7 +487,7 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
               onChange={(patch, key) => setCell(selected.id, patch, key)}
               onWidth={(w) => update((s) => ({ ...s, cells: place(s.cells, { ...selected, w }) as StudioCell[] }), "")}
               onLayout={(l) => {
-                if (selected.kind === "chatbot" && l === "inline" && isFloating(selected)) {
+                if (l === "inline" && isEmbed(selected)) {
                   update((s) => ({ ...s, cells: insert(s.cells.filter((c) => c.id !== selected.id), { ...selected, layout: "inline" } as StudioCell) as StudioCell[] }), "");
                 } else setCell(selected.id, { layout: l }, "");
               }}
@@ -472,6 +496,7 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
               onFull={() => setFull(selected.id)}
               onPhoto={(f) => void putPhoto(selected.id, f)}
               aiHref={`/ai?tenant=${ctx.tenant.id}`}
+              businessHref={`/business?tenant=${ctx.tenant.id}`}
             />
           ) : (
             <>
@@ -552,7 +577,7 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
             <Canvas
               scale={scale}
               cells={gridCells}
-              onChange={(cells) => update((s) => ({ ...s, cells: [...cells, ...s.cells.filter(isFloating)] }), "drag")}
+              onChange={(cells) => update((s) => ({ ...s, cells: [...cells, ...s.cells.filter(isEmbed)] }), "drag")}
               onMeasure={onMeasure}
               onResizeH={onResizeH}
               onDropFile={(id, f) => void putPhoto(id, f)}
@@ -590,12 +615,12 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
           ) : (
             <div className="st-phone">
               {mobileOrder(gridCells).map((c) => <div key={c.id} className="st-phone-cell">{renderCell(c)}</div>)}
-              <div className="st-dock"><FloatingChat cell={floating} primary={st.primary} onToggle={setChatOpen} onSelect={setSel} selected={sel} /></div>
+              <div className="st-dock"><FloatingChat cell={floating} primary={st.primary} onToggle={setChatOpen} onSelect={setSel} selected={sel} /><FloatingWa cell={floatingWa} onSelect={setSel} selected={sel} /></div>
             </div>
           )}
           {st.cells.length === 0 && <p className="st-empty">Tarik plugin dari panel kiri ke sini.</p>}
         </div>
-        {device === "desktop" && <div className="st-dock" style={{ ["--s-size" as string]: st.textScale ?? 1 }}><FloatingChat cell={floating} primary={st.primary} onToggle={setChatOpen} onSelect={setSel} selected={sel} /></div>}
+        {device === "desktop" && <div className="st-dock" style={{ ["--s-size" as string]: st.textScale ?? 1 }}><FloatingChat cell={floating} primary={st.primary} onToggle={setChatOpen} onSelect={setSel} selected={sel} /><FloatingWa cell={floatingWa} onSelect={setSel} selected={sel} /></div>}
         </div>
       </div>
       </div>
@@ -608,7 +633,7 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
           if (!c) return null;
           return (
             <div className="st-stage st-full" data-surface={st.surface} style={{ ["--s-primary" as string]: st.primary, ["--s-size" as string]: st.textScale ?? 1 }}>
-              <div style={{ width: `${(isFloating(c) ? 4 : c.w) / COLS * 100}%`, minWidth: 320, margin: "0 auto" }}>{renderCell({ ...c, chatOpen: true })}</div>
+              <div style={{ width: `${(isFloating(c) ? 4 : c.w) / COLS * 100}%`, minWidth: 320, margin: "0 auto" }}>{renderCell({ ...c, chatOpen: true, layout: c.kind === "whatsapp" ? "inline" : c.layout })}</div>
             </div>
           );
         })()}
@@ -727,7 +752,7 @@ function TemplateGallery({ first, business, renderCell, onPick, onCurrent, surfa
           return (
             <div key={t.key} className="st-tpl" onClick={() => onPick(t.key)}>
               <span className="st-tpl-thumb" data-surface={p.surface} style={{ ["--s-primary" as string]: p.primary }}>
-                <MiniLayout cells={p.cells.filter((c) => !isFloating(c))} render={(c) => renderCell(c, false, { primary: p.primary, font: p.font })} theme={{ primary: p.primary, font: p.font }} />
+                <MiniLayout cells={p.cells.filter((c) => !isEmbed(c))} render={(c) => renderCell(c, false, { primary: p.primary, font: p.font })} theme={{ primary: p.primary, font: p.font }} />
                 {p.cells.some(isFloating) && <span className="st-tpl-float" style={{ background: p.primary }} aria-hidden="true"><ChatCircleDots weight="fill" /></span>}
               </span>
               <span className="st-tpl-meta">
@@ -763,7 +788,7 @@ function MiniLayout({ cells, render, theme }: { cells: StudioCell[]; render: (c:
 }
 
 /* ============================================================ Inspektur */
-function Inspector({ c, onBack, onChange, onWidth, onLayout, onDuplicate, onRemove, onFull, onPhoto, aiHref }: {
+function Inspector({ c, onBack, onChange, onWidth, onLayout, onDuplicate, onRemove, onFull, onPhoto, aiHref, businessHref }: {
   c: StudioCell;
   onBack: () => void;
   onChange: (patch: Partial<StudioCell>, key?: string) => void;
@@ -774,6 +799,7 @@ function Inspector({ c, onBack, onChange, onWidth, onLayout, onDuplicate, onRemo
   onFull: () => void;
   onPhoto: (f: File) => void;
   aiHref: string;
+  businessHref: string;
 }) {
   const def = pluginDef(c.kind);
   return (
@@ -782,12 +808,12 @@ function Inspector({ c, onBack, onChange, onWidth, onLayout, onDuplicate, onRemo
         <button type="button" className="d-back" style={{ margin: 0 }} onClick={onBack}><ArrowLeft weight="bold" aria-hidden="true" />Plugin</button>
         <h2 style={{ margin: 0, fontSize: "0.9375rem", flex: 1 }}>{def.name}</h2>
         <div className="d-row">
-          <button type="button" className="d-icon-btn" aria-label="Duplikat" title="Duplikat" disabled={c.kind === "chatbot"} onClick={onDuplicate}><Copy weight="bold" /></button>
+          <button type="button" className="d-icon-btn" aria-label="Duplikat" title="Duplikat" disabled={SINGLE.includes(c.kind)} onClick={onDuplicate}><Copy weight="bold" /></button>
           <button type="button" className="d-icon-btn" aria-label="Hapus dari halaman" title="Hapus" onClick={onRemove}><Trash weight="bold" /></button>
         </div>
       </div>
       {c.kind !== "chatbot" && <p className="d-hint" style={{ margin: 0 }}>Klik teks di kanvas untuk mengetik langsung.{takesPhoto(c.kind) && " Seret foto dari komputer ke plugin untuk memasangnya."}</p>}
-      {!isFloating(c) && <div className="st-section">
+      {!isEmbed(c) && <div className="st-section">
         <label className="d-switch">
           <input type="checkbox" checked={!!c.locked} onChange={(e) => onChange({ locked: e.target.checked }, "")} />
           <span><strong><LockSimple weight="bold" aria-hidden="true" style={{ verticalAlign: "-2px" }} /> Kunci posisi</strong><span className="d-muted">Plugin ini tidak bisa diseret, dan plugin lain tidak akan menggesernya.</span></span>
@@ -844,6 +870,17 @@ function Inspector({ c, onBack, onChange, onWidth, onLayout, onDuplicate, onRemo
             <label className="d-field"><span>Pesan sambutan</span><textarea rows={3} maxLength={300} value={String(c.data.welcome ?? "")} onChange={(e) => onChange({ data: { ...c.data, welcome: e.target.value } })} /></label>
             <p className="d-hint">Jawaban memakai pengaturan di menu <Link href={aiHref}>Asisten AI</Link>.</p>
           </>
+        ) : c.kind === "text" ? (
+          <>
+            <label className="d-field"><span>Judul (opsional)</span><input maxLength={120} value={String(c.data.title ?? "")} onChange={(e) => onChange({ data: { ...c.data, title: e.target.value } })} /></label>
+            <label className="d-field"><span>Isi</span><textarea rows={6} maxLength={5000} value={String(c.data.body ?? "")} onChange={(e) => onChange({ data: { ...c.data, body: e.target.value } })} /><span className="d-hint">Baris kosong memisahkan paragraf.</span></label>
+          </>
+        ) : c.kind === "whatsapp" ? (
+          <>
+            <label className="d-field"><span>Tulisan tombol</span><input maxLength={40} value={String(c.data.label ?? "")} onChange={(e) => onChange({ data: { ...c.data, label: e.target.value } })} /></label>
+            <label className="d-field"><span>Pesan awal (opsional)</span><textarea rows={3} maxLength={300} value={String(c.data.message ?? "")} onChange={(e) => onChange({ data: { ...c.data, message: e.target.value } })} /><span className="d-hint">Terisi otomatis saat pembeli membuka WhatsApp.</span></label>
+            <p className="d-hint">Nomor diambil dari WhatsApp (atau telepon) di <Link href={businessHref}>Profil bisnis</Link>.</p>
+          </>
         ) : (
           FIELDS[c.kind as SectionType].map((f) => (
             <FieldInput key={f.key} f={f} data={c.data} disabled={false} onChange={(d) => onChange({ data: d })} />
@@ -851,6 +888,18 @@ function Inspector({ c, onBack, onChange, onWidth, onLayout, onDuplicate, onRemo
         )}
       </div>
     </>
+  );
+}
+
+/* ============================================================ WhatsApp melayang */
+/** Pratinjau tombol WhatsApp melayang (pojok kanan bawah, di atas gelembung chat seperti situs publik). */
+function FloatingWa({ cell, onSelect, selected }: { cell: StudioCell | undefined; onSelect: (id: string) => void; selected: string | null }) {
+  if (!cell) return null;
+  const label = String(cell.data.label || "Pesan via WhatsApp");
+  return (
+    <button type="button" className={`st-wa-float${selected === cell.id ? " st-selected" : ""}`} aria-label={`${label} (tombol WhatsApp melayang) — pilih untuk mengatur`} title={label} onClick={() => onSelect(cell.id)}>
+      <WhatsappLogo weight="fill" aria-hidden="true" />
+    </button>
   );
 }
 

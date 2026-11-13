@@ -3,6 +3,7 @@
 // (atas→bawah, kiri→kanan). `hide_on` dihormati. Plugin section memakai renderer v1 (`Site`) per blok
 // sehingga tampilan = pratinjau editor. Semua teks dirender sebagai teks (React escaping).
 
+import { T, useEditing } from "./edit";
 import type { CSSProperties, ReactNode } from "react";
 
 import { ChatWidget } from "@/chat/widget";
@@ -36,19 +37,33 @@ export function whatsappHref(number: string | null | undefined, message?: string
   return msg ? `${base}?text=${encodeURIComponent(msg)}` : base;
 }
 
-function TextBlock({ b }: { b: BlockV2 }) {
+/** Plugin Teks. Di Studio (EditContext) judul & isi bisa diketik langsung; di situs publik teks biasa. */
+export function TextBlock({ b }: { b: Pick<BlockV2, "data"> }) {
+  const editing = useEditing();
   const title = text(b.data.title);
   return (
     <div className="s-text">
-      {title && <h2 className="s-title">{title}</h2>}
-      {text(b.data.body).split("\n").filter((p) => p.trim()).map((p, i) => <p key={i}>{p}</p>)}
+      {(title || editing) && <h2 className="s-title"><T path="title" v={b.data.title} placeholder="Judul (opsional)" /></h2>}
+      {editing
+        ? <p><T path="body" v={b.data.body} multiline placeholder="Tulis paragraf di sini…" /></p>
+        : text(b.data.body).split("\n").filter((p) => p.trim()).map((p, i) => <p key={i}>{p}</p>)}
     </div>
   );
 }
 
-function WhatsAppButton({ b, business, floating }: { b: BlockV2; business: Business; floating?: boolean }) {
+/** Plugin WhatsApp: tautan wa.me ke nomor Profil bisnis. Di Studio label bisa diketik langsung. */
+export function WhatsAppButton({ b, business, floating }: { b: Pick<BlockV2, "data">; business: Business; floating?: boolean }) {
+  const editing = useEditing();
   const href = whatsappHref(business.profile.whatsapp ?? business.profile.phone, text(b.data.message));
   const label = text(b.data.label) || "Pesan via WhatsApp";
+  if (editing) {
+    return (
+      <span className="s-btn s-wa">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="currentColor"><circle cx="12" cy="12" r="10" /></svg>
+        <T path="label" v={b.data.label} placeholder="Pesan via WhatsApp" />
+      </span>
+    );
+  }
   if (!href) return floating ? null : <p className="s-muted">Nomor WhatsApp belum diatur di Profil bisnis.</p>;
   return (
     <a className={floating ? "s-wa-float" : "s-btn s-wa"} href={href} target="_blank" rel="noopener noreferrer" aria-label={floating ? label : undefined}>

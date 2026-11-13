@@ -171,7 +171,7 @@ function Editor({ ctx }: { ctx: TenantCtx }) {
   });
 
   if (site === undefined) return <>{error ? <Alert kind="error">{error}</Alert> : <PageSkeleton />}</>;
-  if (site === null) return <TemplatePicker base={base} canEdit={canEdit} business={business} onSelected={async () => { setSite(await api<WebsiteView>("GET", `${base}/website`)); await loadDraft(); }} />;
+  if (site === null) return <TemplatePicker base={base} canEdit={canEdit} business={business} studioHref={`/studio?tenant=${ctx.tenant.id}`} onSelected={async () => { setSite(await api<WebsiteView>("GET", `${base}/website`)); await loadDraft(); }} />;
   if (!content) return <Alert kind="error">{error}</Alert>;
   // ADR-0017: draf sudah berformat Studio (v2) → editor lama tidak boleh menimpanya.
   if (isV2(content)) {
@@ -338,7 +338,7 @@ function AddSection({ disabled, onAdd }: { disabled: boolean; onAdd: (t: Section
   );
 }
 
-function TemplatePicker({ base, canEdit, business, onSelected }: { base: string; canEdit: boolean; business: Business; onSelected: () => Promise<void> }) {
+function TemplatePicker({ base, canEdit, business, studioHref, onSelected }: { base: string; canEdit: boolean; business: Business; studioHref: string; onSelected: () => Promise<void> }) {
   const [templates, setTemplates] = useState<TemplateView[]>([]);
   const [preview, setPreview] = useState<{ key: string; content: PageContent } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -359,8 +359,18 @@ function TemplatePicker({ base, canEdit, business, onSelected }: { base: string;
   }
   return (
     <>
-      <PageHeader title="Website" description="Mulai dengan memilih template. Semua teks, foto, dan warna bisa diubah setelahnya." />
+      <PageHeader title="Website" description="Buat situs toko Anda. Semua teks, foto, dan warna bisa diubah setelahnya." />
       <Alert kind="error">{error}</Alert>
+      {/* ADR-0017: Studio adalah editor utama; template klasik tetap tersedia. */}
+      <Card label="Studio">
+        <div className="d-empty">
+          <span className="d-empty-icon" aria-hidden="true"><Sparkle weight="duotone" /></span>
+          <p className="d-empty-title">Susun website di Studio <Badge tone="brand">Disarankan</Badge></p>
+          <p>Pilih dari 6 template siap pakai, geser dan ubah ukuran blok, tambah chatbot & tombol WhatsApp, lihat hasilnya di desktop dan ponsel.</p>
+          {canEdit && <Link className="d-btn d-btn-primary" href={studioHref}>Buka Studio</Link>}
+        </div>
+      </Card>
+      <h2 className="d-section-title">Atau pakai template klasik</h2>
       <div className="e-tpl d-stagger">
         {templates.map((t) => (
           <div className="d-card e-tpl-card" key={t.key}>

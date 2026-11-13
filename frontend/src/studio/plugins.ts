@@ -3,6 +3,8 @@
 
 import type { SectionType } from "@/renderer/types";
 
+import type { Json } from "@/renderer/types";
+
 export type PluginKind = SectionType | "chatbot" | "text" | "whatsapp";
 export type PluginCategory = "Konten" | "Jualan" | "Layanan" | "Info toko";
 
@@ -30,10 +32,20 @@ export const PLUGINS: PluginDef[] = [
   { kind: "testimonials", name: "Testimoni", desc: "Ulasan dari pelanggan.", category: "Konten", w: 12, h: 7, minW: 4, minH: 2, keywords: "review ulasan" },
   { kind: "business_hours", name: "Jam buka", desc: "Jadwal buka dan status buka sekarang.", category: "Info toko", w: 4, h: 8, minW: 3, minH: 2, keywords: "jadwal waktu" },
   { kind: "location", name: "Lokasi", desc: "Alamat toko dan petunjuk arah.", category: "Info toko", w: 4, h: 5, minW: 3, minH: 2, keywords: "alamat peta map" },
+  { kind: "text", name: "Teks", desc: "Paragraf bebas: pengumuman, cerita, atau info penting.", category: "Konten", w: 6, h: 4, minW: 2, minH: 2, keywords: "paragraf tulisan artikel pengumuman" },
+  { kind: "whatsapp", name: "Tombol WhatsApp", desc: "Tombol chat ke nomor WhatsApp di Profil bisnis — melayang di pojok atau di halaman.", category: "Jualan", w: 4, h: 3, minW: 2, minH: 2,
+    layouts: [{ value: "floating", label: "Melayang" }, { value: "inline", label: "Di halaman" }], keywords: "wa chat pesan kontak order" },
   { kind: "contact", name: "Kontak", desc: "Tombol WhatsApp, telepon, dan media sosial.", category: "Info toko", w: 4, h: 5, minW: 3, minH: 2, keywords: "whatsapp telepon sosial" },
 ];
 
 export const pluginDef = (k: PluginKind) => PLUGINS.find((p) => p.kind === k)!;
+
+/** Data awal plugin di luar renderer section v1 (bentuk = validator server schema_v2.rs). */
+export const EXTRA_DATA: Partial<Record<PluginKind, { [k: string]: Json }>> = {
+  chatbot: { title: "Tanya kami", welcome: "Halo! Ada yang bisa kami bantu?" },
+  text: { title: "Pengumuman", body: "Tulis informasi penting untuk pembeli di sini." },
+  whatsapp: { label: "Pesan via WhatsApp", message: "Halo, saya mau tanya produk di toko Anda." },
+};
 
 export type CellStyle = "plain" | "card" | "tint" | "dark";
 export const CELL_STYLES: { value: CellStyle; label: string }[] = [

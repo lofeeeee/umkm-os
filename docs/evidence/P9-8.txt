@@ -1,0 +1,22 @@
+P9-8 — Plugin Teks + WhatsApp di editor Studio; Studio jadi pintu utama toko baru — 2026-11-13T23:36:15+07:00
+
+Sebelumnya: validator (P9-2) & renderer publik (P9-4) sudah mendukung text/whatsapp, tetapi katalog editor tidak
+memuatnya → pemilik toko tidak bisa menambahkannya. Toko tanpa website diarahkan ke galeri template v1 tanpa
+tautan ke Studio.
+
+Perubahan
+- frontend/src/studio/plugins.ts: katalog + EXTRA_DATA (data awal, bentuk = schema_v2.rs).
+- StudioSite.tsx: TextBlock & WhatsAppButton diekspor dan bisa diedit inline (komponen T); publik tetap teks biasa.
+- Studio: render Teks/WhatsApp di kanvas, inspector (judul/isi; tulisan tombol/pesan + tautan Profil bisnis),
+  batas field = server, maks satu WhatsApp & satu chatbot per halaman (ADR-0019), WhatsApp "Melayang" di luar grid
+  seperti chatbot melayang (server is_embed) dengan pratinjau tombol di pojok panggung.
+- Halaman Website (toko baru): kartu "Susun website di Studio (Disarankan)" + template klasik sebagai alternatif.
+
+Tes
+- templates.contract.test.ts: katalog ↔ manifest resmi (setiap kind & layout); fixture kontrak + dokumen
+  "plugin-teks-wa" & "plugin-wa-melayang" (WhatsApp melayang menimpa banner) → frontend_contract.rs 5/5 lolos.
+  Kontrol negatif: dua WhatsApp dalam satu dokumen → too_many_of_kind (validator menolak, dipecah jadi dua dokumen).
+- vitest 53/53, tsc, eslint bersih.
+- e2e/studio.spec.ts (stack nyata): template → edit judul inline (berisi <script>) → pasang & tambah plugin Teks
+  dari katalog → isi lewat inspector → simpan otomatis → terbit → situs publik: grid v2, judul sebagai teks,
+  paragraf Teks tampil, og:site_name & JSON-LD dari API, 390 px tanpa scroll horizontal, tanpa error CSP.

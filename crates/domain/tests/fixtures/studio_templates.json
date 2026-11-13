@@ -773,5 +773,113 @@
         "chat_open": false
       }
     ]
+  },
+  "plugin-teks-wa": {
+    "schema_version": 2,
+    "template": "modern_store",
+    "theme": {
+      "primary": "#15803D",
+      "font": "inter",
+      "surface": "light",
+      "text_scale": 1
+    },
+    "blocks": [
+      {
+        "id": "hero",
+        "kind": "hero",
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 8,
+        "style": "plain",
+        "data": {
+          "title": "Toko Segar"
+        },
+        "auto_height": true
+      },
+      {
+        "id": "text",
+        "kind": "text",
+        "x": 0,
+        "y": 8,
+        "w": 6,
+        "h": 4,
+        "style": "plain",
+        "data": {
+          "title": "Pengumuman",
+          "body": "Tulis informasi penting untuk pembeli di sini."
+        },
+        "auto_height": true
+      },
+      {
+        "id": "whatsapp",
+        "kind": "whatsapp",
+        "x": 6,
+        "y": 8,
+        "w": 6,
+        "h": 3,
+        "style": "plain",
+        "data": {
+          "label": "Pesan via WhatsApp",
+          "message": "Halo, saya mau tanya produk di toko Anda."
+        },
+        "auto_height": true,
+        "layout": "inline"
+      }
+    ]
+  },
+  "plugin-wa-melayang": {
+    "schema_version": 2,
+    "template": "modern_store",
+    "theme": {
+      "primary": "#15803D",
+      "font": "inter",
+      "surface": "light",
+      "text_scale": 1
+    },
+    "blocks": [
+      {
+        "id": "hero",
+        "kind": "hero",
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 8,
+        "style": "plain",
+        "data": {
+          "title": "Toko Segar"
+        },
+        "auto_height": true
+      },
+      {
+        "id": "text",
+        "kind": "text",
+        "x": 0,
+        "y": 8,
+        "w": 6,
+        "h": 4,
+        "style": "plain",
+        "data": {
+          "title": "Pengumuman",
+          "body": "Tulis informasi penting untuk pembeli di sini."
+        },
+        "auto_height": true
+      },
+      {
+        "id": "whatsapp",
+        "kind": "whatsapp",
+        "x": 0,
+        "y": 0,
+        "w": 4,
+        "h": 3,
+        "style": "plain",
+        "data": {
+          "label": "Pesan via WhatsApp",
+          "message": "Halo, saya mau tanya produk di toko Anda."
+        },
+        "auto_height": true,
+        "layout": "floating"
+      }
+    ]
   }
 }

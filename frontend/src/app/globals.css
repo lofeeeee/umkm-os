@@ -1357,6 +1357,12 @@ label.st-tool { cursor: pointer; }
 .st-dock > .st-float { position: absolute; right: 20px; bottom: 20px; }
 .st-phone .st-dock { position: sticky; margin: 0; }
 .st-phone .st-dock > .st-float { right: 4px; bottom: 8px; }
+/* WhatsApp melayang (pratinjau): di atas gelembung chat, seperti .s-wa-float di situs publik. */
+.st-dock > .st-wa-float { position: absolute; right: 24px; bottom: 92px; display: grid; place-items: center; width: 52px; height: 52px; border: 0; border-radius: 999px; background: #25d366; color: #fff; box-shadow: 0 12px 28px -8px rgb(37 211 102 / 0.7); cursor: pointer; transition: transform 160ms var(--ease-out, ease-out); }
+.st-dock > .st-wa-float:active { transform: scale(0.96); }
+.st-dock > .st-wa-float svg { width: 26px; height: 26px; }
+.st-dock > .st-wa-float.st-selected { outline: 2px solid var(--brand, #4f46e5); outline-offset: 3px; }
+.st-phone .st-dock > .st-wa-float { right: 8px; bottom: 80px; }
 .st-chatbar { position: absolute; left: 16px; right: 16px; bottom: 16px; display: grid; gap: 8px; font-size: calc(0.875rem * var(--s-size, 1)); }
 .st-chatbar.st-selected .st-chatbar-bar { outline: 3px solid var(--brand); outline-offset: 3px; }
 .st-chatbar-bar { display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 16px; border-radius: 999px; background: #fff; color: #0f172a; box-shadow: 0 0 0 1px rgb(15 23 42 / 0.08), 0 16px 40px -12px rgb(15 23 42 / 0.35); }
