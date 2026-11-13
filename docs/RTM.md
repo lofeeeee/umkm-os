@@ -112,10 +112,10 @@
 | 1 | Tenant A baca resource miliknya | P1-10 jalur riil | Verified (`docs/evidence/P1-10.txt`) |
 | 2 | Tenant A tak baca Tenant B | P1-10 jalur riil | Verified (`docs/evidence/P1-10.txt`) |
 | 3 | Tenant A tak ubah/hapus Tenant B | P1-10 jalur riil | Verified (`docs/evidence/P1-10.txt`) |
-| 4 | Tak baca conversation/AI config/ticket/order/file Tenant B | P1-10 jalur riil | Planned (penjaga katalog aktif; tabel modul belum ada) |
+| 4 | Tak baca conversation/AI config/ticket/order/file Tenant B | P1-10 jalur riil | Verified (`docs/evidence/phase-6-customer-service.txt`; `apps/api/tests/isolation_suite_4.rs`) |
 | 5 | Background job tak proses tenant salah | P1-10 worker minimum nyata | Verified (`docs/evidence/P1-10.txt`) |
 | 6 | Cache tidak collision | P0-5, P1-10 | Verified (`docs/evidence/P1-10.txt`) |
-| 7 | WebSocket/SSE tidak kirim event lintas tenant | P1-10 realtime minimum nyata | Verified untuk SSE (`docs/evidence/P1-10.txt`); WebSocket P6-2 |
+| 7 | WebSocket/SSE tidak kirim event lintas tenant | P1-10 realtime minimum nyata | Verified untuk SSE (`docs/evidence/P1-10.txt`, chat per percakapan `docs/evidence/P6-2.txt`); WebSocket tidak dipakai (ADR-0006) |
 | 8 | RLS bekerja pada pooled connection reuse | P1-7, P1-10 | Verified (`docs/evidence/P1-10.txt`) |
 | 9 | App DB role tidak bisa bypass RLS | P1-7, P1-10 | Verified (`docs/evidence/P1-10.txt`) |
 

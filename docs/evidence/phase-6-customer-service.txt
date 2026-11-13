@@ -1,0 +1,54 @@
+Gate P6 — Customer service (BUILD_PLAN.md Phase 6; Test Plan §3: "TC-CNV Verified; isolasi #4 penuh")
+Tanggal: 2026-11-13. Gate F: D-04 DISETUJUI (web chat dulu, ADR-0006); D-03 (ADR-0005); D-12 consent AI bersyarat.
+
+Perintah gate (sama dengan Gate P2–P5):
+  cargo fmt --all --check && cargo clippy --workspace --all-targets --locked -- -D warnings &&
+  cargo test --workspace --locked && python3 scripts/check-rtm.py && cargo deny check &&
+  scripts/check-domain-boundary.sh && scripts/check-ci-needs.sh && docker compose --env-file .env.example config -q &&
+  (cd frontend && npm run lint && npm run typecheck && npm test && npm run build)
+Output:
+  rust tests passed=431 failed=0
+  check-rtm: OK — 74 FR, 84 AC, 84 TC
+  advisories ok, bans ok, licenses ok, sources ok
+  OK: umkm-domain bebas dari axum/sqlx/reqwest/tokio/hyper/tower/redis
+  OK: ci-gate mengagregasi 6 job: ['containers', 'frontend', 'lint', 'supply-chain', 'test', 'workflow-lint']
+        Tests  24 passed (24)
+  csp.mjs: 23 hash inline script dari 22 halaman -> out/csp.caddy
+  GATE_EXIT=0
+Ditambah: migration run → revert 0 → run exit 0 (0027–0030, per task); Playwright di stack nyata (Caddy + API +
+worker + PostgreSQL + Redis + provider AI tiruan): chat, ai, ops, shop, mfa 5/5 (chat diulang setelah perubahan
+tampilan analitik terakhir: lulus).
+
+Task & bukti: P6-1, P6-2, P6-3, P6-4, P6-5, P6-6 (docs/evidence/P6-*.txt). Sebelumnya di fase ini: P4-1b (+UI) MFA.
+Migration: 0027_conversations, 0028_conversation_viewer, 0029_conversation_drafts, 0030_conversation_analytics.
+RTM Verified: FR-CNV-001..004 (TC-CNV-001..004), FR-TKT-006 (TC-TKT-006).
+
+Isolation suite #4 (PRD.md §13.2) — apps/api/tests/isolation_suite_4.rs
+- Tenant A tidak membaca conversation, AI config, ticket, order, file milik B: path tenant B → 404; path tenant A
+  dengan id B → 404; daftar/konfigurasi A tidak memuat isi atau id B; signed URL sah untuk A atas objek B → 404;
+  di DB sebagai role aplikasi dalam konteks A: 0 baris B (conversations, tickets, orders, stored_objects,
+  conversation_messages, chatbot_configs, ai_providers, conversation_daily_stats). Kontrol positif: B membaca miliknya.
+- Negative control: RLS conversations dimatikan (migrasi 0027 dimutasi sementara) →
+  "conversations: baris B terlihat dari A" — FAILED; dikembalikan → lulus.
+- Isolasi #7: WebSocket tidak dipakai (ADR-0006: pesan keluar lewat SSE). SSE chat pelanggan difilter per
+  percakapan + sesi dicek ulang per event (P6-2); SSE staf hanya ping conversation_id (P6-4).
+
+Exit criteria
+- Conversation/session/message UUID terpisah, 4 sender type ditegakkan DB + domain (P6-1) ..................... YA
+- Web chat: consent AI sebelum pesan pertama, cookie sesi host-only, SSE per percakapan (P6-2) ................ YA
+- Viewer lengkap + masking sesuai permission; Viewer role termasking (P6-3) .................................... YA
+- Takeover menghentikan auto-response; draft Assisted privat; persetujuan chat lewat approval engine (P6-4) ...... YA
+- Inbox antrean/assign, notifikasi AI handover via outbox, ticket ≠ conversation (P6-5) ........................ YA
+- Analitik 8 metrik tenant-scoped, bertahan setelah purge 30 hari (P6-6) ......................................... YA
+- Retensi percakapan 30 hari setelah pesan terakhir (ADR-0012) aktif di job retensi (P6-1) ........................ YA
+
+Ditemukan & diperbaiki selama fase
+- SSE staf meneruskan isi pesan chat mentah ke semua pemegang conversations.read (melewati masking Viewer) →
+  kini hanya ping (P6-4).
+- ai_runs.latency_ms selalu 0 → kini diukur (P6-2).
+
+Belum / catatan
+- "20 chat session" (PRD §13.4) belum diukur (skenario benchmark, NFR-003/004 belum diukur — sama seperti sebelumnya).
+- Panel draft dashboard belum diuji di browser (alur draft diuji HTTP). Penugasan percakapan tanpa notifikasi pribadi.
+- Keputusan engineering yang menunggu konfirmasi pemilik (product-decision-log 2026-11-13): aturan masking P6-3,
+  definisi metrik P6-6, role admin untuk AUTH-012.
