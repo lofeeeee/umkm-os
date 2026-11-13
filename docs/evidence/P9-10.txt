@@ -1,0 +1,11 @@
+P9-10 — Pemeriksa "siap terbit" + pengaturan Google & berbagi di Studio — 2026-11-13T23:50:27+07:00
+
+- frontend/src/studio/readiness.ts (murni): judul utama, foto tanpa teks alternatif, WhatsApp/kontak tanpa nomor,
+  galeri produk tanpa produk aktif, Lokasi tanpa alamat, Jam buka tanpa jadwal, tanpa deskripsi (SEO/profil).
+- Studio: "Terbitkan" → panel "Sebelum terbit" bila ada catatan (tidak memblokir): per butir "Tunjukkan" (memilih
+  blok), "Profil bisnis"/"Produk", atau "Isi deskripsi"; "Terbitkan sekarang" / "Perbaiki dulu".
+- Panel situs: "Google & berbagi" — judul (≤ 70) & deskripsi (≤ 160) = batas schema_v2; dipakai <head> API (P9-5).
+
+Tes: readiness.test.ts (lengkap → kosong; 7 catatan berurutan dengan blok/area; deskripsi SEO menggantikan profil;
+tanpa banner). e2e/studio.spec.ts: toko baru → catatan produk & nomor WA tampil → "Tunjukkan" memilih blok Jam buka
+→ "Terbitkan sekarang" → situs publik. Suite e2e penuh 9 spec / 12 tes lolos; vitest 65/65.

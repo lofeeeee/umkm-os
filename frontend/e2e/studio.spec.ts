@@ -65,7 +65,16 @@ test("studio: template → edit inline → simpan otomatis → terbit → situs 
   await page.getByRole("complementary", { name: "Pengaturan plugin" }).getByRole("textbox", { name: /^Isi/ }).fill(notice);
   await expect(badge).toHaveText(/Draf tersimpan/, { timeout: 15_000 });
 
+  // P9-10: toko baru belum punya produk/alamat/jadwal/nomor WA → catatan "Sebelum terbit" (tidak memblokir).
   await page.getByRole("button", { name: "Terbitkan", exact: true }).click();
+  const checks = page.getByRole("list", { name: "Catatan siap terbit" });
+  await expect(checks).toContainText("Galeri produk masih kosong");
+  await expect(checks).toContainText("nomor WhatsApp/telepon di Profil bisnis kosong");
+  // "Tunjukkan" memilih blok terkait di kanvas; lalu terbitkan tetap.
+  await checks.getByRole("listitem").filter({ hasText: "Blok Jam buka kosong" }).getByRole("button", { name: "Tunjukkan" }).click();
+  await expect(page.getByRole("complementary", { name: "Pengaturan plugin" })).toContainText("Jam buka");
+  await page.getByRole("button", { name: "Terbitkan", exact: true }).click();
+  await page.getByRole("button", { name: "Terbitkan sekarang" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Website diterbitkan." })).toBeVisible();
 
   // Situs publik (konteks baru, tanpa cache): grid v2 + judul baru sebagai TEKS.

@@ -289,7 +289,7 @@ Sumber: `docs/ux/riset-studio-website-builder.md` §7 Fase 1. Bukti per tugas di
 | P9-7 Performa gambar | G-MED-04/05, G-PRF-02/03 | renderer | ukuran & atribut gambar |
 | P9-8 Plugin Teks + WhatsApp | G-PLG-02/17 | schema v2 + studio + renderer | unit + browser — selesai, docs/evidence/P9-8.txt |
 | P9-9 Privasi: buang EXIF, tautan kebijakan otomatis | G-SEC-05, G-PDP-01/03/04 | `crates/domain/src/storage.rs` (server, semua jalur unggah), renderer | unit + HTTP — selesai, docs/evidence/P9-9.txt |
-| P9-10 Pemeriksa "siap terbit" | G-PUB-05 | studio | unit |
+| P9-10 Pemeriksa "siap terbit" | G-PUB-05 | studio | unit + browser — selesai, docs/evidence/P9-10.txt |
 | P9-11 Gating paket plugin (ADR-0019) | G-ECO-03/04 | API publik + studio | tes HTTP |
 
 ## 6. Ketergantungan keputusan

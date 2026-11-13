@@ -29,6 +29,7 @@ import { Canvas, DESIGN_WIDTH, GAP, ROW, rowsFor } from "@/studio/Canvas";
 import { COLS, compact, insert, mobileOrder, moveBy, place } from "@/studio/grid";
 import { commit, redo, silent, start, undo, type History } from "@/studio/history";
 import { CELL_STYLES, EXTRA_DATA, PALETTES, PLUGINS, pluginDef, type PluginKind } from "@/studio/plugins";
+import { readiness, type Issue } from "@/studio/readiness";
 import { TEMPLATES, type TplCell } from "@/studio/templates";
 import { fromDoc, isV2, toDoc, type StudioState } from "@/studio/doc";
 import { ApiError, describe } from "@/lib/api";
@@ -148,6 +149,8 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [saveErr, setSaveErr] = useState<string | null>(null);
   const [versionsOpen, setVersionsOpen] = useState(false);
+  /** P9-10: catatan "siap terbit" yang sedang ditampilkan (null = tertutup). */
+  const [checks, setChecks] = useState<Issue[] | null>(null);
   const [publishing, setPublishing] = useState(false);
   const [stageW, setStageW] = useState(DESIGN_WIDTH);
   const stageRef = useRef<HTMLDivElement>(null);
@@ -260,8 +263,17 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
   }, [st, srv, picking, canEdit, saveState, saveNow]);
   const saved = !!st && !!srv && JSON.stringify(toDoc(st, srv.template)) === srv.savedDoc;
 
-  async function publish() {
+  /** Terbitkan: tampilkan catatan siap-terbit dulu bila ada (tidak memblokir). */
+  function publish() {
+    if (!st) return;
+    const issues = readiness({ cells: st.cells, business, productCount: rawProducts.length, seo: st.seo });
+    if (issues.length > 0) { setChecks(issues); return; }
+    void doPublish();
+  }
+
+  async function doPublish() {
     if (!srv) return;
+    setChecks(null);
     setPublishing(true);
     try {
       const rev = await saveNow();
@@ -473,7 +485,7 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
         {ctx.tenant.primary_hostname && srv?.published && (
           <a className="d-btn d-btn-sm d-btn-ghost" href={`https://${ctx.tenant.primary_hostname}`} target="_blank" rel="noopener noreferrer"><ArrowSquareOut weight="bold" aria-hidden="true" />Lihat situs</a>
         )}
-        <button className="d-btn d-btn-sm d-btn-primary" onClick={() => void publish()} disabled={!canPublish || publishing || saveState === "conflict"} title={canPublish ? "Terbitkan ke situs publik" : "Butuh izin terbitkan website"}>
+        <button className="d-btn d-btn-sm d-btn-primary" onClick={publish} disabled={!canPublish || publishing || saveState === "conflict"} title={canPublish ? "Terbitkan ke situs publik" : "Butuh izin terbitkan website"}>
           {publishing ? "Menerbitkan…" : srv?.published ? "Terbitkan perubahan" : "Terbitkan"}
         </button>
       </header>
@@ -566,6 +578,16 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
                   </div>
                 </div>
               </div>
+              <div className="st-section">
+                <h3>Google & berbagi</h3>
+                <p className="d-hint" style={{ marginTop: 0 }}>Tampil di hasil pencarian dan pratinjau saat tautan toko dibagikan di WhatsApp. Kosong = nama & deskripsi Profil bisnis.</p>
+                <label className="d-field"><span>Judul halaman <em className="d-muted">{(st.seo?.title ?? "").length}/70</em></span>
+                  <input maxLength={70} placeholder={business.profile.name || "Nama toko"} value={st.seo?.title ?? ""} onChange={(e) => update((s) => ({ ...s, seo: { ...s.seo, title: e.target.value } }), "seo")} />
+                </label>
+                <label className="d-field" style={{ marginBottom: 0 }}><span>Deskripsi <em className="d-muted">{(st.seo?.description ?? "").length}/160</em></span>
+                  <textarea id="seo-description" rows={3} maxLength={160} placeholder={business.profile.description ?? "Satu-dua kalimat tentang toko Anda"} value={st.seo?.description ?? ""} onChange={(e) => update((s) => ({ ...s, seo: { ...s.seo, description: e.target.value } }), "seo")} />
+                </label>
+              </div>
               <p className="d-hint" style={{ margin: 0 }}>Tips: klik plugin untuk memilih, klik teksnya untuk mengetik, seret foto dari komputer ke plugin. Ctrl+Z untuk membatalkan.</p>
             </>
           )}
@@ -638,6 +660,24 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
             </div>
           );
         })()}
+      </Sheet>
+
+      <Sheet open={checks !== null} onClose={() => setChecks(null)} title="Sebelum terbit"
+        description="Website tetap bisa diterbitkan. Butir di bawah membuat toko lebih meyakinkan bagi pembeli."
+        footer={<><button className="d-btn" onClick={() => setChecks(null)}>Perbaiki dulu</button><button className="d-btn d-btn-primary" onClick={() => void doPublish()} disabled={publishing}>Terbitkan sekarang</button></>}>
+        <ul className="d-list" aria-label="Catatan siap terbit">
+          {(checks ?? []).map((i) => (
+            <li key={i.key} className="d-row d-row-between" style={{ gap: 12 }}>
+              <span><WarningCircle weight="fill" aria-hidden="true" style={{ color: "var(--warn)", verticalAlign: "-3px", marginRight: 6 }} />{i.message}</span>
+              <span className="d-row" style={{ gap: 6, flex: "none" }}>
+                {i.cellId && <button type="button" className="d-btn d-btn-sm" onClick={() => { setSel(i.cellId!); setPanelOpen(true); setChecks(null); }}>Tunjukkan</button>}
+                {i.area === "business" && <Link className="d-btn d-btn-sm" href={`/business?tenant=${ctx.tenant.id}`}>Profil bisnis</Link>}
+                {i.area === "products" && <Link className="d-btn d-btn-sm" href={`/products?tenant=${ctx.tenant.id}`}>Produk</Link>}
+                {i.area === "seo" && <button type="button" className="d-btn d-btn-sm" onClick={() => { setSel(null); setPanelOpen(true); setChecks(null); setTimeout(() => document.getElementById("seo-description")?.focus(), 50); }}>Isi deskripsi</button>}
+              </span>
+            </li>
+          ))}
+        </ul>
       </Sheet>
 
       <Sheet open={versionsOpen} onClose={() => setVersionsOpen(false)} title="Riwayat terbit"
