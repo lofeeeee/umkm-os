@@ -1,0 +1,47 @@
+P7-1 — Plan configuration (PRD.md §4.15, §12; FR-SUB-001; ADR-0016, ADR-0008)
+Tanggal: 2026-11-13
+
+Artefak
+- migrations/0031_billing.{up,down}.sql
+  - plans (katalog platform, tanpa tenant): code, name, price_idr, period_days, trial_days (tepat satu paket uji coba),
+    limits_json, active. Seed ADR-0016: Starter Rp50.000 (uji coba 14 hari; 2 anggota, 30 produk, 0 token AI
+    platform, BYOK boleh, 50 MB, 100 percakapan/bulan) dan Pro Rp100.000 (10 anggota, 1.000 produk, 1.000.000
+    token/bulan, BYOK, 1 GB, percakapan tak terbatas); custom_domain false (ADR-0008). Tidak ada paket gratis.
+    Role aplikasi hanya SELECT.
+  - subscriptions (per tenant, RLS): plan_code, status trialing | active | expired, trial_ends_at,
+    current_period_end. Role aplikasi hanya SELECT — status hanya diubah verifikasi pembayaran platform (P7-3).
+  - app.start_trial() (SECURITY DEFINER) via trigger AFTER INSERT ON tenants: setiap toko baru (registrasi, uji,
+    jalur apa pun) mulai uji coba paket trial. Tenant yang sudah ada di-backfill uji coba mulai saat migrasi.
+- crates/domain/src/billing.rs  parse_limits fail-closed (7 kunci wajib; null = tak terbatas; tipe salah/negatif →
+  error), PlanLimits::allows, status efektif (uji coba/periode yang lewat = expired tanpa menunggu job).
+- crates/infrastructure/src/billing_repo.rs  plans, current (dibaca setiap permintaan — tanpa cache).
+- apps/api/src/billing.rs  GET /api/v1/plans (publik), GET /tenants/{t}/subscription (tenant.read).
+
+Hasil
+- fmt, clippy -D warnings bersih; cargo test --workspace --no-fail-fast: 435 lulus, 0 gagal (rls 59 tabel tenant).
+- sqlx migrate run → revert 0 → run: exit 0.
+
+Cakupan apps/api/tests/billing_http.rs (+ domain billing 2)
+- plans_are_data_and_new_tenants_start_trial: katalog publik starter/pro (harga, trial 14 hari, token AI 0 di
+  Starter, BYOK, Pro percakapan null, custom_domain false); toko baru trialing Starter ±14 hari; UPDATE limits_json
+  → respons langsung berubah (AC-SUB-001 bagian konfigurasi); uji coba lewat → expired; kunci batas hilang → 500
+  (fail-closed, bukan tak terbatas).
+- tenants_cannot_change_plans_or_subscriptions: role aplikasi UPDATE/INSERT/DELETE plans & subscriptions → 42501;
+  langganan toko lain 404 / tidak terlihat (RLS).
+
+Negative control (mutasi sementara, dikembalikan; test terkait GAGAL)
+  == NEGCTL: anggota tenant bisa mengubah langganan sendiri
+      tenants_cannot_change_plans_or_subscriptions ... FAILED
+      result: FAILED. 1 passed; 1 failed;
+  == NEGCTL: toko baru tanpa uji coba otomatis
+      plans_are_data_and_new_tenants_start_trial ... FAILED
+      tenants_cannot_change_plans_or_subscriptions ... FAILED
+      result: FAILED. 0 passed; 2 failed;
+  == NEGCTL: kunci batas hilang dianggap tak terbatas
+      plans_are_data_and_new_tenants_start_trial ... FAILED
+      result: FAILED. 1 passed; 1 failed;
+Setelah dikembalikan: billing_http 2 lulus.
+
+Belum di task ini
+- Penegakan batas di backend (P7-2) — TC-SUB-001 baru Verified setelah enforcement berubah tanpa deploy.
+- Halaman langganan & pembayaran manual di dashboard + verifikasi Super Admin (P7-3).

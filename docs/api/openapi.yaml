@@ -851,6 +851,44 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
       security:
       - sessionCookie: []
+  /api/v1/plans:
+    get:
+      tags:
+      - billing
+      summary: Paket yang ditawarkan (publik, untuk halaman harga).
+      operationId: list_plans
+      responses:
+        '200':
+          description: Paket aktif
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_Vec_PlanView'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security: []
   /api/v1/public/categories:
     get:
       tags:
@@ -7647,6 +7685,58 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
       security:
       - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/subscription:
+    get:
+      tags:
+      - billing
+      summary: Paket & status langganan toko. Butuh `tenant.read`.
+      operationId: subscription
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Langganan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_SubscriptionView'
+        '404':
+          description: Bukan anggota
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
   /api/v1/tenants/{tenant_id}/tickets:
     get:
       tags:
@@ -10029,6 +10119,49 @@ components:
         reserved:
           type: integer
           format: int64
+    LimitsView:
+      type: object
+      required:
+      - byok_allowed
+      - custom_domain
+      properties:
+        byok_allowed:
+          type: boolean
+          description: Boleh memakai kunci provider AI sendiri (ADR-0011)
+        conversations_monthly:
+          type:
+          - integer
+          - 'null'
+          format: int64
+          minimum: 0
+        custom_domain:
+          type: boolean
+        max_members:
+          type:
+          - integer
+          - 'null'
+          format: int64
+          description: '`null` = tak terbatas (fair-use)'
+          minimum: 0
+        max_products:
+          type:
+          - integer
+          - 'null'
+          format: int64
+          minimum: 0
+        platform_ai_tokens_monthly:
+          type:
+          - integer
+          - 'null'
+          format: int64
+          description: 0 = tidak termasuk token AI platform
+          minimum: 0
+        storage_bytes:
+          type:
+          - integer
+          - 'null'
+          format: int64
+          minimum: 0
     LinkedTicketView:
       type: object
       required:
@@ -10380,6 +10513,34 @@ components:
           type:
           - string
           - 'null'
+    PlanView:
+      type: object
+      required:
+      - code
+      - name
+      - price_idr
+      - period_days
+      - limits
+      properties:
+        code:
+          type: string
+        limits:
+          $ref: '#/components/schemas/LimitsView'
+        name:
+          type: string
+        period_days:
+          type: integer
+          format: int32
+        price_idr:
+          type: integer
+          format: int32
+          description: Rupiah per periode
+        trial_days:
+          type:
+          - integer
+          - 'null'
+          format: int32
+          description: Terisi untuk paket yang dipakai saat uji coba toko baru
     PlatformView:
       type: object
       required:
@@ -12772,6 +12933,36 @@ components:
           $ref: '#/components/schemas/Meta'
         success:
           type: boolean
+    SuccessEnvelope_SubscriptionView:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - plan
+          - status
+          properties:
+            current_period_end:
+              type:
+              - string
+              - 'null'
+            plan:
+              $ref: '#/components/schemas/PlanView'
+            status:
+              type: string
+              description: 'Status efektif: `trialing` | `active` | `expired`'
+            trial_ends_at:
+              type:
+              - string
+              - 'null'
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
     SuccessEnvelope_TemplatePreview:
       type: object
       required:
@@ -13391,6 +13582,47 @@ components:
                 type:
                 - string
                 - 'null'
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
+    SuccessEnvelope_Vec_PlanView:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            required:
+            - code
+            - name
+            - price_idr
+            - period_days
+            - limits
+            properties:
+              code:
+                type: string
+              limits:
+                $ref: '#/components/schemas/LimitsView'
+              name:
+                type: string
+              period_days:
+                type: integer
+                format: int32
+              price_idr:
+                type: integer
+                format: int32
+                description: Rupiah per periode
+              trial_days:
+                type:
+                - integer
+                - 'null'
+                format: int32
+                description: Terisi untuk paket yang dipakai saat uji coba toko baru
         meta:
           $ref: '#/components/schemas/Meta'
         success:
@@ -14137,5 +14369,7 @@ tags:
   description: Conversation viewer staf; data sensitif dimasking sesuai permission (PRD.md §4.12, P6-3)
 - name: analytics
   description: Analitik percakapan dari agregat harian yang bertahan setelah purge (PRD.md §4.12, P6-6)
+- name: billing
+  description: Paket Starter/Pro & langganan toko; batas paket = data (PRD.md §4.15, ADR-0016)
 - name: chat
   description: 'Web chat publik toko: tenant dari Host, cookie sesi chat host-only (ADR-0006, P6-2)'

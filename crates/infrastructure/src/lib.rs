@@ -9,6 +9,7 @@ pub mod approval_repo;
 pub mod audit_repo;
 pub mod auth;
 pub mod auth_repo;
+pub mod billing_repo;
 pub mod business_repo;
 pub mod catalog_repo;
 pub mod commerce_repo;

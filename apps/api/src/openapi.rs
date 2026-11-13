@@ -36,6 +36,8 @@ use crate::{
         auth::logout_handler,
         auth::verify_email_handler,
         crate::analytics::conversations,
+        crate::billing::list_plans,
+        crate::billing::subscription,
         crate::inbox::list,
         crate::inbox::detail,
         crate::inbox::takeover,
@@ -209,6 +211,7 @@ use crate::{
         (name = "files", description = "Upload gambar tenant + signed URL ber-expiry (ADR-0009)"),
         (name = "conversations", description = "Conversation viewer staf; data sensitif dimasking sesuai permission (PRD.md §4.12, P6-3)"),
         (name = "analytics", description = "Analitik percakapan dari agregat harian yang bertahan setelah purge (PRD.md §4.12, P6-6)"),
+        (name = "billing", description = "Paket Starter/Pro & langganan toko; batas paket = data (PRD.md §4.15, ADR-0016)"),
         (name = "chat", description = "Web chat publik toko: tenant dari Host, cookie sesi chat host-only (ADR-0006, P6-2)")
     )
 )]
@@ -256,7 +259,8 @@ impl Modify for CommonErrors {
 /// `security: []`. Skema auth tenant/admin ditambahkan di P1.
 struct PublicOps;
 
-const PUBLIC_PATHS: [&str; 8] = [
+const PUBLIC_PATHS: [&str; 9] = [
+    "/api/v1/plans",
     "/api/v1/public/site",
     "/files/{object_id}",
     "/healthz",

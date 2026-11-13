@@ -5,6 +5,7 @@ pub mod analytics;
 pub mod approvals;
 pub mod audit;
 pub mod auth;
+pub mod billing;
 pub mod bootstrap;
 pub mod business;
 pub mod catalog;

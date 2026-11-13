@@ -6,6 +6,7 @@ pub mod ai;
 pub mod approvals;
 pub mod audit;
 pub mod auth;
+pub mod billing;
 pub mod business;
 pub mod catalog;
 pub mod commerce;
