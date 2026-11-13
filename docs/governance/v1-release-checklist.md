@@ -55,7 +55,7 @@ Arti status:
 | Token bot Telegram + chat on-call (kanal diputus: Telegram) | #28 | Ops |
 | Pentest/assessment pihak ketiga | #29 | Security |
 | D-08 email provider (bukan butir checklist, tetapi gate go-live: semua keputusan final) | #1, #18 catatan | Ops + Product |
-| D-12 sign-off legal (privacy, terms, consent AI, billing — teks masih placeholder) | Gate go-live | Legal |
+| D-12: teks v1 dibuat sendiri & disetujui (`docs/evidence/D-12-legal-v1.txt`); sisa: isi kontak resmi + konfirmasi kebijakan refund & batas tanggung jawab | Gate go-live | Pemilik |
 
 ## Riwayat
 - 2026-11-13: dokumen dibuat (P8-6 bagian checklist). Gate P0–P7 lulus.

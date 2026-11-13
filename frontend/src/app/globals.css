@@ -117,3 +117,8 @@ table.d-table th, table.d-table td { text-align: left; padding: 6px 4px; border-
 /* Langganan & admin platform (P7-3) */
 .sub-feat { margin: 8px 0 12px; padding-left: 18px; font-size: 0.9rem; }
 .pf-proof { display: block; max-width: 100%; max-height: 360px; height: auto; border: 1px solid var(--line); border-radius: 8px; margin: 8px 0; }
+
+/* Teks legal (D-12) */
+.legal-doc h2 { font-size: 1.1rem; margin: 20px 0 6px; }
+.legal-doc p { margin: 0 0 10px; overflow-wrap: anywhere; }
+.legal-meta { color: var(--muted, #6b7280); font-size: 0.9rem; }

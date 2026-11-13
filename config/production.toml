@@ -17,9 +17,9 @@ cors_allowed_origins = ["https://app.ryasai.my.id"]
 trust_forwarded_for = true
 
 [legal]
-# D-12: placeholder sampai teks final di-review legal (wajib sebelum go-live).
-privacy_policy_version = "placeholder-v0"
-terms_of_service_version = "placeholder-v0"
+# D-12: teks v1 disusun sendiri, disetujui pemilik 2026-11-13 (frontend/src/legal/content.ts). Versi HARUS sama dengan LEGAL_VERSION.
+privacy_policy_version = "v1-20261113"
+terms_of_service_version = "v1-20261113"
 
 [worker]
 poll_interval_ms = 1000

@@ -9,6 +9,8 @@
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore, type FormEvent, type ReactNode } from "react";
 
 import { ApiError } from "@/lib/api";
+import { PRIVACY, TERMS } from "@/legal/content";
+import { LegalDoc } from "@/legal/LegalDoc";
 
 import {
   STATUS_TEXT, fileUrl, loadCustomer, rupiah, setCustomerCsrf, shopApi,
@@ -567,16 +569,11 @@ export function VerifyPage() {
   );
 }
 
-/** Teks hukum transaksi (D-12): placeholder sampai teks final hasil review legal (sebelum go-live). */
+/** Teks hukum (D-12) di situs toko: sumber sama dengan dashboard (`@/legal/content`). */
 export function LegalPage({ kind }: { kind: "privacy" | "terms" }) {
   return (
-    <Shell title={kind === "privacy" ? "Kebijakan privasi" : "Syarat transaksi"}>
-      <p><strong>Draf — belum berlaku final.</strong> Teks ini placeholder dan akan diganti versi yang telah ditinjau sebelum layanan dibuka untuk umum.</p>
-      {kind === "privacy" ? (
-        <p>Data yang Anda isi saat memesan (nama, email/telepon, alamat) dipakai toko untuk memproses dan mengonfirmasi pesanan, dan dihapus mengikuti kebijakan retensi.</p>
-      ) : (
-        <p>Pembayaran dilakukan langsung ke QRIS milik toko. Pesanan diproses setelah toko memverifikasi pembayaran. Pesanan yang tidak dibayar sebelum batas waktu dibatalkan otomatis.</p>
-      )}
+    <Shell title={kind === "privacy" ? "Kebijakan privasi" : "Syarat & ketentuan"}>
+      <LegalDoc sections={kind === "privacy" ? PRIVACY : TERMS} />
     </Shell>
   );
 }

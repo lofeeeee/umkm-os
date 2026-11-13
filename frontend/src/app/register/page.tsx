@@ -43,8 +43,8 @@ export default function Register() {
         <label className="d-field"><span>Alamat toko (opsional)</span><input name="slug" pattern="[a-z0-9-]{3,63}" placeholder="tokosaya" /></label>
         <label className="d-field"><span>Email</span><input name="email" type="email" autoComplete="email" required /></label>
         <label className="d-field"><span>Password</span><input name="password" type="password" autoComplete="new-password" required minLength={8} /></label>
-        <label className="d-check"><input name="terms" type="checkbox" required /> Saya menyetujui syarat layanan</label>
-        <label className="d-check"><input name="privacy" type="checkbox" required /> Saya menyetujui kebijakan privasi</label>
+        <label className="d-check"><input name="terms" type="checkbox" required /> Saya menyetujui <a href="/legal/syarat" target="_blank" rel="noopener">syarat & ketentuan</a></label>
+        <label className="d-check"><input name="privacy" type="checkbox" required /> Saya menyetujui <a href="/legal/privasi" target="_blank" rel="noopener">kebijakan privasi</a></label>
         <button className="d-btn d-btn-primary" disabled={busy}>{busy ? "Memproses…" : "Daftar"}</button>
       </form>
       <p>Sudah punya akun? <Link href="/login">Masuk</Link></p>

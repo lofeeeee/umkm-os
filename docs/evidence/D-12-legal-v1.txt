@@ -1,0 +1,26 @@
+D-12 — Teks legal v1 (privasi, syarat & ketentuan termasuk billing, persetujuan AI)
+Tanggal: 2026-11-13. Keputusan pemilik: "Buat sendiri, karena kita juga bagian dari UMKM mandiri" — disusun tim,
+disetujui pemilik, TANPA review konsultan hukum (risiko diterima, product-decision-log Gate H).
+
+Artefak
+- frontend/src/legal/content.ts  satu sumber teks: Kebijakan Privasi (9 bagian: peran pengelola vs pemroses atas nama
+  toko, data yang diproses, tujuan, asisten AI, akses, retensi sesuai ADR-0012, keamanan, hak subjek data, kontak) dan
+  Syarat & Ketentuan (9 bagian: pemilik toko — akun, paket Starter/Pro + uji coba 14 hari + pembayaran manual +
+  akibat berakhir, AI & BYOK; pembeli — toko sebagai penjual, QRIS milik toko; larangan; tanggung jawab; penghentian;
+  hukum RI). LEGAL_VERSION = v1-20261113.
+- frontend/src/legal/LegalDoc.tsx + /legal/privasi, /legal/syarat (dashboard); situs toko /kebijakan-privasi &
+  /syarat-transaksi memakai sumber yang sama; pendaftaran menautkan keduanya; halaman Langganan merujuk bagian 3.
+- config/{development,staging,production}.toml [legal] = v1-20261113 (versi yang tercatat saat persetujuan).
+- crates/domain/src/ai/consent.rs  VERSION ai-consent-v1-20261113; teks menyebut pemrosesan oleh penyedia AI dan
+  retensi 30 hari; uji: 4 elemen wajib tetap ada, versi bukan placeholder.
+
+Hasil
+- frontend vitest 28 lulus (baru: versi teks == config 3 environment; tanpa kata placeholder/draf); tsc/eslint lulus.
+- Negative control: staging privacy_policy_version diubah → content.test.ts GAGAL; dikembalikan → lulus.
+- cargo test domain+shared 116 lulus; chat_http 6, conversation_schema 4, registration 6 lulus.
+
+Wajib sebelum peluncuran (tercatat di checklist)
+- LEGAL_CONTACT masih "[alamat email kontak resmi — diisi sebelum peluncuran]".
+- Konfirmasi pemilik atas pilihan engineering dalam teks: biaya langganan tidak dikembalikan (kecuali salah tagih);
+  batas tanggung jawab = biaya langganan 3 bulan terakhir.
+- Instruksi pembayaran ([billing].payment_instructions) masih contoh.

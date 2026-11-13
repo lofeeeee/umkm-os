@@ -163,7 +163,7 @@ function View({ ctx }: { ctx: TenantCtx }) {
           </table>
         </section>
       )}
-      <p className="d-muted">Ketentuan penagihan: teks sementara, akan diganti versi final sebelum layanan resmi diluncurkan.</p>
+      <p className="d-muted">Ketentuan paket & pembayaran: lihat <a href="/legal/syarat" target="_blank" rel="noopener">Syarat & Ketentuan</a> bagian 3.</p>
     </>
   );
 }
