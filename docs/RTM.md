@@ -243,8 +243,8 @@ Arah balik: TC → AC lewat nomor yang sama (Test Plan §4); AC → FR lewat FSD
 | FR-AIO-003 | AC-AIO-003 | TC-AIO-003 | internal (orchestrator) | — | `docs/evidence/P5-5.txt` | Verified |
 | FR-AIO-004 | AC-AIO-004 | TC-AIO-004 | internal (retriever) | — | `docs/evidence/P5-7.txt` | Verified |
 | FR-CNV-001 | AC-CNV-001 | TC-CNV-001 | internal (skema + conversation_repo; endpoint chat di P6-2) | ADR-0006, ADR-0012 | `docs/evidence/P6-1.txt` | Verified |
-| FR-CNV-002 | AC-CNV-002 | TC-CNV-002 | ditetapkan di OpenAPI saat task | ADR-0006 (D-04) | — | Planned |
-| FR-CNV-003 | AC-CNV-003 | TC-CNV-003 | ditetapkan di OpenAPI saat task | ADR-0006 (D-04) | — | Planned |
+| FR-CNV-002 | AC-CNV-002 | TC-CNV-002 | GET /api/v1/tenants/{tenant_id}/conversations; GET /api/v1/tenants/{tenant_id}/conversations/{conversation_id} | ADR-0006 | `docs/evidence/P6-3.txt` | Verified |
+| FR-CNV-003 | AC-CNV-003 | TC-CNV-003 | GET /api/v1/tenants/{tenant_id}/conversations; GET /api/v1/tenants/{tenant_id}/conversations/{conversation_id} | ADR-0006 | `docs/evidence/P6-3.txt` | Verified |
 | FR-CNV-004 | AC-CNV-004 | TC-CNV-004 | ditetapkan di OpenAPI saat task | ADR-0006 (D-04) | — | Planned |
 | FR-NTF-001 | AC-NTF-001 | TC-NTF-001 | GET /tenants/{tenant_id}/notifications | ADR-0010 (D-08) | `docs/evidence/P4-4.txt` | Verified (email nyata menunggu D-08) |
 | FR-NTF-002 | AC-NTF-002 | TC-NTF-002 | worker: notification_repo::deliver | ADR-0010 (D-08) | `docs/evidence/P4-4.txt` | Verified (email nyata menunggu D-08) |

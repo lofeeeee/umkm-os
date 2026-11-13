@@ -233,7 +233,7 @@ Prefix `/api/v1`; envelope sukses/gagal; `meta.request_id`; cursor pagination; r
 
 **Blokir:** D-04 messaging channel, D-03 untuk `get_customer_orders`.
 
-**Status:** D-04 (ADR-0006) dan D-03 (ADR-0005) sudah diputus. P6-1 selesai 2026-11-13 (`docs/evidence/P6-1.txt`; migrasi aktual `0027_conversations`). P6-2 selesai 2026-11-13 (`docs/evidence/P6-2.txt`; `apps/api/src/chat.rs`, `frontend/src/chat/`).
+**Status:** D-04 (ADR-0006) dan D-03 (ADR-0005) sudah diputus. P6-1 selesai 2026-11-13 (`docs/evidence/P6-1.txt`; migrasi aktual `0027_conversations`). P6-2 selesai 2026-11-13 (`docs/evidence/P6-2.txt`; `apps/api/src/chat.rs`, `frontend/src/chat/`). P6-3 selesai 2026-11-13 (`docs/evidence/P6-3.txt`; `apps/api/src/inbox.rs`, `frontend/src/inbox/conversation.tsx`).
 
 | Task | Requirement | File | Uji |
 |---|---|---|---|

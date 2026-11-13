@@ -64,6 +64,8 @@ fn expected(role: &str) -> BTreeSet<&'static str> {
             "tickets.read",
             "analytics.read",
             "customers.read",
+            // P6-3: percakapan dengan masking (AC-CNV-003)
+            "conversations.read",
         ]
         .into(),
         "Admin" => ["tenant.read"].into(),

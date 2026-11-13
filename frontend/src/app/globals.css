@@ -81,3 +81,23 @@ table.d-table th, table.d-table td { text-align: left; padding: 6px 4px; border-
 .d-thread li { border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; margin-bottom: 8px; }
 .d-thread li.d-internal { background: #fffbeb; border-color: #fcd34d; }
 .d-thread li p { margin: 4px 0 0; white-space: pre-wrap; }
+
+/* Conversation Viewer (P6-3) */
+.cv-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.cv-list .d-card { padding: 0; margin: 0; }
+.cv-open { display: grid; gap: 4px; width: 100%; text-align: left; background: none; border: 0; padding: 12px; font: inherit; color: inherit; cursor: pointer; min-height: 44px; }
+.cv-preview { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cv-badge { justify-self: start; font-size: 0.8rem; padding: 2px 8px; border-radius: 999px; background: var(--line); }
+.cv-badge[data-status="WAITING_HUMAN"] { background: #fef3c7; color: #92400e; }
+.cv-badge[data-status="HUMAN"] { background: #dbeafe; color: #1e40af; }
+.cv-dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; margin: 0; }
+.cv-dl dt { color: var(--muted); }
+.cv-dl dd { margin: 0; overflow-wrap: anywhere; }
+.cv-timeline { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+.cv-msg { padding: 8px 10px; border-radius: 8px; border-left: 3px solid var(--line); }
+.cv-customer { border-left-color: #2563eb; }
+.cv-run { font-size: 0.85rem; margin-top: 4px; }
+.cv-ai { border-left-color: #7c3aed; }
+.cv-admin { border-left-color: #059669; }
+.cv-body { white-space: pre-wrap; overflow-wrap: anywhere; }
+.cv-history { margin: 0; padding-left: 18px; }

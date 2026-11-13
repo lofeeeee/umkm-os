@@ -50,6 +50,7 @@ pub fn build_router(state: AppState, limits: HttpLimits) -> Router {
         .merge(auth::routes())
         .merge(crate::mfa::routes())
         .merge(crate::chat::routes())
+        .merge(crate::inbox::routes())
         .merge(tenants::routes())
         .merge(upload::routes())
         .merge(business::routes())

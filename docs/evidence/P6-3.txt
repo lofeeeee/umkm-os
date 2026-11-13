@@ -1,0 +1,54 @@
+P6-3 — Conversation Viewer + masking (PRD.md §4.12; FR-CNV-002/003, AC-CNV-002/003)
+Tanggal: 2026-11-13
+
+Artefak
+- migrations/0028_conversation_viewer.{up,down}.sql  role sistem Viewer + `conversations.read` (lihat
+  product-decision-log 2026-11-13); matriks preset di crates/infrastructure/tests/rbac.rs diperbarui.
+- crates/domain/src/conversation.rs  mod mask: email (`b•••@domain`), phone (3 digit terakhir), name (inisial),
+  text (email + deret ≥ 8 digit dengan pemisah umum disamarkan; kode pesanan < 8 digit tetap; tanggal 8 digit ikut
+  disamarkan — konservatif).
+- crates/infrastructure/src/conversation_repo.rs  list (filter status/assignee, total, jumlah & pesan terakhir) dan
+  detail: konteks pelanggan, timeline + jejak AI per pesan (provider, sumber, model, token, latensi, keputusan,
+  error, tool + ringkasan argumen), run AI tanpa pesan, riwayat event (aktor + email), approval `ai_response`
+  untuk percakapan ini. Semua dalam tenant context (RLS).
+- apps/api/src/inbox.rs  GET /tenants/{t}/conversations, GET /tenants/{t}/conversations/{id}; butuh
+  `conversations.read`; tanpa masking hanya bila `conversations.reply` + `customers.read`; respons membawa
+  `masked`. Saat dimasking: kontak pelanggan, email staf, isi pesan, ringkasan approval disamarkan; args tool null.
+- frontend/src/inbox/conversation.tsx + src/app/conversations/page.tsx  daftar (filter status) + viewer (pelanggan,
+  status/channel/penangan/persetujuan AI, timeline dengan jejak AI, riwayat, approval, catatan bila dimasking);
+  tautan "Percakapan" di navigasi untuk `conversations.read`.
+- OpenAPI: tag conversations, 2 operasi.
+
+Hasil
+- fmt, clippy -D warnings bersih; cargo test --workspace --no-fail-fast: 420 lulus, 0 gagal.
+- sqlx migrate run → revert 0 → run: exit 0. check-rtm OK.
+- frontend tsc/eslint/vitest 24 lulus. Playwright stack nyata: chat (diperluas dengan viewer pemilik), ops, shop, mfa
+  — 4/4 lulus, tanpa error CSP/JS; tangkapan viewer 360px tanpa scroll horizontal.
+
+Cakupan apps/api/tests/conversation_viewer_http.rs
+- viewer_shows_every_field_for_support_agent (AC-CNV-002): masked=false; status/channel/consent; pelanggan utuh;
+  timeline CUSTOMER/AI/ADMIN; provider "AI Platform"/m1/platform, token 321+45, latensi 870 ms, tool
+  get_order_status + args; run tanpa pesan (handover, timeout); assignee + sender staf; riwayat created →
+  handover_requested → taken_over; approval pending. Daftar: total, jumlah pesan, pesan terakhir, filter status,
+  status tidak valid 422.
+- viewer_role_sees_sensitive_fields_masked (AC-CNV-003): Viewer masked=true; nama "B••• S•••", email "b•••@toko.id",
+  telepon "•••890"; isi pesan email/telepon disamarkan, kode pesanan tetap; args tool null; email staf & ringkasan
+  approval disamarkan; nilai asli tidak muncul di mana pun dalam respons; token AI tetap terlihat. Role kustom
+  dengan conversations.reply tanpa customers.read tetap dimasking.
+- permission_and_tenant_isolation: Catalog Manager 403 (daftar & detail); pemilik toko B → path toko A 404, id
+  percakapan A di path toko B 404, daftar toko B kosong.
+
+Negative control (mutasi sementara pada apps/api/src/inbox.rs, dikembalikan; test terkait GAGAL)
+== NEGCTL: masking hanya bergantung conversations.reply (tanpa customers.read)
+    viewer_role_sees_sensitive_fields_masked ... FAILED
+== NEGCTL: isi pesan tidak dimasking
+    viewer_role_sees_sensitive_fields_masked ... FAILED
+== NEGCTL: ringkasan argumen tool selalu tampil
+    viewer_role_sees_sensitive_fields_masked ... FAILED
+== NEGCTL: viewer tanpa cek permission
+    permission_and_tenant_isolation ... FAILED
+Setelah dikembalikan: conversation_viewer_http 3 lulus.
+
+Belum di task ini
+- Balasan staf, takeover dari dashboard, draft Assisted + approval chat (P6-4); inbox realtime + tiket dari
+  percakapan (P6-5); analitik (P6-6).

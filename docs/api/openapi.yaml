@@ -4447,6 +4447,166 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
       security:
       - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/conversations:
+    get:
+      tags:
+      - conversations
+      summary: Daftar percakapan (terbaru dulu). Butuh `conversations.read`.
+      operationId: list
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: status
+        in: path
+        description: '`AI` | `WAITING_HUMAN` | `HUMAN` | `CLOSED`'
+        required: true
+        schema:
+          type:
+          - string
+          - 'null'
+      - name: assignee_user_id
+        in: path
+        required: true
+        schema:
+          type:
+          - string
+          - 'null'
+          format: uuid
+      - name: limit
+        in: path
+        required: true
+        schema:
+          type:
+          - integer
+          - 'null'
+          format: int64
+      - name: offset
+        in: path
+        required: true
+        schema:
+          type:
+          - integer
+          - 'null'
+          format: int64
+      responses:
+        '200':
+          description: Daftar; `masked` = data sensitif disamarkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_ConversationList'
+        '403':
+          description: Permission kurang
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '404':
+          description: Bukan anggota
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '422':
+          description: Filter tidak valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/conversations/{conversation_id}:
+    get:
+      tags:
+      - conversations
+      summary: 'Viewer satu percakapan: timeline + jejak AI + riwayat + approval. Butuh `conversations.read`.'
+      operationId: detail
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: conversation_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Detail percakapan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_ConversationDetailView'
+        '403':
+          description: Permission kurang
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '404':
+          description: Tidak ada di tenant ini
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
   /api/v1/tenants/{tenant_id}/customers:
     get:
       tags:
@@ -8309,6 +8469,77 @@ components:
           - string
           - 'null'
       additionalProperties: false
+    AiRunView:
+      type: object
+      required:
+      - run_id
+      - source
+      - model
+      - status
+      - prompt_tokens
+      - completion_tokens
+      - latency_ms
+      - tool_calls
+      properties:
+        completion_tokens:
+          type: integer
+          format: int32
+        decision:
+          type:
+          - string
+          - 'null'
+        error_code:
+          type:
+          - string
+          - 'null'
+        latency_ms:
+          type: integer
+          format: int32
+        model:
+          type: string
+        prompt_tokens:
+          type: integer
+          format: int32
+        provider_name:
+          type:
+          - string
+          - 'null'
+        run_id:
+          type: string
+          format: uuid
+        source:
+          type: string
+          description: '`platform` | `byok`'
+        status:
+          type: string
+        tool_calls:
+          type: array
+          items:
+            $ref: '#/components/schemas/ToolCallView'
+    ApprovalView:
+      type: object
+      required:
+      - id
+      - status
+      - action
+      - summary
+      - current_step
+      - created_at
+      properties:
+        action:
+          type: string
+        created_at:
+          type: string
+        current_step:
+          type: integer
+          format: int32
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+        summary:
+          type: string
     AssignInput:
       type: object
       properties:
@@ -8626,6 +8857,73 @@ components:
           - 'null'
           description: Wajib bila jumlah berbeda dari tagihan
       additionalProperties: false
+    ConversationSummaryView:
+      type: object
+      required:
+      - id
+      - channel
+      - status
+      - human_involved
+      - message_count
+      - last_message_at
+      - created_at
+      properties:
+        assignee_email:
+          type:
+          - string
+          - 'null'
+        assignee_user_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        channel:
+          type: string
+        created_at:
+          type: string
+        customer:
+          oneOf:
+          - $ref: '#/components/schemas/CustomerContext'
+          - type: 'null'
+        human_involved:
+          type: boolean
+        id:
+          type: string
+          format: uuid
+        last_message:
+          type:
+          - string
+          - 'null'
+        last_message_at:
+          type: string
+        message_count:
+          type: integer
+          format: int64
+        status:
+          type: string
+          description: '`AI` | `WAITING_HUMAN` | `HUMAN` | `CLOSED`'
+    CustomerContext:
+      type: object
+      required:
+      - id
+      - name
+      - has_account
+      properties:
+        email:
+          type:
+          - string
+          - 'null'
+        has_account:
+          type: boolean
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        phone:
+          type:
+          - string
+          - 'null'
     CustomerInput:
       type: object
       required:
@@ -8903,6 +9201,38 @@ components:
           - string
           - 'null'
       additionalProperties: false
+    HistoryEventView:
+      type: object
+      required:
+      - kind
+      - actor_type
+      - created_at
+      properties:
+        actor_email:
+          type:
+          - string
+          - 'null'
+        actor_type:
+          type: string
+          description: '`customer` | `ai` | `staff` | `system`'
+        actor_user_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        created_at:
+          type: string
+        from_status:
+          type:
+          - string
+          - 'null'
+        kind:
+          type: string
+          description: '`created` | `assigned` | `unassigned` | `handover_requested` | `taken_over` | `released` | `closed`'
+        to_status:
+          type:
+          - string
+          - 'null'
     HoursDto:
       type: object
       required:
@@ -10245,6 +10575,85 @@ components:
               type: array
               items:
                 $ref: '#/components/schemas/ToolState'
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
+    SuccessEnvelope_ConversationDetailView:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          allOf:
+          - $ref: '#/components/schemas/ConversationSummaryView'
+          - type: object
+            required:
+            - consent_version
+            - consented_at
+            - timeline
+            - other_ai_runs
+            - history
+            - approvals
+            - masked
+            properties:
+              approvals:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ApprovalView'
+              closed_at:
+                type:
+                - string
+                - 'null'
+              consent_version:
+                type: string
+              consented_at:
+                type: string
+              history:
+                type: array
+                items:
+                  $ref: '#/components/schemas/HistoryEventView'
+              masked:
+                type: boolean
+              other_ai_runs:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AiRunView'
+                description: Run AI tanpa pesan terkirim (mis. handover / antre staf).
+              timeline:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TimelineMessageView'
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
+    SuccessEnvelope_ConversationList:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - items
+          - total
+          - masked
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/ConversationSummaryView'
+            masked:
+              type: boolean
+              description: Data sensitif disamarkan untuk pembaca ini.
+            total:
+              type: integer
+              format: int64
         meta:
           $ref: '#/components/schemas/Meta'
         success:
@@ -12598,6 +13007,41 @@ components:
             type: string
         updated_at:
           type: string
+    TimelineMessageView:
+      type: object
+      required:
+      - id
+      - seq
+      - sender
+      - body
+      - created_at
+      properties:
+        ai:
+          oneOf:
+          - $ref: '#/components/schemas/AiRunView'
+          - type: 'null'
+        body:
+          type: string
+        created_at:
+          type: string
+        id:
+          type: string
+          format: uuid
+        sender:
+          type: string
+          description: '`CUSTOMER` | `AI` | `ADMIN` | `SYSTEM`'
+        sender_email:
+          type:
+          - string
+          - 'null'
+        sender_user_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        seq:
+          type: integer
+          format: int64
     ToolCallView:
       type: object
       required:
@@ -12743,5 +13187,7 @@ tags:
   description: Stok, movement ledger, ambang low-stock (PRD.md §4.5)
 - name: files
   description: Upload gambar tenant + signed URL ber-expiry (ADR-0009)
+- name: conversations
+  description: Conversation viewer staf; data sensitif dimasking sesuai permission (PRD.md §4.12, P6-3)
 - name: chat
   description: 'Web chat publik toko: tenant dari Host, cookie sesi chat host-only (ADR-0006, P6-2)'

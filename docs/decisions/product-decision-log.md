@@ -67,3 +67,12 @@ Keputusan produk yang tidak membutuhkan ADR. Entri tidak ditimpa; perubahan = en
 
 - "Role admin" untuk AUTH-012 diartikan sebagai role sistem Owner, Manager, dan Admin (role sistem `Admin` ada sejak
   migrasi 0003). Role kustom tidak terkena kebijakan ini. Entri Gate F tidak diubah.
+
+## 2026-11-13 — Klarifikasi implementasi P6-3 (masking percakapan)
+
+- AC-CNV-003 ("Viewer role → field sensitif dimasking") diartikan: role sistem Viewer mendapat `conversations.read`
+  (migrasi 0028) dan selalu melihat versi termasking. Tampilan tanpa masking hanya untuk pembaca yang punya
+  `conversations.reply` DAN `customers.read` (preset: Owner, Manager, Support Agent).
+- Field sensitif: nama/email/telepon pelanggan, email staf, alamat email dan deret ≥ 8 digit di isi pesan & ringkasan
+  approval, ringkasan argumen tool. Statistik AI (provider, model, token, latensi, status tool) tidak dianggap sensitif.
+- Dapat diubah pemilik produk; perubahan = entri baru.

@@ -455,3 +455,327 @@ pub async fn customer_for_account(
     tx.commit().await?;
     Ok(id)
 }
+
+// ------------------------------------------------------------------ viewer (P6-3)
+
+fn ts(c: &str) -> String {
+    format!("to_char({c} AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"')")
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct ListFilter {
+    pub status: Option<ConversationStatus>,
+    pub assignee: Option<Uuid>,
+    pub limit: i64,
+    pub offset: i64,
+}
+
+#[derive(Debug, Clone)]
+pub struct CustomerInfo {
+    pub id: Uuid,
+    pub name: String,
+    pub email: Option<String>,
+    pub phone: Option<String>,
+    /// Ditautkan dari akun pelanggan terverifikasi (ADR-0005).
+    pub has_account: bool,
+}
+
+#[derive(Debug, Clone)]
+pub struct Summary {
+    pub id: Uuid,
+    pub channel: String,
+    pub status: ConversationStatus,
+    pub customer: Option<CustomerInfo>,
+    pub assignee_user_id: Option<Uuid>,
+    pub assignee_email: Option<String>,
+    pub human_involved: bool,
+    pub message_count: i64,
+    pub last_message: Option<String>,
+    pub last_message_at: String,
+    pub created_at: String,
+}
+
+fn customer_of(r: &sqlx::postgres::PgRow) -> Option<CustomerInfo> {
+    r.get::<Option<Uuid>, _>("customer_id")
+        .map(|id| CustomerInfo {
+            id,
+            name: r.get::<Option<String>, _>("c_name").unwrap_or_default(),
+            email: r.get("c_email"),
+            phone: r.get("c_phone"),
+            has_account: r.get::<Option<bool>, _>("c_account").unwrap_or(false),
+        })
+}
+
+fn summary_cols() -> String {
+    format!(
+        "c.id, c.channel, c.status, c.customer_id, cu.name AS c_name, cu.email AS c_email, cu.phone AS c_phone,
+         (cu.account_id IS NOT NULL) AS c_account, c.assignee_user_id, u.email AS assignee_email, c.human_involved,
+         (SELECT count(*) FROM conversation_messages m WHERE m.tenant_id = c.tenant_id AND m.conversation_id = c.id) AS message_count,
+         (SELECT m.body FROM conversation_messages m WHERE m.tenant_id = c.tenant_id AND m.conversation_id = c.id
+            ORDER BY m.seq DESC LIMIT 1) AS last_message,
+         {} AS last_message_at, {} AS created_at",
+        ts("c.last_message_at"),
+        ts("c.created_at")
+    )
+}
+
+const SUMMARY_FROM: &str = "FROM conversations c
+    LEFT JOIN customers cu ON cu.tenant_id = c.tenant_id AND cu.id = c.customer_id
+    LEFT JOIN users u ON u.id = c.assignee_user_id";
+
+fn summary(r: &sqlx::postgres::PgRow) -> Summary {
+    Summary {
+        id: r.get("id"),
+        channel: r.get("channel"),
+        status: status_of(r.get::<&str, _>("status")),
+        customer: customer_of(r),
+        assignee_user_id: r.get("assignee_user_id"),
+        assignee_email: r.get("assignee_email"),
+        human_involved: r.get("human_involved"),
+        message_count: r.get("message_count"),
+        last_message: r.get("last_message"),
+        last_message_at: r.get("last_message_at"),
+        created_at: r.get("created_at"),
+    }
+}
+
+/// Daftar percakapan tenant (terbaru dulu) + total.
+pub async fn list(
+    pool: &PgPool,
+    t: TenantId,
+    f: &ListFilter,
+) -> Result<(Vec<Summary>, i64), ConversationError> {
+    let mut tx = tenant_tx(pool, t).await?;
+    let filter = "WHERE c.tenant_id = $1 AND ($2::text IS NULL OR c.status = $2)
+        AND ($3::uuid IS NULL OR c.assignee_user_id = $3)";
+    let total: i64 = sqlx::query_scalar(sqlx::AssertSqlSafe(format!(
+        "SELECT count(*) FROM conversations c {filter}"
+    )))
+    .bind(t.as_uuid())
+    .bind(f.status.map(|s| s.as_str()))
+    .bind(f.assignee)
+    .fetch_one(&mut *tx)
+    .await?;
+    let rows = sqlx::query(sqlx::AssertSqlSafe(format!(
+        "SELECT {} {SUMMARY_FROM} {filter} ORDER BY c.last_message_at DESC, c.id LIMIT $4 OFFSET $5",
+        summary_cols()
+    )))
+    .bind(t.as_uuid())
+    .bind(f.status.map(|s| s.as_str()))
+    .bind(f.assignee)
+    .bind(f.limit.clamp(1, 100))
+    .bind(f.offset.max(0))
+    .fetch_all(&mut *tx)
+    .await?;
+    tx.commit().await?;
+    Ok((rows.iter().map(summary).collect(), total))
+}
+
+#[derive(Debug, Clone)]
+pub struct ToolCallInfo {
+    pub name: String,
+    pub status: String,
+    pub args_summary: serde_json::Value,
+}
+
+/// Jejak AI satu pesan (provider/model, token, latensi, tool).
+#[derive(Debug, Clone)]
+pub struct AiRunInfo {
+    pub id: Uuid,
+    pub provider_name: Option<String>,
+    pub source: String,
+    pub model: String,
+    pub status: String,
+    pub decision: Option<String>,
+    pub error_code: Option<String>,
+    pub prompt_tokens: i32,
+    pub completion_tokens: i32,
+    pub latency_ms: i32,
+    pub tool_calls: Vec<ToolCallInfo>,
+}
+
+#[derive(Debug, Clone)]
+pub struct TimelineMessage {
+    pub message: Message,
+    pub sender_email: Option<String>,
+    pub ai: Option<AiRunInfo>,
+}
+
+#[derive(Debug, Clone)]
+pub struct EventInfo {
+    pub kind: String,
+    pub from_status: Option<String>,
+    pub to_status: Option<String>,
+    pub actor_type: String,
+    pub actor_user_id: Option<Uuid>,
+    pub actor_email: Option<String>,
+    pub created_at: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct ApprovalInfo {
+    pub id: Uuid,
+    pub status: String,
+    pub action: String,
+    pub summary: String,
+    pub current_step: i32,
+    pub created_at: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct Detail {
+    pub summary: Summary,
+    pub consent_version: String,
+    pub consented_at: String,
+    pub closed_at: Option<String>,
+    pub messages: Vec<TimelineMessage>,
+    pub events: Vec<EventInfo>,
+    pub approvals: Vec<ApprovalInfo>,
+    /// Run AI tanpa pesan (mis. handover tanpa balasan) tetap terlihat untuk audit biaya.
+    pub runs_without_message: Vec<AiRunInfo>,
+}
+
+/// Viewer satu percakapan (FR-CNV-002). Semua query di tenant context (RLS).
+pub async fn detail(
+    pool: &PgPool,
+    t: TenantId,
+    id: Uuid,
+) -> Result<Option<Detail>, ConversationError> {
+    let mut tx = tenant_tx(pool, t).await?;
+    let Some(row) = sqlx::query(sqlx::AssertSqlSafe(format!(
+        "SELECT {}, c.consent_version, {} AS consented_at, {} AS closed_at {SUMMARY_FROM}
+          WHERE c.tenant_id = $1 AND c.id = $2",
+        summary_cols(),
+        ts("c.consented_at"),
+        ts("c.closed_at")
+    )))
+    .bind(t.as_uuid())
+    .bind(id)
+    .fetch_optional(&mut *tx)
+    .await?
+    else {
+        return Ok(None);
+    };
+    let runs = sqlx::query(sqlx::AssertSqlSafe(
+        "SELECT r.id, p.name AS provider_name, r.source, r.model, r.status, r.decision, r.error_code,
+                r.prompt_tokens, r.completion_tokens, r.latency_ms
+           FROM ai_runs r LEFT JOIN ai_providers p ON p.tenant_id = r.tenant_id AND p.id = r.provider_id
+          WHERE r.tenant_id = $1 AND r.conversation_id = $2 ORDER BY r.created_at"
+            .to_owned(),
+    ))
+    .bind(t.as_uuid())
+    .bind(id)
+    .fetch_all(&mut *tx)
+    .await?;
+    let tools = sqlx::query(
+        "SELECT tc.ai_run_id, tc.tool_name, tc.result_status, tc.args_summary
+           FROM ai_tool_calls tc JOIN ai_runs r ON r.tenant_id = tc.tenant_id AND r.id = tc.ai_run_id
+          WHERE tc.tenant_id = $1 AND r.conversation_id = $2 ORDER BY tc.created_at",
+    )
+    .bind(t.as_uuid())
+    .bind(id)
+    .fetch_all(&mut *tx)
+    .await?;
+    let mut run_infos: Vec<AiRunInfo> = runs
+        .iter()
+        .map(|r| {
+            let rid: Uuid = r.get("id");
+            AiRunInfo {
+                id: rid,
+                provider_name: r.get("provider_name"),
+                source: r.get("source"),
+                model: r.get("model"),
+                status: r.get("status"),
+                decision: r.get("decision"),
+                error_code: r.get("error_code"),
+                prompt_tokens: r.get("prompt_tokens"),
+                completion_tokens: r.get("completion_tokens"),
+                latency_ms: r.get("latency_ms"),
+                tool_calls: tools
+                    .iter()
+                    .filter(|x| x.get::<Uuid, _>("ai_run_id") == rid)
+                    .map(|x| ToolCallInfo {
+                        name: x.get("tool_name"),
+                        status: x.get("result_status"),
+                        args_summary: x.get("args_summary"),
+                    })
+                    .collect(),
+            }
+        })
+        .collect();
+    let msgs = sqlx::query(sqlx::AssertSqlSafe(format!(
+        "SELECT {MESSAGE_COLS}, (SELECT email FROM users u WHERE u.id = sender_user_id) AS sender_email
+           FROM conversation_messages WHERE tenant_id = $1 AND conversation_id = $2 ORDER BY seq"
+    )))
+    .bind(t.as_uuid())
+    .bind(id)
+    .fetch_all(&mut *tx)
+    .await?;
+    let messages: Vec<TimelineMessage> = msgs
+        .iter()
+        .map(|r| {
+            let m = message(r);
+            let ai = m
+                .ai_run_id
+                .and_then(|rid| run_infos.iter().find(|x| x.id == rid).cloned());
+            TimelineMessage {
+                sender_email: r.get("sender_email"),
+                ai,
+                message: m,
+            }
+        })
+        .collect();
+    run_infos.retain(|r| !messages.iter().any(|m| m.message.ai_run_id == Some(r.id)));
+    let events = sqlx::query(sqlx::AssertSqlSafe(format!(
+        "SELECT e.kind, e.from_status, e.to_status, e.actor_type, e.actor_user_id, u.email AS actor_email,
+                {} AS created_at
+           FROM conversation_events e LEFT JOIN users u ON u.id = e.actor_user_id
+          WHERE e.tenant_id = $1 AND e.conversation_id = $2 ORDER BY e.seq",
+        ts("e.created_at")
+    )))
+    .bind(t.as_uuid())
+    .bind(id)
+    .fetch_all(&mut *tx)
+    .await?
+    .iter()
+    .map(|r| EventInfo {
+        kind: r.get("kind"),
+        from_status: r.get("from_status"),
+        to_status: r.get("to_status"),
+        actor_type: r.get("actor_type"),
+        actor_user_id: r.get("actor_user_id"),
+        actor_email: r.get("actor_email"),
+        created_at: r.get("created_at"),
+    })
+    .collect();
+    let approvals = sqlx::query(sqlx::AssertSqlSafe(format!(
+        "SELECT id, status, action, summary, current_step, {} AS created_at FROM approval_requests
+          WHERE tenant_id = $1 AND entity_type = 'ai_response' AND entity_id = $2 ORDER BY created_at",
+        ts("created_at")
+    )))
+    .bind(t.as_uuid())
+    .bind(id)
+    .fetch_all(&mut *tx)
+    .await?
+    .iter()
+    .map(|r| ApprovalInfo {
+        id: r.get("id"),
+        status: r.get("status"),
+        action: r.get("action"),
+        summary: r.get("summary"),
+        current_step: r.get("current_step"),
+        created_at: r.get("created_at"),
+    })
+    .collect();
+    tx.commit().await?;
+    Ok(Some(Detail {
+        summary: summary(&row),
+        consent_version: row.get("consent_version"),
+        consented_at: row.get("consented_at"),
+        closed_at: row.get("closed_at"),
+        messages,
+        events,
+        approvals,
+        runs_without_message: run_infos,
+    }))
+}

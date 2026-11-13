@@ -34,6 +34,7 @@ test("web chat: persetujuan AI, jawaban AI, realtime, handover, akhiri", async (
   await page.getByRole("button", { name: "Masuk" }).click();
   await page.getByRole("link", { name: "Kelola website" }).click();
   await page.waitForURL(/\/website\?tenant=/);
+  const q = new URL(page.url()).search;
   await page.getByRole("link", { name: "Asisten AI" }).click();
   await page.getByLabel("Nama").fill("AI Platform");
   await page.getByRole("button", { name: "Tambah provider" }).click();
@@ -96,6 +97,24 @@ test("web chat: persetujuan AI, jawaban AI, realtime, handover, akhiri", async (
   await expect(panel.getByRole("button", { name: "Setuju & mulai chat" })).toBeVisible();
   const after = await a.evaluate(async () => (await fetch("/_api/public/chat/conversation")).status);
   expect(after).toBe(401);
+
+  // P6-3: pemilik membuka Conversation Viewer — timeline, jejak AI, riwayat handover (tanpa masking).
+  await page.goto(`${APP}/conversations${q}`);
+  const list = page.getByRole("list", { name: "Daftar percakapan" });
+  await expect(list).toContainText("Selesai");
+  await list.getByRole("button").first().click();
+  const tl = page.getByRole("region", { name: "Timeline" });
+  await expect(tl).toContainText("Jam berapa toko buka?");
+  await expect(tl).toContainText("<b>tebal</b> ada promo?");
+  await expect(tl.getByTestId("ai-meta").first()).toContainText(/mock-1 \(platform\) · \d+\+\d+ token · \d+ ms/);
+  await expect(tl.getByTestId("ai-meta").first()).toContainText("get_business_hours");
+  const hist = page.getByRole("region", { name: "Riwayat" });
+  await expect(hist).toContainText("Diteruskan ke staf — oleh pelanggan");
+  await expect(hist).toContainText("Ditutup — oleh pelanggan");
+  await expect(page.getByRole("note")).toHaveCount(0);
+  await page.setViewportSize({ width: 360, height: 740 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.screenshot({ path: "test-results/conversation-viewer-mobile.png", fullPage: true });
 
   expect(errors).toEqual([]);
   await owner.close();
