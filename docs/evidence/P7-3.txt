@@ -19,7 +19,7 @@ Artefak
   tenant.update (Owner).
 - apps/api/src/platform.rs  PlatformAdmin: platform_role super_admin aktif + sesi lolos MFA (gerbang AUTH-011 +
   pemeriksaan kedua). GET /platform/me, GET /platform/invoices?status, GET …/proof, POST …/approve, POST …/reject.
-- crates/domain/src/audit.rs  aktor , aksi subscription.* & platform.*; kategori PRD §6.9 "Platform admin
+- crates/domain/src/audit.rs  aktor "platform", aksi subscription.* & platform.*; kategori PRD §6.9 "Platform admin
   access" aktif → 10 dari 10 kategori (audit_http menuntut 10).
 - frontend: /subscription (paket & status, pemakaian vs batas, pilih paket → tagihan + instruksi → unggah bukti,
   riwayat), /platform (antrean verifikasi, gambar bukti, setujui/tolak dengan alasan), tautan "Langganan" dan
