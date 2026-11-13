@@ -246,6 +246,7 @@ pub struct OrderView {
 }
 
 #[derive(Debug, Deserialize, utoipa::IntoParams)]
+#[into_params(parameter_in = Query)]
 pub struct OrderQuery {
     pub status: Option<String>,
     pub customer_id: Option<Uuid>,

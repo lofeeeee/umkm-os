@@ -255,6 +255,7 @@ fn platform_caps(s: &AiService) -> Capabilities {
 
 type Ok<T> = Result<Json<SuccessEnvelope<T>>, ApiError>;
 
+/// Daftar provider AI tenant (API key tidak pernah dikembalikan).
 #[utoipa::path(
     get, path = "/api/v1/tenants/{tenant_id}/ai/providers", tag = "ai",
     params(("tenant_id" = Uuid, Path)),
@@ -275,6 +276,7 @@ pub async fn list_providers(
     )))
 }
 
+/// Tambah provider AI tenant (BYOK); API key dienkripsi.
 #[utoipa::path(
     post, path = "/api/v1/tenants/{tenant_id}/ai/providers", tag = "ai",
     params(("tenant_id" = Uuid, Path)), request_body = ProviderInput,
@@ -368,6 +370,7 @@ pub async fn create_provider(
     ))
 }
 
+/// Ubah provider AI tenant.
 #[utoipa::path(
     patch, path = "/api/v1/tenants/{tenant_id}/ai/providers/{provider_id}", tag = "ai",
     params(("tenant_id" = Uuid, Path), ("provider_id" = Uuid, Path)), request_body = ProviderPatchInput,
@@ -424,6 +427,7 @@ pub async fn update_provider(
     Ok(Json(SuccessEnvelope::new(view(row), &id)))
 }
 
+/// Hapus provider AI tenant.
 #[utoipa::path(
     delete, path = "/api/v1/tenants/{tenant_id}/ai/providers/{provider_id}", tag = "ai",
     params(("tenant_id" = Uuid, Path), ("provider_id" = Uuid, Path)),
@@ -496,6 +500,7 @@ async fn config_view(
     })
 }
 
+/// Konfigurasi chatbot tenant.
 #[utoipa::path(
     get, path = "/api/v1/tenants/{tenant_id}/ai/config", tag = "ai",
     params(("tenant_id" = Uuid, Path)),
@@ -518,6 +523,7 @@ pub async fn get_config(
 
 const JSON_MAX: usize = 4_000;
 
+/// Simpan konfigurasi chatbot tenant.
 #[utoipa::path(
     put, path = "/api/v1/tenants/{tenant_id}/ai/config", tag = "ai",
     params(("tenant_id" = Uuid, Path)), request_body = ConfigBody,
@@ -610,6 +616,7 @@ pub async fn put_config(
     )))
 }
 
+/// Atur tool yang boleh dipakai chatbot.
 #[utoipa::path(
     put, path = "/api/v1/tenants/{tenant_id}/ai/tools", tag = "ai",
     params(("tenant_id" = Uuid, Path)), request_body = ToolsInput,
@@ -755,6 +762,7 @@ pub struct UsageView {
     pub byok_budget: Option<i64>,
 }
 
+/// Pemakaian AI tenant (token & biaya).
 #[utoipa::path(
     get, path = "/api/v1/tenants/{tenant_id}/ai/usage", tag = "ai",
     params(("tenant_id" = Uuid, Path)),
@@ -815,6 +823,7 @@ fn rag_err(e: umkm_infrastructure::rag::RagError) -> ApiError {
     }
 }
 
+/// Daftar dokumen pengetahuan chatbot.
 #[utoipa::path(
     get, path = "/api/v1/tenants/{tenant_id}/ai/knowledge", tag = "ai",
     params(("tenant_id" = Uuid, Path)),
@@ -874,6 +883,7 @@ pub async fn create_knowledge(
     Ok((StatusCode::CREATED, Json(SuccessEnvelope::new(doc, &id))))
 }
 
+/// Hapus dokumen pengetahuan chatbot.
 #[utoipa::path(
     delete, path = "/api/v1/tenants/{tenant_id}/ai/knowledge/{document_id}", tag = "ai",
     params(("tenant_id" = Uuid, Path), ("document_id" = Uuid, Path)),
@@ -898,6 +908,7 @@ pub async fn delete_knowledge(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// Indeks ulang dokumen pengetahuan chatbot.
 #[utoipa::path(
     post, path = "/api/v1/tenants/{tenant_id}/ai/knowledge/{document_id}/reindex", tag = "ai",
     params(("tenant_id" = Uuid, Path), ("document_id" = Uuid, Path)),

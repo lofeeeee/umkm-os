@@ -173,6 +173,7 @@ pub struct CustomerMessageInput {
 }
 
 #[derive(Debug, Deserialize, utoipa::IntoParams)]
+#[into_params(parameter_in = Query)]
 pub struct TicketQuery {
     pub status: Option<String>,
     pub assignee_user_id: Option<Uuid>,
@@ -186,6 +187,7 @@ pub struct TicketQuery {
 }
 
 #[derive(Debug, Deserialize, utoipa::IntoParams)]
+#[into_params(parameter_in = Query)]
 pub struct AttachQuery {
     #[serde(default)]
     pub internal: bool,

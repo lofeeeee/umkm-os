@@ -64,6 +64,7 @@ pub async fn run_checks(state: &AppState) -> Vec<CheckResult> {
     checks
 }
 
+/// Readiness: semua dependensi (DB, Redis, …) siap melayani.
 #[utoipa::path(
     get,
     path = "/readyz",

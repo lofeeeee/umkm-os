@@ -71,6 +71,7 @@ pub struct CustomerInput {
 }
 
 #[derive(Debug, Deserialize, utoipa::IntoParams)]
+#[into_params(parameter_in = Query)]
 pub struct CustomerQuery {
     /// Cari nama/email/telepon
     pub q: Option<String>,

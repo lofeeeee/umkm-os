@@ -59,6 +59,7 @@ pub fn parse_asset_ref(s: &str) -> Option<uuid::Uuid> {
 }
 
 #[derive(Debug, Clone, Copy, serde::Deserialize, utoipa::IntoParams)]
+#[into_params(parameter_in = Query)]
 pub struct Page {
     /// 1..=100, default 20
     pub limit: Option<i64>,

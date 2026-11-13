@@ -42,6 +42,7 @@ pub struct AuditList {
 }
 
 #[derive(Debug, Deserialize, utoipa::IntoParams)]
+#[into_params(parameter_in = Query)]
 pub struct AuditQuery {
     /// Awalan aksi, mis. `order.`
     pub action: Option<String>,

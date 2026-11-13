@@ -275,6 +275,7 @@ impl Masker {
 }
 
 #[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 pub struct ConversationQuery {
     /// `AI` | `WAITING_HUMAN` | `HUMAN` | `CLOSED`
     pub status: Option<String>,

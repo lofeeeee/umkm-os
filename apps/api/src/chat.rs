@@ -174,6 +174,7 @@ pub struct SendChat {
 pub struct EmptyBody {}
 
 #[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 pub struct AfterQuery {
     /// Hanya pesan dengan seq lebih besar (default 0)
     pub after: Option<i64>,

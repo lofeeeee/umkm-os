@@ -90,6 +90,7 @@ pub struct SettingsInput {
 }
 
 #[derive(Debug, Deserialize, utoipa::IntoParams)]
+#[into_params(parameter_in = Query)]
 pub struct StockQuery {
     /// Hanya stok di bawah ambang
     #[serde(default)]

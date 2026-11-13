@@ -202,7 +202,7 @@ use crate::{
     ),
     components(schemas(ErrorEnvelope, ErrorBody, ErrorCode, Meta)),
     servers((url = "/", description = "Origin yang sama; root domain menunggu D-01")),
-    modifiers(&CommonErrors, &PublicOps, &PruneUnused),
+    modifiers(&CommonErrors, &PublicOps, &UniqueOperationIds, &PruneUnused),
     tags(
         (name = "ops", description = "Liveness/readiness untuk orchestrator"),
         (name = "auth", description = "Registrasi, login, sesi (cookie HttpOnly + CSRF, ADR-0015)"),
@@ -335,6 +335,39 @@ impl Modify for PruneUnused {
             let components = openapi.components.as_mut().expect("checked above");
             for n in unused {
                 components.schemas.remove(&n);
+            }
+        }
+    }
+}
+
+/// utoipa memakai nama fungsi sebagai `operationId`; nama yang sama di modul berbeda (mis. `list`)
+/// bentrok. Id ganda diberi awalan tag (`approvals_list`) — deterministik, klien hasil generate tetap stabil.
+struct UniqueOperationIds;
+
+impl Modify for UniqueOperationIds {
+    fn modify(&self, openapi: &mut utoipa::openapi::OpenApi) {
+        let mut seen: std::collections::BTreeMap<String, usize> = Default::default();
+        for item in openapi.paths.paths.values_mut() {
+            for op in operations(item) {
+                if let Some(id) = &op.operation_id {
+                    *seen.entry(id.clone()).or_default() += 1;
+                }
+            }
+        }
+        for item in openapi.paths.paths.values_mut() {
+            for op in operations(item) {
+                let Some(id) = op.operation_id.clone() else {
+                    continue;
+                };
+                if seen.get(&id).copied().unwrap_or(0) > 1 {
+                    let tag = op
+                        .tags
+                        .as_ref()
+                        .and_then(|t| t.first())
+                        .cloned()
+                        .unwrap_or_default();
+                    op.operation_id = Some(format!("{tag}_{id}"));
+                }
             }
         }
     }

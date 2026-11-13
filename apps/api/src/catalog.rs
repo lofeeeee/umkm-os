@@ -139,6 +139,7 @@ pub struct CategoryView {
 }
 
 #[derive(Debug, Deserialize, utoipa::IntoParams)]
+#[into_params(parameter_in = Query)]
 pub struct ProductQuery {
     /// `draft` | `active` | `archived`
     pub status: Option<String>,
@@ -181,6 +182,7 @@ pub struct PublicProductList {
 }
 
 #[derive(Debug, Deserialize, utoipa::IntoParams)]
+#[into_params(parameter_in = Query)]
 pub struct PublicQuery {
     pub category_id: Option<Uuid>,
     pub limit: Option<i64>,

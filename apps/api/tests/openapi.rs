@@ -116,3 +116,36 @@ async fn real_responses_match_schema() {
         err["error"]["code"]
     );
 }
+
+/// Aturan Redocly (CI) yang juga dikunci di sini: operationId unik, setiap operasi punya summary,
+/// dan parameter `in: path` benar-benar ada di path (struct query wajib `parameter_in = Query`).
+#[test]
+fn operations_have_unique_ids_summaries_and_real_path_params() {
+    let spec = spec();
+    let mut ids = std::collections::BTreeSet::new();
+    let mut problems = Vec::new();
+    for (path, item) in spec["paths"].as_object().unwrap() {
+        for (method, op) in item.as_object().unwrap() {
+            let at = format!("{method} {path}");
+            match op["operationId"].as_str() {
+                Some(id) if !ids.insert(id.to_owned()) => {
+                    problems.push(format!("{at}: operationId ganda `{id}`"))
+                }
+                None => problems.push(format!("{at}: tanpa operationId")),
+                _ => {}
+            }
+            if op["summary"].as_str().is_none_or(str::is_empty) {
+                problems.push(format!("{at}: tanpa summary (tambahkan doc comment ///)"));
+            }
+            for p in op["parameters"].as_array().into_iter().flatten() {
+                let name = p["name"].as_str().unwrap_or_default();
+                if p["in"] == "path" && !path.contains(&format!("{{{name}}}")) {
+                    problems.push(format!(
+                        "{at}: `{name}` ditandai path padahal tidak ada di path"
+                    ));
+                }
+            }
+        }
+    }
+    assert!(problems.is_empty(), "{}", problems.join("\n"));
+}

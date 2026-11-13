@@ -84,6 +84,7 @@ pub async fn me(ReqId(id): ReqId, admin: PlatformAdmin) -> Json<SuccessEnvelope<
 }
 
 #[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 pub struct InvoiceQuery {
     /// default `submitted` (menunggu verifikasi); `all` = semua
     pub status: Option<String>,

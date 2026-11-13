@@ -897,21 +897,17 @@ paths:
       operationId: analytics
       parameters:
       - name: from
-        in: path
+        in: query
         description: '`YYYY-MM-DD` (Asia/Jakarta), default 29 hari sebelum `to`'
-        required: true
+        required: false
         schema:
-          type:
-          - string
-          - 'null'
+          type: string
       - name: to
-        in: path
+        in: query
         description: '`YYYY-MM-DD` (inklusif), default hari ini; rentang maks 366 hari'
-        required: true
+        required: false
         schema:
-          type:
-          - string
-          - 'null'
+          type: string
       responses:
         '200':
           description: Agregat platform
@@ -965,13 +961,11 @@ paths:
       operationId: invoices
       parameters:
       - name: status
-        in: path
+        in: query
         description: default `submitted` (menunggu verifikasi); `all` = semua
-        required: true
+        required: false
         schema:
-          type:
-          - string
-          - 'null'
+          type: string
       responses:
         '200':
           description: Tagihan
@@ -1016,7 +1010,7 @@ paths:
       tags:
       - platform
       summary: Setujui pembayaran → langganan aktif/diperpanjang + notifikasi toko (atomik).
-      operationId: approve
+      operationId: platform_approve
       parameters:
       - name: invoice_id
         in: path
@@ -1114,7 +1108,7 @@ paths:
       tags:
       - platform
       summary: Tolak pembayaran (alasan wajib, terlihat oleh toko).
-      operationId: reject
+      operationId: platform_reject
       parameters:
       - name: invoice_id
         in: path
@@ -1178,7 +1172,7 @@ paths:
       tags:
       - platform
       summary: Cek akses admin platform (dipakai dashboard untuk menampilkan menu).
-      operationId: me
+      operationId: platform_me
       responses:
         '200':
           description: Super admin dengan sesi MFA
@@ -1310,13 +1304,11 @@ paths:
       operationId: current
       parameters:
       - name: after
-        in: path
+        in: query
         description: Hanya pesan dengan seq lebih besar (default 0)
-        required: true
+        required: false
         schema:
-          type:
-          - integer
-          - 'null'
+          type: integer
           format: int64
       responses:
         '200':
@@ -1862,7 +1854,7 @@ paths:
       tags:
       - public
       summary: Akun yang sedang login + customer tertaut.
-      operationId: me
+      operationId: public_me
       responses:
         '200':
           description: Akun
@@ -1910,22 +1902,18 @@ paths:
       operationId: customer_orders
       parameters:
       - name: limit
-        in: path
+        in: query
         description: 1..=100, default 20
-        required: true
+        required: false
         schema:
-          type:
-          - integer
-          - 'null'
+          type: integer
           format: int64
       - name: offset
-        in: path
+        in: query
         description: default 0
-        required: true
+        required: false
         schema:
-          type:
-          - integer
-          - 'null'
+          type: integer
           format: int64
       responses:
         '200':
@@ -2220,7 +2208,7 @@ paths:
       tags:
       - public
       summary: Unggah bukti bayar (PNG/JPEG/WebP; isi diperiksa server; menggantikan bukti lama).
-      operationId: upload_proof
+      operationId: public_upload_proof
       parameters:
       - name: X-Order-Token
         in: header
@@ -2544,28 +2532,22 @@ paths:
       operationId: public_products
       parameters:
       - name: category_id
-        in: path
-        required: true
+        in: query
+        required: false
         schema:
-          type:
-          - string
-          - 'null'
+          type: string
           format: uuid
       - name: limit
-        in: path
-        required: true
+        in: query
+        required: false
         schema:
-          type:
-          - integer
-          - 'null'
+          type: integer
           format: int64
       - name: offset
-        in: path
-        required: true
+        in: query
+        required: false
         schema:
-          type:
-          - integer
-          - 'null'
+          type: integer
           format: int64
       responses:
         '200':
@@ -2892,6 +2874,7 @@ paths:
     get:
       tags:
       - ai
+      summary: Konfigurasi chatbot tenant.
       operationId: get_config
       parameters:
       - name: tenant_id
@@ -2936,6 +2919,7 @@ paths:
     put:
       tags:
       - ai
+      summary: Simpan konfigurasi chatbot tenant.
       operationId: put_config
       parameters:
       - name: tenant_id
@@ -2993,6 +2977,7 @@ paths:
     get:
       tags:
       - ai
+      summary: Daftar dokumen pengetahuan chatbot.
       operationId: list_knowledge
       parameters:
       - name: tenant_id
@@ -3089,6 +3074,7 @@ paths:
     delete:
       tags:
       - ai
+      summary: Hapus dokumen pengetahuan chatbot.
       operationId: delete_knowledge
       parameters:
       - name: tenant_id
@@ -3136,6 +3122,7 @@ paths:
     post:
       tags:
       - ai
+      summary: Indeks ulang dokumen pengetahuan chatbot.
       operationId: reindex_knowledge
       parameters:
       - name: tenant_id
@@ -3183,6 +3170,7 @@ paths:
     get:
       tags:
       - ai
+      summary: Daftar provider AI tenant (API key tidak pernah dikembalikan).
       operationId: list_providers
       parameters:
       - name: tenant_id
@@ -3227,6 +3215,7 @@ paths:
     post:
       tags:
       - ai
+      summary: Tambah provider AI tenant (BYOK); API key dienkripsi.
       operationId: create_provider
       parameters:
       - name: tenant_id
@@ -3284,6 +3273,7 @@ paths:
     delete:
       tags:
       - ai
+      summary: Hapus provider AI tenant.
       operationId: delete_provider
       parameters:
       - name: tenant_id
@@ -3336,6 +3326,7 @@ paths:
     patch:
       tags:
       - ai
+      summary: Ubah provider AI tenant.
       operationId: update_provider
       parameters:
       - name: tenant_id
@@ -3451,6 +3442,7 @@ paths:
     put:
       tags:
       - ai
+      summary: Atur tool yang boleh dipakai chatbot.
       operationId: put_tools
       parameters:
       - name: tenant_id
@@ -3502,6 +3494,7 @@ paths:
     get:
       tags:
       - ai
+      summary: Pemakaian AI tenant (token & biaya).
       operationId: usage
       parameters:
       - name: tenant_id
@@ -3557,21 +3550,17 @@ paths:
           type: string
           format: uuid
       - name: from
-        in: path
+        in: query
         description: '`YYYY-MM-DD` (Asia/Jakarta), default 29 hari sebelum `to`'
-        required: true
+        required: false
         schema:
-          type:
-          - string
-          - 'null'
+          type: string
       - name: to
-        in: path
+        in: query
         description: '`YYYY-MM-DD` (inklusif), default hari ini; rentang maks 366 hari'
-        required: true
+        required: false
         schema:
-          type:
-          - string
-          - 'null'
+          type: string
       responses:
         '200':
           description: Metrik percakapan
@@ -3631,21 +3620,17 @@ paths:
           type: string
           format: uuid
       - name: from
-        in: path
+        in: query
         description: '`YYYY-MM-DD` (Asia/Jakarta), default 29 hari sebelum `to`'
-        required: true
+        required: false
         schema:
-          type:
-          - string
-          - 'null'
+          type: string
       - name: to
-        in: path
+        in: query
         description: '`YYYY-MM-DD` (inklusif), default hari ini; rentang maks 366 hari'
-        required: true
+        required: false
         schema:
-          type:
-          - string
-          - 'null'
+          type: string
       responses:
         '200':
           description: Ringkasan toko
@@ -3940,7 +3925,7 @@ paths:
       tags:
       - approvals
       summary: Daftar permintaan approval.
-      operationId: list
+      operationId: approvals_list
       parameters:
       - name: tenant_id
         in: path
@@ -3949,27 +3934,21 @@ paths:
           type: string
           format: uuid
       - name: status
-        in: path
-        required: true
+        in: query
+        required: false
         schema:
-          type:
-          - string
-          - 'null'
+          type: string
       - name: limit
-        in: path
-        required: true
+        in: query
+        required: false
         schema:
-          type:
-          - integer
-          - 'null'
+          type: integer
           format: int64
       - name: offset
-        in: path
-        required: true
+        in: query
+        required: false
         schema:
-          type:
-          - integer
-          - 'null'
+          type: integer
           format: int64
       responses:
         '200':
@@ -4009,7 +3988,7 @@ paths:
       tags:
       - approvals
       summary: Detail + riwayat keputusan.
-      operationId: get_one
+      operationId: approvals_get_one
       parameters:
       - name: tenant_id
         in: path
@@ -4061,7 +4040,7 @@ paths:
       tags:
       - approvals
       summary: Setujui langkah aktif. Langkah terakhir → perubahan diterapkan.
-      operationId: approve
+      operationId: approvals_approve
       parameters:
       - name: tenant_id
         in: path
@@ -4179,7 +4158,7 @@ paths:
       tags:
       - approvals
       summary: Tolak langkah aktif (alasan wajib).
-      operationId: reject
+      operationId: approvals_reject
       parameters:
       - name: tenant_id
         in: path
@@ -4237,7 +4216,7 @@ paths:
       tags:
       - audit
       summary: Audit log toko (terbaru dulu, filter aksi/aktor/resource/waktu).
-      operationId: list
+      operationId: audit_list
       parameters:
       - name: tenant_id
         in: path
@@ -4246,66 +4225,50 @@ paths:
           type: string
           format: uuid
       - name: action
-        in: path
+        in: query
         description: Awalan aksi, mis. `order.`
-        required: true
+        required: false
         schema:
-          type:
-          - string
-          - 'null'
+          type: string
       - name: actor_user_id
-        in: path
-        required: true
+        in: query
+        required: false
         schema:
-          type:
-          - string
-          - 'null'
+          type: string
           format: uuid
       - name: resource_type
-        in: path
-        required: true
+        in: query
+        required: false
         schema:
-          type:
-          - string
-          - 'null'
+          type: string
       - name: resource_id
-        in: path
-        required: true
+        in: query
+        required: false
         schema:
-          type:
-          - string
-          - 'null'
+          type: string
       - name: from
-        in: path
+        in: query
         description: RFC3339
-        required: true
+        required: false
         schema:
-          type:
-          - string
-          - 'null'
+          type: string
       - name: to
-        in: path
+        in: query
         description: RFC3339 (eksklusif)
-        required: true
+        required: false
         schema:
-          type:
-          - string
-          - 'null'
+          type: string
       - name: limit
-        in: path
-        required: true
+        in: query
+        required: false
         schema:
-          type:
-          - integer
-          - 'null'
+          type: integer
           format: int64
       - name: offset
-        in: path
-        required: true
+        in: query
+        required: false
         schema:
-          type:
-          - integer
-          - 'null'
+          type: integer
           format: int64
       responses:
         '200':
@@ -4345,7 +4308,7 @@ paths:
       tags:
       - business
       summary: Ganti seluruh daftar alamat (urutan = urutan tampil; AC-BIZ-003).
-      operationId: put_addresses
+      operationId: business_put_addresses
       parameters:
       - name: tenant_id
         in: path
@@ -4903,7 +4866,7 @@ paths:
       tags:
       - commerce
       summary: Ubah pengaturan; mengganti QRIS hanya Owner (`tenant.update`) dan diaudit (ADR-0004).
-      operationId: put_settings
+      operationId: commerce_put_settings
       parameters:
       - name: tenant_id
         in: path
@@ -4967,7 +4930,7 @@ paths:
       tags:
       - conversations
       summary: Daftar percakapan (terbaru dulu). Butuh `conversations.read`.
-      operationId: list
+      operationId: conversations_list
       parameters:
       - name: tenant_id
         in: path
@@ -4976,44 +4939,34 @@ paths:
           type: string
           format: uuid
       - name: status
-        in: path
+        in: query
         description: '`AI` | `WAITING_HUMAN` | `HUMAN` | `CLOSED`'
-        required: true
+        required: false
         schema:
-          type:
-          - string
-          - 'null'
+          type: string
       - name: assignee_user_id
-        in: path
-        required: true
+        in: query
+        required: false
         schema:
-          type:
-          - string
-          - 'null'
+          type: string
           format: uuid
       - name: mine
-        in: path
+        in: query
         description: '`true` = hanya yang ditangani pemanggil (mengabaikan `assignee_user_id`).'
-        required: true
+        required: false
         schema:
-          type:
-          - boolean
-          - 'null'
+          type: boolean
       - name: limit
-        in: path
-        required: true
+        in: query
+        required: false
         schema:
-          type:
-          - integer
-          - 'null'
+          type: integer
           format: int64
       - name: offset
-        in: path
-        required: true
+        in: query
+        required: false
         schema:
-          type:
-          - integer
-          - 'null'
+          type: integer
           format: int64
       responses:
         '200':
@@ -5135,7 +5088,7 @@ paths:
       tags:
       - conversations
       summary: Tugaskan percakapan ke anggota lain (status HUMAN). Butuh `conversations.takeover`.
-      operationId: assign
+      operationId: conversations_assign
       parameters:
       - name: tenant_id
         in: path
@@ -5711,7 +5664,7 @@ paths:
       tags:
       - crm
       summary: Daftar + pencarian customer tenant (AC-CRM-002).
-      operationId: list
+      operationId: crm_list
       parameters:
       - name: tenant_id
         in: path
@@ -5720,35 +5673,27 @@ paths:
           type: string
           format: uuid
       - name: q
-        in: path
+        in: query
         description: Cari nama/email/telepon
-        required: true
+        required: false
         schema:
-          type:
-          - string
-          - 'null'
+          type: string
       - name: tag
-        in: path
-        required: true
+        in: query
+        required: false
         schema:
-          type:
-          - string
-          - 'null'
+          type: string
       - name: limit
-        in: path
-        required: true
+        in: query
+        required: false
         schema:
-          type:
-          - integer
-          - 'null'
+          type: integer
           format: int64
       - name: offset
-        in: path
-        required: true
+        in: query
+        required: false
         schema:
-          type:
-          - integer
-          - 'null'
+          type: integer
           format: int64
       responses:
         '200':
@@ -5787,7 +5732,7 @@ paths:
       tags:
       - crm
       summary: Tambah customer manual (pelanggan offline).
-      operationId: create
+      operationId: crm_create
       parameters:
       - name: tenant_id
         in: path
@@ -5839,7 +5784,7 @@ paths:
       tags:
       - crm
       summary: Profil customer + alamat + tag + catatan internal.
-      operationId: get_one
+      operationId: crm_get_one
       parameters:
       - name: tenant_id
         in: path
@@ -5948,7 +5893,7 @@ paths:
       tags:
       - crm
       summary: Ganti daftar alamat (maks 5).
-      operationId: put_addresses
+      operationId: crm_put_addresses
       parameters:
       - name: tenant_id
         in: path
@@ -6179,7 +6124,7 @@ paths:
       tags:
       - inventory
       summary: Stok semua varian (produk non-arsip).
-      operationId: list
+      operationId: inventory_list
       parameters:
       - name: tenant_id
         in: path
@@ -6188,34 +6133,28 @@ paths:
           type: string
           format: uuid
       - name: low
-        in: path
+        in: query
         description: Hanya stok di bawah ambang
-        required: true
+        required: false
         schema:
           type: boolean
       - name: q
-        in: path
+        in: query
         description: Cari nama produk / SKU
-        required: true
+        required: false
         schema:
-          type:
-          - string
-          - 'null'
+          type: string
       - name: limit
-        in: path
-        required: true
+        in: query
+        required: false
         schema:
-          type:
-          - integer
-          - 'null'
+          type: integer
           format: int64
       - name: offset
-        in: path
-        required: true
+        in: query
+        required: false
         schema:
-          type:
-          - integer
-          - 'null'
+          type: integer
           format: int64
       responses:
         '200':
@@ -6270,22 +6209,18 @@ paths:
           type: string
           format: uuid
       - name: limit
-        in: path
+        in: query
         description: 1..=100, default 20
-        required: true
+        required: false
         schema:
-          type:
-          - integer
-          - 'null'
+          type: integer
           format: int64
       - name: offset
-        in: path
+        in: query
         description: default 0
-        required: true
+        required: false
         schema:
-          type:
-          - integer
-          - 'null'
+          type: integer
           format: int64
       responses:
         '200':
@@ -6394,7 +6329,7 @@ paths:
       tags:
       - inventory
       summary: Ambang low-stock dan izin stok negatif (diaudit).
-      operationId: put_settings
+      operationId: inventory_put_settings
       parameters:
       - name: tenant_id
         in: path
@@ -6713,7 +6648,7 @@ paths:
       tags:
       - notifications
       summary: Notifikasi saya di toko ini (terbaru dulu) + jumlah belum dibaca.
-      operationId: list
+      operationId: notifications_list
       parameters:
       - name: tenant_id
         in: path
@@ -6722,17 +6657,15 @@ paths:
           type: string
           format: uuid
       - name: unread
-        in: path
-        required: true
+        in: query
+        required: false
         schema:
           type: boolean
       - name: limit
-        in: path
-        required: true
+        in: query
+        required: false
         schema:
-          type:
-          - integer
-          - 'null'
+          type: integer
           format: int64
       responses:
         '200':
@@ -6873,35 +6806,27 @@ paths:
           type: string
           format: uuid
       - name: status
-        in: path
-        required: true
+        in: query
+        required: false
         schema:
-          type:
-          - string
-          - 'null'
+          type: string
       - name: customer_id
-        in: path
-        required: true
+        in: query
+        required: false
         schema:
-          type:
-          - string
-          - 'null'
+          type: string
           format: uuid
       - name: limit
-        in: path
-        required: true
+        in: query
+        required: false
         schema:
-          type:
-          - integer
-          - 'null'
+          type: integer
           format: int64
       - name: offset
-        in: path
-        required: true
+        in: query
+        required: false
         schema:
-          type:
-          - integer
-          - 'null'
+          type: integer
           format: int64
       responses:
         '200':
@@ -7127,7 +7052,7 @@ paths:
       tags:
       - commerce
       summary: Bukti bayar pembeli untuk staf (`orders.read`).
-      operationId: get_proof
+      operationId: commerce_get_proof
       parameters:
       - name: tenant_id
         in: path
@@ -7367,7 +7292,7 @@ paths:
       summary: |-
         Ubah status manual: pemrosesan/pengiriman/selesai (`orders.approve`) atau batal order
         belum dibayar (`orders.cancel`). AC-ORD-004.
-      operationId: change_status
+      operationId: commerce_change_status
       parameters:
       - name: tenant_id
         in: path
@@ -7440,45 +7365,35 @@ paths:
           type: string
           format: uuid
       - name: status
-        in: path
+        in: query
         description: '`draft` | `active` | `archived`'
-        required: true
+        required: false
         schema:
-          type:
-          - string
-          - 'null'
+          type: string
       - name: category_id
-        in: path
+        in: query
         description: Termasuk subkategori langsung
-        required: true
+        required: false
         schema:
-          type:
-          - string
-          - 'null'
+          type: string
           format: uuid
       - name: q
-        in: path
+        in: query
         description: Cari nama atau SKU
-        required: true
+        required: false
         schema:
-          type:
-          - string
-          - 'null'
+          type: string
       - name: limit
-        in: path
-        required: true
+        in: query
+        required: false
         schema:
-          type:
-          - integer
-          - 'null'
+          type: integer
           format: int64
       - name: offset
-        in: path
-        required: true
+        in: query
+        required: false
         schema:
-          type:
-          - integer
-          - 'null'
+          type: integer
           format: int64
       responses:
         '200':
@@ -7696,7 +7611,7 @@ paths:
       tags:
       - catalog
       summary: Aktifkan (`products.update`) atau arsipkan (`products.archive`). AC-CAT-001.
-      operationId: change_status
+      operationId: catalog_change_status
       parameters:
       - name: tenant_id
         in: path
@@ -8308,7 +8223,7 @@ paths:
       tags:
       - billing
       summary: Bukti bayar yang diunggah toko ini. Butuh `tenant.read`.
-      operationId: get_proof
+      operationId: billing_get_proof
       parameters:
       - name: tenant_id
         in: path
@@ -8359,7 +8274,7 @@ paths:
       tags:
       - billing
       summary: Unggah bukti bayar (gambar PNG/JPEG/WebP ≤ 2 MB, body mentah). Butuh `tenant.update`.
-      operationId: upload_proof
+      operationId: billing_upload_proof
       parameters:
       - name: tenant_id
         in: path
@@ -8433,7 +8348,7 @@ paths:
       tags:
       - tickets
       summary: Daftar ticket (filter, pencarian kode/subjek).
-      operationId: list
+      operationId: tickets_list
       parameters:
       - name: tenant_id
         in: path
@@ -8442,72 +8357,54 @@ paths:
           type: string
           format: uuid
       - name: status
-        in: path
-        required: true
+        in: query
+        required: false
         schema:
-          type:
-          - string
-          - 'null'
+          type: string
       - name: assignee_user_id
-        in: path
-        required: true
+        in: query
+        required: false
         schema:
-          type:
-          - string
-          - 'null'
+          type: string
           format: uuid
       - name: priority
-        in: path
-        required: true
+        in: query
+        required: false
         schema:
-          type:
-          - string
-          - 'null'
+          type: string
       - name: tag
-        in: path
-        required: true
+        in: query
+        required: false
         schema:
-          type:
-          - string
-          - 'null'
+          type: string
       - name: q
-        in: path
-        required: true
+        in: query
+        required: false
         schema:
-          type:
-          - string
-          - 'null'
+          type: string
       - name: customer_id
-        in: path
-        required: true
+        in: query
+        required: false
         schema:
-          type:
-          - string
-          - 'null'
+          type: string
           format: uuid
       - name: order_id
-        in: path
-        required: true
+        in: query
+        required: false
         schema:
-          type:
-          - string
-          - 'null'
+          type: string
           format: uuid
       - name: limit
-        in: path
-        required: true
+        in: query
+        required: false
         schema:
-          type:
-          - integer
-          - 'null'
+          type: integer
           format: int64
       - name: offset
-        in: path
-        required: true
+        in: query
+        required: false
         schema:
-          type:
-          - integer
-          - 'null'
+          type: integer
           format: int64
       responses:
         '200':
@@ -8546,7 +8443,7 @@ paths:
       tags:
       - tickets
       summary: Ticket manual oleh staf (AC-TKT-001 sumber `manual`).
-      operationId: create
+      operationId: tickets_create
       parameters:
       - name: tenant_id
         in: path
@@ -8598,7 +8495,7 @@ paths:
       tags:
       - tickets
       summary: Detail + pesan (termasuk catatan internal) + lampiran + riwayat.
-      operationId: get_one
+      operationId: tickets_get_one
       parameters:
       - name: tenant_id
         in: path
@@ -8707,7 +8604,7 @@ paths:
       tags:
       - tickets
       summary: Assign / reassign / lepas (AC-TKT-003).
-      operationId: assign
+      operationId: tickets_assign
       parameters:
       - name: tenant_id
         in: path
@@ -8780,8 +8677,8 @@ paths:
           type: string
           format: uuid
       - name: internal
-        in: path
-        required: true
+        in: query
+        required: false
         schema:
           type: boolean
       requestBody:
@@ -9837,6 +9734,7 @@ paths:
     get:
       tags:
       - ops
+      summary: 'Readiness: semua dependensi (DB, Redis, …) siap melayani.'
       operationId: readyz
       responses:
         '200':

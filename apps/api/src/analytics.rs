@@ -25,6 +25,7 @@ use crate::{
 };
 
 #[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 pub struct RangeQuery {
     /// `YYYY-MM-DD` (Asia/Jakarta), default 29 hari sebelum `to`
     pub from: Option<String>,
