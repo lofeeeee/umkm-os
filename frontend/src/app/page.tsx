@@ -24,7 +24,6 @@ export default function Home() {
         return;
       }
       setItems(await api<Membership[]>("GET", "/api/v1/tenants"));
-      // Admin platform (super_admin + sesi MFA) — 403 untuk pengguna lain, diabaikan.
       api("GET", "/api/v1/platform/me").then(() => setPlatform(true), () => setPlatform(false));
     })().catch(() => setError("Tidak dapat menghubungi server."));
   }, [router]);
@@ -37,16 +36,18 @@ export default function Home() {
         {error && <div className="d-alert d-alert-error" role="alert">{error}</div>}
         {!items && !error && <p className="d-muted" aria-busy="true">Memuat…</p>}
         {items?.length === 0 && <p className="d-muted">Anda belum menjadi anggota toko mana pun.</p>}
+        <div className="d-bento">
         {items?.map((m) => (
           <div className="d-card" key={m.tenant_id}>
             <h2>{m.name}</h2>
             <p className="d-muted">{m.slug} · {m.role}</p>
-            <div className="d-row">
+            <div className="d-row" style={{marginTop: '16px'}}>
               <Link className="d-btn d-btn-primary" href={`/website?tenant=${m.tenant_id}`}>Kelola website</Link>
               <Link className="d-btn" href={`/business?tenant=${m.tenant_id}`}>Profil bisnis</Link>
             </div>
           </div>
         ))}
+        </div>
       </main>
     </>
   );
