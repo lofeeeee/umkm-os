@@ -89,3 +89,13 @@ Keputusan produk yang tidak membutuhkan ADR. Entri tidak ditimpa; perubahan = en
     provider: guardrail, kuota, circuit breaker, Human Only).
   - Token: prompt + completion giliran chat (uji coba admin tidak dihitung). Hari = tanggal Asia/Jakarta.
 - Dapat diubah pemilik produk; perubahan = entri baru.
+
+## 2026-11-13 — Gate G: D-06, D-10, D-12 legal billing
+
+- Pemutus: Product owner ("Cukup subdomain, Kita paketnya gratis dan pro, boleh"; lalu "Gratis tidak include token AI,
+  biaya pendaftaran perbulan 50k dan 100k hilangkan yang gratis deh"; uji coba 14 hari; paket 50k boleh BYOK;
+  nama "Starter & Pro"; penagihan "Manual dulu").
+- D-06: **DISETUJUI** — subdomain platform saja; custom domain (P7-4) di luar V1.0 (ADR-0008).
+- D-10: **DISETUJUI** — Starter Rp50.000/bulan, Pro Rp100.000/bulan, tanpa paket gratis, uji coba 14 hari dengan batas
+  Starter, pembayaran manual diverifikasi Super Admin (ADR-0016). Angka batas = usulan engineering, disimpan sebagai data.
+- D-12 legal billing: **DISETUJUI bersyarat** — teks placeholder; wajib diganti teks final hasil review legal sebelum go-live.

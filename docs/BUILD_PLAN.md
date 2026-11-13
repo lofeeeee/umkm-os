@@ -248,6 +248,8 @@ Prefix `/api/v1`; envelope sukses/gagal; `meta.request_id`; cursor pagination; r
 
 **Blokir:** D-06 custom domain (R-04), D-10 pricing, D-12 legal billing. P7-4 **di luar V1.0** bila D-06 menolak custom domain masuk MVP.
 
+**Status:** Gate G diputus 2026-11-13 — D-06 subdomain saja (ADR-0008) → **P7-4 di luar V1.0, tidak dikerjakan**; D-10 Starter/Pro + uji coba 14 hari + pembayaran manual (ADR-0016); D-12 legal billing bersyarat (placeholder).
+
 | Task | Requirement | File | Uji |
 |---|---|---|---|
 | P7-1 Plan configuration | `PRD.md §4.15`, `PRD.md §12` | `migrations/0018_billing.sql`, `crates/domain/src/billing/plan.rs` | ubah `limits_json` tanpa rebuild； bukti: `docs/evidence/<task>.txt`|

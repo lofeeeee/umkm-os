@@ -18,7 +18,7 @@
 | D-12 privacy/terms registrasi | P1 | **DISETUJUI bersyarat** |
 | D-12 consent AI | P5 | **DISETUJUI bersyarat** 2026-11-12 |
 | D-12 privacy/terms transaksi | P3 | **DISETUJUI bersyarat** 2026-11-12 |
-| D-12 legal billing | P7 | Sebelum P7 |
+| D-12 legal billing | P7 | **DISETUJUI bersyarat** 2026-11-13 (placeholder) |
 | D-12 sign-off | Go-live | Go-live |
 | D-05 editor depth | P2 | **DISETUJUI** 2026-11-12 (section-based) |
 | D-07 storage | P2 | **DISETUJUI sementara** 2026-11-12 (lokal PostgreSQL) |
@@ -27,8 +27,8 @@
 | D-03 customer identity | P3/P6 | **DISETUJUI** 2026-11-12 (guest + linking) |
 | D-09 AI key policy | P5 | **DISETUJUI** 2026-11-12 (platform + BYOK) |
 | D-04 messaging channel | P6 | **DISETUJUI** 2026-11-12 (web chat; WhatsApp/Telegram menyusul) |
-| D-06 custom domain | P7 / status V1.0 | Sebelum P7 |
-| D-10 pricing | P7 | Sebelum P7 |
+| D-06 custom domain | P7 / status V1.0 | **DISETUJUI** 2026-11-13 (subdomain saja; P7-4 di luar V1.0) |
+| D-10 pricing | P7 | **DISETUJUI** 2026-11-13 (Starter/Pro, manual, ADR-0016) |
 
 **Yang dapat dimulai tanpa keputusan produk:** hanya P0-0 repo skeleton netral. Task yang menyentuh bentuk workspace menunggu ADR-0013; Caddy/TLS produksi menunggu D-01.
 
@@ -43,13 +43,13 @@
 | D-03 | Customer identity guest/account/linking | Guest + account linking setelah verifikasi; cabang lain didokumentasikan | registered-only mengubah onboarding; guest-only membatasi `get_customer_orders` | P3, P6 | ADR-0005 | Product | **DISETUJUI** 2026-11-12: guest checkout + akun opsional, linking hanya setelah email terverifikasi (ADR-0005) |
 | D-04 | Messaging channel web chat/WhatsApp | Web chat dulu; WhatsApp lewat adapter fase lanjutan | butuh provider messaging, opt-in/consent, webhook | P6 | ADR-0006 | Product | **DISETUJUI** 2026-11-12: web chat dulu; WhatsApp/Telegram lewat adapter fase lanjutan (ADR-0006) |
 | D-05 | Website builder section-based/canvas penuh | Section-based sebagai default usulan; R-03 tetap contract question | canvas penuh mengubah `content_json`, renderer, rollback | P2 | ADR-0007 | Product + Design | **DISETUJUI** 2026-11-12: section-based / stacked blocks (ADR-0007) |
-| D-06 | Custom domain masuk MVP atau lanjutan | Fase lanjutan; P7-4 conditional/out-of-V1.0 | DNS ownership, TLS per domain, lifecycle anti-takeover | P7 / V1.0 scope | ADR-0008 | Product + Ops | MENUNGGU |
+| D-06 | Custom domain masuk MVP atau lanjutan | Fase lanjutan; P7-4 conditional/out-of-V1.0 | DNS ownership, TLS per domain, lifecycle anti-takeover | P7 / V1.0 scope | ADR-0008 | Product + Ops | **DISETUJUI** 2026-11-13: subdomain saja; custom domain di luar V1.0 (ADR-0008) |
 | D-07 | Storage S3-compatible + biaya | Provider eksternal; bukan MinIO di VPS yang sama | budget 8 GB dan RPO dihitung ulang | P2 | ADR-0009 | Ops + Finance | **DISETUJUI sementara** 2026-11-12: "local database for now" → adapter PostgreSQL di belakang port provider-neutral (ADR-0009). Terbuka: provider eksternal + off-site backup |
 | D-08 | Email provider | Transactional email + SPF/DKIM/DMARC + sandbox; **outbox tetap provider-neutral** | tanpa ini AUTH-003/005/009/010 tidak bisa diuji end-to-end | P1 | ADR-0010 | Ops + Product | MENUNGGU — **ditunda** 2026-11-11 (product-decision-log); P1-6 memakai adapter log-only |
 | D-09 | AI provider BYOK/platform key/keduanya | BYOK dulu; platform key menyusul | cost metering/quota/liability lebih awal | P5 | ADR-0011 | Product + Finance + Legal | **DISETUJUI** 2026-11-12: keduanya — provider platform (kuota token per tenant) atau kunci milik tenant (ADR-0011) |
-| D-10 | Subscription pricing/limit/cycle | Simpan limit di `plans.limits_json`; angka final menyusul | billing integration tertahan | P7 | Product decision log | Product + Finance | MENUNGGU |
+| D-10 | Subscription pricing/limit/cycle | Simpan limit di `plans.limits_json`; angka final menyusul | billing integration tertahan | P7 | ADR-0016 | Product + Finance | **DISETUJUI** 2026-11-13: Starter Rp50.000 & Pro Rp100.000/bulan, uji coba 14 hari, pembayaran manual (ADR-0016) |
 | D-11 | Retention conversation/audit/file/customer | Tetapkan angka sebelum P1 | purge/deletion/export tidak bisa Done | P1 | ADR-0012 | Legal + Ops | **DISETUJUI** 2026-11-11: percakapan 30 hari, audit 1 tahun, file/data pelanggan +30 hari setelah tenant tutup/permintaan hapus (ADR-0012) |
-| D-12 | Legal/compliance | Pecah: privacy/terms registrasi (P1), privacy/terms transaksi (P3), consent AI (P5), legal billing (P7), sign-off go-live | masing-masing gate tertahan bila belum `DISETUJUI` | P1/P3/P5/P7/Go-live | Legal decision log | Legal | Privacy/terms registrasi **DISETUJUI bersyarat** 2026-11-11; privacy/terms transaksi **DISETUJUI bersyarat** 2026-11-12 (placeholder; teks final sebelum go-live); consent AI **DISETUJUI bersyarat** 2026-11-12 (placeholder); legal billing & sign-off MENUNGGU |
+| D-12 | Legal/compliance | Pecah: privacy/terms registrasi (P1), privacy/terms transaksi (P3), consent AI (P5), legal billing (P7), sign-off go-live | masing-masing gate tertahan bila belum `DISETUJUI` | P1/P3/P5/P7/Go-live | Legal decision log | Legal | Privacy/terms registrasi **DISETUJUI bersyarat** 2026-11-11; privacy/terms transaksi **DISETUJUI bersyarat** 2026-11-12 (placeholder; teks final sebelum go-live); consent AI **DISETUJUI bersyarat** 2026-11-12 (placeholder); legal billing **DISETUJUI bersyarat** 2026-11-13 (placeholder); sign-off MENUNGGU |
 
 ---
 
