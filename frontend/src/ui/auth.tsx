@@ -32,7 +32,7 @@ export function AuthShell({ pitch, children }: { pitch: string; children: ReactN
       </div>
       <div className="d-auth-form">
         <div className="d-auth-theme"><ThemeToggle /></div>
-        <main id="main" className="d-narrow">
+        <main id="main" className="d-narrow" tabIndex={-1}>
           <div className="d-auth-mark"><span><Storefront size={16} weight="bold" /></span>UMKM OS</div>
           {children}
         </main>

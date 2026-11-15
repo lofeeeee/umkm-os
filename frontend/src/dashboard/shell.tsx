@@ -547,7 +547,20 @@ function Shell({ children }: { children: ReactNode }) {
 
   return (
     <>
-      <a className="d-skip" href="#main">Lompat ke konten utama</a>
+      <a
+        className="d-skip"
+        href="#main"
+        onClick={(e) => {
+          // WCAG 2.4.1: pindahkan fokus ke <main>, bukan hanya scroll (UAT K1).
+          const m = document.getElementById("main");
+          if (!m) return;
+          e.preventDefault();
+          m.focus();
+          m.scrollIntoView();
+        }}
+      >
+        Lompat ke konten utama
+      </a>
       <div className="d-frame" data-nav-open={navOpen ? "true" : undefined}>
         <aside className="d-sidebar" id="sidebar-nav" aria-label="Panel navigasi">
           <div className="d-sidebar-head">
@@ -587,7 +600,7 @@ function Shell({ children }: { children: ReactNode }) {
         </div>
       </header>
 
-      <main id="main" className="d-main">
+      <main id="main" className="d-main" tabIndex={-1}>
         <div className="d-page" key={pathname}>{children}</div>
       </main>
       <CommandPalette open={cmdOpen} onClose={closeCmd} />
