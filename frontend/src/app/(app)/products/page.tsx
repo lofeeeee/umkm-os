@@ -291,7 +291,7 @@ function Editor({ ctx, base, initial, cats, onCancel, onSaved }: {
         <h3>Informasi produk</h3>
         <p className="d-muted">Nama dan deskripsi tampil di halaman produk website.</p>
         <label className="d-field"><span>Nama <span className="d-req">*</span></span>
-          <input {...fieldProps("name")} value={p.name} maxLength={120} placeholder="mis. Kopi Susu Gula Aren" onChange={(e) => setP({ ...p, name: e.target.value })} />
+          <input aria-required="true" {...fieldProps("name")} value={p.name} maxLength={120} placeholder="mis. Kopi Susu Gula Aren" onChange={(e) => setP({ ...p, name: e.target.value })} />
           {f.error("name")}
         </label>
         <div className="d-grid">
@@ -337,12 +337,12 @@ function Editor({ ctx, base, initial, cats, onCancel, onSaved }: {
             {!hasVariants && (
               <div className="d-grid">
                 <label className="d-field"><span>SKU <span className="d-req">*</span></span>
-                  <input {...fieldProps("variants[0].sku")} value={single.sku} maxLength={64} placeholder="mis. KSA-01" onChange={(e) => setVariant(0, { sku: e.target.value })} />
+                  <input aria-required="true" {...fieldProps("variants[0].sku")} value={single.sku} maxLength={64} placeholder="mis. KSA-01" onChange={(e) => setVariant(0, { sku: e.target.value })} />
                   {f.error("variants[0].sku")}
                 </label>
                 <label className="d-field"><span>Harga <span className="d-req">*</span></span>
                   <div className="d-input-prefix"><span aria-hidden="true">Rp</span>
-                    <input aria-label="Harga" inputMode="decimal" {...fieldProps("variants[0].price")} value={single.price} placeholder="0" onChange={(e) => setVariant(0, { price: e.target.value })} />
+                    <input aria-required="true" aria-label="Harga" inputMode="decimal" {...fieldProps("variants[0].price")} value={single.price} placeholder="0" onChange={(e) => setVariant(0, { price: e.target.value })} />
                   </div>
                   {f.error("variants[0].price")}
                 </label>
@@ -399,11 +399,11 @@ function Editor({ ctx, base, initial, cats, onCancel, onSaved }: {
                   <tr key={v.option_values.join("|")}>
                     <td className="d-strong d-nowrap">{v.option_values.join(" / ")}</td>
                     <td>
-                      <input aria-label={`SKU varian ${i + 1}`} {...fieldProps(`variants[${i}].sku`)} value={v.sku} maxLength={64} onChange={(e) => setVariant(i, { sku: e.target.value })} />
+                      <input aria-required="true" aria-label={`SKU varian ${i + 1}`} {...fieldProps(`variants[${i}].sku`)} value={v.sku} maxLength={64} onChange={(e) => setVariant(i, { sku: e.target.value })} />
                       {f.error(`variants[${i}].sku`)}
                     </td>
                     <td>
-                      <input aria-label={`Harga varian ${i + 1}`} inputMode="decimal" {...fieldProps(`variants[${i}].price`)} value={v.price} onChange={(e) => setVariant(i, { price: e.target.value })} />
+                      <input aria-required="true" aria-label={`Harga varian ${i + 1}`} inputMode="decimal" {...fieldProps(`variants[${i}].price`)} value={v.price} onChange={(e) => setVariant(i, { price: e.target.value })} />
                       {f.error(`variants[${i}].price`)}
                     </td>
                     <td>

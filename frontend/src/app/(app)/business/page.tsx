@@ -90,7 +90,7 @@ function Form({ ctx }: { ctx: TenantCtx }) {
   const field = (label: string, key: keyof BusinessProfile, type = "text") => (
     <label className="d-field">
       <span>{label}</span>
-      <input type={type} value={(p[key] as string | null | undefined) ?? ""} disabled={!canEdit}
+      <input type={type} aria-required={label.endsWith("*") ? true : undefined} value={(p[key] as string | null | undefined) ?? ""} disabled={!canEdit}
         onChange={(e) => setP({ [key]: e.target.value } as Partial<BusinessProfile>)} />
     </label>
   );
@@ -175,7 +175,7 @@ function Form({ ctx }: { ctx: TenantCtx }) {
             <div className="e-list-item" key={i}>
               <div className="d-grid2">
                 <label className="d-field"><span>Label</span><input value={a.label ?? ""} disabled={!canEdit} onChange={(e) => set({ label: e.target.value })} /></label>
-                <label className="d-field"><span>Alamat *</span><input value={a.address} disabled={!canEdit} onChange={(e) => set({ address: e.target.value })} /></label>
+                <label className="d-field"><span>Alamat *</span><input aria-required="true" value={a.address} disabled={!canEdit} onChange={(e) => set({ address: e.target.value })} /></label>
                 <label className="d-field"><span>Latitude</span><input inputMode="decimal" value={a.latitude ?? ""} disabled={!canEdit} onChange={(e) => set({ latitude: num(e.target.value) })} /></label>
                 <label className="d-field"><span>Longitude</span><input inputMode="decimal" value={a.longitude ?? ""} disabled={!canEdit} onChange={(e) => set({ longitude: num(e.target.value) })} /></label>
               </div>
