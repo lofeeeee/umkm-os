@@ -18,6 +18,7 @@ pub mod crm_repo;
 pub mod crypto;
 pub mod customer_auth_repo;
 pub mod gopay;
+pub mod gopay_repo;
 pub mod http_client;
 pub mod image_variant;
 pub mod inventory_repo;
