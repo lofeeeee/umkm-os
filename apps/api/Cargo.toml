@@ -34,3 +34,4 @@ sqlx.workspace = true
 image.workspace = true
 redis.workspace = true
 http-body-util.workspace = true
+qrcode = { workspace = true, features = ["image"] }

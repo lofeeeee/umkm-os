@@ -320,3 +320,57 @@ pub async fn platform_admin(pool: &PgPool, mfa: bool) -> Who {
         csrf: csrf_token(&token),
     }
 }
+
+use image::{DynamicImage, ImageFormat, Luma};
+use qrcode::QrCode;
+use std::io::Cursor;
+use umkm_domain::commerce::qris::crc16_ccitt;
+
+/// QRIS statis valid untuk fixture uji (format TLV + CRC tag 63).
+pub fn qris_payload() -> String {
+    let fields = [
+        ("00", "01"),
+        ("01", "11"),
+        ("26", "0014COM.EXAMPLE0208ABCDEF12"),
+        ("52", "5812"),
+        ("53", "360"),
+        ("58", "ID"),
+        ("59", "WARUNG KOPI"),
+        ("60", "JAKARTA"),
+        ("62", "0703A01"),
+    ];
+    let mut body = String::new();
+    for (id, v) in fields {
+        body.push_str(id);
+        body.push_str(&format!("{:02}", v.len()));
+        body.push_str(v);
+    }
+    body.push_str("6304");
+    let crc = crc16_ccitt(body.as_bytes());
+    body.push_str(&format!("{crc:04X}"));
+    body
+}
+
+pub fn qr_png(content: &str) -> Vec<u8> {
+    let img = QrCode::new(content.as_bytes())
+        .unwrap()
+        .render::<Luma<u8>>()
+        .min_dimensions(400, 400)
+        .build();
+    let mut bytes = Vec::new();
+    DynamicImage::ImageLuma8(img)
+        .write_to(&mut Cursor::new(&mut bytes), ImageFormat::Png)
+        .unwrap();
+    bytes
+}
+
+pub fn qris_png() -> Vec<u8> {
+    qr_png(&qris_payload())
+}
+
+pub fn tampered_qris_png() -> Vec<u8> {
+    let mut b = qris_payload().into_bytes();
+    let i = b.len() - 1;
+    b[i] = if b[i] == b'0' { b'1' } else { b'0' };
+    qr_png(&String::from_utf8(b).unwrap())
+}
