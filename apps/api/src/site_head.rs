@@ -7,6 +7,7 @@
 //! tidak dieksekusi) yang di-escape untuk konteks `<script>` (`<`, `>`, `&` → `\u003c` dst.), sehingga
 //! teks pemilik toko tidak bisa menutup elemen atau menyuntik markup.
 
+use sha2::{Digest, Sha256};
 use std::collections::BTreeSet;
 
 use axum::{
@@ -267,6 +268,44 @@ fn cached(body: String, ctype: &'static str) -> Response {
     r
 }
 
+/// Dokumen HTML toko: `no-cache` + ETag kuat (hash isi) → browser selalu merevalidasi, tetapi
+/// hanya mengunduh ulang bila isinya berubah (304). Sebelumnya `public, max-age=60` bertabrakan
+/// dengan `no-cache` dari Caddy dan tanpa ETag tidak bisa 304 (UAT 15 Nov perf #5).
+fn html_document(body: String, req: &HeaderMap) -> Response {
+    let digest = Sha256::digest(body.as_bytes());
+    let etag = format!(
+        "\"{}\"",
+        digest[..16]
+            .iter()
+            .map(|b| format!("{b:02x}"))
+            .collect::<String>()
+    );
+    let fresh = req
+        .get(header::IF_NONE_MATCH)
+        .and_then(|v| v.to_str().ok())
+        .is_some_and(|v| {
+            v.split(',')
+                .any(|t| t.trim().trim_start_matches("W/") == etag)
+        });
+    let mut r = if fresh {
+        StatusCode::NOT_MODIFIED.into_response()
+    } else {
+        let mut r = (StatusCode::OK, body).into_response();
+        r.headers_mut().insert(
+            header::CONTENT_TYPE,
+            HeaderValue::from_static("text/html; charset=utf-8"),
+        );
+        r
+    };
+    let h = r.headers_mut();
+    h.insert(header::CACHE_CONTROL, HeaderValue::from_static("no-cache"));
+    h.insert(header::VARY, HeaderValue::from_static("Host"));
+    if let Ok(v) = HeaderValue::from_str(&etag) {
+        h.insert(header::ETAG, v);
+    }
+    r
+}
+
 /// `GET /api/v1/public/document?path=/…` → shell HTML dengan `<head>` toko. Gagal/nonaktif → 404,
 /// dan Caddy jatuh balik ke shell statis (situs tetap tampil, hanya tanpa meta).
 pub async fn document(
@@ -296,12 +335,9 @@ pub async fn document(
     )
     .await
     {
-        Ok(Some(meta)) => cached(
-            inject(&shell, &render_head(&meta)),
-            "text/html; charset=utf-8",
-        ),
+        Ok(Some(meta)) => html_document(inject(&shell, &render_head(&meta)), &headers),
         // Langganan habis / toko tanpa versi terbit: shell apa adanya.
-        Ok(None) => cached(shell, "text/html; charset=utf-8"),
+        Ok(None) => html_document(shell, &headers),
         Err(_) => StatusCode::NOT_FOUND.into_response(),
     }
 }
@@ -483,7 +519,6 @@ pub async fn sitemap(
 
 /// SHA-256 hex isi shell (sama dengan `frontend/scripts/csp.mjs`).
 pub fn shell_hash(shell: &str) -> String {
-    use sha2::{Digest, Sha256};
     Sha256::digest(shell.as_bytes())
         .iter()
         .map(|b| format!("{b:02x}"))

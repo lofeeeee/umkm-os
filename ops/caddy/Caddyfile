@@ -38,7 +38,8 @@ import /srv/www/csp.caddy
 	@hashed path /_next/static/*
 	header @hashed Cache-Control "public, max-age=31536000, immutable"
 	@html not path /_next/static/*
-	header @html Cache-Control "no-cache"
+	# `?` = hanya bila upstream belum menetapkan (API mengatur cache dokumen/robots/sitemap sendiri).
+	header @html ?Cache-Control "no-cache"
 }
 
 # ADR-0014: dashboard = build statis; data dari api.{$ROOT_DOMAIN} (cookie + CSRF, ADR-0015).

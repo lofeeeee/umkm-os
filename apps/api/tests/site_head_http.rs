@@ -26,12 +26,18 @@ async fn get(a: &axum::Router, uri: &str, host: &str) -> Res {
 
 /// Seperti Caddy (snippet `web_shell` dari csp.mjs): kirim identitas shell build web yang disajikan.
 async fn doc(a: &axum::Router, uri: &str, host: &str, shell: &str) -> Res {
-    let req = axum::http::Request::builder()
+    doc_if(a, uri, host, shell, None).await
+}
+
+async fn doc_if(a: &axum::Router, uri: &str, host: &str, shell: &str, inm: Option<&str>) -> Res {
+    let mut req = axum::http::Request::builder()
         .uri(uri)
         .header("host", host)
-        .header("x-web-shell", umkm_api::site_head::shell_hash(shell))
-        .body(axum::body::Body::empty())
-        .unwrap();
+        .header("x-web-shell", umkm_api::site_head::shell_hash(shell));
+    if let Some(v) = inm {
+        req = req.header("if-none-match", v);
+    }
+    let req = req.body(axum::body::Body::empty()).unwrap();
     let res = tower::ServiceExt::oneshot(a.clone(), req).await.unwrap();
     let status = res.status().as_u16();
     let headers = res.headers().clone();
@@ -139,7 +145,30 @@ async fn document_injects_escaped_head_per_host_and_never_leaks(pool: PgPool) {
     assert_eq!(r.status, 200);
     let html = String::from_utf8(r.bytes.clone()).unwrap();
     assert_eq!(r.headers["content-type"], "text/html; charset=utf-8");
-    assert_eq!(r.headers["cache-control"], "public, max-age=60");
+    // UAT 15 Nov perf #5: HTML toko = no-cache + ETag (publish langsung terlihat, revalidasi 304).
+    assert_eq!(r.headers["cache-control"], "no-cache");
+    let etag = r.headers["etag"].to_str().unwrap().to_owned();
+    assert!(etag.starts_with('"') && etag.ends_with('"'), "{etag}");
+    let again = doc_if(
+        &router,
+        "/api/v1/public/document?path=/",
+        "kopi.ryasai.my.id",
+        SHELL,
+        Some(&etag),
+    )
+    .await;
+    assert_eq!(again.status, 304);
+    assert!(again.bytes.is_empty());
+    assert_eq!(again.headers["etag"], etag.as_str());
+    let stale = doc_if(
+        &router,
+        "/api/v1/public/document?path=/",
+        "kopi.ryasai.my.id",
+        SHELL,
+        Some("\"lama\""),
+    )
+    .await;
+    assert_eq!(stale.status, 200);
     // Judul SEO dari versi terbit, ter-escape; judul shell diganti; skrip shell utuh.
     assert!(
         html.contains("<title>Kopi Senja &lt;/title&gt;&lt;script&gt;x&lt;/script&gt;</title>"),
