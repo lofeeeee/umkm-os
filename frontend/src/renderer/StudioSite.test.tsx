@@ -68,4 +68,15 @@ describe("renderer publik Studio (v2)", () => {
     expect(html).toContain('sizes="(min-width: 720px) 393px, 100vw"');
     expect(html.match(/sizes="\(min-width: 720px\) 393px, 100vw"/g)?.length).toBe(2);
   });
+  it("anchor template (#kontak, #menu, …) menunjuk blok pertama jenis itu", () => {
+    const d: PageV2 = { ...doc, blocks: [
+      { id: "c1", kind: "contact", x: 0, y: 0, w: 4, h: 4, style: "plain", data: { title: "Kontak" } },
+      { id: "c2", kind: "contact", x: 4, y: 0, w: 4, h: 4, style: "plain", data: { title: "Kontak 2" } },
+      { id: "p1", kind: "product_grid", x: 0, y: 4, w: 12, h: 8, style: "plain", data: { title: "Menu" } },
+    ] };
+    const html = renderToStaticMarkup(<StudioSite doc={d} business={biz} assetUrl={() => undefined} />);
+    expect(html.match(/id="kontak"/g)?.length).toBe(1);
+    expect(html).toMatch(/id="c1"[^>]*>(<span[^>]*><\/span>)*<span id="kontak"/);
+    for (const a of ["produk", "menu", "koleksi", "karya"]) expect(html).toContain(`id="${a}"`);
+  });
 });

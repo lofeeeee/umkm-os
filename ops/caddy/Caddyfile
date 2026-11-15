@@ -130,6 +130,11 @@ http://*.{$ROOT_DOMAIN} {
 			}
 		}
 	}
+	# Aset berekstensi yang tidak ada (mis. /favicon.ico) → 404, bukan shell HTML 200 (UAT 15 Nov customer #9).
+	@missing_asset path_regexp \.(js|css|png|jpe?g|gif|svg|ico|webp|avif|woff2?|map|json|txt|xml)$
+	handle @missing_asset {
+		respond 404
+	}
 	handle {
 		root * /srv/www
 		rewrite * /site.html

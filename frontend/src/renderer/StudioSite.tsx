@@ -94,9 +94,39 @@ function Block({ b, props }: { b: BlockV2; props: StudioSiteProps }) {
   return <div className={`st-content st-style-${b.style}${b.layout ? ` st-layout-${b.layout}` : ""}`}>{body}</div>;
 }
 
+/** Anchor berbahasa Indonesia yang dipakai tombol template (`#kontak`, `#menu`, …) → blok pertama
+ *  jenis itu. ID blok sendiri acak (mis. `contact-t2d478i`), jadi tanpa ini tombol tidak menggulir
+ *  (UAT 15 Nov customer #11). */
+const ANCHORS: [string, string[]][] = [
+  ["contact", ["kontak"]],
+  ["product_grid", ["produk", "menu", "koleksi"]],
+  ["gallery", ["karya", "galeri"]],
+  ["location", ["lokasi"]],
+  ["business_hours", ["jam-buka"]],
+  ["testimonials", ["testimoni"]],
+  ["about", ["tentang"]],
+];
+
+function anchorsFor(blocks: { id: string; kind: string }[]): Map<string, string[]> {
+  const out = new Map<string, string[]>();
+  const taken = new Set(blocks.map((b) => b.id));
+  for (const [kind, names] of ANCHORS) {
+    const first = blocks.find((b) => b.kind === kind);
+    if (!first) continue;
+    const free = names.filter((n) => !taken.has(n));
+    free.forEach((n) => taken.add(n));
+    if (free.length) out.set(first.id, free);
+  }
+  // Situs kerajinan tanpa galeri: "Lihat karya" ke galeri produk.
+  const grid = blocks.find((b) => b.kind === "product_grid");
+  if (grid && !taken.has("karya")) out.set(grid.id, [...(out.get(grid.id) ?? []), "karya"]);
+  return out;
+}
+
 export function StudioSite(props: StudioSiteProps) {
   const { doc } = props;
   const grid = mobileSorted(doc.blocks.filter((b) => !isEmbed(b)));
+  const anchors = anchorsFor(grid);
   const chat = doc.blocks.find((b) => b.kind === "chatbot" && isEmbed(b));
   const wa = doc.blocks.find((b) => b.kind === "whatsapp" && isEmbed(b));
   const style = {
@@ -123,6 +153,7 @@ export function StudioSite(props: StudioSiteProps) {
               ...(b.auto_height === false ? { minHeight: b.h * 36 } : {}),
             } as CSSProperties}
           >
+            {anchors.get(b.id)?.map((a) => <span key={a} id={a} className="sv2-anchor" aria-hidden="true" />)}
             <Block b={b} props={props} />
           </div>
         ))}
