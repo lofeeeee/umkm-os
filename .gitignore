@@ -16,6 +16,9 @@ node_modules/
 .next/
 out/
 
+# Superpowers execution ledger/review artifacts (local only)
+.superpowers/
+
 # OS / editor
 .DS_Store
 .idea/
