@@ -879,6 +879,8 @@ pub struct GopayQrisView {
     pub qris_payload: Option<String>,
     /// Nominal yang harus dibayar (rupiah, termasuk kode unik pencocokan).
     pub total_rupiah: Option<i64>,
+    /// QR code SVG siap di-inline (render dari `qris_payload`).
+    pub qr_svg: Option<String>,
 }
 
 /// QRIS dinamis GoPay untuk order pembeli (buat-atau-ambil).
@@ -904,6 +906,7 @@ pub async fn current_gopay_qris(
         available: false,
         qris_payload: None,
         total_rupiah: None,
+        qr_svg: None,
     };
     let fail = |v| Ok(no_store(Json(SuccessEnvelope::new(v, &id)).into_response()));
 
@@ -941,10 +944,12 @@ pub async fn current_gopay_qris(
             .await
             .map_err(internal)?,
     };
+    let qr_svg = umkm_infrastructure::gopay::qrsvg::to_svg(&charge.qris_payload);
     fail(GopayQrisView {
         available: true,
         qris_payload: Some(charge.qris_payload),
         total_rupiah: Some(charge.total_rupiah),
+        qr_svg,
     })
 }
 

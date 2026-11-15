@@ -12950,6 +12950,11 @@ components:
           properties:
             available:
               type: boolean
+            qr_svg:
+              type:
+              - string
+              - 'null'
+              description: QR code SVG siap di-inline (render dari `qris_payload`).
             qris_payload:
               type:
               - string

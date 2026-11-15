@@ -11,6 +11,7 @@ workspace = true
 
 [dependencies]
 image.workspace = true
+qrcode.workspace = true
 umkm-domain.workspace = true
 umkm-application.workspace = true
 tokio.workspace = true

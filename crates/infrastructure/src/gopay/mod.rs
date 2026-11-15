@@ -3,6 +3,7 @@
 
 pub mod client;
 pub mod poller;
+pub mod qrsvg;
 pub mod session;
 pub mod time;
 
