@@ -124,6 +124,7 @@ export default function PlatformPage() {
           <p className="d-muted d-small">Periode {stats.from} s.d. {stats.to} (WIB). Pemakaian API dihitung sejak instance API ini berjalan.</p>
         </section>
       )}
+      {state === "ready" && <TenantsSection />}
       {state === "ready" && (
         <>
           <h2 className="d-section-title">Tagihan langganan</h2>
@@ -180,5 +181,118 @@ export default function PlatformPage() {
         </>
       )}
     </>
+  );
+}
+
+// P11: pengawasan per-toko (UMKM) — daftar + omzet/volume + drill-down. Akses diaudit sebagai platform.
+interface TenantRow {
+  id: string; name: string; slug: string; tenant_status: string;
+  plan: string | null; sub_status: string | null; created_at: string;
+  orders: number; paid_orders: number; gmv: string; last_order_at: string | null;
+}
+interface TenantDetail {
+  name: string; slug: string; tenant_status: string; created_at: string; primary_hostname: string | null;
+  plan: string | null; sub_status: string | null; current_period_end: string | null;
+  products_active: number; customers_total: number; last_order_at: string | null;
+  range: { orders: number; paid_orders: number; gmv: string; by_status: Record<string, number> };
+}
+
+const LIMIT = 20;
+const planLabel = (c: string | null) => (c === "pro" ? "Pro" : c === "starter" ? "Starter" : c ?? "—");
+const tenantTone = (s: string) => (s === "active" ? "ok" : s === "suspended" ? "warn" : "danger");
+
+function TenantsSection() {
+  const [q, setQ] = useState("");
+  const [query, setQuery] = useState("");
+  const [page, setPage] = useState(0);
+  const [data, setData] = useState<{ total: number; items: TenantRow[] } | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [open, setOpen] = useState<string | null>(null);
+  const [detail, setDetail] = useState<{ id: string; data: TenantDetail } | null>(null);
+
+  useEffect(() => {
+    const p = new URLSearchParams({ limit: String(LIMIT), offset: String(page * LIMIT) });
+    if (query) p.set("q", query);
+    api<{ total: number; items: TenantRow[] }>("GET", `/api/v1/platform/tenants?${p}`)
+      .then(setData, (e) => setErr(describe(e)));
+  }, [query, page]);
+
+  useEffect(() => {
+    if (!open) return;
+    let live = true;
+    api<{ tenant: TenantDetail }>("GET", `/api/v1/platform/tenants/${open}`)
+      .then((d) => { if (live) setDetail({ id: open, data: d.tenant }); }, (e) => { if (live) setErr(describe(e)); });
+    return () => { live = false; };
+  }, [open]);
+
+  // Tampilkan detail hanya bila cocok dengan baris yang dibuka (hindari data basi saat ganti toko).
+  const shown = detail && detail.id === open ? detail.data : null;
+  const total = data?.total ?? 0;
+  const pages = Math.max(1, Math.ceil(total / LIMIT));
+  return (
+    <section aria-label="Toko (UMKM)" style={{ marginTop: 8 }}>
+      <h2 className="d-section-title">Toko (UMKM)</h2>
+      <Alert kind="error">{err}</Alert>
+      <form className="d-row" style={{ marginBottom: 12 }} onSubmit={(e) => { e.preventDefault(); setPage(0); setQuery(q.trim()); }}>
+        <input aria-label="Cari toko" placeholder="Cari nama atau slug toko…" value={q} onChange={(e) => setQ(e.target.value)} style={{ maxWidth: 320 }} />
+        <button className="d-btn" type="submit">Cari</button>
+        {query && <button className="d-btn d-btn-ghost" type="button" onClick={() => { setQ(""); setQuery(""); setPage(0); }}>Reset</button>}
+      </form>
+      {!data ? <PageSkeleton /> : data.items.length === 0 ? (
+        <Card><EmptyState icon={Receipt} title="Tidak ada toko">Tidak ada toko yang cocok.</EmptyState></Card>
+      ) : (
+        <>
+          <div className="d-table-wrap">
+            <table className="d-table">
+              <thead><tr>
+                <th>Toko</th><th>Paket</th><th>Status</th>
+                <th className="d-num">Pesanan</th><th className="d-num">Omzet</th><th className="d-hide-sm">Terakhir aktif</th>
+              </tr></thead>
+              <tbody>
+                {data.items.map((t) => (
+                  <tr key={t.id} onClick={() => setOpen(open === t.id ? null : t.id)} style={{ cursor: "pointer" }}
+                      aria-expanded={open === t.id}>
+                    <td><strong className="d-strong">{t.name}</strong><span className="d-sub">{t.slug}</span></td>
+                    <td>{planLabel(t.plan)}{t.sub_status ? <span className="d-sub">{status(SUBSCRIPTION_STATUS, t.sub_status).label}</span> : null}</td>
+                    <td><Badge tone={tenantTone(t.tenant_status)}>{t.tenant_status}</Badge></td>
+                    <td className="d-num">{nf.format(t.orders)}<span className="d-sub">{nf.format(t.paid_orders)} bayar</span></td>
+                    <td className="d-num">{rupiah(t.gmv)}</td>
+                    <td className="d-hide-sm">{t.last_order_at ? tanggal(t.last_order_at) : "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="d-row" style={{ justifyContent: "space-between", marginTop: 12 }}>
+            <span className="d-muted d-small">{nf.format(total)} toko · halaman {page + 1}/{pages}</span>
+            <div className="d-row">
+              <button className="d-btn d-btn-sm d-btn-ghost" disabled={page === 0} onClick={() => setPage((p) => Math.max(0, p - 1))}>Sebelumnya</button>
+              <button className="d-btn d-btn-sm d-btn-ghost" disabled={page + 1 >= pages} onClick={() => setPage((p) => p + 1)}>Berikutnya</button>
+            </div>
+          </div>
+        </>
+      )}
+      {open && (
+        <Card title={shown ? shown.name : "Memuat…"} actions={<button className="d-btn d-btn-sm d-btn-ghost" onClick={() => setOpen(null)}>Tutup</button>}>
+          {!shown ? <PageSkeleton /> : (
+            <div className="an-grid">
+              <div className="an-tile"><div className="an-label">Omzet (periode)</div><div className="an-value">{rupiah(shown.range.gmv)}</div>
+                <div className="an-note">{nf.format(shown.range.paid_orders)} dari {nf.format(shown.range.orders)} pesanan</div></div>
+              <div className="an-tile"><div className="an-label">Paket</div><div className="an-value" style={{ fontSize: 20 }}>{planLabel(shown.plan)}</div>
+                <div className="an-note">{shown.sub_status ? status(SUBSCRIPTION_STATUS, shown.sub_status).label : "tanpa langganan"}{shown.current_period_end ? ` · s.d. ${tanggal(shown.current_period_end)}` : ""}</div></div>
+              <div className="an-tile"><div className="an-label">Katalog & pelanggan</div><div className="an-value" style={{ fontSize: 20 }}>{nf.format(shown.products_active)} produk</div>
+                <div className="an-note">{nf.format(shown.customers_total)} pelanggan · bergabung {tanggal(shown.created_at)}</div></div>
+              <div className="an-tile"><div className="an-label">Pesanan per status (periode)</div>
+                <ul className="sub-feat">{Object.entries(shown.range.by_status).map(([s, n]) => <li key={s}>{s}: {nf.format(n)}</li>)}
+                  {Object.keys(shown.range.by_status).length === 0 && <li className="d-muted">Tidak ada pesanan.</li>}</ul></div>
+              {shown.primary_hostname && (
+                <div className="an-tile"><div className="an-label">Situs</div>
+                  <a className="d-link" href={`https://${shown.primary_hostname}`} target="_blank" rel="noreferrer">{shown.primary_hostname}</a></div>
+              )}
+            </div>
+          )}
+        </Card>
+      )}
+    </section>
   );
 }
