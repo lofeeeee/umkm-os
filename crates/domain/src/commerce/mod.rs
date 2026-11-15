@@ -2,4 +2,5 @@
 
 pub mod payment;
 pub mod pricing;
+pub mod qris;
 pub mod state;
