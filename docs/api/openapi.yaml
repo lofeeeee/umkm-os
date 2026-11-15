@@ -4573,7 +4573,7 @@ paths:
       tags:
       - business
       summary: Status buka/tutup saat ini menurut timezone tenant (AC-BIZ-006).
-      operationId: get_status
+      operationId: business_get_status
       parameters:
       - name: tenant_id
         in: path
@@ -6113,6 +6113,259 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
         '503':
           description: Batas koneksi realtime tercapai
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/gopay:
+    get:
+      tags:
+      - gopay
+      summary: Status koneksi GoPay toko.
+      operationId: gopay_get_status
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_StatusView'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+    delete:
+      tags:
+      - gopay
+      summary: Putuskan hubungan akun GoPay.
+      operationId: disconnect
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Terputus
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_StatusView'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/gopay/connect/request-otp:
+    post:
+      tags:
+      - gopay
+      summary: Minta OTP ke nomor HP GoBiz toko.
+      operationId: request_otp
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestOtpDto'
+        required: true
+      responses:
+        '200':
+          description: OTP terkirim
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_OtpChallengeView'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/gopay/connect/verify:
+    post:
+      tags:
+      - gopay
+      summary: Verifikasi OTP → simpan sesi (akun terhubung).
+      operationId: verify_otp
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyOtpDto'
+        required: true
+      responses:
+        '200':
+          description: Terhubung
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_StatusView'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/gopay/static-qris:
+    put:
+      tags:
+      - gopay
+      summary: Atur QRIS statis toko (divalidasi EMVCo). Harus sudah terhubung.
+      operationId: put_static_qris
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StaticQrisDto'
+        required: true
+      responses:
+        '200':
+          description: Tersimpan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_StatusView'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '422':
+          description: QRIS tidak valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
           content:
             application/json:
               schema:
@@ -11695,6 +11948,14 @@ components:
         reason:
           type: string
       additionalProperties: false
+    RequestOtpDto:
+      type: object
+      required:
+      - phone
+      properties:
+        phone:
+          type: string
+      additionalProperties: false
     RequestView:
       type: object
       required:
@@ -11899,6 +12160,15 @@ components:
         consent_version:
           type: string
           description: Harus sama dengan `consent_version` dari `/public/chat/config`.
+      additionalProperties: false
+    StaticQrisDto:
+      type: object
+      required:
+      - qris
+      properties:
+        qris:
+          type: string
+          description: Payload EMVCo QRIS statis toko (teks dari pindai QR).
       additionalProperties: false
     StatusChange:
       type: object
@@ -12984,6 +13254,33 @@ components:
           $ref: '#/components/schemas/Meta'
         success:
           type: boolean
+    SuccessEnvelope_OtpChallengeView:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - otp_token
+          - otp_length
+          - expires_in_secs
+          properties:
+            expires_in_secs:
+              type: integer
+              format: int64
+            otp_length:
+              type: integer
+              format: int32
+              minimum: 0
+            otp_token:
+              type: string
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
     SuccessEnvelope_PendingApproval:
       type: object
       required:
@@ -13797,17 +14094,27 @@ components:
         data:
           type: object
           required:
-          - status
-          - timezone
-          - local_time
+          - connected
+          - has_static_qris
           properties:
-            local_time:
-              type: string
+            connected:
+              type: boolean
+            has_static_qris:
+              type: boolean
+            outlet_name:
+              type:
+              - string
+              - 'null'
+            phone_masked:
+              type:
+              - string
+              - 'null'
+              description: Nomor HP ter-mask, mis. `+62••••7890`.
             status:
-              type: string
-              description: '`open` | `closed`'
-            timezone:
-              type: string
+              type:
+              - string
+              - 'null'
+              description: '`active` | `needs_relogin`'
         meta:
           $ref: '#/components/schemas/Meta'
         success:
@@ -15464,6 +15771,20 @@ components:
         token:
           type: string
           description: Token dari fragment tautan email (`#token=`).
+      additionalProperties: false
+    VerifyOtpDto:
+      type: object
+      required:
+      - phone
+      - otp
+      - otp_token
+      properties:
+        otp:
+          type: string
+        otp_token:
+          type: string
+        phone:
+          type: string
       additionalProperties: false
   securitySchemes:
     sessionCookie:

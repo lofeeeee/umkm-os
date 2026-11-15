@@ -64,6 +64,7 @@ pub fn build_router(state: AppState, limits: HttpLimits) -> Router {
         .merge(crm::routes())
         .merge(customer_auth::routes())
         .merge(commerce::routes())
+        .merge(crate::gopay::routes())
         .merge(team::routes())
         .merge(approvals::routes())
         .merge(tickets::routes())

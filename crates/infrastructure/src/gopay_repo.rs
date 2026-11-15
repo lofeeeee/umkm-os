@@ -162,6 +162,17 @@ pub async fn mark_needs_relogin(pool: &PgPool, t: TenantId) -> Result<(), GopayR
     Ok(())
 }
 
+/// Putuskan hubungan: hapus sesi toko (charge pending tetap ada tapi tak akan dipoll).
+pub async fn delete_session(pool: &PgPool, t: TenantId) -> Result<(), GopayRepoError> {
+    let mut tx = tenant_tx(pool, t).await?;
+    sqlx::query("DELETE FROM gopay_sessions WHERE tenant_id = $1")
+        .bind(t.as_uuid())
+        .execute(&mut *tx)
+        .await?;
+    tx.commit().await?;
+    Ok(())
+}
+
 // ---- charge ----
 
 async fn used_totals(tx: &mut Tx, t: TenantId) -> Result<Vec<i64>, sqlx::Error> {

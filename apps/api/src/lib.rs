@@ -14,6 +14,7 @@ pub mod commerce;
 pub mod crm;
 pub mod customer_auth;
 pub mod error;
+pub mod gopay;
 pub mod health;
 pub mod http_util;
 pub mod inbox;

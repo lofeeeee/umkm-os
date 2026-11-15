@@ -15,8 +15,8 @@ use utoipa::{
 };
 
 use crate::{
-    ai, approvals, audit, auth, business, catalog, commerce, crm, customer_auth, health, inventory,
-    notifications, team, tenants, tickets, upload, website,
+    ai, approvals, audit, auth, business, catalog, commerce, crm, customer_auth, gopay, health,
+    inventory, notifications, team, tenants, tickets, upload, website,
 };
 
 #[derive(OpenApi)]
@@ -89,6 +89,11 @@ use crate::{
         business::put_hours,
         business::put_exceptions,
         business::get_status,
+        gopay::get_status,
+        gopay::request_otp,
+        gopay::verify_otp,
+        gopay::put_static_qris,
+        gopay::disconnect,
         website::list_templates,
         website::preview_template,
         website::get_website,
