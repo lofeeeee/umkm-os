@@ -23,6 +23,8 @@ export default function Login() {
       await fn();
     } catch (err) {
       setError(describe(err));
+      // Tombol nonaktif saat memproses → fokus jatuh ke BODY. Pindahkan ke pesan galat (UAT 15 Nov).
+      requestAnimationFrame(() => document.querySelector<HTMLElement>(".d-auth-form [role=alert]")?.focus());
     } finally {
       setBusy(false);
     }

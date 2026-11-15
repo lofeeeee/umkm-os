@@ -664,6 +664,8 @@ input[aria-invalid="true"]:focus-visible, textarea[aria-invalid="true"]:focus-vi
 .cv-badge[data-status="HUMAN"] { background: var(--info-bg); color: var(--info); }
 .cv-badge[data-status="CLOSED"] { background: var(--ok-bg); color: var(--ok); }
 
+.d-alert:focus { outline: none; }
+.d-alert:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 .d-alert {
   display: flex; gap: 10px; align-items: flex-start;
   padding: 10px 14px; border-radius: var(--radius); margin-bottom: var(--sp-4);

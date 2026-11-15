@@ -696,7 +696,7 @@ export function Alert({ kind, children }: { kind: "error" | "ok" | "warn" | "inf
   if (!children) return null;
   const Icon = kind === "ok" ? CheckCircle : WarningCircle;
   return (
-    <div className={`d-alert d-alert-${kind}`} role={kind === "error" ? "alert" : "status"}>
+    <div className={`d-alert d-alert-${kind}`} role={kind === "error" ? "alert" : "status"} tabIndex={kind === "error" ? -1 : undefined}>
       <Icon weight="fill" aria-hidden="true" />
       <div>{children}</div>
     </div>

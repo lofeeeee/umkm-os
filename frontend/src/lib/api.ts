@@ -213,10 +213,31 @@ export function fieldLabel(path: string): string {
   return path;
 }
 
-export function describe(e: unknown): string {
+/** Nama bidang umum untuk pesan validasi (UAT 15 Nov: "name: wajib diisi" → "Nama: wajib diisi"). */
+export const FIELD_TEXT: Record<string, string> = {
+  name: "Nama", email: "Email", phone: "Telepon", whatsapp: "WhatsApp", description: "Deskripsi",
+  address: "Alamat", label: "Label", latitude: "Latitude", longitude: "Longitude", timezone: "Zona waktu",
+  url: "URL", platform: "Platform", fulfillment_note: "Catatan pengambilan/pengantaran", note: "Catatan",
+  date: "Tanggal", open: "Jam buka", close: "Jam tutup", password: "Password", price: "Harga", sku: "SKU",
+  slug: "Slug", title: "Judul", delivery_fee: "Ongkir", quantity: "Jumlah", reason: "Alasan",
+};
+
+/** `addresses[0].city` → label bidang terakhir (+ nomor urut bila dalam daftar). */
+function genericLabel(path: string, labels?: Record<string, string>): string {
+  if (!path) return "Dokumen";
+  if (labels?.[path]) return labels[path]!;
+  const m = /^(?:.*?\[(\d+)\]\.)?([^.[\]]+)$/.exec(path);
+  const last = m?.[2] ?? path;
+  const base = labels?.[last] ?? FIELD_TEXT[last];
+  if (!base) return path;
+  return m?.[1] !== undefined ? `${base} #${Number(m[1]) + 1}` : base;
+}
+
+/** Pesan galat ramah. `labels` (opsional) menimpa nama bidang per halaman, mis. `{ name: "Nama bisnis" }`. */
+export function describe(e: unknown, labels?: Record<string, string>): string {
   if (e instanceof ApiError) {
     const f = e.fieldErrors;
-    if (f.length) return f.map((x) => `${x.path || "dokumen"}: ${ERROR_TEXT[x.code] ?? x.code}`).join("; ");
+    if (f.length) return f.map((x) => `${genericLabel(x.path, labels)}: ${ERROR_TEXT[x.code] ?? x.code}`).join("; ");
     const reason = (e.details as { reason?: string; limit?: string; max?: number } | null)?.reason;
     if (e.status === 403 && reason === "plan_limit") {
       const d = e.details as { limit?: string; max?: number };

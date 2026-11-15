@@ -6,6 +6,7 @@ import "./globals.css";
 
 import { ConfirmHost } from "@/ui/dialog";
 import { Toaster } from "@/ui/toast";
+import { ValidityLocalizer } from "@/ui/validity";
 
 export const metadata: Metadata = {
   // R3: %s diisi tiap halaman supaya tab & riwayat browser bisa dibedakan.
@@ -35,6 +36,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         {children}
         <Toaster />
         <ConfirmHost />
+        <ValidityLocalizer />
       </body>
     </html>
   );

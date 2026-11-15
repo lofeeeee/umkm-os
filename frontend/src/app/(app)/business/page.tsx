@@ -81,7 +81,7 @@ function Form({ ctx }: { ctx: TenantCtx }) {
       toast.ok("Tersimpan.");
       setStatus(await api("GET", `${base}/status`));
     } catch (e) {
-      setMsgs((m) => ({ ...m, [part]: { err: describe(e) } }));
+      setMsgs((m) => ({ ...m, [part]: { err: describe(e, { name: "Nama bisnis" }) } }));
     }
   }
 

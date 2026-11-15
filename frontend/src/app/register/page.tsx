@@ -48,6 +48,7 @@ export default function Register() {
       router.push("/");
     } catch (err) {
       setError(describe(err));
+      requestAnimationFrame(() => document.querySelector<HTMLElement>(".d-auth-form [role=alert]")?.focus());
     } finally {
       setBusy(false);
     }
