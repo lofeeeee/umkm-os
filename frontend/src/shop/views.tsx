@@ -31,10 +31,16 @@ const ERR: Record<string, string> = {
   weak_password: "password minimal 8 karakter dan tidak sama dengan email",
 };
 
+const FIELD: Record<string, string> = {
+  name: "Nama", email: "Email", phone: "Nomor telepon", delivery_address: "Alamat pengiriman",
+  note: "Catatan", fulfillment: "Pengambilan", password: "Password", items: "Keranjang",
+};
+
 function explain(e: unknown): string {
   if (e instanceof ApiError) {
     const f = e.fieldErrors;
-    if (f.length) return f.map((x) => `${x.path}: ${ERR[x.code] ?? x.code}`).join("; ");
+    if (f.some((x) => x.code === "fulfillment_unavailable")) return "Cara pengambilan yang dipilih sudah tidak tersedia. Muat ulang halaman lalu pilih yang lain.";
+    if (f.length) return f.map((x) => `${FIELD[x.path] ?? x.path}: ${ERR[x.code] ?? x.code}`).join("; ");
     const reason = (e.details as { reason?: string } | null)?.reason;
     if (reason === "insufficient_stock") return "Stok tidak mencukupi untuk salah satu produk. Kurangi jumlahnya.";
     if (reason === "payment_not_configured") return "Toko belum menerima pesanan online.";
@@ -250,7 +256,10 @@ export function CartPage() {
           <p className="shop-total">Perkiraan total: <strong>{sen(subtotal + fee)}</strong>{fee > 0 && <span className="s-muted"> (termasuk ongkir {sen(fee)})</span>}</p>
           <p className="s-muted">Total resmi dihitung toko saat pesanan dibuat.</p>
           {cfg && !cfg.checkout_enabled && <Msg kind="error">Toko belum menerima pesanan online.</Msg>}
-          {cfg?.checkout_enabled && (
+          {cfg?.checkout_enabled && !cfg.pickup_available && !cfg.delivery_available && (
+            <Msg kind="error">Toko belum mengatur cara pengambilan atau pengiriman, jadi pesanan online belum bisa dibuat. Silakan hubungi toko secara langsung.</Msg>
+          )}
+          {cfg?.checkout_enabled && (cfg.pickup_available || cfg.delivery_available) && (
             <form className="shop-form" onSubmit={submit}>
               <fieldset>
                 <legend>Pengambilan</legend>

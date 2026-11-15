@@ -3,6 +3,7 @@
 // Pengaturan toko online (P3): QRIS statis milik toko (ADR-0004), ongkir, approval, SoD.
 // Hanya Owner (tenant.update) yang dapat mengubah; pergantian QRIS tercatat di audit log.
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 import { useUploads } from "@/dashboard/assets";
@@ -28,14 +29,21 @@ function Form({ ctx }: { ctx: TenantCtx }) {
   const [s, setS] = useState<Settings | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Tanpa ambil di toko maupun pengiriman, checkout publik selalu ditolak (UAT 15 Nov #1).
+  const [fulfil, setFulfil] = useState<{ pickup: boolean; delivery: boolean } | null>(null);
   useEffect(() => { api<Settings>("GET", url).then(setS, (e) => setErr(describe(e))); }, [url]);
+  useEffect(() => {
+    api<{ profile: { pickup_available: boolean; delivery_available: boolean } }>("GET", `/api/v1/tenants/${ctx.tenant.id}/business/profile`)
+      .then((b) => setFulfil({ pickup: b.profile.pickup_available, delivery: b.profile.delivery_available }), () => setFulfil(null));
+  }, [ctx.tenant.id]);
   if (!s) return <><Alert kind="error">{err}</Alert>{!err && <PageSkeleton />}</>;
   async function save() {
     setErr(null);
     setBusy(true);
     try { setS(await api<Settings>("PUT", url, { json: s })); toast.ok("Tersimpan."); } catch (e) { setErr(describe(e)); } finally { setBusy(false); }
   }
-  const ready = !!s.qris && s.checkout_enabled;
+  const noFulfil = !!fulfil && !fulfil.pickup && !fulfil.delivery;
+  const ready = !!s.qris && s.checkout_enabled && !noFulfil;
   return (
     <Assets.Provider value={assets}>
       <PageHeader
@@ -45,6 +53,11 @@ function Form({ ctx }: { ctx: TenantCtx }) {
       />
       {!can && <Alert kind="info">Anda hanya dapat melihat. Hanya pemilik toko yang dapat mengubah pengaturan ini.</Alert>}
       <Alert kind="error">{err}</Alert>
+      {noFulfil && (
+        <Alert kind="warn">
+          Belum ada cara pengambilan yang aktif. Aktifkan &quot;Bisa ambil di tempat&quot; atau &quot;Bisa diantar&quot; di <Link href="/business">Profil bisnis</Link> agar pembeli bisa membuat pesanan.
+        </Alert>
+      )}
       <form onSubmit={(e) => { e.preventDefault(); void save(); }}>
         <Card title="Pembayaran QRIS" description="Unggah QRIS merchant milik toko. Pembeli membayar langsung ke rekening toko; Anda mengonfirmasi setiap pembayaran di menu Pesanan. Platform tidak memegang dana.">
           <div className="d-grid">
