@@ -52,7 +52,13 @@ http://app.{$ROOT_DOMAIN} {
 	# Renderer situs tenant tidak dilayani di host dashboard.
 	@site path /site /site.html /site.txt
 	respond @site 404
-	try_files {path} {path}.html /404.html
+	# `{path}index.html`: "/" harus index.html — tanpa ini Caddy jatuh ke /404.html untuk muat penuh "/".
+	try_files {path} {path}index.html {path}.html /404.html
+	# Rute tak dikenal: halaman 404 dengan status 404 (bukan 200).
+	@notfound path /404.html
+	file_server @notfound {
+		status 404
+	}
 	file_server
 }
 

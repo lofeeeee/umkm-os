@@ -28,7 +28,7 @@
 | AUTH-003 | Email verification sebelum publish | `PRD.md §4.1` | P1-2 | `PRD.md §13.3` Registration / security test | Blocked by decision |
 | AUTH-004 | Login/logout | `PRD.md §4.1` | P1-2 | `PRD.md §13.3` Registration / security test | Planned |
 | AUTH-005 | Forgot password token sekali pakai | `PRD.md §4.1` | P1-2 | `PRD.md §13.3` Registration / security test | Blocked by decision |
-| AUTH-006 | Session revoke per/semua perangkat | `PRD.md §4.1` | P1-2 | `PRD.md §13.3` Registration / security test | Planned |
+| AUTH-006 | Session revoke per/semua perangkat | `PRD.md §4.1` | P1-2 | `PRD.md §13.3` Registration / security test | Verified (`docs/evidence/AUTH-006.txt`) |
 | AUTH-007 | Rate limit login & reset | `PRD.md §4.1` | P1-2 | `PRD.md §13.3` Registration / security test | Planned |
 | AUTH-008 | User bisa member beberapa tenant | `PRD.md §4.1` | P1-2 | `PRD.md §13.3` Registration / security test | Planned |
 | AUTH-009 | Owner undang anggota via email | `PRD.md §4.1` | P1-2 | `PRD.md §13.3` Registration / security test | Blocked by decision |

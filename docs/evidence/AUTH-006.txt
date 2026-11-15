@@ -1,0 +1,33 @@
+AUTH-006 — Sesi dapat dicabut per perangkat dan seluruh perangkat (PRD.md §4.1, P0) + ubah kata sandi
+Tanggal: 2026-11-16 · Pemicu: UAT 15 Nov 2026 temuan F7 / quick win #10
+
+Artefak
+- crates/infrastructure/src/auth_repo.rs  list_active_sessions (belum dicabut & belum kedaluwarsa, maks 50,
+  urut last_seen_at); revoke_session / revoke_all_sessions (sudah ada sejak P1-2, kini terhubung ke HTTP).
+- apps/api/src/account.rs
+  GET  /api/v1/auth/sessions                    sesi aktif akun ini (UA, created/last_seen/expires, current)
+  POST /api/v1/auth/sessions/{id}/revoke        hanya sesi milik akun (lainnya 404 seragam); sesi ini 409
+  POST /api/v1/auth/sessions/revoke-others      keluar dari semua perangkat lain
+  POST /api/v1/auth/password                    wajib sandi lama; validate_password; beda dari lama;
+                                                rate limit password_change_user 5/15 menit (fail-closed);
+                                                update hash + cabut sesi lain dalam satu transaksi
+  Mutasi: CSRF + Origin (extractor SessionUser). Audit: auth.session.revoked, auth.password.changed.
+- frontend/src/app/(app)/security/page.tsx  kartu "Kata sandi" + "Perangkat yang sedang masuk" (konfirmasi, toast).
+- docs/api/openapi.yaml diperbarui (UPDATE_OPENAPI=1).
+
+Cakupan uji
+- apps/api/tests/auth_http.rs
+  sessions_can_be_listed_and_revoked_per_device: 4 sesi terdaftar, tepat satu current, hash token tidak bocor;
+    tanpa CSRF → 403; cabut sesi sendiri → 409; cabut ponsel → sesi ponsel 401, tablet tetap 200; cabut ulang → 404;
+    akun lain mencabut sesi akun ini → 404 dan sesi tetap hidup (kontrol negatif); revoke-others = 2, sesi ini tetap.
+  change_password_requires_current_and_revokes_other_sessions: sandi lama salah → 422 field current_password;
+    sandi lemah / sama → 422 tanpa efek (sesi lain masih hidup — kontrol negatif); sukses → 2 sesi lain dicabut,
+    sesi ini tetap; login sandi lama 401, sandi baru 200.
+- frontend/e2e/security.spec.ts (stack nyata): dua perangkat → keluarkan perangkat lain → perangkat kedua terlempar
+  ke /login → sandi lama salah (pesan galat difokuskan) → ubah sandi → sandi lama ditolak, baru diterima.
+- frontend/src/lib/labels.test.ts: deviceName() (nama perangkat dari User-Agent).
+
+Hasil (2026-11-16)
+- cargo fmt --all --check: bersih. cargo clippy --workspace --all-targets -D warnings: bersih.
+- cargo test --workspace --no-fail-fast: 513 lulus, 0 gagal.
+- scripts/e2e-stack.sh test: 10/10 spec lulus (ai, billing, chat, dashboard, mfa, ops, responsive, security, shop, studio).

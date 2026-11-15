@@ -97,7 +97,7 @@ test("MFA: aktifkan, login dua langkah, kode pemulihan, kebijakan toko", async (
   await expect(page.getByLabel(/Wajibkan MFA untuk Owner/)).toBeChecked();
 
   // Login dua langkah dengan TOTP (langkah berikutnya: kode langkah ini sudah dipakai saat aktivasi).
-  await page.getByRole("button", { name: "Keluar" }).click();
+  await page.getByRole("button", { name: "Keluar", exact: true }).click();
   await page.waitForURL(/\/login$/);
   await login();
   await expect(page.getByRole("heading", { name: "Verifikasi dua langkah" })).toBeVisible();
@@ -108,7 +108,7 @@ test("MFA: aktifkan, login dua langkah, kode pemulihan, kebijakan toko", async (
   await expect(page.getByRole("heading", { name: "Pesanan" })).toBeVisible();
 
   // Login dengan kode pemulihan (sekali pakai).
-  await page.getByRole("button", { name: "Keluar" }).click();
+  await page.getByRole("button", { name: "Keluar", exact: true }).click();
   await page.waitForURL(/\/login$/);
   await login();
   await page.getByLabel("Kode verifikasi").fill(recovery.toUpperCase());
@@ -118,7 +118,7 @@ test("MFA: aktifkan, login dua langkah, kode pemulihan, kebijakan toko", async (
   await expect(page.getByText(/sisa kode pemulihan: 9/)).toBeVisible();
 
   // Kode pemulihan yang sama tidak bisa dipakai lagi.
-  await page.getByRole("button", { name: "Keluar" }).click();
+  await page.getByRole("button", { name: "Keluar", exact: true }).click();
   await page.waitForURL(/\/login$/);
   await login();
   await page.getByLabel("Kode verifikasi").fill(recovery);

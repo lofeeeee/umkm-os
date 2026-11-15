@@ -228,7 +228,7 @@ function Ai({ ctx }: { ctx: TenantCtx }) {
       <Card title="Basis pengetahuan" description="FAQ, kebijakan retur, info pengiriman — dipakai AI untuk menjawab dengan akurat." label="Basis pengetahuan">
         {docs.length === 0 ? (
           <EmptyState icon={BookOpen} title="Belum ada dokumen"
-            action={manage ? <button type="button" className="d-btn" onClick={() => document.getElementById("kb-title")?.focus()}>Tambah dokumen pertama</button> : undefined}>
+            action={manage ? <button type="button" className="d-btn" onClick={() => document.getElementById("kb-title")?.focus()}>Mulai isi basis pengetahuan</button> : undefined}>
             Tambahkan FAQ, kebijakan retur, info pengiriman, dll.
           </EmptyState>
         ) : (

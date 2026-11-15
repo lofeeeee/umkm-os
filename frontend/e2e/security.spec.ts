@@ -50,12 +50,12 @@ test("keamanan: sesi aktif, keluarkan perangkat lain, ubah kata sandi", async ({
   await pb.waitForURL(/\/login/);
 
   // Kata sandi saat ini salah → pesan per bidang, fokus ke pesan.
-  await pa.getByLabel("Kata sandi saat ini").fill("salah-sekali");
-  await pa.getByLabel("Kata sandi baru").fill("rahasia-baru-456");
+  await pa.locator("input[name=current_password]").fill("salah-sekali");
+  await pa.locator("input[name=new_password]").fill("rahasia-baru-456");
   await pa.getByLabel("Ulangi kata sandi baru").fill("rahasia-baru-456");
   await pa.getByRole("button", { name: "Ubah kata sandi" }).click();
   await expect(pa.getByRole("alert").filter({ hasText: "kata sandi saat ini salah" })).toBeFocused();
-  await pa.getByLabel("Kata sandi saat ini").fill("rahasia-lama-123");
+  await pa.locator("input[name=current_password]").fill("rahasia-lama-123");
   await pa.getByRole("button", { name: "Ubah kata sandi" }).click();
   await expect(pa.getByText("Kata sandi diubah.")).toBeVisible();
 

@@ -50,6 +50,8 @@ export function PasswordInput(props: { name: string; autoComplete: string; minLe
       <span className="d-password">
         <input
           name={props.name}
+          // Label membungkus tombol "Tampilkan" juga; nama aksesibel input = label saja.
+          aria-label={props.label ?? "Password"}
           type={show ? "text" : "password"}
           autoComplete={props.autoComplete}
           required={!props.onChange}
