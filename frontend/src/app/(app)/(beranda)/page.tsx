@@ -219,6 +219,15 @@ function Dashboard({ ctx }: { ctx: TenantCtx }) {
           </Card>
         )}
       </div>
+
+      <footer className="d-page-legal">
+        <span>© {new Date().getFullYear()} UMKM Business OS</span>
+        <nav aria-label="Legal">
+          <a href="/legal/syarat" target="_blank" rel="noopener">Terms of Service</a>
+          <span aria-hidden="true">·</span>
+          <a href="/legal/privasi" target="_blank" rel="noopener">Privacy Policy</a>
+        </nav>
+      </footer>
     </>
   );
 }
