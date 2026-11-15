@@ -37,21 +37,37 @@ export function ValidityLocalizer() {
   useEffect(() => {
     const onInvalid = (e: Event) => {
       if (!isField(e.target)) return;
-      // Hanya ganti pesan bawaan; pesan kustom (setCustomValidity dari kode lain) dibiarkan.
-      if (e.target.validity.customError) return;
       const msg = validityMessage(e.target);
       if (msg) e.target.setCustomValidity(msg);
     };
     const onEdit = (e: Event) => {
       if (isField(e.target)) e.target.setCustomValidity("");
     };
+    // Sebelum browser memvalidasi (klik tombol submit / Enter), hapus semua pesan kustom di form itu
+    // supaya validitas selalu dihitung ulang — nilai yang diubah lewat state React tanpa event input
+    // tidak boleh tertahan oleh pesan lama.
+    const reset = (form: HTMLFormElement | null | undefined) => {
+      if (!form) return;
+      for (const el of Array.from(form.elements)) if (isField(el)) el.setCustomValidity("");
+    };
+    const onClick = (e: Event) => {
+      const t = e.target instanceof Element ? e.target.closest("button, input[type=submit], input[type=image]") : null;
+      if (t instanceof HTMLButtonElement || t instanceof HTMLInputElement) reset(t.form);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Enter" && e.target instanceof HTMLInputElement) reset(e.target.form);
+    };
     document.addEventListener("invalid", onInvalid, true);
     document.addEventListener("input", onEdit, true);
     document.addEventListener("change", onEdit, true);
+    document.addEventListener("click", onClick, true);
+    document.addEventListener("keydown", onKey, true);
     return () => {
       document.removeEventListener("invalid", onInvalid, true);
       document.removeEventListener("input", onEdit, true);
       document.removeEventListener("change", onEdit, true);
+      document.removeEventListener("click", onClick, true);
+      document.removeEventListener("keydown", onKey, true);
     };
   }, []);
   return null;

@@ -91,7 +91,7 @@ function Ai({ ctx }: { ctx: TenantCtx }) {
   useEffect(() => { void load(); }, [load]);
   async function run(f: () => Promise<unknown>, ok: string) {
     setErr(null);
-    try { await f(); toast.ok(ok); await load(); } catch (e) { setErr(describe(e)); }
+    try { await f(); await load(); toast.ok(ok); } catch (e) { setErr(describe(e)); }
   }
   const manage = ctx.can("ai_config.manage");
   const manageProv = ctx.can("ai_provider.manage");
@@ -101,7 +101,9 @@ function Ai({ ctx }: { ctx: TenantCtx }) {
     if (!cfg) return;
     setSaving(true);
     setCfgErr(null);
-    try { await api("PUT", `${base}/config`, { json: cfg }); toast.ok("Pengaturan tersimpan."); await load(); } catch (e) { setCfgErr(describe(e)); } finally { setSaving(false); }
+    // Toast setelah data dimuat ulang: form sudah mencerminkan nilai tersimpan, dan muat ulang yang
+    // terlambat tidak menimpa isian yang baru diketik pengguna.
+    try { await api("PUT", `${base}/config`, { json: cfg }); await load(); toast.ok("Pengaturan tersimpan."); } catch (e) { setCfgErr(describe(e)); } finally { setSaving(false); }
   }
   return (
     <>
