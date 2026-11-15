@@ -430,6 +430,8 @@ kbd, .d-kbd {
 .d-grid { display: grid; gap: 0 var(--sp-4); grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr)); }
 .d-grid2 { display: grid; gap: var(--sp-4); grid-template-columns: repeat(auto-fit, minmax(min(380px, 100%), 1fr)); align-items: start; }
 .d-grid2 > .d-card { margin-bottom: 0; }
+.gp-stack { display: grid; gap: var(--sp-4); max-width: 620px; }
+.gp-steps { margin: 0; padding-left: 18px; line-height: 1.7; display: grid; gap: 4px; }
 .d-bento { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr)); gap: var(--sp-4); }
 .d-bento > .d-card { margin-bottom: 0; }
 .d-split { display: grid; gap: var(--sp-5); align-items: start; }

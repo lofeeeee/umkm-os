@@ -174,52 +174,58 @@ function GopayCard({ tenantId, can }: { tenantId: string; can: boolean }) {
     >
       <Alert kind="error">{err}</Alert>
       {!st.connected ? (
-        <div className="d-grid">
+        <div className="gp-stack">
           <Alert kind="info">
-            <strong>Cara termudah (tanpa menyalin token):</strong> pasang ekstensi browser <em>&quot;UMKM OS — Penghubung GoPay&quot;</em>, login GoBiz di browser (nomor + OTP seperti biasa), lalu klik <em>Hubungkan</em> di ekstensi — kolom di bawah akan terisi dan tersambung sendiri. Login GoPay dilindungi reCAPTCHA sehingga memang harus di browser; ekstensi hanya menangkap sesinya. Tak punya ekstensi? Isi manual di bawah.
+            <strong>Cara termudah (tanpa menyalin token):</strong> pasang ekstensi <em>&quot;UMKM OS — Penghubung GoPay&quot;</em>, login GoBiz di browser, lalu klik <em>Hubungkan</em> di ekstensi — kolom di bawah terisi sendiri. Login GoPay dilindungi reCAPTCHA sehingga harus di browser; ekstensi hanya menangkap sesinya. Tak punya ekstensi? Isi manual di bawah.
           </Alert>
           <label className="d-field"><span>Nomor HP GoBiz/GoPay Merchant</span>
             <input disabled={!can} inputMode="tel" placeholder="mis. 0812xxxxxxx" value={phone} onChange={(e) => setPhone(e.target.value)} />
             <span className="d-hint">Nomor akun merchant (dipakai untuk memperbarui sesi).</span>
           </label>
           <label className="d-field"><span>Token sesi GoBiz</span>
-            <textarea disabled={!can} rows={3} placeholder="Tempel cookie sesi (memuat access_token dan refresh_token)" value={session} onChange={(e) => setSession(e.target.value)} />
+            <textarea disabled={!can} rows={4} placeholder="Tempel cookie sesi (memuat access_token dan refresh_token)" value={session} onChange={(e) => setSession(e.target.value)} />
+            <span className="d-hint">
+              <button type="button" className="d-link" onClick={() => setHelp((v) => !v)} aria-expanded={help}>
+                {help ? "Sembunyikan cara mendapatkan token" : "Cara mendapatkan token sesi"}
+              </button>
+            </span>
           </label>
-          <button type="button" className="d-btn d-btn-ghost d-btn-sm" style={{ justifySelf: "start" }} onClick={() => setHelp((v) => !v)} aria-expanded={help}>
-            {help ? "Sembunyikan cara" : "Cara mendapatkan token sesi"}
-          </button>
           {help && (
-            <ol className="d-muted d-small" style={{ margin: 0, paddingLeft: 18, lineHeight: 1.7 }}>
+            <ol className="d-muted d-small gp-steps">
               <li>Buka <strong>portal.gofoodmerchant.co.id</strong> di browser (komputer), login dengan nomor &amp; OTP seperti biasa (selesaikan reCAPTCHA bila ada).</li>
               <li>Tekan <strong>F12</strong> → tab <strong>Application</strong> (Chrome) / <strong>Storage</strong> (Firefox) → <strong>Cookies</strong> → pilih <strong>https://portal.gofoodmerchant.co.id</strong>.</li>
               <li>Salin nilai <strong>access_token</strong> dan <strong>refresh_token</strong>, lalu tempel ke kotak di atas (boleh format <code>access_token=...; refresh_token=...</code>).</li>
-              <li>Token akan diperbarui otomatis; ulangi langkah ini hanya bila status berubah jadi &quot;Perlu login ulang&quot;.</li>
+              <li>Token diperbarui otomatis; ulangi hanya bila status berubah jadi &quot;Perlu login ulang&quot;.</li>
             </ol>
           )}
-          {can && <div className="d-savebar"><BusyButton type="button" busy={busy} onClick={connectSession} disabled={phone.trim().length < 8 || session.trim().length < 20}>Hubungkan</BusyButton></div>}
+          {can && (
+            <div className="d-row" style={{ justifyContent: "flex-end" }}>
+              <BusyButton type="button" busy={busy} onClick={connectSession} disabled={phone.trim().length < 8 || session.trim().length < 20}>Hubungkan</BusyButton>
+            </div>
+          )}
         </div>
       ) : (
-        <>
-          <div className="d-grid">
-            <div className="d-field"><span>Akun terhubung</span>
-              <div className="d-row" style={{ gap: 8, alignItems: "center" }}>
-                <Badge tone={st.status === "active" ? "ok" : "warn"}>{st.status === "active" ? "Aktif" : "Perlu login ulang"}</Badge>
-                <span>{st.outlet_name ?? "Merchant GoPay"}{st.phone_masked ? ` · ${st.phone_masked}` : ""}</span>
-              </div>
+        <div className="gp-stack">
+          <div className="d-field"><span>Akun terhubung</span>
+            <div className="d-row" style={{ gap: 8, alignItems: "center" }}>
+              <Badge tone={st.status === "active" ? "ok" : "warn"}>{st.status === "active" ? "Aktif" : "Perlu login ulang"}</Badge>
+              <span>{st.outlet_name ?? "Merchant GoPay"}{st.phone_masked ? ` · ${st.phone_masked}` : ""}</span>
             </div>
-            <label className="d-field"><span>QRIS statis toko (teks)</span>
-              <textarea disabled={!can} rows={3} placeholder="Tempel teks QRIS (mulai 00020101...). Dapat dari penyedia/aplikasi QRIS toko." value={qris} onChange={(e) => setQris(e.target.value)} />
-              <span className="d-hint">
-                {st.has_static_qris ? "QRIS statis sudah diatur. Tempel baru untuk mengganti." : "Wajib: dipakai menyusun QR bernominal unik per pesanan."}
-              </span>
-            </label>
           </div>
+          <label className="d-field"><span>QRIS statis toko (teks)</span>
+            <textarea disabled={!can} rows={4} placeholder="Tempel teks QRIS (mulai 00020101...). Dapat dari penyedia/aplikasi QRIS toko." value={qris} onChange={(e) => setQris(e.target.value)} />
+            <span className="d-hint">
+              {st.has_static_qris ? "QRIS statis sudah diatur. Tempel baru untuk mengganti." : "Wajib: dipakai menyusun QR bernominal unik per pesanan."}
+            </span>
+          </label>
           {!st.has_static_qris && <Alert kind="warn">Konfirmasi otomatis belum aktif sampai QRIS statis diisi.</Alert>}
-          {can && <div className="d-savebar">
-            <button type="button" className="d-btn d-btn-ghost" onClick={disconnect}>Putuskan akun</button>
-            <BusyButton type="button" busy={busy} onClick={saveQris} disabled={qris.trim().length < 20}>Simpan QRIS</BusyButton>
-          </div>}
-        </>
+          {can && (
+            <div className="d-row" style={{ justifyContent: "flex-end", gap: "var(--sp-3)" }}>
+              <button type="button" className="d-btn d-btn-ghost" onClick={disconnect}>Putuskan akun</button>
+              <BusyButton type="button" busy={busy} onClick={saveQris} disabled={qris.trim().length < 20}>Simpan QRIS</BusyButton>
+            </div>
+          )}
+        </div>
       )}
     </Card>
     </div>
