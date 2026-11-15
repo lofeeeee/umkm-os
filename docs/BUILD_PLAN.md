@@ -292,6 +292,18 @@ Sumber: `docs/ux/riset-studio-website-builder.md` §7 Fase 1. Bukti per tugas di
 | P9-10 Pemeriksa "siap terbit" | G-PUB-05 | studio | unit + browser — selesai, docs/evidence/P9-10.txt |
 | P9-11 Gating paket plugin (ADR-0019) | G-ECO-03/04 | API publik + studio | tes HTTP — selesai, docs/evidence/P9-11.txt |
 
+### P10 — Konfirmasi pembayaran QRIS otomatis via GoPay Merchant (ADR-0020)
+
+| Tugas | Komponen | Status |
+|---|---|---|
+| P10-1 Inti QRIS dinamis EMVCo + kode unik | `umkm_domain::commerce::qris` | selesai (unit, CRC 0x29B1) |
+| P10-2 Pencocokan pembayaran + header kustom egress | `commerce::gopay`, `http_client` | selesai (unit) |
+| P10-3 Klien GoBiz (OTP, refresh, transaksi) | `umkm_infrastructure::gopay` | selesai (unit parser/time) |
+| P10-4 Skema + repo (sesi disegel, charge nominal unik) | migrasi 0036, `gopay_repo` | selesai (integrasi) |
+| P10-5/6 Auto-konfirmasi + poller worker (~15 dtk) | migrasi 0037, `payment_repo::confirm_auto`, `gopay::poller` | selesai (integrasi) |
+| P10-7 Endpoint pemilik + pembeli + render QR SVG | `apps/api/gopay.rs`, `commerce.rs`, `gopay::qrsvg` (crate qrcode) | selesai (openapi) |
+| P10-8 UI: kartu hubungkan + QRIS dinamis di halaman bayar | `shop-settings`, `shop/views` | selesai (tsc/eslint/vitest/build) |
+
 ## 6. Ketergantungan keputusan
 
 | Keputusan | Harus diputus sebelum | Mengapa |
