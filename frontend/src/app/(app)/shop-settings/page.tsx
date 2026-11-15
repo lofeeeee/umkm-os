@@ -58,6 +58,7 @@ function Form({ ctx }: { ctx: TenantCtx }) {
             <span><strong>Terima pesanan online</strong><span className="d-muted">Tombol beli dan keranjang muncul di website.</span></span>
           </label>
         </Card>
+        <GopayCard tenantId={ctx.tenant.id} can={can} />
         <Card title="Pengiriman & pesanan" description="Pilihan ambil di toko / diantar diatur di Profil bisnis.">
           <div className="d-grid">
             <label className="d-field"><span>Ongkir datar untuk pengiriman</span>
@@ -81,5 +82,101 @@ function Form({ ctx }: { ctx: TenantCtx }) {
         )}
       </form>
     </Assets.Provider>
+  );
+}
+
+// P10 (ADR-0020): konfirmasi pembayaran QRIS otomatis via GoPay Merchant (GoBiz).
+interface GopayStatus {
+  connected: boolean; status: string | null; outlet_name: string | null;
+  phone_masked: string | null; has_static_qris: boolean;
+}
+
+function GopayCard({ tenantId, can }: { tenantId: string; can: boolean }) {
+  const base = `/api/v1/tenants/${tenantId}/gopay`;
+  const [st, setSt] = useState<GopayStatus | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  // Alur OTP: phase 'phone' -> 'otp'.
+  const [phone, setPhone] = useState("");
+  const [otp, setOtp] = useState("");
+  const [otpToken, setOtpToken] = useState<string | null>(null);
+  const [qris, setQris] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => { api<GopayStatus>("GET", base).then(setSt, (e) => setErr(describe(e))); }, [base]);
+
+  async function run(fn: () => Promise<void>) {
+    setErr(null); setBusy(true);
+    try { await fn(); } catch (e) { setErr(describe(e)); } finally { setBusy(false); }
+  }
+  const requestOtp = () => run(async () => {
+    const r = await api<{ otp_token: string }>("POST", `${base}/connect/request-otp`, { json: { phone } });
+    setOtpToken(r.otp_token); toast.ok("Kode OTP dikirim via SMS/WhatsApp.");
+  });
+  const verifyOtp = () => run(async () => {
+    setSt(await api<GopayStatus>("POST", `${base}/connect/verify`, { json: { phone, otp, otp_token: otpToken } }));
+    setOtp(""); setOtpToken(null); toast.ok("Akun GoPay terhubung.");
+  });
+  const saveQris = () => run(async () => {
+    setSt(await api<GopayStatus>("PUT", `${base}/static-qris`, { json: { qris } }));
+    setQris(""); toast.ok("QRIS statis tersimpan.");
+  });
+  const disconnect = () => run(async () => {
+    if (!confirm("Putuskan akun GoPay? Pesanan tidak lagi dikonfirmasi otomatis.")) return;
+    setSt(await api<GopayStatus>("DELETE", base)); toast.ok("Akun GoPay diputus.");
+  });
+
+  if (!st) return null;
+  return (
+    <Card
+      title="Konfirmasi otomatis (GoPay Merchant)"
+      description="Opsional. Hubungkan akun GoPay/GoBiz Merchant toko agar pembayaran QRIS dikonfirmasi otomatis — pesanan langsung berstatus Diproses tanpa Anda cek manual. Gratis untuk usaha mikro. Konfirmasi manual tetap tersedia sebagai cadangan."
+    >
+      <Alert kind="error">{err}</Alert>
+      {!st.connected ? (
+        <div className="d-grid">
+          {!otpToken ? (
+            <>
+              <label className="d-field"><span>Nomor HP GoBiz/GoPay Merchant</span>
+                <input disabled={!can} inputMode="tel" placeholder="mis. 0812xxxxxxx" value={phone} onChange={(e) => setPhone(e.target.value)} />
+                <span className="d-hint">Nomor yang terdaftar di aplikasi GoPay Merchant / GoBiz.</span>
+              </label>
+              {can && <div className="d-savebar"><BusyButton type="button" busy={busy} onClick={requestOtp} disabled={phone.trim().length < 8}>Kirim OTP</BusyButton></div>}
+            </>
+          ) : (
+            <>
+              <label className="d-field"><span>Kode OTP</span>
+                <input disabled={!can} inputMode="numeric" autoComplete="one-time-code" placeholder="Masukkan kode dari SMS/WhatsApp" value={otp} onChange={(e) => setOtp(e.target.value)} />
+              </label>
+              {can && <div className="d-savebar">
+                <button type="button" className="d-btn d-btn-ghost" onClick={() => { setOtpToken(null); setOtp(""); }}>Ganti nomor</button>
+                <BusyButton type="button" busy={busy} onClick={verifyOtp} disabled={otp.trim().length < 4}>Verifikasi</BusyButton>
+              </div>}
+            </>
+          )}
+        </div>
+      ) : (
+        <>
+          <div className="d-grid">
+            <div className="d-field"><span>Akun terhubung</span>
+              <div className="d-row" style={{ gap: 8, alignItems: "center" }}>
+                <Badge tone={st.status === "active" ? "ok" : "warn"}>{st.status === "active" ? "Aktif" : "Perlu login ulang"}</Badge>
+                <span>{st.outlet_name ?? "Merchant GoPay"}{st.phone_masked ? ` · ${st.phone_masked}` : ""}</span>
+              </div>
+            </div>
+            <label className="d-field"><span>QRIS statis toko (teks)</span>
+              <textarea disabled={!can} rows={3} placeholder="Tempel teks QRIS (mulai 00020101...). Dapat dari penyedia/aplikasi QRIS toko." value={qris} onChange={(e) => setQris(e.target.value)} />
+              <span className="d-hint">
+                {st.has_static_qris ? "QRIS statis sudah diatur. Tempel baru untuk mengganti." : "Wajib: dipakai menyusun QR bernominal unik per pesanan."}
+              </span>
+            </label>
+          </div>
+          {!st.has_static_qris && <Alert kind="warn">Konfirmasi otomatis belum aktif sampai QRIS statis diisi.</Alert>}
+          {can && <div className="d-savebar">
+            <button type="button" className="d-btn d-btn-ghost" onClick={disconnect}>Putuskan akun</button>
+            <BusyButton type="button" busy={busy} onClick={saveQris} disabled={qris.trim().length < 20}>Simpan QRIS</BusyButton>
+          </div>}
+        </>
+      )}
+    </Card>
   );
 }

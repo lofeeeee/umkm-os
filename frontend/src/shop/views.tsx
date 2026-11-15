@@ -315,6 +315,8 @@ export function OrderPage() {
   const [ok, setOk] = useState<string | null>(null);
   const [ref, setRef] = useState("");
   const [busy, setBusy] = useState(false);
+  // P10: QRIS dinamis GoPay (konfirmasi otomatis). null = belum/ tidak tersedia.
+  const [gopay, setGopay] = useState<{ available: boolean; total_rupiah: number | null; qr_svg: string | null } | null>(null);
   const load = useCallback(
     (t: string) =>
       shopApi<PublicOrder>("GET", "/orders/current", undefined, { "x-order-token": t }).then(
@@ -329,6 +331,13 @@ export function OrderPage() {
   useEffect(() => {
     if (token) void load(token);
   }, [load, token]);
+  // Ambil QRIS dinamis GoPay bila order menunggu bayar (idempoten; available=false bila tak dipakai).
+  useEffect(() => {
+    if (!token || order?.status !== "AWAITING_PAYMENT") return;
+    shopApi<{ available: boolean; total_rupiah: number | null; qr_svg: string | null }>(
+      "POST", "/orders/current/gopay-qris", undefined, { "x-order-token": token },
+    ).then(setGopay, () => setGopay(null));
+  }, [token, order?.status]);
   if (token === undefined) return <Shell title="Pesanan"><p className="s-muted" aria-busy="true">Memuat…</p></Shell>;
   if (!token) {
     const saved = savedOrders();
@@ -382,12 +391,23 @@ export function OrderPage() {
       {waiting && (
         <section className="shop-pay" aria-label="Pembayaran QRIS">
           <h2>Bayar dengan QRIS</h2>
-          <p>Pindai kode QRIS berikut dengan aplikasi pembayaran Anda, lalu bayar <strong>tepat {rupiah(p.amount)}</strong>.</p>
-          {p.qris_url && (
-            // eslint-disable-next-line @next/next/no-img-element -- QRIS toko, signed URL
-            <img className="shop-qris" src={fileUrl(p.qris_url)} alt={`QRIS ${p.receiver_name ?? "toko"}`} />
+          {gopay?.available && gopay.qr_svg ? (
+            <>
+              <p>Pindai kode QRIS berikut, lalu bayar <strong>tepat {rupiah(`${gopay.total_rupiah}.00`)}</strong>. Pembayaran terkonfirmasi otomatis.</p>
+              {/* eslint-disable-next-line @next/next/no-img-element -- QR dinamis SVG inline (data URL) */}
+              <img className="shop-qris" src={`data:image/svg+xml;utf8,${encodeURIComponent(gopay.qr_svg)}`} alt="QRIS pembayaran" />
+              <p className="s-muted">Nominal berakhiran angka unik agar pembayaran Anda dikenali otomatis — jangan dibulatkan. Status pesanan berubah sendiri setelah dibayar.</p>
+            </>
+          ) : (
+            <>
+              <p>Pindai kode QRIS berikut dengan aplikasi pembayaran Anda, lalu bayar <strong>tepat {rupiah(p.amount)}</strong>.</p>
+              {p.qris_url && (
+                // eslint-disable-next-line @next/next/no-img-element -- QRIS toko, signed URL
+                <img className="shop-qris" src={fileUrl(p.qris_url)} alt={`QRIS ${p.receiver_name ?? "toko"}`} />
+              )}
+              <p className="s-muted">Penerima: {p.receiver_name}. Cantumkan kode pesanan {order.code} bila aplikasi meminta catatan.</p>
+            </>
           )}
-          <p className="s-muted">Penerima: {p.receiver_name}. Cantumkan kode pesanan {order.code} bila aplikasi meminta catatan.</p>
           <p className="s-muted">Bayar sebelum {new Date(order.expires_at).toLocaleString("id-ID")}.</p>
           {p.status === "claimed" ? (
             <p>Anda sudah menandai pembayaran. Toko sedang memverifikasi.</p>
