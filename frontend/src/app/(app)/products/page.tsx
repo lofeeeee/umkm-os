@@ -16,6 +16,7 @@ import { PRODUCT_STATUS, rupiah, status } from "@/lib/labels";
 import { confirm, Sheet } from "@/ui/dialog";
 import { RowMenu } from "@/ui/menu";
 import { Badge, BusyButton, Card, EmptyState, PageHeader, SearchInput, Skeleton, Tabs } from "@/ui/page";
+import { sized } from "@/renderer/safe";
 import { useFieldErrors } from "@/ui/form";
 import { toast } from "@/ui/toast";
 
@@ -153,7 +154,7 @@ function Catalog({ ctx }: { ctx: TenantCtx }) {
             <tbody>
               {shown.map((p) => {
                 const st = status(PRODUCT_STATUS, p.status);
-                const img = p.images[0] ? assets.url(p.images[0]) : undefined;
+                const img = p.images[0] ? sized(assets.url(p.images[0]), 320) : undefined;
                 return (
                   <tr key={p.id}>
                     <td>

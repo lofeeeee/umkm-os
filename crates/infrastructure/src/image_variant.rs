@@ -15,6 +15,9 @@ pub const WIDTHS: [u32; 4] = [320, 640, 960, 1280];
 /// Batas aman decode: unggahan maks ±2 MB tetapi dimensi bisa diklaim besar (bom dekompresi).
 const MAX_SIDE: u32 = 8000;
 const MAX_ALLOC: u64 = 192 * 1024 * 1024;
+/// Asli yang sudah cukup sempit tetapi lebih berat dari ini dikompres ulang (UAT 15 Nov perf #4:
+/// foto 445 KB / hero 813 KB tersaji mentah karena lebarnya ≤ lebar yang diminta).
+pub const RECOMPRESS_MIN_BYTES: usize = 150 * 1024;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Variant {
@@ -59,7 +62,8 @@ pub fn display_width(bytes: &[u8], ty: ImageType) -> Result<u32, VariantError> {
     Ok(if rotated { h } else { w })
 }
 
-/// `Ok(None)` bila gambar asli sudah tidak lebih lebar dari `width` (sajikan asli).
+/// `Ok(None)` bila asli sebaiknya disajikan apa adanya: sudah tidak lebih lebar dari `width` dan
+/// ringan, atau kompres ulang tidak menghemat ≥20% (atau beralpha — PNG tidak lebih kecil).
 pub fn make_variant(
     bytes: &[u8],
     ty: ImageType,
@@ -72,12 +76,21 @@ pub fn make_variant(
     let orientation = decoder.orientation()?;
     let mut img = DynamicImage::from_decoder(decoder)?;
     img.apply_orientation(orientation);
-    if img.width() <= width {
-        return Ok(None);
-    }
-    let height =
-        ((u64::from(img.height()) * u64::from(width)) / u64::from(img.width())).max(1) as u32;
-    let small = img.resize_exact(width, height, FilterType::CatmullRom);
+    let small = if img.width() <= width {
+        if bytes.len() <= RECOMPRESS_MIN_BYTES || img.color().has_alpha() {
+            return Ok(None);
+        }
+        let mut out = Vec::new();
+        JpegEncoder::new_with_quality(&mut out, 82).encode_image(&img.to_rgb8())?;
+        return Ok((out.len() < bytes.len() / 10 * 8).then_some(Variant {
+            content_type: "image/jpeg",
+            bytes: out,
+        }));
+    } else {
+        let height =
+            ((u64::from(img.height()) * u64::from(width)) / u64::from(img.width())).max(1) as u32;
+        img.resize_exact(width, height, FilterType::CatmullRom)
+    };
     let mut out = Vec::new();
     if small.color().has_alpha() {
         small.write_to(&mut Cursor::new(&mut out), ImageFormat::Png)?;
@@ -133,6 +146,25 @@ mod tests {
             make_variant(&jpeg(2000, 1000), ImageType::Jpeg, 641),
             Err(VariantError::Width)
         ));
+    }
+
+    #[test]
+    fn heavy_narrow_original_is_recompressed() {
+        // 900 px (≤ 960) tetapi berderau + kualitas 100 → jauh di atas ambang: dikompres ulang, lebar tetap.
+        let img = ImageBuffer::from_fn(900, 900, |x, y| {
+            let n = x
+                .wrapping_mul(2_654_435_761)
+                .wrapping_add(y.wrapping_mul(40_503)) as u8;
+            Rgb([n, n.wrapping_mul(7), n.wrapping_add(x as u8)])
+        });
+        let mut heavy = Vec::new();
+        JpegEncoder::new_with_quality(&mut heavy, 100)
+            .encode_image(&img)
+            .unwrap();
+        assert!(heavy.len() > RECOMPRESS_MIN_BYTES, "{}", heavy.len());
+        let v = make_variant(&heavy, ImageType::Jpeg, 960).unwrap().unwrap();
+        assert_eq!((v.content_type, dims(&v)), ("image/jpeg", (900, 900)));
+        assert!(v.bytes.len() < heavy.len() / 10 * 8);
     }
 
     #[test]

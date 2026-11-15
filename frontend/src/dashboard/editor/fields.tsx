@@ -4,6 +4,7 @@ import { createContext, useContext, useId, useState } from "react";
 
 import { ImageSquare, UploadSimple } from "@phosphor-icons/react/ssr";
 
+import { sized } from "@/renderer/safe";
 import type { Field } from "@/renderer/sections";
 import type { Json } from "@/renderer/types";
 
@@ -39,7 +40,7 @@ export function ImagePicker({ value, onChange, label }: { value: string | undefi
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const src = value ? a.url(value) : undefined;
+  const src = value ? sized(a.url(value), 320) : undefined;
   return (
     <div className="d-field">
       <span>{label}</span>
@@ -86,7 +87,7 @@ export function ImagePicker({ value, onChange, label }: { value: string | undefi
                 <button type="button" key={u.id} aria-pressed={u.ref === value} aria-label={`Pilih gambar ${u.id.slice(0, 8)}`}
                   onClick={() => { onChange(u.ref); setOpen(false); }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={a.url(u.ref)} alt="" />
+                  <img src={sized(a.url(u.ref), 320)} alt="" loading="lazy" />
                 </button>
               ))}
             </div>

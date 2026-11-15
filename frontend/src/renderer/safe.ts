@@ -87,6 +87,15 @@ export function srcSet(url: string | undefined): string | undefined {
   return IMAGE_WIDTHS.map((w) => `${url}&w=${w} ${w}w`).join(", ");
 }
 
+/** URL varian satu lebar untuk thumbnail (UAT 15 Nov perf #4: thumbnail 36 px dulu mengunduh foto asli
+ *  ratusan KB). URL non-file-bertanda-tangan dikembalikan apa adanya. */
+export function sized(url: string, w: (typeof IMAGE_WIDTHS)[number]): string;
+export function sized(url: string | undefined, w: (typeof IMAGE_WIDTHS)[number]): string | undefined;
+export function sized(url: string | undefined, w: (typeof IMAGE_WIDTHS)[number]): string | undefined {
+  if (!url || !/\/files\/[0-9a-f-]{36}\?/i.test(url)) return url;
+  return `${url}&w=${w}`;
+}
+
 /** `sizes`: di desktop gambar menempati `px` (lebar slot × porsi), di ponsel selebar layar × `mobile`. */
 export const sizesFor = (px: number, mobile = 1) => `(min-width: 720px) ${Math.max(160, Math.round(px))}px, ${Math.round(mobile * 100)}vw`;
 

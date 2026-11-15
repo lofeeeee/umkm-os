@@ -312,9 +312,11 @@ pub async fn serve_file(
         return Ok(image_response(bytes, &ct, &etag, max_age));
     }
     let ty = obj.content_type;
-    // Asli sudah cukup kecil (dari header saja, tanpa decode piksel) → sajikan asli.
+    // Asli sudah cukup sempit (dari header saja, tanpa decode piksel) DAN ringan → sajikan asli.
+    // Asli sempit tetapi berat tetap lewat make_variant (kompres ulang; UAT 15 Nov perf #4).
     let fits = umkm_infrastructure::image_variant::display_width(&obj.bytes, ty).map(|dw| dw <= w);
-    if !matches!(fits, Ok(false)) {
+    let heavy = obj.bytes.len() > umkm_infrastructure::image_variant::RECOMPRESS_MIN_BYTES;
+    if fits.is_err() || (matches!(fits, Ok(true)) && !heavy) {
         return Ok(image_response(
             obj.bytes,
             ty.content_type(),

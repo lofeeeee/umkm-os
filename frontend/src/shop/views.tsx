@@ -12,6 +12,7 @@ import { prepareImage } from "@/lib/image";
 import { ApiError } from "@/lib/api";
 import { PRIVACY, TERMS } from "@/legal/content";
 import { LegalDoc } from "@/legal/LegalDoc";
+import { sized, srcSet } from "@/renderer/safe";
 
 import {
   STATUS_TEXT, fileUrl, loadCustomer, rupiah, setCustomerCsrf, shopApi,
@@ -122,7 +123,8 @@ export function ProductPage({ slug }: { slug: string }) {
         <div className="shop-gallery">
           {p.images.map((src, i) => (
             // eslint-disable-next-line @next/next/no-img-element -- static export, gambar bertanda tangan
-            <img key={i} src={fileUrl(src)} alt={i === 0 ? p.name : ""} loading={i === 0 ? "eager" : "lazy"} />
+            <img key={i} src={sized(fileUrl(src), 960)} srcSet={srcSet(fileUrl(src))} sizes="(min-width: 720px) 50vw, 100vw"
+              alt={i === 0 ? p.name : ""} loading={i === 0 ? "eager" : "lazy"} decoding="async" />
           ))}
         </div>
         <div>
