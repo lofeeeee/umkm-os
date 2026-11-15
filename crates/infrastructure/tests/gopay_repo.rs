@@ -4,6 +4,8 @@
 use base64::{Engine, engine::general_purpose::STANDARD};
 use sqlx::PgPool;
 use umkm_database::{MIGRATOR, begin_tenant_tx};
+use umkm_domain::catalog::Money;
+use umkm_infrastructure::payment_repo;
 use umkm_infrastructure::{
     crypto::Keyring,
     gopay::GopaySession,
@@ -196,5 +198,70 @@ async fn charges_have_unique_amounts_and_dedup_txn(pool: PgPool) {
     assert_eq!(
         gopay_repo::pending_charges(&pool, t).await.unwrap().len(),
         1
+    );
+}
+
+#[sqlx::test(migrator = "MIGRATOR")]
+async fn auto_confirm_moves_order_to_processing(pool: PgPool) {
+    let t = tenant(&pool).await;
+    let o = order(&pool, t, "key-auto-01").await;
+
+    // Payment pending (seperti dibuat saat checkout QRIS).
+    {
+        let mut tx = begin_tenant_tx(&pool, t).await.unwrap();
+        sqlx::query(
+            "INSERT INTO payments (tenant_id, order_id, amount, status) VALUES ($1, $2, 100, 'pending')",
+        )
+        .bind(t.as_uuid())
+        .bind(o)
+        .execute(&mut *tx)
+        .await
+        .unwrap();
+        tx.commit().await.unwrap();
+    }
+
+    // Pembeli membayar total (base 100 + kode unik 50).
+    let next = payment_repo::confirm_auto(
+        &pool,
+        t,
+        o,
+        Money::parse("150").unwrap(),
+        "TXN-9",
+        (None, None),
+    )
+    .await
+    .unwrap();
+    assert_eq!(next, umkm_domain::commerce::state::OrderStatus::Processing);
+
+    let status: String = sqlx::query_scalar("SELECT status FROM orders WHERE id = $1")
+        .bind(o)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(status, "PROCESSING");
+
+    // Audit sistem tercatat tanpa aktor pengguna.
+    let (action, actor): (String, Option<Uuid>) = sqlx::query_as(
+        "SELECT action, actor_user_id FROM audit_logs WHERE resource_id = $1 AND action = 'payment.confirmed_auto'",
+    )
+    .bind(o.to_string())
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(action, "payment.confirmed_auto");
+    assert!(actor.is_none());
+
+    // Idempoten: order sudah bukan AWAITING_PAYMENT → tolak konfirmasi kedua.
+    assert!(
+        payment_repo::confirm_auto(
+            &pool,
+            t,
+            o,
+            Money::parse("150").unwrap(),
+            "TXN-9",
+            (None, None)
+        )
+        .await
+        .is_err()
     );
 }

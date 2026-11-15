@@ -415,6 +415,63 @@ pub async fn confirm(
     Ok(next)
 }
 
+/// Konfirmasi otomatis oleh sistem (pembayaran GoPay cocok; P10, ADR-0020). Sama seperti
+/// [`confirm`] tetapi tanpa aktor manusia: `decided_by` NULL, audit sebagai event sistem.
+/// `received` = nominal terbayar (termasuk kode unik), jadi beda dari tagihan → dicatat.
+pub async fn confirm_auto(
+    pool: &PgPool,
+    t: TenantId,
+    order: Uuid,
+    received: Money,
+    txn_id: &str,
+    ctx: Ctx<'_>,
+) -> Result<OrderStatus, FlowError> {
+    let mut tx = tenant_tx(pool, t).await?;
+    let mut o = lock_order(&mut tx, t, Key::Id(order)).await?;
+    if o.status != OrderStatus::AwaitingPayment {
+        return Err(FlowError::WrongStatus(o.status.as_str()));
+    }
+    let p = lock_payment(&mut tx, t, o.id).await?;
+    let billed = Money::from_sen(o.total_sen).unwrap_or(Money::ZERO);
+    let note = "Konfirmasi otomatis GoPay";
+    check_confirm(p.status, billed, received, Some(note))?;
+    sqlx::query(
+        "UPDATE payments SET status = 'confirmed', amount_received = $3::bigint::numeric / 100,
+             verifier_note = $4, decided_at = now(), decided_by = NULL
+         WHERE tenant_id = $1 AND id = $2",
+    )
+    .bind(t.as_uuid())
+    .bind(p.id)
+    .bind(received.sen())
+    .bind(note)
+    .execute(&mut *tx)
+    .await?;
+    inventory_repo::commit_in(&mut tx, t, &reference(o.id), None).await?;
+    transition(&mut tx, t, &mut o, OrderStatus::Paid, None, None).await?;
+    let s = settings_in(&mut tx, t).await?;
+    let next = if s.order_approval_required {
+        OrderStatus::ApprovalPending
+    } else {
+        OrderStatus::Processing
+    };
+    transition(&mut tx, t, &mut o, next, None, None).await?;
+    let (request_id, ip) = ctx;
+    crate::audit_repo::record(
+        &mut *tx,
+        &AuditEvent::new("payment.confirmed_auto", "order")
+            .in_tenant(t)
+            .resource(o.id)
+            .request(request_id, ip)
+            .with_summary(serde_json::json!({
+                "billed": billed.format(), "received": received.format(),
+                "source": "gopay_auto", "txn_id": txn_id,
+            })),
+    )
+    .await?;
+    tx.commit().await?;
+    Ok(next)
+}
+
 /// Tolak klaim pembayaran (alasan wajib): order dibatalkan, reservasi dilepas.
 pub async fn reject_payment(
     pool: &PgPool,

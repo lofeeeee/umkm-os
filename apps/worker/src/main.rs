@@ -110,6 +110,17 @@ async fn run() -> Result<(), BoxError> {
         tracing::warn!("realtime publisher disabled");
     }
 
+    // P10: poller pembayaran GoPay (auto-konfirmasi QRIS). Klien GoBiz lewat Egress (SSRF guard,
+    // HTTPS publik). Poll hanya menyentuh toko yang punya charge pending → nol biaya bila tak dipakai.
+    let gopay_keyring = keyring.clone();
+    let gobiz = umkm_infrastructure::gopay::GobizClient::new(
+        umkm_infrastructure::http_client::Egress::new(
+            umkm_infrastructure::http_client::EgressPolicy::tenant(Duration::from_secs(15)),
+            umkm_infrastructure::http_client::Resolver::default(),
+            4,
+        ),
+    );
+
     // P5-7: pengindeksan basis pengetahuan (embedding lewat provider tenant, SSRF guard).
     let ai = umkm_infrastructure::ai::runtime::AiRuntime::new(
         pool.clone(),
@@ -153,6 +164,21 @@ async fn run() -> Result<(), BoxError> {
                 }
                 Ok(_) => {}
                 Err(e) => tracing::error!(error = %e, "knowledge indexing failed"),
+            }
+            // P10: edaluwarsakan charge GoPay lewat + poll pembayaran masuk (auto-konfirmasi).
+            match umkm_infrastructure::gopay_repo::expire_charges_global(&pool, 500).await {
+                Ok(n) if n > 0 => tracing::info!(expired = n, "gopay charges expired"),
+                Ok(_) => {}
+                Err(e) => tracing::error!(error = %e, "gopay charge expiry failed"),
+            }
+            let gp = umkm_infrastructure::gopay::poll_due(&pool, &gopay_keyring, &gobiz, 200).await;
+            if gp.confirmed > 0 || gp.errors > 0 {
+                tracing::info!(
+                    tenants = gp.tenants,
+                    confirmed = gp.confirmed,
+                    errors = gp.errors,
+                    "gopay poll"
+                );
             }
             next_expire = tokio::time::Instant::now() + expire_every;
         }

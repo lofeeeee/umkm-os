@@ -314,6 +314,23 @@ pub async fn mark_matched(
     }
 }
 
+/// Tenant yang punya charge pending belum kedaluwarsa (lintas-tenant, untuk poller worker).
+pub async fn due_tenants(pool: &PgPool, limit: i32) -> Result<Vec<TenantId>, GopayRepoError> {
+    let ids: Vec<Uuid> = sqlx::query_scalar("SELECT app.gopay_due_tenants($1)")
+        .bind(limit)
+        .fetch_all(pool)
+        .await?;
+    Ok(ids.into_iter().map(TenantId::from_uuid).collect())
+}
+
+/// Kedaluwarsakan charge pending yang lewat batas waktu, semua tenant (worker). Jumlah terubah.
+pub async fn expire_charges_global(pool: &PgPool, batch: i32) -> Result<i32, GopayRepoError> {
+    Ok(sqlx::query_scalar("SELECT app.gopay_expire_charges($1)")
+        .bind(batch)
+        .fetch_one(pool)
+        .await?)
+}
+
 /// Kedaluwarsakan charge pending yang sudah lewat batas waktu (per tenant). Kembalikan jumlahnya.
 pub async fn expire_due(pool: &PgPool, t: TenantId) -> Result<u64, GopayRepoError> {
     let mut tx = tenant_tx(pool, t).await?;
