@@ -163,6 +163,8 @@ async fn session_then_logout_requires_csrf_and_revokes(pool: PgPool) {
     .await;
     assert_eq!(s.status, 200);
     assert_eq!(s.body["data"]["csrf_token"], csrf.as_str());
+    // Merchant biasa bukan staf platform → dashboard tidak memeriksa /platform/me.
+    assert_eq!(s.body["data"]["platform_staff"], false);
 
     // Tanpa / dengan CSRF salah -> 403, sesi tetap hidup
     assert_eq!(

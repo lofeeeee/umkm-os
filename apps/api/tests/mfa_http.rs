@@ -398,6 +398,7 @@ async fn platform_super_admin_must_enroll_mfa(pool: PgPool) {
     )
     .await;
     assert_eq!(s.json()["data"]["mfa_enrollment_required"], true);
+    assert_eq!(s.json()["data"]["platform_staff"], true);
     // Endpoint biasa tertahan sampai MFA terdaftar.
     let r = json(&a.router, Method::GET, "/api/v1/tenants", Some(&w), None).await;
     assert_eq!(r.status, 403);

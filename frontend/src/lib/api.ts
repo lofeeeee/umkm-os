@@ -53,6 +53,8 @@ export interface Session {
   user_id: string; session_id: string; csrf_token: string;
   /** Hanya dari GET /auth/session (AUTH-011/012). */
   mfa_verified?: boolean; mfa_enrollment_required?: boolean;
+  /** Pemegang peran platform; hanya mereka yang perlu memeriksa /platform/me. */
+  platform_staff?: boolean;
 }
 /** Jawaban 202 /auth/login bila akun memakai MFA. */
 export interface MfaChallenge { mfa_required: true; mfa_token: string }

@@ -295,6 +295,9 @@ pub struct SessionStateResponse {
     pub mfa_verified: bool,
     /// AUTH-011: akun wajib MFA dan sesi belum lolos → hanya halaman Keamanan yang bisa dipakai.
     pub mfa_enrollment_required: bool,
+    /// Akun memegang peran platform (mis. super admin). Dashboard hanya memeriksa
+    /// `/platform/me` bila true — sesi merchant biasa tidak lagi memicu 403 (UAT 15 Nov).
+    pub platform_staff: bool,
 }
 
 pub(crate) fn user_agent(headers: &HeaderMap) -> Option<String> {
@@ -535,6 +538,7 @@ pub async fn session_handler(
             csrf_token: csrf_token(token),
             mfa_verified: s.mfa_verified,
             mfa_enrollment_required: s.platform_mfa_required && !s.mfa_verified,
+            platform_staff: s.platform_mfa_required,
         },
         &id,
     ))

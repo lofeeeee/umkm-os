@@ -218,9 +218,12 @@ function AppProvider({ children }: { children: ReactNode }) {
       }
       setSession(s);
       setMemberships(await api<Membership[]>("GET", "/api/v1/tenants"));
-      // Admin platform: probe senyap; tautan hanya muncul bila diizinkan.
-      fetch(`${API_ORIGIN}/api/v1/platform/me`, { credentials: "include" })
-        .then((r) => setPlatformAdmin(r.ok), () => undefined);
+      // Admin platform: probe hanya untuk staf platform bersesi MFA (selain itu pasti 403 dan
+      // mengotori console di setiap halaman — UAT 15 Nov). Tautan muncul bila diizinkan.
+      if (s.platform_staff && s.mfa_verified) {
+        fetch(`${API_ORIGIN}/api/v1/platform/me`, { credentials: "include" })
+          .then((r) => setPlatformAdmin(r.ok), () => undefined);
+      }
     })().catch(() => setFatal("Tidak dapat menghubungi server. Periksa koneksi lalu muat ulang halaman."));
     // eslint-disable-next-line react-hooks/exhaustive-deps -- sekali per shell
   }, []);

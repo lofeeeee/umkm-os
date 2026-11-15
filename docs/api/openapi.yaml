@@ -14342,6 +14342,7 @@ components:
           - csrf_token
           - mfa_verified
           - mfa_enrollment_required
+          - platform_staff
           properties:
             csrf_token:
               type: string
@@ -14351,6 +14352,11 @@ components:
             mfa_verified:
               type: boolean
               description: Sesi lolos langkah kedua MFA.
+            platform_staff:
+              type: boolean
+              description: |-
+                Akun memegang peran platform (mis. super admin). Dashboard hanya memeriksa
+                `/platform/me` bila true — sesi merchant biasa tidak lagi memicu 403 (UAT 15 Nov).
             session_id:
               type: string
               format: uuid
