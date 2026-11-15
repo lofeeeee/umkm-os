@@ -191,7 +191,7 @@ function GopayCard({ tenantId, can }: { tenantId: string; can: boolean }) {
           {help && (
             <ol className="d-muted d-small" style={{ margin: 0, paddingLeft: 18, lineHeight: 1.7 }}>
               <li>Buka <strong>portal.gofoodmerchant.co.id</strong> di browser (komputer), login dengan nomor &amp; OTP seperti biasa (selesaikan reCAPTCHA bila ada).</li>
-              <li>Tekan <strong>F12</strong> → tab <strong>Application</strong> (Chrome) / <strong>Storage</strong> (Firefox) → <strong>Cookies</strong> → pilih <strong>https://api.gobiz.co.id</strong>.</li>
+              <li>Tekan <strong>F12</strong> → tab <strong>Application</strong> (Chrome) / <strong>Storage</strong> (Firefox) → <strong>Cookies</strong> → pilih <strong>https://portal.gofoodmerchant.co.id</strong>.</li>
               <li>Salin nilai <strong>access_token</strong> dan <strong>refresh_token</strong>, lalu tempel ke kotak di atas (boleh format <code>access_token=...; refresh_token=...</code>).</li>
               <li>Token akan diperbarui otomatis; ulangi langkah ini hanya bila status berubah jadi &quot;Perlu login ulang&quot;.</li>
             </ol>

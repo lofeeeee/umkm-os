@@ -2,7 +2,7 @@
 
 Menghubungkan akun GoPay/GoBiz Merchant ke UMKM OS **tanpa menyalin token manual**.
 Pemilik login GoBiz di browsernya sendiri (nomor + OTP + reCAPTCHA seperti biasa), lalu
-ekstensi membaca cookie sesi (httpOnly) dan mengirimkannya ke dashboard UMKM OS.
+ekstensi membaca cookie sesi (httpOnly, di portal.gofoodmerchant.co.id) dan mengirimkannya ke dashboard UMKM OS.
 
 Kenapa ekstensi: token GoBiz disimpan sebagai cookie **httpOnly**, jadi tidak bisa dibaca
 JavaScript/bookmarklet biasa — hanya ekstensi (`chrome.cookies`) yang boleh membacanya.

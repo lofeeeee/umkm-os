@@ -4,14 +4,14 @@
 const $ = (id) => document.getElementById(id);
 
 async function gobizCookieString() {
-  const cookies = await chrome.cookies.getAll({ url: "https://api.gobiz.co.id/" });
+  const cookies = await chrome.cookies.getAll({ url: "https://portal.gofoodmerchant.co.id/" });
   // Kirim semua cookie (server mengekstrak access_token & refresh_token). Defensif terhadap
   // perubahan nama cookie di sisi GoBiz.
   return cookies.map((c) => `${c.name}=${c.value}`).join("; ");
 }
 
 async function hasSession() {
-  const cookies = await chrome.cookies.getAll({ url: "https://api.gobiz.co.id/" });
+  const cookies = await chrome.cookies.getAll({ url: "https://portal.gofoodmerchant.co.id/" });
   const names = new Set(cookies.map((c) => c.name));
   return names.has("access_token") && names.has("refresh_token");
 }
