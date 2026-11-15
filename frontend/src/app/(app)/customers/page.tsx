@@ -3,7 +3,7 @@
 // Pelanggan (P3-3): pencarian, profil, tag & catatan internal, alamat, riwayat pesanan,
 // export dan permintaan hapus (ADR-0005, ADR-0012).
 
-import Link from "next/link";
+import Link from "@/ui/link";
 import { useCallback, useEffect, useState } from "react";
 
 import { DownloadSimple, Trash, Users } from "@phosphor-icons/react/ssr";

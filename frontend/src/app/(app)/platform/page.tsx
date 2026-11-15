@@ -3,7 +3,7 @@
 // Admin platform (P7-3, ADR-0016): verifikasi pembayaran langganan lintas toko. Hanya super_admin dengan sesi
 // lolos MFA (ditegakkan API). Melihat bukti & setiap keputusan diaudit.
 
-import Link from "next/link";
+import Link from "@/ui/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 

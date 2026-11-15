@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/ui/link";
 
 import { TERMS } from "@/legal/content";
 import { LegalDoc } from "@/legal/LegalDoc";

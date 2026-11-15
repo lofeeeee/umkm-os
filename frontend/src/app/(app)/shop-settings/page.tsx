@@ -3,7 +3,7 @@
 // Pengaturan toko online (P3): QRIS statis milik toko (ADR-0004), ongkir, approval, SoD.
 // Hanya Owner (tenant.update) yang dapat mengubah; pergantian QRIS tercatat di audit log.
 
-import Link from "next/link";
+import Link from "@/ui/link";
 import { useEffect, useRef, useState } from "react";
 
 import { useUploads } from "@/dashboard/assets";

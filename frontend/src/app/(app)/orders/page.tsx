@@ -3,7 +3,7 @@
 // Pesanan (P3-5..P3-8): daftar, detail, verifikasi pembayaran QRIS (ADR-0004), approval,
 // status pemrosesan, refund.
 
-import Link from "next/link";
+import Link from "@/ui/link";
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 
 import { ArrowCounterClockwise, Check, Image as ImageIcon, MapPin, Note, Phone, Receipt, Storefront, Truck, User } from "@phosphor-icons/react/ssr";

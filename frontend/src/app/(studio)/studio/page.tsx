@@ -7,7 +7,7 @@
 // Belum menyentuh situs publik: tata letak disimpan di browser (localStorage) sampai ADR disetujui dan
 // schema_version 2 + validator server dibangun.
 
-import Link from "next/link";
+import Link from "@/ui/link";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 
 import {

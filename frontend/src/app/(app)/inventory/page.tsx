@@ -3,7 +3,7 @@
 // Stok (P3-2): level per varian, mutasi (masuk/keluar/opname), ambang low-stock, riwayat.
 // Kelola satu varian di panel samping supaya daftar tetap terlihat.
 
-import Link from "next/link";
+import Link from "@/ui/link";
 import { useCallback, useEffect, useState } from "react";
 
 import { ArrowDown, ArrowUp, Scales, Stack } from "@phosphor-icons/react/ssr";

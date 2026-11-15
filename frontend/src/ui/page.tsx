@@ -2,7 +2,7 @@
 //   <PageHeader title description actions/>  →  <Card title actions>…</Card>  →  <EmptyState/>
 // Teks memakai kamus label (src/lib/labels.ts) agar istilah konsisten.
 
-import Link from "next/link";
+import Link from "@/ui/link";
 import type { ReactNode } from "react";
 
 import { ArrowLeft, MagnifyingGlass, Tray } from "@phosphor-icons/react/ssr";

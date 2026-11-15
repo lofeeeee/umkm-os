@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import Link from "next/link";
+import Link from "@/ui/link";
 
 import { Sparkle } from "@phosphor-icons/react/ssr";
 import { ArrowDown, ArrowSquareOut, ArrowUp, CaretDown, CaretRight, DesktopTower, DeviceMobile, Eye, EyeSlash, Plus, Trash } from "@phosphor-icons/react/ssr";

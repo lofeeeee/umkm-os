@@ -7,7 +7,7 @@
 // Halaman tetap memakai pola lama `<WithTenant>{(ctx) => …}</WithTenant>`; komponen itu kini
 // hanya membaca konteks dari shell.
 
-import Link from "next/link";
+import Link from "@/ui/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   createContext, Suspense, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode,

@@ -2,7 +2,7 @@
 
 // Terima undangan tim (P4-1, AUTH-009/010). Token di fragment URL (tidak terkirim ke server/log).
 
-import Link from "next/link";
+import Link from "@/ui/link";
 import { useRouter } from "next/navigation";
 import { useState, useSyncExternalStore, type FormEvent } from "react";
 
