@@ -8,9 +8,16 @@
 }
 
 (hardening) {
+	# `defer`: diterapkan saat respons ditulis dan MENGGANTI header yang sama dari upstream
+	# (API juga mengirim nosniff/Referrer-Policy) → tidak ada header ganda (UAT 15 Nov sec #4).
 	header {
+		defer
 		X-Content-Type-Options nosniff
 		Referrer-Policy no-referrer
+		# Browser mengabaikan HSTS di respons HTTP biasa, jadi aman untuk lokal; di produksi TLS
+		# diterminasi di depan Caddy ini. Naikkan HSTS_MAX_AGE bertahap → 31536000 (UAT sec #1).
+		Strict-Transport-Security "max-age={$HSTS_MAX_AGE:86400}; includeSubDomains"
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
 		-Server
 	}
 	# Upload gambar maks 2 MiB (ADR-0009) + overhead; API menegakkan batas persisnya.
@@ -39,7 +46,7 @@ http://app.{$ROOT_DOMAIN} {
 	import hardening
 	import csp_app
 	import static_cache
-	header X-Frame-Options DENY
+	header >X-Frame-Options DENY
 	root * /srv/www
 	# Renderer situs tenant tidak dilayani di host dashboard.
 	@site path /site /site.html /site.txt
@@ -60,7 +67,7 @@ http://*.{$ROOT_DOMAIN} {
 	import hardening
 	import csp_site
 	import static_cache
-	header X-Frame-Options DENY
+	header >X-Frame-Options DENY
 	# Akun customer toko (ADR-0005): cookie host-only __Host-umkm_cust milik subdomain ini
 	# diteruskan HANYA untuk endpoint akun customer & checkout. Cookie sesi staf host-only di
 	# api.{$ROOT_DOMAIN} (ADR-0015) tidak pernah dikirim browser ke host toko.

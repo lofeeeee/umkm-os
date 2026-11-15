@@ -52,6 +52,8 @@ services:
       ROOT_DOMAIN: ${ROOT_DOMAIN:?ROOT_DOMAIN wajib (placeholder sampai D-01)}
       # Origin API untuk CSP (connect-src/img-src). http sampai TLS produksi aktif.
       PUBLIC_API_ORIGIN: ${PUBLIC_API_ORIGIN:-http://api.${ROOT_DOMAIN}}
+      # HSTS (ops/caddy/Caddyfile): mulai 1 hari, naikkan ke 31536000 setelah semua host stabil di HTTPS.
+      HSTS_MAX_AGE: ${HSTS_MAX_AGE:-86400}
     volumes:
       - caddy_data:/data
       - caddy_config:/config
