@@ -4,28 +4,50 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    body { font: 13px/1.5 system-ui, sans-serif; width: 320px; margin: 0; padding: 14px; color: #0f172a; }
-    h1 { font-size: 14px; margin: 0 0 4px; }
-    p { margin: 0 0 10px; color: #475569; }
-    label { display: block; font-weight: 600; margin: 10px 0 4px; }
-    input { width: 100%; box-sizing: border-box; padding: 8px; border: 1px solid #cbd5e1; border-radius: 8px; }
-    button { width: 100%; padding: 9px; border: 0; border-radius: 8px; font-weight: 600; cursor: pointer; margin-top: 10px; }
-    .primary { background: #4f46e5; color: #fff; }
-    .ghost { background: #f1f5f9; color: #0f172a; }
+    :root { --indigo:#4f46e5; --ink:#0f172a; --muted:#64748b; --line:#e2e8f0; --ok:#047857; --okbg:#ecfdf5; }
+    * { box-sizing: border-box; }
+    body { font: 13px/1.5 system-ui, -apple-system, sans-serif; width: 340px; margin: 0; padding: 16px; color: var(--ink); }
+    header { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+    header img { width: 28px; height: 28px; border-radius: 7px; }
+    h1 { font-size: 14px; margin: 0; }
+    .sub { color: var(--muted); margin: 0 0 14px; }
+    .step { border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin-bottom: 10px; }
+    .step h2 { font-size: 12px; margin: 0 0 8px; display: flex; align-items: center; gap: 8px; }
+    .num { width: 20px; height: 20px; border-radius: 999px; background: var(--indigo); color: #fff; display: inline-grid; place-items: center; font-size: 11px; font-weight: 700; flex: none; }
+    label { display: block; font-weight: 600; margin: 8px 0 4px; font-size: 12px; }
+    input { width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 8px; font: inherit; }
+    button { width: 100%; padding: 9px; border: 0; border-radius: 8px; font: inherit; font-weight: 600; cursor: pointer; }
+    .primary { background: var(--indigo); color: #fff; }
+    .ghost { background: #f1f5f9; color: var(--ink); }
     button:disabled { opacity: .5; cursor: not-allowed; }
-    .status { margin-top: 12px; padding: 8px 10px; border-radius: 8px; font-weight: 600; }
-    .ok { background: #ecfdf5; color: #047857; }
-    .no { background: #fef2f2; color: #b91c1c; }
+    .chip { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-size: 12px; padding: 4px 9px; border-radius: 999px; }
+    .chip.ok { background: var(--okbg); color: var(--ok); }
+    .chip.no { background: #fef2f2; color: #b91c1c; }
+    .hint { color: var(--muted); font-size: 11px; margin: 6px 0 0; }
+    .done { border-color: #a7f3d0; background: var(--okbg); }
   </style>
 </head>
 <body>
-  <h1>Hubungkan GoPay ke UMKM OS</h1>
-  <p>Login GoBiz di browser ini, lalu kirim sesinya ke dashboard tanpa menyalin token.</p>
-  <label for="url">URL dashboard UMKM OS</label>
-  <input id="url" type="url" placeholder="mis. https://app.domainanda.com" />
-  <button id="login" class="ghost" type="button">1. Buka &amp; login GoBiz</button>
-  <button id="connect" class="primary" type="button" disabled>2. Hubungkan ke UMKM OS</button>
-  <div id="status" class="status no">Belum login GoBiz di browser ini.</div>
+  <header>
+    <img src="icons/icon48.png" alt="" />
+    <div><h1>Penghubung GoPay</h1></div>
+  </header>
+  <p class="sub">Hubungkan GoPay/GoBiz Merchant ke UMKM OS tanpa menyalin token.</p>
+
+  <div class="step" id="step1">
+    <h2><span class="num">1</span> Login GoBiz di browser</h2>
+    <div id="loginStatus" class="chip no">Belum login</div>
+    <button class="ghost" id="login" type="button" style="margin-top:10px">Buka halaman login GoBiz</button>
+    <p class="hint">Login dengan nomor + OTP seperti biasa (reCAPTCHA diselesaikan oleh Anda). Status di atas akan berubah hijau otomatis setelah masuk.</p>
+  </div>
+
+  <div class="step" id="step2">
+    <h2><span class="num">2</span> Hubungkan ke UMKM OS</h2>
+    <label for="url">Alamat dashboard UMKM OS</label>
+    <input id="url" type="url" placeholder="https://app.domainanda.com" />
+    <button class="primary" id="connect" type="button" style="margin-top:10px" disabled>Hubungkan sekarang</button>
+    <p class="hint">Cukup isi alamat sekali; akan diingat untuk berikutnya.</p>
+  </div>
   <script src="popup.js"></script>
 </body>
 </html>
