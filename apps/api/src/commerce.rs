@@ -870,6 +870,84 @@ pub async fn current_order(
     Ok(no_store(Json(SuccessEnvelope::new(v, &id)).into_response()))
 }
 
+/// QRIS dinamis GoPay untuk order saat ini (P10). `available=false` bila toko belum menghubungkan
+/// GoPay / belum atur QRIS statis / order bukan menunggu bayar. Idempoten: buat-atau-ambil charge.
+#[derive(Debug, Clone, serde::Serialize, utoipa::ToSchema)]
+pub struct GopayQrisView {
+    pub available: bool,
+    /// Payload EMVCo QRIS dinamis (nominal terkunci) untuk dirender jadi QR.
+    pub qris_payload: Option<String>,
+    /// Nominal yang harus dibayar (rupiah, termasuk kode unik pencocokan).
+    pub total_rupiah: Option<i64>,
+}
+
+/// QRIS dinamis GoPay untuk order pembeli (buat-atau-ambil).
+#[utoipa::path(
+    post, path = "/api/v1/public/orders/current/gopay-qris", tag = "public",
+    params(("X-Order-Token" = String, Header)),
+    responses((status = 200, description = "QRIS GoPay", body = SuccessEnvelope<GopayQrisView>))
+)]
+pub async fn current_gopay_qris(
+    State(state): State<AppState>,
+    ReqId(id): ReqId,
+    HostTenant(t): HostTenant,
+    headers: HeaderMap,
+) -> Result<Response, ApiError> {
+    use umkm_infrastructure::gopay_repo;
+    let kr = state
+        .auth
+        .as_ref()
+        .and_then(|a| a.keyring.as_ref())
+        .ok_or_else(|| ApiError::new(umkm_shared::http::ErrorCode::ServiceUnavailable))?;
+    let o = order_from_token(&state, t, &headers).await?;
+    let unavailable = GopayQrisView {
+        available: false,
+        qris_payload: None,
+        total_rupiah: None,
+    };
+    let fail = |v| Ok(no_store(Json(SuccessEnvelope::new(v, &id)).into_response()));
+
+    if o.status != OrderStatus::AwaitingPayment {
+        return fail(unavailable);
+    }
+    // Toko harus terhubung aktif + punya QRIS statis; nominal harus rupiah bulat.
+    let Some(stored) = gopay_repo::get_session(pool(&state)?, t, kr)
+        .await
+        .map_err(internal)?
+    else {
+        return fail(unavailable);
+    };
+    let (Some(static_qris), true) = (stored.static_qris.as_deref(), stored.status == "active")
+    else {
+        return fail(unavailable);
+    };
+    if o.total_sen <= 0 || o.total_sen % 100 != 0 {
+        return fail(unavailable);
+    }
+    let base = (o.total_sen / 100) as u64;
+
+    // TTL selaras batas waktu order.
+    let now = umkm_infrastructure::gopay::poller::now_ms();
+    let exp = umkm_infrastructure::gopay::time::parse_iso8601_ms(&o.expires_at)
+        .unwrap_or(now + 1_800_000);
+    let ttl = ((exp - now) / 1000).clamp(60, 24 * 3600);
+
+    let charge = match gopay_repo::get_charge(pool(&state)?, t, o.id)
+        .await
+        .map_err(internal)?
+    {
+        Some(c) if c.status == "pending" => c,
+        _ => gopay_repo::create_charge(pool(&state)?, t, o.id, base, static_qris, ttl)
+            .await
+            .map_err(internal)?,
+    };
+    fail(GopayQrisView {
+        available: true,
+        qris_payload: Some(charge.qris_payload),
+        total_rupiah: Some(charge.total_rupiah),
+    })
+}
+
 /// Riwayat order customer login (hanya customer tertaut akun; AC-CRM-003).
 #[utoipa::path(
     get, path = "/api/v1/public/customer/orders", tag = "public", params(Page),
@@ -1429,6 +1507,10 @@ pub fn routes() -> Router<AppState> {
         .route("/api/v1/public/checkout-config", get(checkout_config))
         .route("/api/v1/public/checkout", post(checkout))
         .route("/api/v1/public/orders/current", get(current_order))
+        .route(
+            "/api/v1/public/orders/current/gopay-qris",
+            post(current_gopay_qris),
+        )
         .route("/api/v1/public/customer/orders", get(customer_orders))
         .route(
             "/api/v1/public/orders/current/payment-claim",

@@ -141,6 +141,7 @@ use crate::{
         commerce::checkout_config,
         commerce::checkout,
         commerce::current_order,
+        commerce::current_gopay_qris,
         commerce::customer_orders,
         commerce::claim_payment,
         commerce::upload_proof,

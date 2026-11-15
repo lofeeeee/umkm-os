@@ -2146,6 +2146,51 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
       security:
       - sessionCookie: []
+  /api/v1/public/orders/current/gopay-qris:
+    post:
+      tags:
+      - public
+      summary: QRIS dinamis GoPay untuk order pembeli (buat-atau-ambil).
+      operationId: current_gopay_qris
+      parameters:
+      - name: X-Order-Token
+        in: header
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: QRIS GoPay
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_GopayQrisView'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
   /api/v1/public/orders/current/payment-claim:
     post:
       tags:
@@ -12884,6 +12929,38 @@ components:
             revision:
               type: integer
               format: int32
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
+    SuccessEnvelope_GopayQrisView:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          description: |-
+            QRIS dinamis GoPay untuk order saat ini (P10). `available=false` bila toko belum menghubungkan
+            GoPay / belum atur QRIS statis / order bukan menunggu bayar. Idempoten: buat-atau-ambil charge.
+          required:
+          - available
+          properties:
+            available:
+              type: boolean
+            qris_payload:
+              type:
+              - string
+              - 'null'
+              description: Payload EMVCo QRIS dinamis (nominal terkunci) untuk dirender jadi QR.
+            total_rupiah:
+              type:
+              - integer
+              - 'null'
+              format: int64
+              description: Nominal yang harus dibayar (rupiah, termasuk kode unik pencocokan).
         meta:
           $ref: '#/components/schemas/Meta'
         success:
