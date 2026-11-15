@@ -1212,6 +1212,153 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
       security:
       - sessionCookie: []
+  /api/v1/platform/tenants:
+    get:
+      tags:
+      - platform
+      summary: Daftar toko (UMKM) dengan omzet & volume transaksi. Super admin + MFA; akses diaudit.
+      operationId: tenants
+      parameters:
+      - name: from
+        in: query
+        description: 'Tanggal mulai `YYYY-MM-DD` (Asia/Jakarta). Default: 30 hari terakhir.'
+        required: false
+        schema:
+          type: string
+      - name: to
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: q
+        in: query
+        description: Cari nama atau slug toko.
+        required: false
+        schema:
+          type: string
+      - name: limit
+        in: query
+        description: Maks baris (1..100, default 20).
+        required: false
+        schema:
+          type: integer
+          format: int64
+      - name: offset
+        in: query
+        description: Lewati baris (default 0).
+        required: false
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: Daftar toko
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_PlatformTenantsView'
+        '403':
+          description: Bukan admin platform
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/platform/tenants/{tenant_id}:
+    get:
+      tags:
+      - platform
+      summary: Detail satu toko (drill-down). Super admin + MFA; akses diaudit (tenant tujuan).
+      operationId: tenant_detail
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: from
+        in: query
+        description: '`YYYY-MM-DD` (Asia/Jakarta), default 29 hari sebelum `to`'
+        required: false
+        schema:
+          type: string
+      - name: to
+        in: query
+        description: '`YYYY-MM-DD` (inklusif), default hari ini; rentang maks 366 hari'
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Detail toko
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_PlatformTenantDetailView'
+        '403':
+          description: Bukan admin platform
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '404':
+          description: Toko tidak ditemukan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
   /api/v1/public/categories:
     get:
       tags:
@@ -13449,6 +13596,60 @@ components:
             user_id:
               type: string
               format: uuid
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
+    SuccessEnvelope_PlatformTenantDetailView:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - from
+          - to
+          - tenant
+          properties:
+            from:
+              type: string
+            tenant:
+              type: object
+              description: Metrik detail satu toko (lihat `app.platform_tenant_detail`).
+            to:
+              type: string
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
+    SuccessEnvelope_PlatformTenantsView:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - from
+          - to
+          - total
+          - items
+          properties:
+            from:
+              type: string
+            items:
+              type: object
+              description: 'Array toko: id, name, slug, plan, sub_status, tenant_status, created_at, orders, paid_orders, gmv, last_order_at.'
+            to:
+              type: string
+            total:
+              type: integer
+              format: int64
         meta:
           $ref: '#/components/schemas/Meta'
         success:

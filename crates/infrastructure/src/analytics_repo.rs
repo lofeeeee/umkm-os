@@ -394,3 +394,48 @@ pub async fn platform_overview(
     tx.commit().await?;
     Ok((f, to_s, v))
 }
+
+/// P11: daftar toko (UMKM) untuk admin platform — nama/slug, paket, status, orders & omzet di
+/// rentang, terakhir aktif. Pagination + pencarian. Lintas-tenant via `app.platform_tenants`.
+pub async fn platform_tenants(
+    pool: &PgPool,
+    from: Option<&str>,
+    to: Option<&str>,
+    q: &str,
+    limit: i32,
+    offset: i32,
+) -> Result<(String, String, serde_json::Value), AnalyticsError> {
+    let mut tx = pool.begin().await?;
+    let (f, to_s) = resolve_range(&mut *tx, from, to).await?;
+    let v: serde_json::Value =
+        sqlx::query_scalar("SELECT app.platform_tenants($1::date, $2::date, $3, $4, $5)")
+            .bind(&f)
+            .bind(&to_s)
+            .bind(q)
+            .bind(limit)
+            .bind(offset)
+            .fetch_one(&mut *tx)
+            .await?;
+    tx.commit().await?;
+    Ok((f, to_s, v))
+}
+
+/// P11: detail satu toko untuk drill-down admin platform. `None` bila toko tak ada.
+pub async fn platform_tenant_detail(
+    pool: &PgPool,
+    tenant: uuid::Uuid,
+    from: Option<&str>,
+    to: Option<&str>,
+) -> Result<(String, String, Option<serde_json::Value>), AnalyticsError> {
+    let mut tx = pool.begin().await?;
+    let (f, to_s) = resolve_range(&mut *tx, from, to).await?;
+    let v: Option<serde_json::Value> =
+        sqlx::query_scalar("SELECT app.platform_tenant_detail($1, $2::date, $3::date)")
+            .bind(tenant)
+            .bind(&f)
+            .bind(&to_s)
+            .fetch_one(&mut *tx)
+            .await?;
+    tx.commit().await?;
+    Ok((f, to_s, v))
+}

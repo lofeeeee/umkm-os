@@ -45,6 +45,8 @@ use crate::{
         crate::billing::cancel_invoice,
         crate::platform::me,
         crate::platform::analytics,
+        crate::platform::tenants,
+        crate::platform::tenant_detail,
         crate::analytics::overview,
         crate::platform::invoices,
         crate::platform::proof,

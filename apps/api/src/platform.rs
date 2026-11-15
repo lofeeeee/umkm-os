@@ -361,11 +361,141 @@ pub async fn analytics(
     )))
 }
 
+// ------------------------------------------------------------------ pengawasan per-toko (P11)
+// Berbeda dari /analytics (agregat tanpa identitas): operator sengaja melihat nama/slug + omzet
+// tiap toko. Super admin + MFA, dan setiap akses diaudit sebagai aktor 'platform'.
+
+#[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
+pub struct TenantsQuery {
+    /// Tanggal mulai `YYYY-MM-DD` (Asia/Jakarta). Default: 30 hari terakhir.
+    pub from: Option<String>,
+    pub to: Option<String>,
+    /// Cari nama atau slug toko.
+    pub q: Option<String>,
+    /// Maks baris (1..100, default 20).
+    pub limit: Option<i64>,
+    /// Lewati baris (default 0).
+    pub offset: Option<i64>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct PlatformTenantsView {
+    pub from: String,
+    pub to: String,
+    pub total: i64,
+    /// Array toko: id, name, slug, plan, sub_status, tenant_status, created_at, orders, paid_orders, gmv, last_order_at.
+    #[schema(value_type = Object)]
+    pub items: serde_json::Value,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct PlatformTenantDetailView {
+    pub from: String,
+    pub to: String,
+    /// Metrik detail satu toko (lihat `app.platform_tenant_detail`).
+    #[schema(value_type = Object)]
+    pub tenant: serde_json::Value,
+}
+
+/// Daftar toko (UMKM) dengan omzet & volume transaksi. Super admin + MFA; akses diaudit.
+#[utoipa::path(
+    get, path = "/api/v1/platform/tenants", tag = "platform", params(TenantsQuery),
+    responses(
+        (status = 200, description = "Daftar toko", body = SuccessEnvelope<PlatformTenantsView>),
+        (status = 403, description = "Bukan admin platform", body = umkm_shared::http::ErrorEnvelope)
+    )
+)]
+pub async fn tenants(
+    State(state): State<AppState>,
+    ReqId(id): ReqId,
+    ClientIp(ip): ClientIp,
+    admin: PlatformAdmin,
+    Query(q): Query<TenantsQuery>,
+) -> Result<Json<SuccessEnvelope<PlatformTenantsView>>, ApiError> {
+    let db = pool(&state)?;
+    let limit = q.limit.unwrap_or(20).clamp(1, 100) as i32;
+    let offset = q.offset.unwrap_or(0).max(0) as i32;
+    let search = q.q.as_deref().unwrap_or("").trim();
+    let (from, to, v) = umkm_infrastructure::analytics_repo::platform_tenants(
+        db,
+        q.from.as_deref(),
+        q.to.as_deref(),
+        search,
+        limit,
+        offset,
+    )
+    .await
+    .map_err(crate::analytics::range_err)?;
+    umkm_infrastructure::audit_repo::record_best_effort(
+        db,
+        &umkm_domain::audit::AuditEvent::new("platform.tenants_viewed", "platform")
+            .by_platform(admin.user_id)
+            .request(Some(id.as_str()), Some(&ip))
+            .with_summary(serde_json::json!({ "q": search, "from": from, "to": to })),
+    )
+    .await;
+    Ok(Json(SuccessEnvelope::new(
+        PlatformTenantsView {
+            from,
+            to,
+            total: v["total"].as_i64().unwrap_or(0),
+            items: v["items"].clone(),
+        },
+        &id,
+    )))
+}
+
+/// Detail satu toko (drill-down). Super admin + MFA; akses diaudit (tenant tujuan).
+#[utoipa::path(
+    get, path = "/api/v1/platform/tenants/{tenant_id}", tag = "platform",
+    params(("tenant_id" = Uuid, Path), crate::analytics::RangeQuery),
+    responses(
+        (status = 200, description = "Detail toko", body = SuccessEnvelope<PlatformTenantDetailView>),
+        (status = 404, description = "Toko tidak ditemukan", body = umkm_shared::http::ErrorEnvelope),
+        (status = 403, description = "Bukan admin platform", body = umkm_shared::http::ErrorEnvelope)
+    )
+)]
+pub async fn tenant_detail(
+    State(state): State<AppState>,
+    ReqId(id): ReqId,
+    ClientIp(ip): ClientIp,
+    admin: PlatformAdmin,
+    Path(tenant_id): Path<Uuid>,
+    Query(q): Query<crate::analytics::RangeQuery>,
+) -> Result<Json<SuccessEnvelope<PlatformTenantDetailView>>, ApiError> {
+    let db = pool(&state)?;
+    let (from, to, v) = umkm_infrastructure::analytics_repo::platform_tenant_detail(
+        db,
+        tenant_id,
+        q.from.as_deref(),
+        q.to.as_deref(),
+    )
+    .await
+    .map_err(crate::analytics::range_err)?;
+    let tenant = v.ok_or_else(|| ApiError::new(ErrorCode::ResourceNotFound))?;
+    umkm_infrastructure::audit_repo::record_best_effort(
+        db,
+        &umkm_domain::audit::AuditEvent::new("platform.tenant_viewed", "tenant")
+            .by_platform(admin.user_id)
+            .in_tenant(umkm_shared::ids::TenantId::from_uuid(tenant_id))
+            .resource(tenant_id)
+            .request(Some(id.as_str()), Some(&ip)),
+    )
+    .await;
+    Ok(Json(SuccessEnvelope::new(
+        PlatformTenantDetailView { from, to, tenant },
+        &id,
+    )))
+}
+
 pub fn routes() -> Router<AppState> {
     let p = "/api/v1/platform";
     Router::new()
         .route(&format!("{p}/me"), get(me))
         .route(&format!("{p}/analytics"), get(analytics))
+        .route(&format!("{p}/tenants"), get(tenants))
+        .route(&format!("{p}/tenants/{{tenant_id}}"), get(tenant_detail))
         .route(&format!("{p}/invoices"), get(invoices))
         .route(&format!("{p}/invoices/{{invoice_id}}/proof"), get(proof))
         .route(
