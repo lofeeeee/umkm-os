@@ -6454,6 +6454,67 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
       security:
       - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/gopay/connect/session:
+    post:
+      tags:
+      - gopay
+      summary: |-
+        Hubungkan via sesi browser. Login OTP GoBiz kini terkunci reCAPTCHA (hanya bisa di browser),
+        jadi pemilik login di browser lalu menempel cookie/token sesinya di sini; refresh token & poll
+        transaksi berikutnya berjalan otomatis di server.
+      operationId: connect_session
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConnectSessionDto'
+        required: true
+      responses:
+        '200':
+          description: Terhubung
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_StatusView'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '422':
+          description: Token sesi tidak ditemukan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
   /api/v1/tenants/{tenant_id}/gopay/connect/verify:
     post:
       tags:
@@ -10670,6 +10731,18 @@ components:
           - string
           - 'null'
           description: Wajib bila jumlah berbeda dari tagihan
+      additionalProperties: false
+    ConnectSessionDto:
+      type: object
+      required:
+      - phone
+      - session
+      properties:
+        phone:
+          type: string
+        session:
+          type: string
+          description: Cookie/token sesi GoBiz dari browser pemilik (harus memuat `access_token` & `refresh_token`).
       additionalProperties: false
     ConversationSummaryView:
       type: object

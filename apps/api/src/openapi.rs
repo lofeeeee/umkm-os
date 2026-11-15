@@ -94,6 +94,7 @@ use crate::{
         gopay::get_status,
         gopay::request_otp,
         gopay::verify_otp,
+        gopay::connect_session,
         gopay::put_static_qris,
         gopay::disconnect,
         website::list_templates,

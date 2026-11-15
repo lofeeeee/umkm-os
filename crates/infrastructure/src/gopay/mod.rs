@@ -7,6 +7,8 @@ pub mod qrsvg;
 pub mod session;
 pub mod time;
 
-pub use client::{GobizClient, GobizError, OtpChallenge, normalize_phone, parse_txns};
+pub use client::{
+    GobizClient, GobizError, OtpChallenge, normalize_phone, parse_session_blob, parse_txns,
+};
 pub use poller::{PollStats, poll_due};
 pub use session::{GopaySession, REFRESH_SKEW_MS, TOKEN_TTL_MS, TokenPair};

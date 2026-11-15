@@ -62,6 +62,23 @@ pub fn normalize_phone(input: &str) -> Result<(String, String), GobizError> {
     Ok((local, e164))
 }
 
+/// Ekstrak (access_token, refresh_token) dari teks bebas yang ditempel pemilik: string cookie
+/// (`access_token=..; refresh_token=..`), potongan JSON, atau dua baris. P10: jalur "sesi via
+/// browser" karena login OTP GoBiz kini terkunci reCAPTCHA.
+pub fn parse_session_blob(blob: &str) -> Option<(String, String)> {
+    fn grab(b: &str, key: &str) -> Option<String> {
+        let idx = b.find(key)?;
+        let rest = b[idx + key.len()..]
+            .trim_start_matches(|c: char| c == '"' || c == ':' || c == '=' || c.is_whitespace());
+        let tok: String = rest
+            .chars()
+            .take_while(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '_' | '-'))
+            .collect();
+        (tok.len() >= 10).then_some(tok)
+    }
+    Some((grab(blob, "access_token")?, grab(blob, "refresh_token")?))
+}
+
 // ---- Fungsi murni: header ----
 
 fn web_headers<'a>(uniqueid: &'a str) -> Vec<Header<'a>> {
@@ -300,6 +317,26 @@ impl GobizClient {
         })
     }
 
+    /// Bangun sesi dari token yang ditangkap di browser pemilik (login OTP terkunci captcha).
+    /// Best-effort ambil merchant/outlet. Refresh + poll berikutnya memakai token ini.
+    pub async fn session_from_tokens(
+        &self,
+        access_token: String,
+        refresh_token: String,
+        phone_e164: &str,
+        now_ms: i64,
+    ) -> GopaySession {
+        let (merchant_id, outlet_name) = self.fetch_merchant(&access_token).await;
+        GopaySession {
+            phone_e164: phone_e164.to_string(),
+            merchant_id,
+            outlet_name,
+            access_token,
+            refresh_token,
+            expires_at_ms: now_ms + TOKEN_TTL_MS,
+        }
+    }
+
     async fn fetch_merchant(&self, access_token: &str) -> (Option<String>, Option<String>) {
         let bearer = format!("Bearer {access_token}");
         let headers = vec![
@@ -458,5 +495,22 @@ mod tests {
         assert!(u.contains("merchant_ids=M1"));
         assert!(u.contains("start_time=1970-01-01T00%3A00%3A00Z"));
         assert!(u.contains("size=20"));
+    }
+
+    #[test]
+    fn parse_blob_from_cookie_json_lines() {
+        let (a, r) = parse_session_blob(
+            "access_token=AAAbbbCCC111; refresh_token=RRRdddEEE222; auth_method=goid",
+        )
+        .unwrap();
+        assert_eq!(a, "AAAbbbCCC111");
+        assert_eq!(r, "RRRdddEEE222");
+        let (a2, r2) =
+            parse_session_blob(r#"{"access_token":"tok.en-A_1","refresh_token":"ref.tok-B_2"}"#)
+                .unwrap();
+        assert_eq!(a2, "tok.en-A_1");
+        assert_eq!(r2, "ref.tok-B_2");
+        assert!(parse_session_blob("tidak ada token di sini").is_none());
+        assert!(parse_session_blob("access_token=short").is_none());
     }
 }

@@ -64,6 +64,14 @@ pub struct VerifyOtpDto {
 
 #[derive(Debug, Clone, Deserialize, ToSchema)]
 #[serde(deny_unknown_fields)]
+pub struct ConnectSessionDto {
+    pub phone: String,
+    /// Cookie/token sesi GoBiz dari browser pemilik (harus memuat `access_token` & `refresh_token`).
+    pub session: String,
+}
+
+#[derive(Debug, Clone, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
 pub struct StaticQrisDto {
     /// Payload EMVCo QRIS statis toko (teks dari pindai QR).
     pub qris: String,
@@ -228,6 +236,50 @@ pub async fn verify_otp(
     Ok(Json(SuccessEnvelope::new(view, &id)))
 }
 
+/// Hubungkan via sesi browser. Login OTP GoBiz kini terkunci reCAPTCHA (hanya bisa di browser),
+/// jadi pemilik login di browser lalu menempel cookie/token sesinya di sini; refresh token & poll
+/// transaksi berikutnya berjalan otomatis di server.
+#[utoipa::path(
+    post, path = "/api/v1/tenants/{tenant_id}/gopay/connect/session", tag = "gopay",
+    params(("tenant_id" = Uuid, Path)), request_body = ConnectSessionDto,
+    responses(
+        (status = 200, description = "Terhubung", body = SuccessEnvelope<StatusView>),
+        (status = 422, description = "Token sesi tidak ditemukan", body = umkm_shared::http::ErrorEnvelope)
+    )
+)]
+pub async fn connect_session(
+    State(state): State<AppState>,
+    ReqId(id): ReqId,
+    Member(actor): Member,
+    Json(body): Json<ConnectSessionDto>,
+) -> Result<Json<SuccessEnvelope<StatusView>>, ApiError> {
+    actor.require("tenant.update")?;
+    let p = pool(&state)?;
+    let (_, e164) = umkm_infrastructure::gopay::normalize_phone(&body.phone)
+        .map_err(|e| gobiz_err(e, "Nomor HP tidak valid"))?;
+    let (access, refresh) = umkm_infrastructure::gopay::parse_session_blob(&body.session)
+        .ok_or_else(|| {
+            msg(
+                ErrorCode::ValidationFailed,
+                "Token sesi tidak ditemukan. Tempel cookie/token dari browser yang memuat access_token dan refresh_token.",
+            )
+        })?;
+    let session = client()
+        .session_from_tokens(access, refresh, &e164, now_ms())
+        .await;
+    gopay_repo::put_session(p, actor.tenant_id, &session, keyring(&state)?)
+        .await
+        .map_err(repo_err)?;
+    let view = StatusView {
+        connected: true,
+        status: Some("active".into()),
+        outlet_name: session.outlet_name.clone(),
+        phone_masked: Some(mask_phone(&session.phone_e164)),
+        has_static_qris: false,
+    };
+    Ok(Json(SuccessEnvelope::new(view, &id)))
+}
+
 /// Atur QRIS statis toko (divalidasi EMVCo). Harus sudah terhubung.
 #[utoipa::path(
     put, path = "/api/v1/tenants/{tenant_id}/gopay/static-qris", tag = "gopay",
@@ -286,5 +338,6 @@ pub fn routes() -> Router<AppState> {
         .route(base, get(get_status).delete(disconnect))
         .route(&format!("{base}/connect/request-otp"), post(request_otp))
         .route(&format!("{base}/connect/verify"), post(verify_otp))
+        .route(&format!("{base}/connect/session"), post(connect_session))
         .route(&format!("{base}/static-qris"), put(put_static_qris))
 }

@@ -95,13 +95,11 @@ function GopayCard({ tenantId, can }: { tenantId: string; can: boolean }) {
   const base = `/api/v1/tenants/${tenantId}/gopay`;
   const [st, setSt] = useState<GopayStatus | null>(null);
   const [err, setErr] = useState<string | null>(null);
-  // Alur OTP: phase 'phone' -> 'otp'.
+  // Hubungkan via sesi browser: login OTP GoBiz terkunci reCAPTCHA (hanya bisa di browser),
+  // jadi pemilik login di browser lalu menempel cookie/token sesinya.
   const [phone, setPhone] = useState("");
-  const [otp, setOtp] = useState("");
-  const [otpToken, setOtpToken] = useState<string | null>(null);
-  // `sent` menandai OTP sudah diminta → tampilkan form kode. Tidak bergantung pada otp_token
-  // (yang bisa kosong meski OTP terkirim), agar form selalu muncul setelah kirim berhasil.
-  const [sent, setSent] = useState(false);
+  const [session, setSession] = useState("");
+  const [help, setHelp] = useState(false);
   const [qris, setQris] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -122,13 +120,9 @@ function GopayCard({ tenantId, can }: { tenantId: string; can: boolean }) {
     setErr(null); setBusy(true);
     try { await fn(); } catch (e) { setErr(describe(e)); } finally { setBusy(false); }
   }
-  const requestOtp = () => run(async () => {
-    const r = await api<{ otp_token?: string }>("POST", `${base}/connect/request-otp`, { json: { phone } });
-    setOtpToken(r.otp_token ?? ""); setSent(true); toast.ok("Kode OTP dikirim via SMS/WhatsApp.");
-  });
-  const verifyOtp = () => run(async () => {
-    setSt(await api<GopayStatus>("POST", `${base}/connect/verify`, { json: { phone, otp, otp_token: otpToken } }));
-    setOtp(""); setOtpToken(null); setSent(false); toast.ok("Akun GoPay terhubung.");
+  const connectSession = () => run(async () => {
+    setSt(await api<GopayStatus>("POST", `${base}/connect/session`, { json: { phone, session } }));
+    setSession(""); toast.ok("Akun GoPay terhubung.");
   });
   const saveQris = () => run(async () => {
     setSt(await api<GopayStatus>("PUT", `${base}/static-qris`, { json: { qris } }));
@@ -149,25 +143,28 @@ function GopayCard({ tenantId, can }: { tenantId: string; can: boolean }) {
       <Alert kind="error">{err}</Alert>
       {!st.connected ? (
         <div className="d-grid">
-          {!sent ? (
-            <>
-              <label className="d-field"><span>Nomor HP GoBiz/GoPay Merchant</span>
-                <input disabled={!can} inputMode="tel" placeholder="mis. 0812xxxxxxx" value={phone} onChange={(e) => setPhone(e.target.value)} />
-                <span className="d-hint">Nomor yang terdaftar di aplikasi GoPay Merchant / GoBiz.</span>
-              </label>
-              {can && <div className="d-savebar"><BusyButton type="button" busy={busy} onClick={requestOtp} disabled={phone.trim().length < 8}>Kirim OTP</BusyButton></div>}
-            </>
-          ) : (
-            <>
-              <label className="d-field"><span>Kode OTP</span>
-                <input disabled={!can} inputMode="numeric" autoComplete="one-time-code" placeholder="Masukkan kode dari SMS/WhatsApp" value={otp} onChange={(e) => setOtp(e.target.value)} />
-              </label>
-              {can && <div className="d-savebar">
-                <button type="button" className="d-btn d-btn-ghost" onClick={() => { setOtpToken(null); setOtp(""); setSent(false); }}>Ganti nomor</button>
-                <BusyButton type="button" busy={busy} onClick={verifyOtp} disabled={otp.trim().length < 4}>Verifikasi</BusyButton>
-              </div>}
-            </>
+          <Alert kind="info">
+            Login GoPay/GoBiz dilindungi verifikasi (reCAPTCHA) yang hanya bisa diselesaikan di browser. Jadi: login sekali di browser, lalu tempel token sesinya di sini. Server memperbarui token dan mengecek pembayaran otomatis setelahnya.
+          </Alert>
+          <label className="d-field"><span>Nomor HP GoBiz/GoPay Merchant</span>
+            <input disabled={!can} inputMode="tel" placeholder="mis. 0812xxxxxxx" value={phone} onChange={(e) => setPhone(e.target.value)} />
+            <span className="d-hint">Nomor akun merchant (dipakai untuk memperbarui sesi).</span>
+          </label>
+          <label className="d-field"><span>Token sesi GoBiz</span>
+            <textarea disabled={!can} rows={3} placeholder="Tempel cookie sesi (memuat access_token dan refresh_token)" value={session} onChange={(e) => setSession(e.target.value)} />
+          </label>
+          <button type="button" className="d-btn d-btn-ghost d-btn-sm" style={{ justifySelf: "start" }} onClick={() => setHelp((v) => !v)} aria-expanded={help}>
+            {help ? "Sembunyikan cara" : "Cara mendapatkan token sesi"}
+          </button>
+          {help && (
+            <ol className="d-muted d-small" style={{ margin: 0, paddingLeft: 18, lineHeight: 1.7 }}>
+              <li>Buka <strong>portal.gofoodmerchant.co.id</strong> di browser (komputer), login dengan nomor &amp; OTP seperti biasa (selesaikan reCAPTCHA bila ada).</li>
+              <li>Tekan <strong>F12</strong> → tab <strong>Application</strong> (Chrome) / <strong>Storage</strong> (Firefox) → <strong>Cookies</strong> → pilih <strong>https://api.gobiz.co.id</strong>.</li>
+              <li>Salin nilai <strong>access_token</strong> dan <strong>refresh_token</strong>, lalu tempel ke kotak di atas (boleh format <code>access_token=...; refresh_token=...</code>).</li>
+              <li>Token akan diperbarui otomatis; ulangi langkah ini hanya bila status berubah jadi &quot;Perlu login ulang&quot;.</li>
+            </ol>
           )}
+          {can && <div className="d-savebar"><BusyButton type="button" busy={busy} onClick={connectSession} disabled={phone.trim().length < 8 || session.trim().length < 20}>Hubungkan</BusyButton></div>}
         </div>
       ) : (
         <>
