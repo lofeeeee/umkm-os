@@ -168,11 +168,28 @@ export function ProductPage({ slug }: { slug: string }) {
 
 // ------------------------------------------------------------------ keranjang & checkout
 
+const DRAFT_KEY = "umkm-checkout-draft";
+
 export function CartPage() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [cfg, setCfg] = useState<CheckoutConfig | null>(null);
   const [customer, setCustomer] = useState<CustomerSession | null>(null);
-  const [form, setForm] = useState({ fulfillment: "pickup", name: "", email: "", phone: "", delivery_address: "", note: "", accept: false });
+  // Draf isian bertahan saat halaman dimuat ulang (UAT customer #10). sessionStorage: hilang saat tab
+  // ditutup — data pribadi tidak tertinggal di perangkat bersama. Persetujuan tidak ikut disimpan.
+  // (CartPage hanya dirender di browser: path diketahui setelah hidrasi.)
+  const [form, setForm] = useState(() => {
+    const base = { fulfillment: "pickup", name: "", email: "", phone: "", delivery_address: "", note: "", accept: false };
+    try {
+      const d = JSON.parse(sessionStorage.getItem(DRAFT_KEY) ?? "null") as Partial<typeof base> | null;
+      return d ? { ...base, name: d.name ?? "", email: d.email ?? "", phone: d.phone ?? "", delivery_address: d.delivery_address ?? "", note: d.note ?? "" } : base;
+    } catch { return base; }
+  });
+  useEffect(() => {
+    try {
+      const { name, email, phone, delivery_address, note } = form;
+      if (name || email || phone || delivery_address || note) sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ name, email, phone, delivery_address, note }));
+    } catch { /* opsional */ }
+  }, [form]);
   const [key, setKey] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -224,6 +241,7 @@ export function CartPage() {
       );
       saveOrder({ code: r.order.code, token: r.access_token, created_at: r.order.created_at });
       clearCart();
+      try { sessionStorage.removeItem(DRAFT_KEY); } catch { /* opsional */ }
       window.location.assign(`/pesanan#token=${encodeURIComponent(r.access_token)}`);
     } catch (e2) {
       setErr(explain(e2));

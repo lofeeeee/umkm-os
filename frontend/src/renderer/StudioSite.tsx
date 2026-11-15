@@ -161,6 +161,12 @@ export function StudioSite(props: StudioSiteProps) {
       {/* P9-9: kebijakan privasi & syarat selalu bisa dijangkau dari situs (chat & akun mengumpulkan data). */}
       <footer className="sv2-foot">
         <span>© {props.business.profile.name}</span>
+        {/* UAT 15 Nov customer #5: keranjang/pesanan/akun terjangkau dari halaman depan juga. */}
+        <nav aria-label="Belanja">
+          <a href="/keranjang">Keranjang</a>
+          <a href="/pesanan">Pesanan saya</a>
+          <a href="/akun">Akun</a>
+        </nav>
         <nav aria-label="Informasi toko">
           <a href="/kebijakan-privasi">Kebijakan privasi</a>
           <a href="/syarat-transaksi">Syarat transaksi</a>
