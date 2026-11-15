@@ -3,6 +3,7 @@
 // Analitik percakapan (P6-6, FR-CNV-004): 8 metrik sebagai stat tile + tabel harian. Data dari agregat
 // harian yang bertahan setelah purge isi percakapan (ADR-0012). Hari = tanggal Asia/Jakarta.
 
+import Link from "@/ui/link";
 import { useEffect, useState } from "react";
 
 import { Alert, WithTenant, type TenantCtx } from "@/dashboard/shell";
@@ -136,7 +137,11 @@ function View({ ctx }: { ctx: TenantCtx }) {
           </section>
           <div className="d-grid2">
             <Card flush title="Produk terlaris" label="Produk terlaris">
-              {ov.top_products.length === 0 ? <p className="d-muted" style={{ padding: 20, margin: 0 }}>Belum ada pesanan terbayar.</p> : (
+              {ov.top_products.length === 0 ? (
+                <p className="d-muted" style={{ padding: 20, margin: 0 }}>
+                  Belum ada pesanan terbayar. <Link href={`/products?tenant=${ctx.tenant.id}`}>Pastikan produk aktif</Link> dan bagikan tautan website toko.
+                </p>
+              ) : (
                 <ol className="an-rank">
                   {ov.top_products.map((p) => {
                     const max = Math.max(...ov.top_products.map((x) => x.quantity), 1);

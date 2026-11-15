@@ -4,6 +4,7 @@
 // tutup, draft AI mode Assisted). Pembaruan realtime: SSE tenant hanya mengirim ping `conversation_id`;
 // isi diambil ulang lewat API (masking sesuai permission).
 
+import Link from "@/ui/link";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 
 import { confirm } from "@/ui/dialog";
@@ -123,7 +124,8 @@ function Conversations({ ctx }: { ctx: TenantCtx }) {
         items={(Object.keys(TABS) as Tab[]).map((k) => ({ value: k, label: TABS[k].label, count: counts && TABS[k].count ? TABS[k].count(counts) : undefined }))}
       />
       {items === null ? <div className="d-card"><Skeleton lines={6} /></div> : items.length === 0 ? (
-        <div className="d-card"><EmptyState icon={ChatCircleDots} title="Antrean kosong">{tab === "waiting" ? "Tidak ada pelanggan yang menunggu staf. Kerja bagus!" : "Belum ada percakapan di tab ini."}</EmptyState></div>
+        <div className="d-card"><EmptyState icon={ChatCircleDots} title="Antrean kosong"
+          action={<Link className="d-btn" href={`/ai?tenant=${ctx.tenant.id}`}>Atur Asisten AI & chat website</Link>}>{tab === "waiting" ? "Tidak ada pelanggan yang menunggu staf. Kerja bagus!" : "Belum ada percakapan di tab ini."}</EmptyState></div>
       ) : (
         <ul className="cv-list" aria-label="Daftar percakapan">
           {items.map((c) => {

@@ -226,7 +226,12 @@ function Ai({ ctx }: { ctx: TenantCtx }) {
       </Card>
 
       <Card title="Basis pengetahuan" description="FAQ, kebijakan retur, info pengiriman — dipakai AI untuk menjawab dengan akurat." label="Basis pengetahuan">
-        {docs.length === 0 ? <EmptyState icon={BookOpen} title="Belum ada dokumen">Tambahkan FAQ, kebijakan retur, info pengiriman, dll.</EmptyState> : (
+        {docs.length === 0 ? (
+          <EmptyState icon={BookOpen} title="Belum ada dokumen"
+            action={manage ? <button type="button" className="d-btn" onClick={() => document.getElementById("kb-title")?.focus()}>Tambah dokumen pertama</button> : undefined}>
+            Tambahkan FAQ, kebijakan retur, info pengiriman, dll.
+          </EmptyState>
+        ) : (
           <ul className="d-list" style={{ marginBottom: 16 }}>
             {docs.map((d) => (
               <li key={d.id}>
@@ -325,7 +330,7 @@ function AddDoc({ onAdd }: { onAdd: (t: string, b: string) => void }) {
   return (
     <details className="d-details d-subpanel" open>
       <summary><Plus weight="bold" aria-hidden="true" /> Dokumen baru</summary>
-      <label className="d-field"><span>Judul dokumen</span><input maxLength={200} placeholder="mis. Kebijakan pengiriman" value={t} onChange={(e) => setT(e.target.value)} /></label>
+      <label className="d-field"><span>Judul dokumen</span><input id="kb-title" maxLength={200} placeholder="mis. Kebijakan pengiriman" value={t} onChange={(e) => setT(e.target.value)} /></label>
       <label className="d-field"><span>Isi</span><textarea rows={5} maxLength={50000} value={b} onChange={(e) => setB(e.target.value)} /></label>
       <button className="d-btn" disabled={!t.trim() || !b.trim()} onClick={() => { onAdd(t, b); setT(""); setB(""); }}>Tambah dokumen</button>
     </details>

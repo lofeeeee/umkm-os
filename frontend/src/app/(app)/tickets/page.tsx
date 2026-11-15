@@ -83,7 +83,8 @@ function Tickets({ ctx }: { ctx: TenantCtx }) {
       </div>
       <div className="d-table-wrap">
         {items === null ? <div style={{ padding: 20 }}><Skeleton lines={5} /></div> : items.length === 0 ? (
-          <EmptyState icon={Headset} title={tab || q ? "Tidak ada tiket yang cocok" : "Belum ada tiket"}>
+          <EmptyState icon={Headset} title={tab || q ? "Tidak ada tiket yang cocok" : "Belum ada tiket"}
+            action={tab || q ? undefined : <button type="button" className="d-btn d-btn-primary" onClick={() => document.querySelector<HTMLElement>('[aria-label="Subjek tiket baru"]')?.focus()}>Buat tiket pertama</button>}>
             {tab || q ? "Coba tab atau kata kunci lain." : "Tiket dibuat saat pelanggan butuh bantuan, atau saat staf mengeskalasi percakapan."}
           </EmptyState>
         ) : (

@@ -63,8 +63,9 @@ function Approvals({ ctx }: { ctx: TenantCtx }) {
       <Tabs label="Status permintaan" value={status} onChange={setStatus} items={TABS} />
       {items === null ? <div className="d-card"><Skeleton lines={4} /></div> : items.length === 0 ? (
         <div className="d-card">
-          <EmptyState icon={CheckSquare} title={status === "pending" ? "Tidak ada yang menunggu persetujuan" : "Tidak ada permintaan"}>
-            Permintaan muncul di sini bila toko mewajibkan persetujuan untuk perubahan tertentu. Atur di Kebijakan persetujuan di bawah.
+          <EmptyState icon={CheckSquare} title={status === "pending" ? "Tidak ada yang menunggu persetujuan" : "Tidak ada permintaan"}
+            action={<a className="d-btn" href="#kebijakan-persetujuan">Atur kebijakan persetujuan</a>}>
+            Permintaan muncul di sini bila toko mewajibkan persetujuan untuk perubahan tertentu.
           </EmptyState>
         </div>
       ) : (
@@ -123,7 +124,7 @@ function Policies({ ctx, base, policies, roles, run }: {
 }) {
   const can = ctx.can("tenant.update");
   return (
-    <Card flush title="Kebijakan persetujuan" description="Bila aktif, perubahan jenis ini menunggu persetujuan sebelum diterapkan.">
+    <Card flush id="kebijakan-persetujuan" title="Kebijakan persetujuan" description="Bila aktif, perubahan jenis ini menunggu persetujuan sebelum diterapkan.">
       <div className="d-table-wrap">
         <table className="d-table d-table-stack">
           <thead><tr><th>Jenis perubahan</th><th>Langkah 1 (peran)</th><th>Langkah 2 <span className="d-opt">(opsional)</span></th><th>Aktif</th></tr></thead>
