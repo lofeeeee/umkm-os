@@ -327,19 +327,75 @@ pub async fn document(
         tracing::warn!(served, own = %state.site.shell_hash, "site shell API ≠ build web; <head> per toko dilewati");
         return StatusCode::NOT_FOUND.into_response();
     }
-    match build_meta(
-        &state,
-        t,
-        &host_of(&headers),
-        &clean_path(q.path.as_deref()),
-    )
-    .await
-    {
-        Ok(Some(meta)) => html_document(inject(&shell, &render_head(&meta)), &headers),
+    let host = host_of(&headers);
+    let path = clean_path(q.path.as_deref());
+    match build_meta(&state, t, &host, &path).await {
+        Ok(Some(mut meta)) => {
+            stable_image(&mut meta, &site_origin(&state, &host), &path);
+            html_document(inject(&shell, &render_head(&meta)), &headers)
+        }
         // Langganan habis / toko tanpa versi terbit: shell apa adanya.
         Ok(None) => html_document(shell, &headers),
         Err(_) => StatusCode::NOT_FOUND.into_response(),
     }
+}
+
+fn site_origin(state: &AppState, host: &str) -> String {
+    let scheme = if state.site.scheme.is_empty() {
+        "https"
+    } else {
+        state.site.scheme.as_str()
+    };
+    format!("{scheme}://{host}")
+}
+
+/// og:image & JSON-LD memakai URL STABIL di host toko, bukan signed URL `/files/…` yang kedaluwarsa
+/// dalam ±1 jam: WhatsApp/Facebook menyimpan URL og:image dan mengambilnya lagi belakangan → 404
+/// (UAT 15 Nov customer #2). `/_api/public/og-image` mengalihkan ke signed URL yang segar.
+fn stable_image(meta: &mut HeadMeta, origin: &str, path: &str) {
+    if meta.image.is_none() {
+        return;
+    }
+    let stable = format!("{origin}/_api/public/og-image?path={path}");
+    if let Some(ld) = meta.json_ld.as_mut()
+        && ld.get("image").is_some()
+    {
+        ld["image"] = json!(stable);
+    }
+    meta.image = Some(stable);
+}
+
+/// `GET /api/v1/public/og-image?path=/…` → 302 ke signed URL gambar pratinjau halaman itu (varian
+/// 1280 px). Pengalihan di-cache 5 menit — jauh di bawah sisa umur signature (≥ TTL/2).
+pub async fn og_image(
+    State(state): State<AppState>,
+    HostTenant(t): HostTenant,
+    headers: HeaderMap,
+    Query(q): Query<DocQuery>,
+) -> Response {
+    let path = clean_path(q.path.as_deref());
+    let image = match build_meta(&state, t, &host_of(&headers), &path).await {
+        Ok(Some(m)) => m.image,
+        _ => None,
+    };
+    let Some(mut url) = image else {
+        return StatusCode::NOT_FOUND.into_response();
+    };
+    if url.contains("/files/") && url.contains('?') {
+        url.push_str("&w=1280");
+    }
+    let Ok(loc) = HeaderValue::from_str(&url) else {
+        return StatusCode::NOT_FOUND.into_response();
+    };
+    let mut r = StatusCode::FOUND.into_response();
+    let h = r.headers_mut();
+    h.insert(header::LOCATION, loc);
+    h.insert(
+        header::CACHE_CONTROL,
+        HeaderValue::from_static("public, max-age=300"),
+    );
+    h.insert(header::VARY, HeaderValue::from_static("Host"));
+    r
 }
 
 async fn build_meta(
@@ -397,12 +453,7 @@ async fn build_meta(
         })
     };
 
-    let scheme = if state.site.scheme.is_empty() {
-        "https"
-    } else {
-        state.site.scheme.as_str()
-    };
-    let site_url = format!("{scheme}://{host}");
+    let site_url = site_origin(state, host);
     let url = format!("{site_url}{path}");
     let name = biz.profile.name.clone();
     let store_image = abs(seo_str("image"))
@@ -528,6 +579,7 @@ pub fn shell_hash(shell: &str) -> String {
 pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/api/v1/public/document", get(document))
+        .route("/api/v1/public/og-image", get(og_image))
         .route("/api/v1/public/robots.txt", get(robots))
         .route("/api/v1/public/sitemap.xml", get(sitemap))
 }

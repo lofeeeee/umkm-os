@@ -249,3 +249,84 @@ async fn document_injects_escaped_head_per_host_and_never_leaks(pool: PgPool) {
         "{xml}"
     );
 }
+
+/// UAT 15 Nov customer #2: og:image tidak boleh signed URL yang kedaluwarsa — crawler WhatsApp/FB
+/// menyimpan URL-nya. Head memakai URL stabil di host toko yang mengalihkan ke signed URL segar.
+#[sqlx::test(migrator = "MIGRATOR")]
+async fn og_image_is_a_stable_redirect_not_an_expiring_signed_url(pool: PgPool) {
+    let a = app(&pool).await;
+    let router = build_router(
+        a.state.clone().with_site(SiteHead::new(
+            Some(SHELL.into()),
+            "https://api.ryasai.my.id".into(),
+            "https".into(),
+        )),
+        LIMITS,
+    );
+    let t = tenant(&pool, "kopi").await;
+    let o = member(&pool, t, "Owner").await;
+    let r#ref = upload(&a.router, t, &o, png()).await.json()["data"]["ref"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    let mut d = studio_doc();
+    d["seo"]["image"] = json!(r#ref);
+    publish_doc(&a, t, &o, d).await;
+
+    let r = doc(
+        &router,
+        "/api/v1/public/document?path=/",
+        "kopi.ryasai.my.id",
+        SHELL,
+    )
+    .await;
+    assert_eq!(r.status, 200);
+    let html = String::from_utf8(r.bytes).unwrap();
+    assert!(
+        html.contains(
+            "og:image\" content=\"https://kopi.ryasai.my.id/_api/public/og-image?path=/\""
+        ),
+        "{html}"
+    );
+    assert!(
+        !html.contains("og:image\" content=\"https://api.ryasai.my.id/files/"),
+        "{html}"
+    );
+
+    let g = get(
+        &router,
+        "/api/v1/public/og-image?path=/",
+        "kopi.ryasai.my.id",
+    )
+    .await;
+    assert_eq!(g.status, 302);
+    let loc = g.headers["location"].to_str().unwrap();
+    assert!(
+        loc.starts_with("https://api.ryasai.my.id/files/") && loc.ends_with("&w=1280"),
+        "{loc}"
+    );
+    assert_eq!(g.headers["cache-control"], "public, max-age=300");
+
+    // Toko lain tanpa gambar / host tak dikenal → 404.
+    let _ = tenant(&pool, "lain").await;
+    assert_eq!(
+        get(
+            &router,
+            "/api/v1/public/og-image?path=/",
+            "lain.ryasai.my.id"
+        )
+        .await
+        .status,
+        404
+    );
+    assert_eq!(
+        get(
+            &router,
+            "/api/v1/public/og-image?path=/",
+            "tidakada.ryasai.my.id"
+        )
+        .await
+        .status,
+        404
+    );
+}
