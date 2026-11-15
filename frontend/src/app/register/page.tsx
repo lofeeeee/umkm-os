@@ -64,7 +64,7 @@ export default function Register() {
         </label>
         <label className="d-field"><span>Alamat toko</span>
           <span className="d-input-suffix">
-            <input name="slug" pattern="[a-z0-9-]{3,63}" placeholder="tokosaya" value={effectiveSlug}
+            <input name="slug" pattern="[a-z0-9\-]{3,63}" placeholder="tokosaya" value={effectiveSlug}
               onChange={(e) => { setSlugTouched(true); setSlug(e.target.value.toLowerCase()); }} style={{ paddingRight: domain ? `${domain.length * 7.5 + 24}px` : undefined }} />
             {domain && <em aria-hidden="true">.{domain}</em>}
           </span>
