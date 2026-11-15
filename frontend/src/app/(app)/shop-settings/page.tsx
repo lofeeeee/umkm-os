@@ -99,6 +99,9 @@ function GopayCard({ tenantId, can }: { tenantId: string; can: boolean }) {
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
   const [otpToken, setOtpToken] = useState<string | null>(null);
+  // `sent` menandai OTP sudah diminta → tampilkan form kode. Tidak bergantung pada otp_token
+  // (yang bisa kosong meski OTP terkirim), agar form selalu muncul setelah kirim berhasil.
+  const [sent, setSent] = useState(false);
   const [qris, setQris] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -120,12 +123,12 @@ function GopayCard({ tenantId, can }: { tenantId: string; can: boolean }) {
     try { await fn(); } catch (e) { setErr(describe(e)); } finally { setBusy(false); }
   }
   const requestOtp = () => run(async () => {
-    const r = await api<{ otp_token: string }>("POST", `${base}/connect/request-otp`, { json: { phone } });
-    setOtpToken(r.otp_token); toast.ok("Kode OTP dikirim via SMS/WhatsApp.");
+    const r = await api<{ otp_token?: string }>("POST", `${base}/connect/request-otp`, { json: { phone } });
+    setOtpToken(r.otp_token ?? ""); setSent(true); toast.ok("Kode OTP dikirim via SMS/WhatsApp.");
   });
   const verifyOtp = () => run(async () => {
     setSt(await api<GopayStatus>("POST", `${base}/connect/verify`, { json: { phone, otp, otp_token: otpToken } }));
-    setOtp(""); setOtpToken(null); toast.ok("Akun GoPay terhubung.");
+    setOtp(""); setOtpToken(null); setSent(false); toast.ok("Akun GoPay terhubung.");
   });
   const saveQris = () => run(async () => {
     setSt(await api<GopayStatus>("PUT", `${base}/static-qris`, { json: { qris } }));
@@ -146,7 +149,7 @@ function GopayCard({ tenantId, can }: { tenantId: string; can: boolean }) {
       <Alert kind="error">{err}</Alert>
       {!st.connected ? (
         <div className="d-grid">
-          {!otpToken ? (
+          {!sent ? (
             <>
               <label className="d-field"><span>Nomor HP GoBiz/GoPay Merchant</span>
                 <input disabled={!can} inputMode="tel" placeholder="mis. 0812xxxxxxx" value={phone} onChange={(e) => setPhone(e.target.value)} />
@@ -160,7 +163,7 @@ function GopayCard({ tenantId, can }: { tenantId: string; can: boolean }) {
                 <input disabled={!can} inputMode="numeric" autoComplete="one-time-code" placeholder="Masukkan kode dari SMS/WhatsApp" value={otp} onChange={(e) => setOtp(e.target.value)} />
               </label>
               {can && <div className="d-savebar">
-                <button type="button" className="d-btn d-btn-ghost" onClick={() => { setOtpToken(null); setOtp(""); }}>Ganti nomor</button>
+                <button type="button" className="d-btn d-btn-ghost" onClick={() => { setOtpToken(null); setOtp(""); setSent(false); }}>Ganti nomor</button>
                 <BusyButton type="button" busy={busy} onClick={verifyOtp} disabled={otp.trim().length < 4}>Verifikasi</BusyButton>
               </div>}
             </>

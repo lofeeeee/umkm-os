@@ -99,19 +99,23 @@ fn msg(code: ErrorCode, m: &str) -> ApiError {
     ErrorBody::new(code).with_message(m).into()
 }
 
-/// Peta error GoBiz → HTTP. OTP salah/kedaluwarsa = 400; jaringan/parse = 503.
-fn gobiz_err(e: GobizError) -> ApiError {
+/// Peta error GoBiz → HTTP. `bad_request` dipakai untuk penolakan 4xx GoBiz (pesannya berbeda
+/// antara langkah kirim-OTP dan verifikasi, agar "OTP salah" tidak muncul saat baru mengirim).
+fn gobiz_err(e: GobizError, bad_request: &str) -> ApiError {
     match e {
         GobizError::BadPhone => msg(ErrorCode::ValidationFailed, "Nomor HP tidak valid"),
-        GobizError::Unauthorized | GobizError::Status(_) => {
-            msg(ErrorCode::BadRequest, "Kode OTP salah atau kedaluwarsa")
-        }
+        GobizError::Unauthorized | GobizError::Status(_) => msg(ErrorCode::BadRequest, bad_request),
         GobizError::Egress(_) | GobizError::Parse(_) => msg(
             ErrorCode::ServiceUnavailable,
             "Layanan GoPay sedang tidak dapat dihubungi",
         ),
     }
 }
+
+/// Pesan 4xx saat meminta OTP (bukan soal kode salah).
+const OTP_SEND_FAIL: &str = "Gagal mengirim OTP. Pastikan nomor terdaftar di aplikasi GoPay/GoBiz Merchant, lalu coba lagi.";
+/// Pesan 4xx saat verifikasi OTP.
+const OTP_VERIFY_FAIL: &str = "Kode OTP salah atau kedaluwarsa.";
 
 fn repo_err(e: gopay_repo::GopayRepoError) -> ApiError {
     use gopay_repo::GopayRepoError as E;
@@ -175,8 +179,12 @@ pub async fn request_otp(
 ) -> Result<Json<SuccessEnvelope<OtpChallengeView>>, ApiError> {
     actor.require("tenant.update")?;
     pool(&state)?; // pastikan DB tersedia walau belum dipakai di langkah ini
-    let (local, _) = umkm_infrastructure::gopay::normalize_phone(&body.phone).map_err(gobiz_err)?;
-    let ch = client().request_otp(&local).await.map_err(gobiz_err)?;
+    let (local, _) = umkm_infrastructure::gopay::normalize_phone(&body.phone)
+        .map_err(|e| gobiz_err(e, OTP_SEND_FAIL))?;
+    let ch = client()
+        .request_otp(&local)
+        .await
+        .map_err(|e| gobiz_err(e, OTP_SEND_FAIL))?;
     Ok(Json(SuccessEnvelope::new(
         OtpChallengeView {
             otp_token: ch.otp_token,
@@ -201,11 +209,12 @@ pub async fn verify_otp(
 ) -> Result<Json<SuccessEnvelope<StatusView>>, ApiError> {
     actor.require("tenant.update")?;
     let p = pool(&state)?;
-    let (_, e164) = umkm_infrastructure::gopay::normalize_phone(&body.phone).map_err(gobiz_err)?;
+    let (_, e164) = umkm_infrastructure::gopay::normalize_phone(&body.phone)
+        .map_err(|e| gobiz_err(e, OTP_VERIFY_FAIL))?;
     let session = client()
         .verify_otp(&e164, body.otp.trim(), &body.otp_token, now_ms())
         .await
-        .map_err(gobiz_err)?;
+        .map_err(|e| gobiz_err(e, OTP_VERIFY_FAIL))?;
     gopay_repo::put_session(p, actor.tenant_id, &session, keyring(&state)?)
         .await
         .map_err(repo_err)?;

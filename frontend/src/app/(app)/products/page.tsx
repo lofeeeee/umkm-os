@@ -318,7 +318,7 @@ function Editor({ ctx, base, initial, cats, onCancel, onSaved }: {
             <ImagePicker key={`${r}-${i}`} label={i === 0 ? "Foto sampul" : `Foto ${i + 1}`} value={r}
               onChange={(v) => setP({ ...p, images: v ? p.images.map((x, j) => (j === i ? v : x)) : p.images.filter((_, j) => j !== i) })} />
           ))}
-          {p.images.length < 10 && <ImagePicker label={p.images.length === 0 ? "Foto sampul" : "Tambah foto"} value={undefined} onChange={(v) => v && setP({ ...p, images: [...p.images, v] })} />}
+          {p.images.length < 10 && <ImagePicker key={`add-${p.images.length}`} label={p.images.length === 0 ? "Foto sampul" : "Tambah foto"} value={undefined} onChange={(v) => v && setP({ ...p, images: [...p.images, v] })} />}
         </div>
       </section>
 
