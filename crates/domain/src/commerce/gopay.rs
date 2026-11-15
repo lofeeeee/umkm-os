@@ -47,12 +47,12 @@ pub struct GopayTxn {
 ///
 /// Mengembalikan transaksi pertama yang cocok (urutan input dipertahankan; gateway mengirim terbaru
 /// dulu). Caller lalu menandai `txn.id` sebagai terklaim untuk pesanan ini.
-pub fn match_payment<'a>(
+pub fn match_payment(
     target_rupiah: u64,
     since_ms: i64,
-    txns: &'a [GopayTxn],
+    txns: &[GopayTxn],
     is_claimed: impl Fn(&str) -> bool,
-) -> Option<&'a GopayTxn> {
+) -> Option<&GopayTxn> {
     txns.iter().find(|t| {
         t.status.is_paid()
             && t.amount_rupiah == target_rupiah
