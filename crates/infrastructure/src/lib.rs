@@ -29,6 +29,7 @@ pub mod onboarding_repo;
 pub mod outbox;
 pub mod payment_repo;
 pub(crate) mod pgx;
+pub mod qris_decode;
 pub mod rag;
 pub mod rate_limit;
 pub mod rbac_repo;

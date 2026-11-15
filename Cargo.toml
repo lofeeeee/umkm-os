@@ -14,6 +14,9 @@ publish = false
 image = { version = "0.25.10", default-features = false, features = ["jpeg", "png", "webp"] }
 # P10: render QRIS dinamis jadi SVG (tanpa raster/font); hanya fitur svg.
 qrcode = { version = "0.14.1", default-features = false, features = ["svg"] }
+# P10 lanjutan: baca payload QRIS dari gambar yang sudah diunggah.
+# default-features=false agar tidak menarik fitur img/rqrr; decoding memakai image workspace.
+rqrr = { version = "0.11.0", default-features = false }
 umkm-shared = { path = "crates/shared" }
 umkm-domain = { path = "crates/domain" }
 umkm-application = { path = "crates/application" }

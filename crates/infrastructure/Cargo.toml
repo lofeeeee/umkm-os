@@ -12,6 +12,7 @@ workspace = true
 [dependencies]
 image.workspace = true
 qrcode.workspace = true
+rqrr.workspace = true
 umkm-domain.workspace = true
 umkm-application.workspace = true
 tokio.workspace = true
@@ -37,5 +38,6 @@ serde.workspace = true
 tracing.workspace = true
 
 [dev-dependencies]
+qrcode = { workspace = true, features = ["image"] }
 umkm-database.workspace = true
 axum.workspace = true
