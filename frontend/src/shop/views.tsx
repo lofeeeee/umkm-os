@@ -338,6 +338,13 @@ export function OrderPage() {
       "POST", "/orders/current/gopay-qris", undefined, { "x-order-token": token },
     ).then(setGopay, () => setGopay(null));
   }, [token, order?.status]);
+  // P10: selama menunggu bayar, periksa status berkala agar auto-konfirmasi (GoPay) atau verifikasi
+  // staf langsung terlihat pembeli tanpa menekan "Perbarui status". Berhenti saat status berubah.
+  useEffect(() => {
+    if (!token || order?.status !== "AWAITING_PAYMENT") return;
+    const id = setInterval(() => { void load(token); }, 5000);
+    return () => clearInterval(id);
+  }, [token, order?.status, load]);
   if (token === undefined) return <Shell title="Pesanan"><p className="s-muted" aria-busy="true">Memuat…</p></Shell>;
   if (!token) {
     const saved = savedOrders();
