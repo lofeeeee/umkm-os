@@ -4,7 +4,7 @@
 // Checklist dihitung dari data nyata (bukan flag terpisah) supaya tidak bisa "bohong":
 // profil bisnis, produk aktif, QRIS, website terbit, anggota tim.
 
-import Link from "next/link";
+import Link from "@/ui/link";
 import { useEffect, useState } from "react";
 
 import {
@@ -14,7 +14,7 @@ import {
 import { Alert, WithTenant, type TenantCtx } from "@/dashboard/shell";
 import { api } from "@/lib/api";
 import { ORDER_STATUS, angka, relatif, rupiah, rupiahShort, status } from "@/lib/labels";
-import { Badge, Card, EmptyState, Skeleton, Stat } from "@/ui/page";
+import { Badge, Card, EmptyState, Stat } from "@/ui/page";
 
 interface Overview {
   revenue: string; orders: number; paid_orders: number;
@@ -37,6 +37,22 @@ function greeting(): string {
   return "Selamat malam";
 }
 
+/** Petunjuk tata letak dari kunjungan terakhir (per toko) agar kerangka seukuran konten akhir —
+ *  mencegah layout shift saat data tiba (UAT 15 Nov perf #2, CLS 0.395). Murni kosmetik. */
+interface LayoutHint { orders?: number; allDone?: boolean }
+const hintKey = (t: string) => `umkm-beranda:${t}`;
+function readHint(t: string): LayoutHint {
+  try { return JSON.parse(localStorage.getItem(hintKey(t)) ?? "{}") as LayoutHint; } catch { return {}; }
+}
+function writeHint(t: string, h: LayoutHint) {
+  try { localStorage.setItem(hintKey(t), JSON.stringify({ ...readHint(t), ...h })); } catch { /* opsional */ }
+}
+
+const STAT_LABELS = [
+  { label: "Omzet", icon: CurrencyCircleDollar }, { label: "Pesanan", icon: Receipt }, { label: "Stok menipis", icon: Stack },
+  { label: "Pelanggan", icon: Users }, { label: "Tiket", icon: ChatCircleDots },
+];
+
 /** Hasil `null` = gagal/tak berizin; langkah tersebut dianggap belum diketahui (disembunyikan). */
 const soft = <T,>(p: Promise<T>) => p.then((x) => x, () => null);
 
@@ -47,6 +63,7 @@ function Dashboard({ ctx }: { ctx: TenantCtx }) {
   const [orders, setOrders] = useState<OrderRow[] | null | undefined>(undefined);
   const [setup, setSetup] = useState<Partial<Setup> | null>(null);
   const [gopay, setGopay] = useState<GopayStatus | null>(null);
+  const [hint] = useState<LayoutHint>(() => (typeof window === "undefined" ? {} : readHint(ctx.tenant.id)));
 
   useEffect(() => {
     let live = true;
@@ -57,7 +74,11 @@ function Dashboard({ ctx }: { ctx: TenantCtx }) {
     (can("analytics.read") ? soft(api<Overview>("GET", `${base}/analytics/overview`)) : Promise.resolve(null))
       .then((x) => { if (live) setOv(x); });
     (can("orders.read") ? soft(api<{ items: OrderRow[] }>("GET", `${base}/orders?limit=5`)) : Promise.resolve(null))
-      .then((x) => { if (live) setOrders(x?.items ?? null); });
+      .then((x) => {
+        if (!live) return;
+        setOrders(x?.items ?? null);
+        if (x) writeHint(ctx.tenant.id, { orders: x.items.length });
+      });
     Promise.all([
       soft(api<{ profile: { description?: string | null; phone?: string | null; whatsapp?: string | null }; addresses: unknown[] }>("GET", `${base}/business/profile`)),
       can("products.read") ? soft(api<{ items: unknown[] }>("GET", `${base}/products?limit=1&status=active`)) : Promise.resolve(null),
@@ -73,9 +94,11 @@ function Dashboard({ ctx }: { ctx: TenantCtx }) {
       s.website = !!site?.pages.some((p) => p.published_version !== null);
       if (members) s.team = members.length > 1;
       setSetup(s);
+      const vals = Object.values(s);
+      writeHint(ctx.tenant.id, { allDone: vals.length > 0 && vals.every(Boolean) });
     });
     return () => { live = false; };
-  }, [base, ctx.can]);
+  }, [base, ctx.can, ctx.tenant.id]);
 
   const steps: { key: keyof Setup; title: string; desc: string; href: string; icon: typeof Globe }[] = [
     { key: "profile", title: "Lengkapi profil bisnis", desc: "Alamat, kontak, dan jam buka tampil di website.", href: `/business${q}`, icon: Buildings },
@@ -86,7 +109,10 @@ function Dashboard({ ctx }: { ctx: TenantCtx }) {
   ];
   const known = setup ? steps.filter((s) => setup[s.key] !== undefined) : [];
   const done = known.filter((s) => setup?.[s.key]).length;
-  const allDone = setup !== null && known.length > 0 && done === known.length;
+  const allDone = setup === null ? !!hint.allDone : known.length > 0 && done === known.length;
+  // Jumlah langkah yang akan tampil (untuk kerangka): profil & website selalu, sisanya per izin.
+  const expectedSteps = steps.filter((s) =>
+    s.key === "product" ? ctx.can("products.read") : s.key === "qris" ? ctx.can("tenant.read") : s.key === "team" ? ctx.can("members.read") : true);
 
   return (
     <>
@@ -112,14 +138,14 @@ function Dashboard({ ctx }: { ctx: TenantCtx }) {
           <Link className="d-strong" href={`/shop-settings${q}#gopay`}>Sambungkan ulang</Link>
         </Alert>
       )}
-      {gopay && ctx.can("tenant.update") && !gopay.connected && setup?.qris && (
-        <Alert kind="info">
-          Aktifkan konfirmasi pembayaran otomatis: pesanan yang dibayar lewat QRIS langsung berstatus Diproses tanpa cek manual. Cukup hubungkan sekali.{" "}
-          <Link className="d-strong" href={`/shop-settings${q}#gopay`}>Hubungkan GoPay</Link>
-        </Alert>
-      )}
 
-      {ov === undefined && <span className="d-skel d-skel-block" style={{ height: 96, marginBottom: 24 }} aria-hidden="true" />}
+      {ov === undefined && ctx.can("analytics.read") && (
+        <section aria-busy="true" aria-label="Memuat ringkasan" className="d-stat-grid">
+          {STAT_LABELS.map((x) => (
+            <Stat key={x.label} icon={x.icon} label={x.label} value={<span className="d-skel d-skel-text" />} note={<span className="d-skel d-skel-text" style={{ width: "12ch" }} />} />
+          ))}
+        </section>
+      )}
       {ov && (
         <section aria-label="Ringkasan toko" className="d-stat-grid d-stagger">
           <Stat icon={CurrencyCircleDollar} label="Omzet" value={rupiahShort(ov.revenue)} note={`${angka(ov.paid_orders)} pesanan terbayar`} href={`/analytics${q}`} />
@@ -139,7 +165,25 @@ function Dashboard({ ctx }: { ctx: TenantCtx }) {
               actions={<Link className="d-btn d-btn-ghost d-btn-sm" href={`/orders${q}`}>Lihat semua <ArrowRight weight="bold" aria-hidden="true" /></Link>}
             >
               {orders === undefined ? (
-                <div style={{ padding: 20 }}><Skeleton lines={4} /></div>
+                hint.orders === 0 ? (
+                  <EmptyState icon={Receipt} title="Memuat pesanan…" />
+                ) : (
+                  <div className="d-table-wrap" aria-busy="true" aria-label="Memuat pesanan">
+                    <table className="d-table" aria-hidden="true">
+                      <thead><tr><th>Pesanan</th><th className="d-hide-sm">Pelanggan</th><th>Status</th><th className="d-num">Total</th></tr></thead>
+                      <tbody>
+                        {Array.from({ length: hint.orders ?? 5 }, (_, i) => (
+                          <tr key={i}>
+                            <td><span className="d-skel d-skel-text" /><span className="d-sub"><span className="d-skel d-skel-text" style={{ width: "9ch" }} /></span></td>
+                            <td className="d-hide-sm"><span className="d-skel d-skel-text" style={{ width: "10ch" }} /></td>
+                            <td><span className="d-skel d-skel-text" /></td>
+                            <td className="d-num"><span className="d-skel d-skel-text" /></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )
               ) : orders.length === 0 ? (
                 <EmptyState icon={Receipt} title="Belum ada pesanan">
                   Pesanan dari website toko akan muncul di sini. Pastikan produk aktif dan QRIS sudah diatur.
@@ -165,6 +209,13 @@ function Dashboard({ ctx }: { ctx: TenantCtx }) {
                 </div>
               )}
             </Card>
+          )}
+
+          {gopay && ctx.can("tenant.update") && !gopay.connected && setup?.qris && (
+            <Alert kind="info">
+              Aktifkan konfirmasi pembayaran otomatis: pesanan yang dibayar lewat QRIS langsung berstatus Diproses tanpa cek manual. Cukup hubungkan sekali.{" "}
+              <Link className="d-strong" href={`/shop-settings${q}#gopay`}>Hubungkan GoPay</Link>
+            </Alert>
           )}
 
           <h2 className="d-section-title">Pintasan</h2>
@@ -200,7 +251,22 @@ function Dashboard({ ctx }: { ctx: TenantCtx }) {
             <div className="d-progress" aria-hidden="true" style={{ marginBottom: 12 }}>
               <span style={{ transform: `scaleX(${known.length ? done / known.length : 0})` }} />
             </div>
-            {!setup ? <Skeleton lines={5} /> : (
+            {!setup ? (
+              <ol className="d-steps" aria-hidden="true">
+                {expectedSteps.map((s) => (
+                  <li key={s.key} data-done="false">
+                    <a tabIndex={-1}>
+                      <span className="d-step-dot"><Check weight="bold" /></span>
+                      <span className="d-step-text">
+                        <strong>{s.title}</strong>
+                        <span><span className="d-skel-mask">{s.desc}</span></span>
+                      </span>
+                      <ArrowRight weight="bold" />
+                    </a>
+                  </li>
+                ))}
+              </ol>
+            ) : (
               <ol className="d-steps">
                 {known.map((s) => (
                   <li key={s.key} data-done={setup[s.key] ? "true" : "false"}>
@@ -223,9 +289,9 @@ function Dashboard({ ctx }: { ctx: TenantCtx }) {
       <footer className="d-page-legal">
         <span>© {new Date().getFullYear()} UMKM Business OS</span>
         <nav aria-label="Legal">
-          <a href="/legal/syarat" target="_blank" rel="noopener">Terms of Service</a>
+          <a href="/legal/syarat" target="_blank" rel="noopener">Syarat layanan</a>
           <span aria-hidden="true">·</span>
-          <a href="/legal/privasi" target="_blank" rel="noopener">Privacy Policy</a>
+          <a href="/legal/privasi" target="_blank" rel="noopener">Kebijakan privasi</a>
         </nav>
       </footer>
     </>
