@@ -6,7 +6,7 @@ use std::{sync::Arc, time::Duration};
 use axum::{
     Router,
     body::Body,
-    http::{HeaderMap, Method, Request, header},
+    http::{HeaderMap, Method, Request, StatusCode, header},
 };
 use http_body_util::BodyExt;
 use serde_json::{Value, json};
@@ -483,6 +483,58 @@ async fn cors_allows_only_allowlisted_origin_with_credentials(pool: PgPool) {
         .await
         .unwrap();
     assert!(bad.headers().get("access-control-allow-origin").is_none());
+    // UAT 15 Nov sec #2: preflight origin asing ditolak, tanpa header CORS sama sekali.
+    assert_eq!(bad.status(), StatusCode::FORBIDDEN);
+    assert!(
+        bad.headers()
+            .get("access-control-allow-credentials")
+            .is_none()
+    );
+    assert!(bad.headers().get("access-control-allow-methods").is_none());
+
+    // Request biasa dari origin asing: tidak ada ACAC; dari origin allowlist: ada.
+    let get = |origin: &'static str| {
+        Request::builder()
+            .uri("/healthz")
+            .header("origin", origin)
+            .body(Body::empty())
+            .unwrap()
+    };
+    let foreign = app
+        .clone()
+        .oneshot(get("https://evil.example"))
+        .await
+        .unwrap();
+    assert!(
+        foreign
+            .headers()
+            .get("access-control-allow-credentials")
+            .is_none()
+    );
+    assert!(
+        foreign
+            .headers()
+            .get("access-control-allow-origin")
+            .is_none()
+    );
+    let own = app.clone().oneshot(get(APP)).await.unwrap();
+    assert_eq!(own.headers()["access-control-allow-credentials"], "true");
+    // Tanpa header Origin (same-origin/non-browser): tidak ada header CORS.
+    let none = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri("/healthz")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert!(
+        none.headers()
+            .get("access-control-allow-credentials")
+            .is_none()
+    );
 }
 
 #[sqlx::test(migrator = "MIGRATOR")]

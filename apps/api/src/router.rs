@@ -73,27 +73,73 @@ pub fn build_router(state: AppState, limits: HttpLimits) -> Router {
         .merge(ai::routes())
         .merge(ai::routes_runtime());
     let metrics = state.metrics.clone();
-    let cors = cors_layer(
+    let origins: Arc<Vec<HeaderValue>> = Arc::new(
         state
             .auth
             .as_ref()
             .map(|a| a.allowed_origins.as_slice())
-            .unwrap_or_default(),
+            .unwrap_or_default()
+            .iter()
+            .filter_map(|o| HeaderValue::from_str(o).ok())
+            .collect(),
     );
+    let cors = cors_layer(&origins);
     with_middleware(routes, limits, metrics)
         .with_state(state)
         .layer(cors)
+        // Terluar: membungkus CorsLayer (lihat `cors_guard`).
+        .layer(from_fn(
+            move |req: Request, next: axum::middleware::Next| {
+                let origins = origins.clone();
+                async move { cors_guard(&origins, req, next).await }
+            },
+        ))
+}
+
+/// Pertahanan berlapis di atas `CorsLayer` (UAT 15 Nov sec #2): tower-http mengirim
+/// `Access-Control-Allow-Credentials: true` di SEMUA respons dan menjawab preflight origin
+/// asing secara lengkap. Di sini: preflight dari origin di luar allowlist → 403 tanpa header
+/// CORS; respons tanpa `Access-Control-Allow-Origin` dibersihkan dari header CORS lainnya.
+async fn cors_guard(
+    origins: &[HeaderValue],
+    req: Request,
+    next: axum::middleware::Next,
+) -> axum::response::Response {
+    let allowed = req
+        .headers()
+        .get(header::ORIGIN)
+        .is_some_and(|o| origins.contains(o));
+    let preflight = req.method() == Method::OPTIONS
+        && req
+            .headers()
+            .contains_key(header::ACCESS_CONTROL_REQUEST_METHOD);
+    if preflight && !allowed {
+        return StatusCode::FORBIDDEN.into_response();
+    }
+    let mut res = next.run(req).await;
+    if !res
+        .headers()
+        .contains_key(header::ACCESS_CONTROL_ALLOW_ORIGIN)
+    {
+        let h = res.headers_mut();
+        for name in [
+            header::ACCESS_CONTROL_ALLOW_CREDENTIALS,
+            header::ACCESS_CONTROL_ALLOW_METHODS,
+            header::ACCESS_CONTROL_ALLOW_HEADERS,
+            header::ACCESS_CONTROL_MAX_AGE,
+            header::ACCESS_CONTROL_EXPOSE_HEADERS,
+        ] {
+            h.remove(name);
+        }
+    }
+    res
 }
 
 /// CORS hanya untuk origin allowlist (ADR-0015); tanpa wildcard, dengan credentials.
 /// Daftar kosong = tidak ada header CORS (request lintas-origin diblokir browser).
-fn cors_layer(origins: &[String]) -> CorsLayer {
-    let list: Vec<HeaderValue> = origins
-        .iter()
-        .filter_map(|o| HeaderValue::from_str(o).ok())
-        .collect();
+fn cors_layer(origins: &[HeaderValue]) -> CorsLayer {
     CorsLayer::new()
-        .allow_origin(AllowOrigin::list(list))
+        .allow_origin(AllowOrigin::list(origins.iter().cloned()))
         .allow_credentials(true)
         .allow_methods([
             Method::GET,
