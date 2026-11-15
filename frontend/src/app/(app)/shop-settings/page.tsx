@@ -3,7 +3,7 @@
 // Pengaturan toko online (P3): QRIS statis milik toko (ADR-0004), ongkir, approval, SoD.
 // Hanya Owner (tenant.update) yang dapat mengubah; pergantian QRIS tercatat di audit log.
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { useUploads } from "@/dashboard/assets";
 import { Assets, ImagePicker } from "@/dashboard/editor/fields";
@@ -91,6 +91,19 @@ interface GopayStatus {
   phone_masked: string | null; has_static_qris: boolean;
 }
 
+// Ambil cookie sesi yang dioper ekstensi via fragment URL (#gopay_connect=<base64 cookie>).
+function readConnectCookie(): string | null {
+  if (typeof window === "undefined") return null;
+  const token = window.location.hash.match(/gopay_connect=([^&]+)/)?.[1];
+  if (!token) return null;
+  try {
+    const cookie = decodeURIComponent(escape(atob(decodeURIComponent(token))));
+    return cookie.includes("access_token") && cookie.includes("refresh_token") ? cookie : null;
+  } catch {
+    return null;
+  }
+}
+
 function GopayCard({ tenantId, can }: { tenantId: string; can: boolean }) {
   const base = `/api/v1/tenants/${tenantId}/gopay`;
   const [st, setSt] = useState<GopayStatus | null>(null);
@@ -98,10 +111,13 @@ function GopayCard({ tenantId, can }: { tenantId: string; can: boolean }) {
   // Hubungkan via sesi browser: login OTP GoBiz terkunci reCAPTCHA (hanya bisa di browser),
   // jadi pemilik login di browser lalu menempel cookie/token sesinya.
   const [phone, setPhone] = useState("");
-  const [session, setSession] = useState("");
+  const [session, setSession] = useState<string>(() => readConnectCookie() ?? "");
   const [help, setHelp] = useState(false);
   const [qris, setQris] = useState("");
   const [busy, setBusy] = useState(false);
+  // Sesi datang dari ekstensi (via #gopay_connect) → kirim otomatis sekali.
+  const fromExt = useRef(readConnectCookie() !== null);
+  const autoSent = useRef(false);
 
   useEffect(() => { api<GopayStatus>("GET", base).then(setSt, (e) => setErr(describe(e))); }, [base]);
   // Satukan nomor HP: prefill dari profil bisnis (bisa diubah). Tak menimpa ketikan pengguna.
@@ -133,6 +149,22 @@ function GopayCard({ tenantId, can }: { tenantId: string; can: boolean }) {
     setSt(await api<GopayStatus>("DELETE", base)); toast.ok("Akun GoPay diputus.");
   });
 
+  // Bersihkan fragment token dari URL setelah ditangkap (tanpa setState).
+  useEffect(() => {
+    if (fromExt.current && typeof window !== "undefined") {
+      window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}#gopay`);
+    }
+  }, []);
+  // Kirim otomatis bila sesi datang dari ekstensi & nomor sudah siap (sekali saja).
+  useEffect(() => {
+    if (autoSent.current || !fromExt.current || st?.connected) return;
+    if (can && !busy && session.trim().length >= 20 && phone.trim().length >= 8) {
+      autoSent.current = true;
+      queueMicrotask(() => connectSession());
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session, phone, st, can, busy]);
+
   if (!st) return null;
   return (
     <div id="gopay">
@@ -144,7 +176,7 @@ function GopayCard({ tenantId, can }: { tenantId: string; can: boolean }) {
       {!st.connected ? (
         <div className="d-grid">
           <Alert kind="info">
-            Login GoPay/GoBiz dilindungi verifikasi (reCAPTCHA) yang hanya bisa diselesaikan di browser. Jadi: login sekali di browser, lalu tempel token sesinya di sini. Server memperbarui token dan mengecek pembayaran otomatis setelahnya.
+            <strong>Cara termudah (tanpa menyalin token):</strong> pasang ekstensi browser <em>&quot;UMKM OS — Penghubung GoPay&quot;</em>, login GoBiz di browser (nomor + OTP seperti biasa), lalu klik <em>Hubungkan</em> di ekstensi — kolom di bawah akan terisi dan tersambung sendiri. Login GoPay dilindungi reCAPTCHA sehingga memang harus di browser; ekstensi hanya menangkap sesinya. Tak punya ekstensi? Isi manual di bawah.
           </Alert>
           <label className="d-field"><span>Nomor HP GoBiz/GoPay Merchant</span>
             <input disabled={!can} inputMode="tel" placeholder="mis. 0812xxxxxxx" value={phone} onChange={(e) => setPhone(e.target.value)} />

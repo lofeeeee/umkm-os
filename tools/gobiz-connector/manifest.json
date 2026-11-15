@@ -1,0 +1,12 @@
+{
+  "manifest_version": 3,
+  "name": "UMKM OS — Penghubung GoPay Merchant",
+  "version": "1.0.0",
+  "description": "Menghubungkan akun GoPay/GoBiz Merchant ke UMKM OS tanpa menyalin token manual. Login GoBiz di browser Anda, lalu sesi dikirim otomatis ke dashboard.",
+  "permissions": ["cookies", "storage"],
+  "host_permissions": ["https://api.gobiz.co.id/*"],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Hubungkan GoPay ke UMKM OS"
+  }
+}
