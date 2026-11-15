@@ -572,6 +572,75 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
       security:
       - sessionCookie: []
+  /api/v1/auth/password:
+    post:
+      tags:
+      - auth
+      summary: 'Ubah kata sandi: wajib kata sandi saat ini; sesi lain dicabut, sesi ini tetap.'
+      operationId: change_password
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+        required: true
+      responses:
+        '200':
+          description: Kata sandi diubah
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_PasswordChangedView'
+        '401':
+          description: Tidak ada sesi valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '403':
+          description: CSRF/Origin tidak valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '422':
+          description: Kata sandi saat ini salah / kata sandi baru lemah; `details.field`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '429':
+          description: Rate limit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
   /api/v1/auth/register:
     post:
       tags:
@@ -673,6 +742,172 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
         '408':
           description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/auth/sessions:
+    get:
+      tags:
+      - auth
+      summary: Sesi aktif milik akun ini (maks 50, terakhir dipakai dulu).
+      operationId: list_sessions
+      responses:
+        '200':
+          description: Sesi aktif
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_Vec_SessionView'
+        '401':
+          description: Tidak ada sesi valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/auth/sessions/revoke-others:
+    post:
+      tags:
+      - auth
+      summary: Cabut semua sesi lain (keluar dari semua perangkat lain).
+      operationId: revoke_others
+      responses:
+        '200':
+          description: Jumlah sesi yang dicabut
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_RevokedView'
+        '401':
+          description: Tidak ada sesi valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '403':
+          description: CSRF/Origin tidak valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
+  /api/v1/auth/sessions/{session_id}/revoke:
+    post:
+      tags:
+      - auth
+      summary: Cabut satu sesi milik akun ini. Sesi saat ini tidak bisa dicabut di sini (pakai logout).
+      operationId: revoke_session
+      parameters:
+      - name: session_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Sesi dicabut
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_RevokedView'
+        '401':
+          description: Tidak ada sesi valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '403':
+          description: CSRF/Origin tidak valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '404':
+          description: Sesi tidak ada / milik akun lain / sudah dicabut
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: Sesi saat ini — gunakan logout
           content:
             application/json:
               schema:
@@ -10559,6 +10794,17 @@ components:
           type: integer
           format: int32
       additionalProperties: false
+    ChangePasswordRequest:
+      type: object
+      required:
+      - current_password
+      - new_password
+      properties:
+        current_password:
+          type: string
+        new_password:
+          type: string
+      additionalProperties: false
     ChatMessageView:
       type: object
       required:
@@ -13583,6 +13829,30 @@ components:
           $ref: '#/components/schemas/Meta'
         success:
           type: boolean
+    SuccessEnvelope_PasswordChangedView:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - changed
+          - other_sessions_revoked
+          properties:
+            changed:
+              type: boolean
+            other_sessions_revoked:
+              type: integer
+              format: int64
+              description: Jumlah sesi lain yang dicabut (perangkat lain harus masuk ulang).
+              minimum: 0
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
     SuccessEnvelope_PendingApproval:
       type: object
       required:
@@ -14278,6 +14548,26 @@ components:
                 $ref: '#/components/schemas/StepDto'
             summary:
               type: string
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
+    SuccessEnvelope_RevokedView:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - revoked
+          properties:
+            revoked:
+              type: integer
+              format: int64
+              minimum: 0
         meta:
           $ref: '#/components/schemas/Meta'
         success:
@@ -15563,6 +15853,45 @@ components:
                 type: array
                 items:
                   type: string
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
+    SuccessEnvelope_Vec_SessionView:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            required:
+            - id
+            - created_at
+            - last_seen_at
+            - expires_at
+            - current
+            properties:
+              created_at:
+                type: string
+              current:
+                type: boolean
+                description: Sesi yang dipakai request ini.
+              expires_at:
+                type: string
+              id:
+                type: string
+                format: uuid
+              last_seen_at:
+                type: string
+              user_agent:
+                type:
+                - string
+                - 'null'
+                description: User-Agent saat login (maks 512 karakter); `null` bila tidak dikirim.
         meta:
           $ref: '#/components/schemas/Meta'
         success:

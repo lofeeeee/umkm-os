@@ -8,8 +8,11 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, useSyncExternalStore, type FormEvent } from "react";
 
 import { Alert } from "@/dashboard/shell";
+import { deviceName, relatif } from "@/lib/labels";
+import { PasswordInput } from "@/ui/auth";
+import { confirm } from "@/ui/dialog";
 import { toast } from "@/ui/toast";
-import { BusyButton, Card, PageHeader, PageSkeleton } from "@/ui/page";
+import { Badge, BusyButton, Card, PageHeader, PageSkeleton } from "@/ui/page";
 import { api, ApiError, describe, isMfaRequired, loadSession, tenantParam, type Session, type TenantView } from "@/lib/api";
 
 interface MfaStatus {
@@ -112,7 +115,7 @@ export default function SecurityPage() {
 
   return (
     <>
-      <PageHeader title="Keamanan akun" description="Lindungi akun Anda dengan verifikasi dua langkah (MFA). Pengaturan ini berlaku untuk semua toko Anda." />
+      <PageHeader title="Keamanan akun" description="Kata sandi, perangkat yang sedang masuk, dan verifikasi dua langkah (MFA). Berlaku untuk semua toko Anda." />
       {mustEnroll && status && !status.session_verified && (
         <Alert kind="warn">
           {status.enabled
@@ -204,7 +207,103 @@ export default function SecurityPage() {
       )}
 
       {status && tenantId && <TenantPolicy tenantId={tenantId} verified={status.session_verified} />}
+      {status && session && <ChangePassword />}
+      {status && session && <Sessions />}
     </>
+  );
+}
+
+interface SessionRow { id: string; user_agent: string | null; created_at: string; last_seen_at: string; current: boolean }
+
+/** AUTH-006: perangkat yang sedang masuk; cabut satu atau semua yang lain. */
+function Sessions() {
+  const [list, setList] = useState<SessionRow[] | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const load = useCallback(() => api<SessionRow[]>("GET", "/api/v1/auth/sessions").then(setList, (e) => setErr(describe(e))), []);
+  useEffect(() => { void load(); }, [load]);
+  async function revoke(row: SessionRow) {
+    if (!(await confirm({ title: "Keluarkan perangkat ini?", body: `${deviceName(row.user_agent)} harus masuk lagi untuk memakai akun Anda.`, confirmLabel: "Keluarkan", danger: true }))) return;
+    setBusy(row.id);
+    try { await api("POST", `/api/v1/auth/sessions/${row.id}/revoke`); await load(); toast.ok("Perangkat dikeluarkan."); }
+    catch (e) { setErr(describe(e)); } finally { setBusy(null); }
+  }
+  async function revokeOthers() {
+    if (!(await confirm({ title: "Keluar dari semua perangkat lain?", body: "Semua perangkat selain yang ini harus masuk lagi.", confirmLabel: "Keluar dari semua", danger: true }))) return;
+    setBusy("all");
+    try {
+      const r = await api<{ revoked: number }>("POST", "/api/v1/auth/sessions/revoke-others");
+      await load();
+      toast.ok(r.revoked ? `${r.revoked} perangkat dikeluarkan.` : "Tidak ada perangkat lain.");
+    } catch (e) { setErr(describe(e)); } finally { setBusy(null); }
+  }
+  const others = list?.filter((s) => !s.current).length ?? 0;
+  return (
+    <Card
+      title="Perangkat yang sedang masuk"
+      description="Keluarkan perangkat yang tidak Anda kenali, lalu ganti kata sandi."
+      actions={others > 0 ? <BusyButton type="button" busy={busy === "all"} className="d-btn d-btn-sm" onClick={() => void revokeOthers()}>Keluar dari semua perangkat lain</BusyButton> : undefined}
+    >
+      <Alert kind="error">{err}</Alert>
+      {!list && !err && <span className="d-skel d-skel-block" style={{ height: 96 }} aria-hidden="true" />}
+      {list && (
+        <ul className="d-list" aria-label="Sesi aktif">
+          {list.map((s) => (
+            <li key={s.id}>
+              <div className="d-list-main">
+                <strong>{deviceName(s.user_agent)} {s.current && <Badge tone="ok">Perangkat ini</Badge>}</strong>
+                <span className="d-muted">Masuk {relatif(s.created_at)} · aktif {relatif(s.last_seen_at)}</span>
+              </div>
+              {!s.current && (
+                <BusyButton type="button" busy={busy === s.id} className="d-btn d-btn-sm d-btn-ghost" onClick={() => void revoke(s)}>Keluarkan</BusyButton>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </Card>
+  );
+}
+
+/** Ubah kata sandi: wajib kata sandi saat ini; perangkat lain otomatis dikeluarkan. */
+function ChangePassword() {
+  const [err, setErr] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  async function submit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const f = new FormData(form);
+    if (f.get("new_password") !== f.get("confirm_password")) {
+      setErr("Konfirmasi kata sandi baru tidak sama.");
+      return;
+    }
+    setErr(null);
+    setBusy(true);
+    try {
+      const r = await api<{ other_sessions_revoked: number }>("POST", "/api/v1/auth/password", {
+        json: { current_password: f.get("current_password"), new_password: f.get("new_password") },
+      });
+      form.reset();
+      toast.ok(r.other_sessions_revoked ? `Kata sandi diubah. ${r.other_sessions_revoked} perangkat lain dikeluarkan.` : "Kata sandi diubah.");
+    } catch (e2) {
+      setErr(describe(e2, { current_password: "Kata sandi saat ini", new_password: "Kata sandi baru" }));
+      requestAnimationFrame(() => form.querySelector<HTMLElement>("[role=alert]")?.focus());
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <Card title="Kata sandi" description="Setelah diubah, semua perangkat lain harus masuk lagi.">
+      <form onSubmit={submit} className="d-stack" style={{ maxWidth: 420 }}>
+        <Alert kind="error">{err}</Alert>
+        <PasswordInput name="current_password" label="Kata sandi saat ini" autoComplete="current-password" />
+        <PasswordInput name="new_password" label="Kata sandi baru" autoComplete="new-password" minLength={8} hint="Minimal 8 karakter, tidak sama dengan email." />
+        <label className="d-field"><span>Ulangi kata sandi baru</span>
+          <input name="confirm_password" type="password" autoComplete="new-password" minLength={8} required />
+        </label>
+        <div><BusyButton busy={busy}>Ubah kata sandi</BusyButton></div>
+      </form>
+    </Card>
   );
 }
 

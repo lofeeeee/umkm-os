@@ -147,6 +147,45 @@ pub async fn authenticate_session<'e>(
     }))
 }
 
+#[derive(Debug, Clone)]
+pub struct ActiveSession {
+    pub id: Uuid,
+    pub user_agent: Option<String>,
+    /// RFC 3339 UTC.
+    pub created_at: String,
+    pub last_seen_at: String,
+    pub expires_at: String,
+}
+
+/// Sesi aktif (belum dicabut & belum kedaluwarsa) milik user, terbaru dipakai dulu (AUTH-006).
+pub async fn list_active_sessions<'e>(
+    db: impl PgExecutor<'e>,
+    user_id: Uuid,
+) -> Result<Vec<ActiveSession>, RepoError> {
+    let rows = sqlx::query(
+        "SELECT id, user_agent,
+                to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS\"Z\"') AS created_at,
+                to_char(last_seen_at AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS\"Z\"') AS last_seen_at,
+                to_char(expires_at AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS\"Z\"') AS expires_at
+           FROM user_sessions
+          WHERE user_id = $1 AND revoked_at IS NULL AND expires_at > now()
+          ORDER BY last_seen_at DESC LIMIT 50",
+    )
+    .bind(user_id)
+    .fetch_all(db)
+    .await?;
+    Ok(rows
+        .into_iter()
+        .map(|r| ActiveSession {
+            id: r.get("id"),
+            user_agent: r.get("user_agent"),
+            created_at: r.get("created_at"),
+            last_seen_at: r.get("last_seen_at"),
+            expires_at: r.get("expires_at"),
+        })
+        .collect())
+}
+
 /// Cabut satu sesi milik `user_id` (AUTH-006). Sesi user lain tidak tersentuh.
 pub async fn revoke_session<'e>(
     db: impl PgExecutor<'e>,

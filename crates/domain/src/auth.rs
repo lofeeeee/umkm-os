@@ -213,7 +213,14 @@ pub mod rate_rules {
         window: MIN15,
     };
 
-    pub const ALL: [RateRule; 12] = [
+    /// Ubah kata sandi dari halaman Keamanan (verifikasi kata sandi lama = tebakan password).
+    pub const PASSWORD_CHANGE_PER_USER: RateRule = RateRule {
+        name: "password_change_user",
+        limit: 5,
+        window: MIN15,
+    };
+    pub const ALL: [RateRule; 13] = [
+        PASSWORD_CHANGE_PER_USER,
         CHAT_START_PER_IP,
         CHAT_MESSAGE_PER_IP,
         CHECKOUT_PER_IP,

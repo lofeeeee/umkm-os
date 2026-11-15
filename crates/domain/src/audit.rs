@@ -22,6 +22,8 @@ pub mod actions {
     pub const AUTH_MFA_DISABLED: &str = "auth.mfa.disabled";
     pub const AUTH_MFA_FAILED: &str = "auth.mfa.failed";
     pub const AUTH_MFA_RECOVERY_REGENERATED: &str = "auth.mfa.recovery_regenerated";
+    pub const AUTH_PASSWORD_CHANGED: &str = "auth.password.changed";
+    pub const AUTH_SESSION_REVOKED: &str = "auth.session.revoked";
     pub const TENANT_SECURITY_UPDATED: &str = "tenant.security_updated";
     // P7-3: langganan (anggota tenant) & akses platform admin.
     pub const SUBSCRIPTION_INVOICE_CREATED: &str = "subscription.invoice_created";
@@ -296,6 +298,8 @@ mod tests {
             actions::AUTH_MFA_DISABLED,
             actions::AUTH_MFA_FAILED,
             actions::AUTH_MFA_RECOVERY_REGENERATED,
+            actions::AUTH_PASSWORD_CHANGED,
+            actions::AUTH_SESSION_REVOKED,
             actions::TENANT_SECURITY_UPDATED,
             actions::SUBSCRIPTION_INVOICE_CREATED,
             actions::SUBSCRIPTION_PROOF_SUBMITTED,

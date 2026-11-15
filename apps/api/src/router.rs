@@ -48,6 +48,7 @@ pub fn build_router(state: AppState, limits: HttpLimits) -> Router {
         .route("/healthz", get(health::healthz))
         .route("/readyz", get(health::readyz))
         .merge(auth::routes())
+        .merge(crate::account::routes())
         .merge(crate::mfa::routes())
         .merge(crate::site_head::routes())
         .merge(crate::chat::routes())

@@ -214,3 +214,14 @@ export function auditLabel(action: string): string {
   const v = AUDIT_VERB[verb];
   return o && v ? `${o} ${v}` : o ? `${o} · ${verb.replace(/_/g, " ")}` : action;
 }
+
+/** "Chrome di Windows" dari User-Agent — cukup untuk mengenali perangkat, bukan sidik jari. */
+export function deviceName(ua: string | null): string {
+  if (!ua) return "Perangkat tidak dikenal";
+  const browser = /Edg\//.test(ua) ? "Edge" : /OPR\/|Opera/.test(ua) ? "Opera" : /Firefox\//.test(ua) ? "Firefox"
+    : /SamsungBrowser/.test(ua) ? "Samsung Internet" : /Chrome\//.test(ua) ? "Chrome" : /Safari\//.test(ua) ? "Safari" : null;
+  const os = /Android/.test(ua) ? "Android" : /iPhone|iPad|iPod/.test(ua) ? "iOS" : /Windows/.test(ua) ? "Windows"
+    : /Mac OS X|Macintosh/.test(ua) ? "macOS" : /Linux/.test(ua) ? "Linux" : null;
+  if (browser && os) return `${browser} di ${os}`;
+  return browser ?? os ?? (ua.length > 40 ? `${ua.slice(0, 40)}…` : ua);
+}

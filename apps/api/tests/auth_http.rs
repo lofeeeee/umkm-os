@@ -707,3 +707,305 @@ async fn login_attempts_are_audited_with_request_id_and_hashed_email(pool: PgPoo
         .unwrap();
     assert_eq!(leaked, 0);
 }
+
+/// Masuk sebagai `email` (sudah terdaftar) → (cookie, csrf).
+async fn login_as(app: &Router, email: &str, password: &str, ua: &str) -> (String, String) {
+    let r = send(
+        app,
+        Method::POST,
+        "/api/v1/auth/login",
+        Some(json!({"email": email, "password": password})),
+        &[("origin", APP), ("user-agent", ua)],
+    )
+    .await;
+    assert_eq!(r.status, 200, "{}", r.body);
+    (
+        cookie_pair(&r),
+        r.body["data"]["csrf_token"].as_str().unwrap().to_owned(),
+    )
+}
+
+/// UAT 15 Nov F7 / AUTH-006: daftar sesi aktif, cabut satu & semua sesi lain, isolasi antar akun.
+#[sqlx::test(migrator = "MIGRATOR")]
+async fn sessions_can_be_listed_and_revoked_per_device(pool: PgPool) {
+    let app = app(pool);
+    let r = send(
+        &app,
+        Method::POST,
+        "/api/v1/auth/register",
+        Some(reg_body("sesi@x.id", "Toko Sesi")),
+        &[("origin", APP)],
+    )
+    .await;
+    assert_eq!(r.status, 201);
+    let (c1, k1) = login_as(&app, "sesi@x.id", "rahasia-123", "Laptop").await;
+    let (c2, _) = login_as(&app, "sesi@x.id", "rahasia-123", "Ponsel").await;
+    let (c3, _) = login_as(&app, "sesi@x.id", "rahasia-123", "Tablet").await;
+
+    let list = send(
+        &app,
+        Method::GET,
+        "/api/v1/auth/sessions",
+        None,
+        &[("cookie", &c1)],
+    )
+    .await;
+    assert_eq!(list.status, 200);
+    let items = list.body["data"].as_array().unwrap().clone();
+    assert_eq!(items.len(), 4, "register + 3 login: {}", list.body);
+    assert_eq!(items.iter().filter(|s| s["current"] == true).count(), 1);
+    let current = items.iter().find(|s| s["current"] == true).unwrap();
+    assert_eq!(current["user_agent"], "Laptop");
+    assert!(
+        !list.body.to_string().contains("token"),
+        "hash token tidak bocor"
+    );
+    let phone = items.iter().find(|s| s["user_agent"] == "Ponsel").unwrap()["id"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    let me = current["id"].as_str().unwrap().to_owned();
+
+    // Tanpa CSRF → 403; sesi sendiri → 409.
+    let uri = format!("/api/v1/auth/sessions/{phone}/revoke");
+    assert_eq!(
+        send(
+            &app,
+            Method::POST,
+            &uri,
+            None,
+            &[("cookie", &c1), ("origin", APP)]
+        )
+        .await
+        .status,
+        403
+    );
+    let own = format!("/api/v1/auth/sessions/{me}/revoke");
+    assert_eq!(
+        send(
+            &app,
+            Method::POST,
+            &own,
+            None,
+            &[("cookie", &c1), ("origin", APP), ("x-csrf-token", &k1)]
+        )
+        .await
+        .status,
+        409
+    );
+
+    // Cabut ponsel → sesi ponsel mati, yang lain hidup; cabut lagi → 404.
+    assert_eq!(
+        send(
+            &app,
+            Method::POST,
+            &uri,
+            None,
+            &[("cookie", &c1), ("origin", APP), ("x-csrf-token", &k1)]
+        )
+        .await
+        .status,
+        200
+    );
+    assert_eq!(
+        send(
+            &app,
+            Method::GET,
+            "/api/v1/auth/session",
+            None,
+            &[("cookie", &c2)]
+        )
+        .await
+        .status,
+        401
+    );
+    assert_eq!(
+        send(
+            &app,
+            Method::GET,
+            "/api/v1/auth/session",
+            None,
+            &[("cookie", &c3)]
+        )
+        .await
+        .status,
+        200
+    );
+    assert_eq!(
+        send(
+            &app,
+            Method::POST,
+            &uri,
+            None,
+            &[("cookie", &c1), ("origin", APP), ("x-csrf-token", &k1)]
+        )
+        .await
+        .status,
+        404
+    );
+
+    // Akun lain tidak bisa mencabut sesi akun ini (404 seragam).
+    let r = send(
+        &app,
+        Method::POST,
+        "/api/v1/auth/register",
+        Some(reg_body("lain@x.id", "Toko Lain")),
+        &[("origin", APP)],
+    )
+    .await;
+    let (co, ko) = (
+        cookie_pair(&r),
+        r.body["data"]["csrf_token"].as_str().unwrap().to_owned(),
+    );
+    let tablet = items.iter().find(|s| s["user_agent"] == "Tablet").unwrap()["id"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    let t_uri = format!("/api/v1/auth/sessions/{tablet}/revoke");
+    assert_eq!(
+        send(
+            &app,
+            Method::POST,
+            &t_uri,
+            None,
+            &[("cookie", &co), ("origin", APP), ("x-csrf-token", &ko)]
+        )
+        .await
+        .status,
+        404
+    );
+    assert_eq!(
+        send(
+            &app,
+            Method::GET,
+            "/api/v1/auth/session",
+            None,
+            &[("cookie", &c3)]
+        )
+        .await
+        .status,
+        200
+    );
+
+    // Keluar dari semua perangkat lain: tablet + sesi register dicabut, sesi ini tetap.
+    let o = send(
+        &app,
+        Method::POST,
+        "/api/v1/auth/sessions/revoke-others",
+        None,
+        &[("cookie", &c1), ("origin", APP), ("x-csrf-token", &k1)],
+    )
+    .await;
+    assert_eq!(o.status, 200);
+    assert_eq!(o.body["data"]["revoked"], 2);
+    assert_eq!(
+        send(
+            &app,
+            Method::GET,
+            "/api/v1/auth/session",
+            None,
+            &[("cookie", &c3)]
+        )
+        .await
+        .status,
+        401
+    );
+    let list = send(
+        &app,
+        Method::GET,
+        "/api/v1/auth/sessions",
+        None,
+        &[("cookie", &c1)],
+    )
+    .await;
+    assert_eq!(list.body["data"].as_array().unwrap().len(), 1);
+}
+
+/// Ubah kata sandi: wajib kata sandi lama, kebijakan kata sandi, sesi lain dicabut.
+#[sqlx::test(migrator = "MIGRATOR")]
+async fn change_password_requires_current_and_revokes_other_sessions(pool: PgPool) {
+    let app = app(pool);
+    let r = send(
+        &app,
+        Method::POST,
+        "/api/v1/auth/register",
+        Some(reg_body("pw@x.id", "Toko Pw")),
+        &[("origin", APP)],
+    )
+    .await;
+    assert_eq!(r.status, 201);
+    let (c1, k1) = login_as(&app, "pw@x.id", "rahasia-123", "Laptop").await;
+    let (c2, _) = login_as(&app, "pw@x.id", "rahasia-123", "Ponsel").await;
+    let h = [
+        ("cookie", c1.as_str()),
+        ("origin", APP),
+        ("x-csrf-token", k1.as_str()),
+    ];
+    let post = |b: Value| send(&app, Method::POST, "/api/v1/auth/password", Some(b), &h);
+
+    let wrong =
+        post(json!({"current_password": "salah-sekali", "new_password": "baru-rahasia-456"})).await;
+    assert_eq!(wrong.status, 422);
+    assert_eq!(wrong.body["error"]["details"]["field"], "current_password");
+    let weak = post(json!({"current_password": "rahasia-123", "new_password": "pendek"})).await;
+    assert_eq!(
+        (weak.status, weak.body["error"]["details"]["field"].as_str()),
+        (422, Some("new_password"))
+    );
+    let same =
+        post(json!({"current_password": "rahasia-123", "new_password": "rahasia-123"})).await;
+    assert_eq!(same.status, 422);
+    // Ditolak tidak mengubah apa pun: sesi lain masih hidup.
+    assert_eq!(
+        send(
+            &app,
+            Method::GET,
+            "/api/v1/auth/session",
+            None,
+            &[("cookie", &c2)]
+        )
+        .await
+        .status,
+        200
+    );
+
+    let ok =
+        post(json!({"current_password": "rahasia-123", "new_password": "baru-rahasia-456"})).await;
+    assert_eq!(ok.status, 200, "{}", ok.body);
+    assert_eq!(ok.body["data"]["other_sessions_revoked"], 2);
+    assert_eq!(
+        send(
+            &app,
+            Method::GET,
+            "/api/v1/auth/session",
+            None,
+            &[("cookie", &c1)]
+        )
+        .await
+        .status,
+        200
+    );
+    assert_eq!(
+        send(
+            &app,
+            Method::GET,
+            "/api/v1/auth/session",
+            None,
+            &[("cookie", &c2)]
+        )
+        .await
+        .status,
+        401
+    );
+    // Kata sandi lama tidak berlaku, yang baru berlaku.
+    let old = send(
+        &app,
+        Method::POST,
+        "/api/v1/auth/login",
+        Some(json!({"email": "pw@x.id", "password": "rahasia-123"})),
+        &[("origin", APP)],
+    )
+    .await;
+    assert_eq!(old.status, 401);
+    login_as(&app, "pw@x.id", "baru-rahasia-456", "Laptop").await;
+}
