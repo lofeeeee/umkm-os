@@ -11,7 +11,7 @@ import {
   ArrowRight, Buildings, ChatCircleDots, Check, CurrencyCircleDollar, Globe, Package, Receipt, Stack, Users, UsersThree,
 } from "@phosphor-icons/react/ssr";
 
-import { WithTenant, type TenantCtx } from "@/dashboard/shell";
+import { Alert, WithTenant, type TenantCtx } from "@/dashboard/shell";
 import { api } from "@/lib/api";
 import { ORDER_STATUS, angka, relatif, rupiah, rupiahShort, status } from "@/lib/labels";
 import { Badge, Card, EmptyState, Skeleton, Stat } from "@/ui/page";
@@ -23,6 +23,7 @@ interface Overview {
 }
 interface OrderRow { id: string; code: string; status: string; customer_name: string | null; total: string; created_at: string }
 interface Setup { profile: boolean; product: boolean; qris: boolean; website: boolean; team: boolean }
+interface GopayStatus { connected: boolean; status: string | null }
 
 export default function Home() {
   return <WithTenant>{(ctx) => <Dashboard ctx={ctx} />}</WithTenant>;
@@ -45,10 +46,14 @@ function Dashboard({ ctx }: { ctx: TenantCtx }) {
   const [ov, setOv] = useState<Overview | null | undefined>(undefined);
   const [orders, setOrders] = useState<OrderRow[] | null | undefined>(undefined);
   const [setup, setSetup] = useState<Partial<Setup> | null>(null);
+  const [gopay, setGopay] = useState<GopayStatus | null>(null);
 
   useEffect(() => {
     let live = true;
     const can = ctx.can;
+    // P10: status GoPay untuk banner "hubungkan / sambungkan ulang" (hanya pemilik).
+    (can("tenant.update") ? soft(api<GopayStatus>("GET", `${base}/gopay`)) : Promise.resolve(null))
+      .then((x) => { if (live) setGopay(x); });
     (can("analytics.read") ? soft(api<Overview>("GET", `${base}/analytics/overview`)) : Promise.resolve(null))
       .then((x) => { if (live) setOv(x); });
     (can("orders.read") ? soft(api<{ items: OrderRow[] }>("GET", `${base}/orders?limit=5`)) : Promise.resolve(null))
@@ -99,6 +104,20 @@ function Dashboard({ ctx }: { ctx: TenantCtx }) {
           <Link className="d-btn d-btn-primary" href={`/website${q}`}>Kelola website</Link>
         </div>
       </div>
+
+      {/* P10: sinkron pembayaran GoPay — muncul tepat setelah login bila perlu tindakan. */}
+      {gopay && ctx.can("tenant.update") && gopay.connected && gopay.status === "needs_relogin" && (
+        <Alert kind="warn">
+          Koneksi GoPay terputus — pembayaran QRIS tidak lagi dikonfirmasi otomatis sampai disambungkan ulang.{" "}
+          <Link className="d-strong" href={`/shop-settings${q}#gopay`}>Sambungkan ulang</Link>
+        </Alert>
+      )}
+      {gopay && ctx.can("tenant.update") && !gopay.connected && setup?.qris && (
+        <Alert kind="info">
+          Aktifkan konfirmasi pembayaran otomatis: pesanan yang dibayar lewat QRIS langsung berstatus Diproses tanpa cek manual. Cukup hubungkan sekali.{" "}
+          <Link className="d-strong" href={`/shop-settings${q}#gopay`}>Hubungkan GoPay</Link>
+        </Alert>
+      )}
 
       {ov === undefined && <span className="d-skel d-skel-block" style={{ height: 96, marginBottom: 24 }} aria-hidden="true" />}
       {ov && (

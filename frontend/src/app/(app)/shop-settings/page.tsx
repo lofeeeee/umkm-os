@@ -103,6 +103,17 @@ function GopayCard({ tenantId, can }: { tenantId: string; can: boolean }) {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => { api<GopayStatus>("GET", base).then(setSt, (e) => setErr(describe(e))); }, [base]);
+  // Satukan nomor HP: prefill dari profil bisnis (bisa diubah). Tak menimpa ketikan pengguna.
+  useEffect(() => {
+    api<{ profile: { phone?: string | null; whatsapp?: string | null } }>("GET", `/api/v1/tenants/${tenantId}/business/profile`)
+      .then((b) => { const p = b.profile.phone || b.profile.whatsapp; if (p) setPhone((cur) => cur || p); }, () => {});
+  }, [tenantId]);
+  // Deep-link dari banner beranda (#gopay): gulirkan kartu ke tampilan.
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.location.hash === "#gopay") {
+      document.getElementById("gopay")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [st]);
 
   async function run(fn: () => Promise<void>) {
     setErr(null); setBusy(true);
@@ -127,6 +138,7 @@ function GopayCard({ tenantId, can }: { tenantId: string; can: boolean }) {
 
   if (!st) return null;
   return (
+    <div id="gopay">
     <Card
       title="Konfirmasi otomatis (GoPay Merchant)"
       description="Opsional. Hubungkan akun GoPay/GoBiz Merchant toko agar pembayaran QRIS dikonfirmasi otomatis — pesanan langsung berstatus Diproses tanpa Anda cek manual. Gratis untuk usaha mikro. Konfirmasi manual tetap tersedia sebagai cadangan."
@@ -178,5 +190,6 @@ function GopayCard({ tenantId, can }: { tenantId: string; can: boolean }) {
         </>
       )}
     </Card>
+    </div>
   );
 }
