@@ -83,6 +83,32 @@ pub struct HttpResponse {
     pub body: Vec<u8>,
 }
 
+/// Header permintaan untuk [`Egress::request`]. `sensitive` menandai nilai yang tak boleh di-log.
+#[derive(Debug, Clone, Copy)]
+pub struct Header<'a> {
+    pub name: &'a str,
+    pub value: &'a str,
+    pub sensitive: bool,
+}
+
+impl<'a> Header<'a> {
+    pub fn plain(name: &'a str, value: &'a str) -> Self {
+        Self {
+            name,
+            value,
+            sensitive: false,
+        }
+    }
+
+    pub fn sensitive(name: &'a str, value: &'a str) -> Self {
+        Self {
+            name,
+            value,
+            sensitive: true,
+        }
+    }
+}
+
 /// Klien keluar. Klon murah (berbagi semaphore konkurensi).
 #[derive(Debug, Clone)]
 pub struct Egress {
@@ -163,6 +189,29 @@ impl Egress {
         bearer: Option<&str>,
         body: Option<Vec<u8>>,
     ) -> Result<HttpResponse, SsrfError> {
+        // Header bawaan jalur AI: accept + (jika ada body) content-type JSON, lalu Authorization.
+        let mut headers: Vec<Header<'_>> = vec![Header::plain("accept", "application/json")];
+        if body.is_some() {
+            headers.push(Header::plain("content-type", "application/json"));
+        }
+        let auth;
+        if let Some(k) = bearer {
+            auth = format!("Bearer {k}");
+            headers.push(Header::sensitive("authorization", &auth));
+        }
+        self.request(method, url, &headers, body).await
+    }
+
+    /// Jalur umum dengan header kustom (mis. sesi GoPay/GoBiz: cookie, x-appid, origin). Semua kontrol
+    /// SSRF 1–9 tetap berlaku — header tidak memengaruhi URL/IP/redirect/ukuran. Header bernama
+    /// `authorization`/`cookie` ditandai sensitif (tidak di-log). Caller menyusun query di `url`.
+    pub async fn request(
+        &self,
+        method: reqwest::Method,
+        url: &str,
+        headers: &[Header<'_>],
+        body: Option<Vec<u8>>,
+    ) -> Result<HttpResponse, SsrfError> {
         let _permit = self
             .permits
             .clone()
@@ -178,17 +227,19 @@ impl Egress {
             .resolve_to_addrs(&target.host, &addrs)
             .build()
             .map_err(|_| SsrfError::Transport)?;
-        let mut req = client
-            .request(method, target.url.clone())
-            .header("accept", "application/json");
-        if let Some(b) = body {
-            req = req.header("content-type", "application/json").body(b);
-        }
-        if let Some(k) = bearer {
-            let mut v = reqwest::header::HeaderValue::from_str(&format!("Bearer {k}"))
+        let mut req = client.request(method, target.url.clone());
+        for h in headers {
+            let name = reqwest::header::HeaderName::from_bytes(h.name.as_bytes())
                 .map_err(|_| SsrfError::InvalidUrl)?;
-            v.set_sensitive(true);
-            req = req.header(reqwest::header::AUTHORIZATION, v);
+            let mut value = reqwest::header::HeaderValue::from_str(h.value)
+                .map_err(|_| SsrfError::InvalidUrl)?;
+            if h.sensitive || name == reqwest::header::AUTHORIZATION || name == "cookie" {
+                value.set_sensitive(true);
+            }
+            req = req.header(name, value);
+        }
+        if let Some(b) = body {
+            req = req.body(b);
         }
         let mut resp = req.send().await.map_err(map_err)?;
         let status = resp.status();
