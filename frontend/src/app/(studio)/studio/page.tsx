@@ -38,6 +38,7 @@ import { PagesPanel, type PageItem } from "@/studio/PagesPanel";
 import { ThemePanel, type ThemeConfig } from "@/studio/ThemePanel";
 import { DrawPanel, type DrawConfig, type DrawTool, type DrawTarget } from "@/studio/DrawPanel";
 import { DrawingLayer, type DrawingStroke } from "@/studio/DrawingLayer";
+import { StudioNavbar } from "@/studio/StudioNavbar";
 import { ImageCropModal } from "@/ui/ImageCropModal";
 import { ApiError, describe } from "@/lib/api";
 import { waktu } from "@/lib/labels";
@@ -587,6 +588,94 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
   const colW = (DESIGN_WIDTH - GAP * (COLS - 1)) / COLS;
   const pw = (w: number) => w * colW + (w - 1) * GAP;
   const ph = (h: number) => h * ROW + (h - 1) * GAP;
+  const bgUrl = st.backgroundImage ? (assets.url(st.backgroundImage) ?? st.backgroundImage) : undefined;
+  const isSideNav = st.navbarStyle === "side";
+
+  const canvasElement = (
+    <Canvas
+      scale={scale}
+      cells={gridCells}
+      onChange={(cells) => update((s) => ({ ...s, cells: [...cells, ...s.cells.filter(isEmbed)] }), "drag")}
+      onMeasure={onMeasure}
+      onResizeH={onResizeH}
+      onDropFile={(id, f) => void putPhoto(id, f)}
+      acceptsFile={(c) => takesPhoto(c.kind)}
+      selected={sel}
+      onSelect={setSel}
+      onRemove={remove}
+      onDropPlugin={(k, at) => add(k as PluginKind, at)}
+      render={(c) => renderCell(c, sel === c.id)}
+      label={(c) => pluginDef(c.kind).name}
+      isDrawingActive={activeTab === "draw" && drawTool !== null}
+      backgroundLayer={
+        <DrawingLayer
+          target="background"
+          strokes={st.drawings ?? []}
+          width={DESIGN_WIDTH}
+          height={canvasHeight}
+          activeTool={activeTab === "draw" && drawTarget === "background" ? drawTool : null}
+          currentConfig={drawConfig}
+          onAddStroke={addStroke}
+          onEraseStroke={eraseStroke}
+        />
+      }
+      cellOverlay={(c) => (
+        <DrawingLayer
+          target={c.id}
+          strokes={st.drawings ?? []}
+          width={pw(c.w)}
+          height={ph(c.h)}
+          activeTool={activeTab === "draw" && drawTarget === "cell" && sel === c.id ? drawTool : null}
+          currentConfig={drawConfig}
+          onAddStroke={addStroke}
+          onEraseStroke={eraseStroke}
+        />
+      )}
+      toolbar={(c) => (
+        <>
+          {needsUpgrade(pluginPlan(c.kind), planCode) && <span className="st-clip st-pro" title="Tidak tampil di situs sampai toko memakai paket Pro">Butuh paket Pro</span>}
+          {c.kind === "product_grid" && noPhoto > 0 && (
+            <Link className="st-clip st-nudge" href={`/products?tenant=${ctx.tenant.id}`}>{noPhoto} produk tanpa foto →</Link>
+          )}
+          {clipped[c.id] && c.autoH === false && <span className="st-clip" title="Isi lebih panjang dari kotak">Terpotong</span>}
+          {takesPhoto(c.kind) && (
+            <label className="st-tool" title={c.kind === "gallery" ? "Tambah foto" : "Ganti foto"} aria-label={c.kind === "gallery" ? "Tambah foto" : "Ganti foto"}>
+              <ImageSquare weight="bold" />
+              <input type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void putPhoto(c.id, f); }} />
+            </label>
+          )}
+          {takesPhoto(c.kind) && (
+            <button
+              type="button"
+              className="st-tool"
+              onClick={() => {
+                const k = IMAGE_KEY[c.kind];
+                const ref = k ? (c.data[k] as string) : null;
+                if (ref && assets.url(ref)) {
+                  setCropModal({ open: true, cellId: c.id, imageSrc: assets.url(ref)! });
+                } else {
+                  toast.error("Belum ada foto yang dipasang untuk dipotong.");
+                }
+              }}
+              aria-label="Potong foto"
+              title="Potong foto"
+            >
+              <Crop weight="bold" />
+            </button>
+          )}
+          {c.kind === "chatbot" && (
+            <button type="button" className="st-tool" onClick={() => setChatOpen(c.id, c.chatOpen === false)} aria-label={c.chatOpen === false ? "Maksimalkan chatbot" : "Minimalkan chatbot"} title={c.chatOpen === false ? "Maksimalkan" : "Minimalkan"}>
+              {c.chatOpen === false ? <CaretUp weight="bold" /> : <CaretDown weight="bold" />}
+            </button>
+          )}
+          <button type="button" className={`st-tool${c.locked ? " st-tool-on" : ""}`} onClick={() => setCell(c.id, { locked: !c.locked }, "")} aria-pressed={!!c.locked} aria-label={c.locked ? "Buka kunci posisi" : "Kunci posisi"} title={c.locked ? "Buka kunci posisi" : "Kunci posisi — plugin lain tidak akan menggeser ini"}>
+            {c.locked ? <LockSimple weight="fill" /> : <LockSimpleOpen weight="bold" />}
+          </button>
+          <button type="button" className="st-tool" onClick={() => setFull(c.id)} aria-label={`Lihat penuh ${pluginDef(c.kind).name}`} title="Lihat penuh"><ArrowsOut weight="bold" /></button>
+        </>
+      )}
+    />
+  );
 
   return (
     <Assets.Provider value={assets}>
@@ -750,93 +839,82 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
         </aside>
 
         <div className="sx-scroll sx-canvas" onPointerDown={(e) => { if (e.target === e.currentTarget) setSel(null); }}>
-        <div className="st-stage" data-surface={st.surface} style={{ ["--s-primary" as string]: st.primary, ["--s-size" as string]: st.textScale ?? 1 }}>
+        <div
+          className="st-stage"
+          data-surface={st.surface}
+          style={{
+            ["--s-primary" as string]: st.primary,
+            ["--s-size" as string]: st.textScale ?? 1,
+            ...(bgUrl ? { ["--s-bg-img" as string]: `url("${bgUrl}")` } : {}),
+            ["--s-bg-size" as string]: st.backgroundSize ?? "cover",
+            ["--s-bg-pos" as string]: st.backgroundPosition ?? "center",
+            ["--s-bg-opacity" as string]: ((st.backgroundOpacity ?? 0) / 100).toString(),
+            position: "relative",
+          }}
+        >
+          {bgUrl && (
+            <div
+              className="s-bg-overlay"
+              aria-hidden="true"
+              style={{
+                position: "absolute",
+                inset: 0,
+                pointerEvents: "none",
+                backgroundImage: "var(--s-bg-img)",
+                backgroundSize: "var(--s-bg-size, cover)",
+                backgroundPosition: "var(--s-bg-pos, center)",
+                backgroundRepeat: st.backgroundSize === "repeat" ? "repeat" : "no-repeat",
+                opacity: "var(--s-bg-opacity, 0)",
+                backdropFilter: "blur(12px)",
+                WebkitBackdropFilter: "blur(12px)",
+                zIndex: 0,
+              }}
+            />
+          )}
           <div ref={stageRef} className="st-measure" />
           {device === "desktop" ? (
-            <Canvas
-              scale={scale}
-              cells={gridCells}
-              onChange={(cells) => update((s) => ({ ...s, cells: [...cells, ...s.cells.filter(isEmbed)] }), "drag")}
-              onMeasure={onMeasure}
-              onResizeH={onResizeH}
-              onDropFile={(id, f) => void putPhoto(id, f)}
-              acceptsFile={(c) => takesPhoto(c.kind)}
-              selected={sel}
-              onSelect={setSel}
-              onRemove={remove}
-              onDropPlugin={(k, at) => add(k as PluginKind, at)}
-              render={(c) => renderCell(c, sel === c.id)}
-              label={(c) => pluginDef(c.kind).name}
-              backgroundLayer={
-                <DrawingLayer
-                  target="background"
-                  strokes={st.drawings ?? []}
-                  width={DESIGN_WIDTH}
-                  height={canvasHeight}
-                  activeTool={activeTab === "draw" && drawTarget === "background" ? drawTool : null}
-                  currentConfig={drawConfig}
-                  onAddStroke={addStroke}
-                  onEraseStroke={eraseStroke}
+            isSideNav ? (
+              <div className="st-stage-side-wrap">
+                <StudioNavbar
+                  style="side"
+                  business={business}
+                  pages={pages}
+                  activeSlug={activeSlug}
+                  onSelectPage={(slug) => void switchPage(slug)}
+                  logoUrl={business.profile.logo ? assets.url(business.profile.logo) : undefined}
+                  primaryColor={st.primary}
                 />
-              }
-              cellOverlay={(c) => (
-                <DrawingLayer
-                  target={c.id}
-                  strokes={st.drawings ?? []}
-                  width={pw(c.w)}
-                  height={ph(c.h)}
-                  activeTool={activeTab === "draw" && drawTarget === "cell" && sel === c.id ? drawTool : null}
-                  currentConfig={drawConfig}
-                  onAddStroke={addStroke}
-                  onEraseStroke={eraseStroke}
+                <div className="st-stage-canvas-flex">
+                  {canvasElement}
+                </div>
+              </div>
+            ) : (
+              <>
+                <StudioNavbar
+                  style="top"
+                  sticky={st.navbarSticky}
+                  business={business}
+                  pages={pages}
+                  activeSlug={activeSlug}
+                  onSelectPage={(slug) => void switchPage(slug)}
+                  logoUrl={business.profile.logo ? assets.url(business.profile.logo) : undefined}
+                  primaryColor={st.primary}
                 />
-              )}
-              toolbar={(c) => (
-                <>
-                  {needsUpgrade(pluginPlan(c.kind), planCode) && <span className="st-clip st-pro" title="Tidak tampil di situs sampai toko memakai paket Pro">Butuh paket Pro</span>}
-                  {c.kind === "product_grid" && noPhoto > 0 && (
-                    <Link className="st-clip st-nudge" href={`/products?tenant=${ctx.tenant.id}`}>{noPhoto} produk tanpa foto →</Link>
-                  )}
-                  {clipped[c.id] && c.autoH === false && <span className="st-clip" title="Isi lebih panjang dari kotak">Terpotong</span>}
-                  {takesPhoto(c.kind) && (
-                    <label className="st-tool" title={c.kind === "gallery" ? "Tambah foto" : "Ganti foto"} aria-label={c.kind === "gallery" ? "Tambah foto" : "Ganti foto"}>
-                      <ImageSquare weight="bold" />
-                      <input type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void putPhoto(c.id, f); }} />
-                    </label>
-                  )}
-                  {takesPhoto(c.kind) && (
-                    <button
-                      type="button"
-                      className="st-tool"
-                      onClick={() => {
-                        const k = IMAGE_KEY[c.kind];
-                        const ref = k ? (c.data[k] as string) : null;
-                        if (ref && assets.url(ref)) {
-                          setCropModal({ open: true, cellId: c.id, imageSrc: assets.url(ref)! });
-                        } else {
-                          toast.error("Belum ada foto yang dipasang untuk dipotong.");
-                        }
-                      }}
-                      aria-label="Potong foto"
-                      title="Potong foto"
-                    >
-                      <Crop weight="bold" />
-                    </button>
-                  )}
-                  {c.kind === "chatbot" && (
-                    <button type="button" className="st-tool" onClick={() => setChatOpen(c.id, c.chatOpen === false)} aria-label={c.chatOpen === false ? "Maksimalkan chatbot" : "Minimalkan chatbot"} title={c.chatOpen === false ? "Maksimalkan" : "Minimalkan"}>
-                      {c.chatOpen === false ? <CaretUp weight="bold" /> : <CaretDown weight="bold" />}
-                    </button>
-                  )}
-                  <button type="button" className={`st-tool${c.locked ? " st-tool-on" : ""}`} onClick={() => setCell(c.id, { locked: !c.locked }, "")} aria-pressed={!!c.locked} aria-label={c.locked ? "Buka kunci posisi" : "Kunci posisi"} title={c.locked ? "Buka kunci posisi" : "Kunci posisi — plugin lain tidak akan menggeser ini"}>
-                    {c.locked ? <LockSimple weight="fill" /> : <LockSimpleOpen weight="bold" />}
-                  </button>
-                  <button type="button" className="st-tool" onClick={() => setFull(c.id)} aria-label={`Lihat penuh ${pluginDef(c.kind).name}`} title="Lihat penuh"><ArrowsOut weight="bold" /></button>
-                </>
-              )}
-            />
+                {canvasElement}
+              </>
+            )
           ) : (
             <div className="st-phone">
+              <StudioNavbar
+                style="top"
+                sticky={st.navbarSticky}
+                business={business}
+                pages={pages}
+                activeSlug={activeSlug}
+                onSelectPage={(slug) => void switchPage(slug)}
+                logoUrl={business.profile.logo ? assets.url(business.profile.logo) : undefined}
+                primaryColor={st.primary}
+              />
               {mobileOrder(gridCells).map((c) => <div key={c.id} className="st-phone-cell">{renderCell(c)}</div>)}
               <div className="st-dock"><FloatingChat cell={floating} primary={st.primary} onToggle={setChatOpen} onSelect={setSel} selected={sel} /><FloatingWa cell={floatingWa} onSelect={setSel} selected={sel} /></div>
             </div>

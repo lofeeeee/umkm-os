@@ -330,4 +330,222 @@
   }
 }
 
+/* ============================================================ Studio Navbar Preview */
+.st-navbar-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 24px;
+  background: var(--bg-surface, var(--card, #ffffff));
+  border-bottom: 1px solid var(--border, var(--line, #e4e4e7));
+  border-radius: 14px 14px 0 0;
+  position: relative;
+  z-index: 10;
+  transition: all 0.2s ease;
+}
+
+.st-navbar-top.st-navbar-sticky {
+  position: sticky;
+  top: 0;
+  box-shadow: 0 4px 16px -4px rgba(0, 0, 0, 0.06);
+  backdrop-filter: blur(8px);
+}
+
+.st-navbar-side {
+  width: 220px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  padding: 24px 16px;
+  gap: 20px;
+  background: var(--bg-surface, var(--card, #ffffff));
+  border-right: 1px solid var(--border, var(--line, #e4e4e7));
+  border-radius: 14px 0 0 14px;
+  box-sizing: border-box;
+  z-index: 10;
+}
+
+.st-nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.st-nav-logo {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  object-fit: cover;
+  flex: none;
+}
+
+.st-nav-logo-fallback {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 14px;
+  flex: none;
+}
+
+.st-nav-brand-name {
+  font-size: 0.9375rem;
+  font-weight: 650;
+  color: var(--text, var(--ink, #18181b));
+  line-height: 1.2;
+}
+
+.st-nav-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.st-nav-badge {
+  font-size: 0.625rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--muted);
+  letter-spacing: 0.05em;
+}
+
+.st-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.st-nav-link-btn {
+  background: transparent;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--muted);
+  cursor: pointer;
+  position: relative;
+  transition: all 0.15s ease;
+}
+
+.st-nav-link-btn:hover {
+  color: var(--text, #18181b);
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.st-nav-link-btn.active {
+  color: var(--nav-primary, var(--primary, #4f46e5));
+  font-weight: 600;
+}
+
+.st-nav-underline {
+  position: absolute;
+  bottom: 0;
+  left: 12px;
+  right: 12px;
+  height: 2px;
+  border-radius: 1px;
+}
+
+.st-sticky-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 9999px;
+  background: rgba(79, 70, 229, 0.08);
+  color: var(--primary, #4f46e5);
+}
+
+.st-nav-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.st-nav-menu-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  padding: 0 8px 4px;
+}
+
+.st-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--muted);
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  position: relative;
+  transition: all 0.15s ease;
+}
+
+.st-nav-item:hover {
+  color: var(--text, #18181b);
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.st-nav-item.active {
+  color: var(--nav-primary, var(--primary, #4f46e5));
+  background: rgba(79, 70, 229, 0.08);
+  font-weight: 600;
+}
+
+.st-nav-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--nav-primary, var(--primary, #4f46e5));
+  margin-left: auto;
+}
+
+.st-nav-footer {
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid var(--border, var(--line, #e4e4e7));
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.st-nav-hint {
+  font-size: 0.6875rem;
+  color: var(--muted);
+}
+
+.st-nav-contact {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.st-stage-side-wrap {
+  display: flex;
+  width: 100%;
+  min-height: 100%;
+}
+
+.st-stage-canvas-flex {
+  flex: 1;
+  min-width: 0;
+}
+
+
 

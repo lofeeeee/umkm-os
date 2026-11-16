@@ -105,12 +105,31 @@ export function DrawingLayer({
 
   const getCoordinates = useCallback(
     (e: React.PointerEvent<SVGSVGElement>): [number, number] => {
+      const svg = svgRef.current;
+      if (svg && typeof svg.getScreenCTM === "function" && typeof svg.createSVGPoint === "function") {
+        const ctm = svg.getScreenCTM();
+        if (ctm) {
+          try {
+            const inverse = ctm.inverse();
+            let p = svg.createSVGPoint();
+            p.x = e.clientX;
+            p.y = e.clientY;
+            p = p.matrixTransform(inverse);
+            return [
+              Math.max(0, Math.min(width, Math.round(p.x))),
+              Math.max(0, Math.min(height, Math.round(p.y))),
+            ];
+          } catch {
+            // Fallback ke hitungan bounding client rect bila inverse matrix gagal
+          }
+        }
+      }
       const rect = e.currentTarget.getBoundingClientRect();
       const scaleX = rect.width ? width / rect.width : 1;
       const scaleY = rect.height ? height / rect.height : 1;
       return [
-        Math.round((e.clientX - rect.left) * scaleX),
-        Math.round((e.clientY - rect.top) * scaleY),
+        Math.max(0, Math.min(width, Math.round((e.clientX - rect.left) * scaleX))),
+        Math.max(0, Math.min(height, Math.round((e.clientY - rect.top) * scaleY))),
       ];
     },
     [width, height]
@@ -201,7 +220,8 @@ export function DrawingLayer({
         height: "100%",
         pointerEvents: pointerEventsMode,
         touchAction: activeTool ? "none" : "auto",
-        zIndex: target === "background" ? 1 : 20,
+        zIndex: target === "background" ? (activeTool ? 40 : 1) : 25,
+        cursor: activeTool === "brush" ? "crosshair" : activeTool === "eraser" ? "crosshair" : "default",
       }}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
