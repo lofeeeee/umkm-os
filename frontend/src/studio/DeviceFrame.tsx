@@ -36,14 +36,13 @@ export interface DeviceFrameProps {
 
 export function DeviceFrame({ device, surface = "light", children }: DeviceFrameProps) {
   const width = DEVICE_WIDTH[device];
+  // `.st-frame` memakai `container-type: inline-size`, yang menyiratkan inline-size containment:
+  // lebarnya TIDAK bisa dihitung dari isinya. Tanpa lebar eksplisit, bingkai menyusut jadi 0 di dalam
+  // induk flex dan kanvas tampak kosong. Karena itu desktop wajib `width: 100%`, bukan auto.
+  const style = width === null ? { width: "100%" } : { width, maxWidth: "100%" };
   return (
     <div className="sf-frame-outer" data-device={device}>
-      <div
-        className="st-frame sf-frame"
-        data-surface={surface}
-        data-device={device}
-        style={width === null ? undefined : { width, maxWidth: "100%" }}
-      >
+      <div className="st-frame sf-frame" data-surface={surface} data-device={device} style={style}>
         {children}
       </div>
     </div>

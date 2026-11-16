@@ -60,3 +60,31 @@ describe("isolasi viewport kanvas", () => {
     expect(s).toContain("@container storefront");
   });
 });
+
+// Regresi: kanvas Studio tampak kosong karena `.st-frame` berlebar 0.
+// `container-type: inline-size` menyiratkan inline-size containment — lebar elemen TIDAK bisa
+// dihitung dari isinya. Di dalam induk flex tanpa lebar eksplisit, bingkai menyusut ke 0 dan seluruh
+// situs (yang masih ter-render di DOM) jadi tak terlihat. Ini sempat terjadi di produksi.
+describe("regresi: bingkai kanvas tidak boleh berlebar nol", () => {
+  it(".st-frame punya lebar eksplisit, bukan auto", () => {
+    const s = css("site.css");
+    // Komentar CSS dibuang dulu: komentar memuat ";" yang mengacaukan pencocokan deklarasi.
+    const noComments = s.replace(/\/\*[\s\S]*?\*\//g, "");
+    const block = /\.st-frame\s*\{([^}]*)\}/.exec(noComments)?.[1] ?? "";
+    expect(block).toContain("container-type: inline-size");
+    // Lebar tidak boleh bergantung pada isi (containment mematikan itu).
+    expect(block).toMatch(/(^|;)\s*width:\s*100%/);
+    expect(block).toContain("max-width: 100%");
+    expect(block).toContain("flex: 1 1 auto");
+    expect(block).toContain("min-width: 0");
+  });
+
+  it("desktop memakai lebar eksplisit; ponsel/tablet memakai lebar tetap", () => {
+    // DEVICE_WIDTH.desktop === null berarti "ikuti induk", dan DeviceFrame menerjemahkannya menjadi
+    // width: 100% — bukan undefined, yang akan kembali ke auto dan menyusut ke 0.
+    expect(DEVICE_WIDTH.desktop).toBeNull();
+    const src = readFileSync(resolve(__dirname, "../studio/DeviceFrame.tsx"), "utf8");
+    expect(src).toContain('width: "100%"');
+    expect(src).toMatch(/width === null \? \{ width: "100%" \}/);
+  });
+});

@@ -618,6 +618,12 @@
   border-radius: 16px;
   background: var(--pg-bg, #fff);
   box-shadow: 0 0 0 1px var(--line, #e4e4e7);
+  /* WAJIB: `container-type: inline-size` menyiratkan inline-size containment, sehingga lebar bingkai
+     tidak bisa berasal dari isinya. Tanpa ini bingkai menyusut ke 0 di induk flex dan kanvas kosong. */
+  width: 100%;
+  max-width: 100%;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 .st-frame > .sv2 { min-height: 100%; }
 .st-frame[data-surface="cream"] { --pg-bg: #fbf6ee; }
