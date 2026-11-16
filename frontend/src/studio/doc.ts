@@ -4,12 +4,16 @@
 import type { Json } from "@/renderer/types";
 
 import manifest from "./plugin-manifest.json";
+import { PALETTES } from "./plugins";
+import { onColor } from "@/renderer/safe";
 import type { CellStyle, PluginKind } from "./plugins";
 import type { TplCell } from "./templates";
 
 export interface StudioSeo { title?: string; description?: string; image?: string; favicon?: string }
 export interface StudioState {
   primary: string;
+  /** Warna teks di atas warna utama; dari palet atau diturunkan saat fromDoc (tidak masuk dokumen server). */
+  onPrimary?: string;
   surface: "light" | "cream" | "dark";
   font: string;
   textScale?: number;
@@ -79,9 +83,20 @@ export function fromDoc(doc: PageV2, minSize: (k: PluginKind) => { minW: number;
     locked: b.locked || undefined, hideOn: b.hide_on,
   }));
   return {
-    primary: doc.theme.primary, font: doc.theme.font, surface: doc.theme.surface ?? "light", textScale: doc.theme.text_scale ?? 1,
+    primary: doc.theme.primary, onPrimary: onPrimaryOf(doc.theme.primary), font: doc.theme.font, surface: doc.theme.surface ?? "light", textScale: doc.theme.text_scale ?? 1,
     seo: doc.seo, installed: [], cells,
   };
+}
+
+/**
+ * `onPrimary` tidak disimpan di dokumen (skema server belum mengenal field itu — Fix 2e step_1).
+ * Dokumen lama/dari server: ambil token palet bila cocok, selain itu turunkan dari luminans
+ * (hasilnya selalu AA karena mengikuti aturan onColor). Setelah skema mengenal field ini,
+ * baca doc.theme.on_primary lebih dulu di sini.
+ */
+function onPrimaryOf(primary: string): string {
+  const p = primary.toUpperCase();
+  return PALETTES.find((x) => x.primary.toUpperCase() === p)?.onPrimary ?? onColor(p);
 }
 
 export const isV2 = (c: unknown): c is PageV2 => !!c && typeof c === "object" && (c as { schema_version?: unknown }).schema_version === 2;

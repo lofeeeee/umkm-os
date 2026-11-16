@@ -616,10 +616,30 @@ Status of each item as it lands. One task per commit, per agreed workflow.
   - Hue-distance test (min ΔL/hue between any two primaries) — only the contrast half
     of the test suite was added; hue test still to write.
 
+### Done — Follow-up commit: sisa lingkup palet (Fix 2e dst.)
+
+- ✅ **Swatch "Aa" chip** — `.st-swatch span::after` kini menampilkan pil kecil dengan
+  `background: var(--sw); color: var(--s-on)` sehingga warna teks palet terlihat nyata.
+- ✅ **Cincin seleksi netral** — `.st-swatch[aria-pressed="true"]` pakai
+  `var(--line-strong)` + ring `var(--ink)` (bukan `var(--brand)`).
+- ✅ **`doc.ts` fallback derive-on-read** — `StudioState.onPrimary?` + `onPrimaryOf()`:
+  cocokkan `PALETTES`, selain itu `onColor()`. Tidak menyentuh bentuk dokumen server.
+- ✅ **Test jarak rona** — `plugins.test.ts`: dua palet kromatik tidak boleh
+  Δhue<12° *sekaligus* ΔL<15 (Abu dikecualikan, s≈5).
+- ⚠️ **Re-tune tambahan yang dipaksa test jarak rona** (semua tetap AA ≥4.5:1):
+  - `Kopi` #78350F→**#5C2A0D** — Senja↔Kopi dulu 4°/ΔL14 (temuan audit asli!); kini ΔL≈19.
+  - `Kuningan` #B45309→**#7A7008** — pertama bentrok Senja (8°), lalu bentrok Emas
+    (5°); kuningan/brass sejati (hue 55) menyelesaikan keduanya.
+  - `Laut` #0369A1→**#075C9E**, `Sian` #0E7490→**#0A6F82** — dulu 8° satu sama lain;
+    kini Laut–Sian 16°, Sian–Toska 15°.
+  - `Mawar` #BE185D→**#A61D6D** — Mawar↔Bata dulu 8°; kini 18°.
+  - `Terong` #7E22CE→**#7C1FA0** — Terong↔Malam dulu 10°/ΔL11; kini 21°.
+  - `Sawi` #4D7C0F→**#33850C** — Sawi↔Lumut dulu 0°/ΔL5; kini 15°.
+- Verifikasi: `tsc --noEmit` bersih; plugins/contrast/doc tests 11/11; full suite
+  73/74 (1 gagal = `templates.contract` yang sudah gagal di master bersih).
+
 ### Next up
 
-1. Finish palette scope: swatch chip using `--s-on`, neutral selection ring, `doc.ts`
-   fallback, hue-distance test.
-2. §2.2 Navbar plugin (A–G) — editor canvas first, then public renderer.
-3. Fix 1.1 → 1.2 → Fix 3 (one CSS sitting), then Fix 1.3.
+1. §2.2 Navbar plugin (A–G) — editor canvas first, then public renderer.
+2. Fix 1.1 → 1.2 → Fix 3 (one CSS sitting), then Fix 1.3.
 
