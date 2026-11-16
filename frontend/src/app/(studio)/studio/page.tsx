@@ -71,6 +71,9 @@ const storageKey = (t: string) => `umkm-studio-${t}`;
 let seq = 0;
 const newId = (k: string) => `${k.replace(/_/g, "-")}-${Date.now().toString(36)}${(seq++).toString(36)}`;
 /** Chatbot di luar grid: gelembung bulat atau bilah bawah, keduanya mengikuti layar. */
+/** Lebar bilah samping Studio di kanvas Tata letak (px). */
+const SIDE_NAV_W = 220;
+
 const isFloating = (c: StudioCell) => c.kind === "chatbot" && (c.layout === "floating" || c.layout === "bar");
 /** WhatsApp melayang: di luar grid seperti chatbot melayang (server: is_embed). */
 const isFloatingWa = (c: StudioCell) => c.kind === "whatsapp" && c.layout === "floating";
@@ -196,8 +199,12 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
     const ro = new ResizeObserver(([e]) => setStageW(e!.contentRect.width));
     ro.observe(el);
     return () => ro.disconnect();
-  });
-  const scale = Math.min(1, stageW / DESIGN_WIDTH);
+  }, []);
+  // Lebar bilah samping Studio (px) — lihat `.st-navbar-side` di site.css. Di mode Tata letak dengan
+  // navbar samping, kanvas hanya mendapat sisa lebar panggung; tanpa dikurangi, kanvas 1080 px
+  // meluber keluar panggung (kartu paling kanan terpotong).
+  const stageAvail = st?.navbarStyle === "side" && canvasMode === "layout" ? Math.max(0, stageW - SIDE_NAV_W) : stageW;
+  const scale = Math.min(1, stageAvail / DESIGN_WIDTH);
 
   /* ---------------- Muat data toko & draf server ---------------- */
   useEffect(() => {
