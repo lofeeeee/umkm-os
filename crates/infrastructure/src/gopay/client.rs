@@ -157,8 +157,38 @@ fn parse_merchant(v: &Value) -> (Option<String>, Option<String>) {
 
 fn as_rupiah(v: &Value) -> Option<u64> {
     match v {
-        Value::Number(n) => n.as_u64().or_else(|| n.as_f64().map(|f| f as u64)),
-        Value::String(s) => s.trim().parse::<u64>().ok(),
+        Value::Number(n) => {
+            if let Some(u) = n.as_u64() {
+                // GoBiz API mengembalikan nominal dalam sen (dikali 100, mis. 156900 sen = Rp 1.569).
+                if u >= 100 && u % 100 == 0 {
+                    return Some(u / 100);
+                }
+                return Some(u);
+            }
+            if let Some(f) = n.as_f64() {
+                if f >= 100.0 && (f % 100.0).abs() < 1e-4 {
+                    return Some((f / 100.0).round() as u64);
+                }
+                return Some(f.round() as u64);
+            }
+            None
+        }
+        Value::String(s) => {
+            let s = s.trim();
+            if let Ok(u) = s.parse::<u64>() {
+                if u >= 100 && u % 100 == 0 {
+                    return Some(u / 100);
+                }
+                return Some(u);
+            }
+            if let Ok(f) = s.parse::<f64>() {
+                if f >= 100.0 && (f % 100.0).abs() < 1e-4 {
+                    return Some((f / 100.0).round() as u64);
+                }
+                return Some(f.round() as u64);
+            }
+            None
+        }
         _ => None,
     }
 }
@@ -476,7 +506,7 @@ mod tests {
         let v = json!({"transactions": [
             {"id": "t1", "gross_amount": "30217", "transaction_status": "SETTLEMENT",
              "transaction_time": "2023-11-14T22:13:20Z", "qris_provider_aspi_issuer": "BCA", "order_id": "o1"},
-            {"id": "t2", "real_gross_amount": 15000, "transaction_status": "capture",
+            {"id": "t2", "real_gross_amount": 1500000, "transaction_status": "capture",
              "settlement_time": "2023-11-14T22:14:00Z"},
             {"gross_amount": 1, "transaction_status": "settlement"} // tanpa id → di-skip
         ]});
@@ -512,5 +542,16 @@ mod tests {
         assert_eq!(r2, "ref.tok-B_2");
         assert!(parse_session_blob("tidak ada token di sini").is_none());
         assert!(parse_session_blob("access_token=short").is_none());
+    }
+
+    #[test]
+    fn as_rupiah_handles_sen_and_decimal() {
+        // GoBiz API nyata mengembalikan real_gross_amount dalam sen (x100)
+        assert_eq!(as_rupiah(&json!(156900)), Some(1569));
+        assert_eq!(as_rupiah(&json!(3032700)), Some(30327));
+        assert_eq!(as_rupiah(&json!("156900")), Some(1569));
+        assert_eq!(as_rupiah(&json!("1569.00")), Some(1569));
+        // Fallback bila format angka sudah rupiah bulat (mis. fixture tes lawas)
+        assert_eq!(as_rupiah(&json!(30217)), Some(30217));
     }
 }
