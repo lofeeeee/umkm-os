@@ -551,7 +551,7 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
                   {PALETTES.map((p) => (
                     <button key={p.name} type="button" className="st-swatch" aria-pressed={st.primary === p.primary && st.surface === p.surface} title={p.name}
                       onClick={() => update((s) => ({ ...s, primary: p.primary, surface: p.surface }), "")}
-                      style={{ ["--sw" as string]: p.primary, ["--sf" as string]: p.surface === "dark" ? "#111118" : p.surface === "cream" ? "#fbf6ee" : "#ffffff" }}>
+                      style={{ ["--sw" as string]: p.primary, ["--s-on" as string]: p.onPrimary, ["--sf" as string]: p.surface === "dark" ? "#111118" : p.surface === "cream" ? "#fbf6ee" : "#ffffff" }}>
                       <span aria-hidden="true" /><em>{p.name}</em>
                     </button>
                   ))}

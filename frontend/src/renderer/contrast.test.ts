@@ -25,6 +25,9 @@ describe("kontras warna utama", () => {
     ];
     for (const p of primaries) expect(contrast(p, onColor(p)), p).toBeGreaterThanOrEqual(4.5);
   });
+  it("palet Studio: token onPrimary resmi ≥ 4.5:1 terhadap primary-nya (WCAG AA)", () => {
+    for (const p of PALETTES) expect(contrast(p.primary, p.onPrimary), p.name).toBeGreaterThanOrEqual(4.5);
+  });
   it("variabel CSS: warna utama, teksnya, dan arah gradien promo", () => {
     expect(primaryVars("#A78BFA")).toEqual({ "--s-primary": "#A78BFA", "--s-on-primary": "#111111", "--s-shade": "#ffffff" });
     expect(primaryVars("#C2410C")["--s-shade"]).toBe("#000000");

@@ -65,15 +65,26 @@ export const CELL_STYLES: { value: CellStyle; label: string }[] = [
   { value: "dark", label: "Gelap" },
 ];
 
-/** Palet siap pakai: warna utama + permukaan halaman. */
-export interface Palette { name: string; primary: string; surface: "light" | "cream" | "dark" }
+/** Palet siap pakai: warna utama + warna teks di atas warna utama + permukaan halaman.
+ *  Wajib: contrast(primary, onPrimary) ≥ 4.5 (WCAG AA) — dijaga lewat plugins.test.ts. */
+export interface Palette { name: string; primary: string; onPrimary: string; surface: "light" | "cream" | "dark" }
 export const PALETTES: Palette[] = [
-  { name: "Senja", primary: "#C2410C", surface: "cream" },
-  { name: "Indigo", primary: "#4F46E5", surface: "light" },
-  { name: "Daun", primary: "#15803D", surface: "light" },
-  { name: "Laut", primary: "#0369A1", surface: "light" },
-  { name: "Mawar", primary: "#BE185D", surface: "cream" },
-  { name: "Kopi", primary: "#92400E", surface: "cream" },
-  { name: "Malam", primary: "#A78BFA", surface: "dark" },
-  { name: "Emas", primary: "#CA8A04", surface: "dark" },
+  { name: "Senja",  primary: "#C2410C", onPrimary: "#FFFFFF", surface: "cream" },
+  { name: "Indigo", primary: "#4F46E5", onPrimary: "#FFFFFF", surface: "light" },
+  { name: "Daun",   primary: "#15803D", onPrimary: "#FFFFFF", surface: "light" },
+  { name: "Laut",   primary: "#0369A1", onPrimary: "#FFFFFF", surface: "light" },
+  { name: "Mawar",  primary: "#BE185D", onPrimary: "#FFFFFF", surface: "cream" },
+  { name: "Kopi",   primary: "#78350F", onPrimary: "#FEF3C7", surface: "cream" },
+  { name: "Malam",  primary: "#7C3AED", onPrimary: "#FFFFFF", surface: "dark" },
+  { name: "Emas",   primary: "#CA8A04", onPrimary: "#1C1917", surface: "dark" },
+  { name: "Sawi",   primary: "#4D7C0F", onPrimary: "#FFFFFF", surface: "light" },
+  { name: "Terong", primary: "#7E22CE", onPrimary: "#FFFFFF", surface: "light" },
+  { name: "Bata",   primary: "#9F1239", onPrimary: "#FFFFFF", surface: "cream" },
+  { name: "Sian",   primary: "#0E7490", onPrimary: "#FFFFFF", surface: "light" },
+  { name: "Kuningan", primary: "#B45309", onPrimary: "#FFFFFF", surface: "cream" },
+  { name: "Lumut",  primary: "#3F6212", onPrimary: "#F7FEE7", surface: "dark" },
+  { name: "Abu",    primary: "#3F3F46", onPrimary: "#FFFFFF", surface: "light" },
+  { name: "Merah",  primary: "#DC2626", onPrimary: "#FFFFFF", surface: "light" },
+  { name: "Toska",  primary: "#0F766E", onPrimary: "#FFFFFF", surface: "cream" },
+  { name: "Koral",  primary: "#E11D48", onPrimary: "#FFFFFF", surface: "light" },
 ];
