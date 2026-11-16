@@ -43,4 +43,55 @@ describe("dokumen Studio v2", () => {
     const d = toDoc({ ...st, cells: [st.cells[0]!, { ...st.cells[0]!, id: "hero-t1abc", x: 0, y: 20 }] }, "t");
     expect(new Set(d.blocks.map((b) => b.id)).size).toBe(2);
   });
+  it("toDoc dan fromDoc mendukung navbar, background, dan drawings", () => {
+    const customSt: StudioState = {
+      ...st,
+      navbarStyle: "side",
+      navbarSticky: true,
+      backgroundImage: "asset:6f9619ff-8b86-d011-b42d-00c04fc964ff",
+      backgroundSize: "contain",
+      backgroundPosition: "top left",
+      backgroundOpacity: 85,
+      drawings: [
+        { id: "stroke-1", target: "background", color: "#ff0000", size: 4, opacity: 1, points: [[0, 0], [10, 10]] },
+      ],
+    };
+    const d = toDoc(customSt, "custom");
+    expect(d.theme.navbar_style).toBe("side");
+    expect(d.theme.navbar_sticky).toBe(true);
+    expect(d.theme.background_image).toBe("asset:6f9619ff-8b86-d011-b42d-00c04fc964ff");
+    expect(d.theme.background_size).toBe("contain");
+    expect(d.theme.background_position).toBe("top left");
+    expect(d.theme.background_opacity).toBe(85);
+    expect(d.drawings).toEqual([
+      { id: "stroke-1", target: "background", color: "#ff0000", size: 4, opacity: 1, points: [[0, 0], [10, 10]] },
+    ]);
+
+    const back = fromDoc(d, (k) => ({ minW: pluginDef(k).minW, minH: pluginDef(k).minH }));
+    expect(back.navbarStyle).toBe("side");
+    expect(back.navbarSticky).toBe(true);
+    expect(back.backgroundImage).toBe("asset:6f9619ff-8b86-d011-b42d-00c04fc964ff");
+    expect(back.backgroundSize).toBe("contain");
+    expect(back.backgroundPosition).toBe("top left");
+    expect(back.backgroundOpacity).toBe(85);
+    expect(back.drawings).toEqual([
+      { id: "stroke-1", target: "background", color: "#ff0000", size: 4, opacity: 1, points: [[0, 0], [10, 10]] },
+    ]);
+  });
+  it("toDoc menghilangkan field kosong/undefined", () => {
+    const emptySt: StudioState = {
+      ...st,
+      backgroundImage: "   ",
+      backgroundPosition: "",
+      drawings: [],
+    };
+    const d = toDoc(emptySt, "clean");
+    expect(d.theme).not.toHaveProperty("navbar_style");
+    expect(d.theme).not.toHaveProperty("navbar_sticky");
+    expect(d.theme).not.toHaveProperty("background_image");
+    expect(d.theme).not.toHaveProperty("background_size");
+    expect(d.theme).not.toHaveProperty("background_position");
+    expect(d.theme).not.toHaveProperty("background_opacity");
+    expect(d).not.toHaveProperty("drawings");
+  });
 });

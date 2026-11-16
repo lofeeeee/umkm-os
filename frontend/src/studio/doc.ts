@@ -3,6 +3,7 @@
 
 import type { Json } from "@/renderer/types";
 
+import { type DrawingStroke } from "./DrawingLayer";
 import manifest from "./plugin-manifest.json";
 import { PALETTES } from "./plugins";
 import { onColor } from "@/renderer/safe";
@@ -17,6 +18,13 @@ export interface StudioState {
   surface: "light" | "cream" | "dark";
   font: string;
   textScale?: number;
+  navbarStyle?: "top" | "side";
+  navbarSticky?: boolean;
+  backgroundImage?: string;
+  backgroundSize?: "cover" | "contain" | "repeat";
+  backgroundPosition?: string;
+  backgroundOpacity?: number; // 0..=100
+  drawings?: DrawingStroke[];
   seo?: StudioSeo;
   installed: PluginKind[];
   cells: TplCell[];
@@ -31,8 +39,20 @@ export interface BlockV2 {
 export interface PageV2 {
   schema_version: 2;
   template: string;
-  theme: { primary: string; font: string; surface?: StudioState["surface"]; text_scale?: number };
+  theme: {
+    primary: string;
+    font: string;
+    surface?: StudioState["surface"];
+    text_scale?: number;
+    navbar_style?: "top" | "side";
+    navbar_sticky?: boolean;
+    background_image?: string;
+    background_size?: "cover" | "contain" | "repeat";
+    background_position?: string;
+    background_opacity?: number;
+  };
   seo?: StudioSeo;
+  drawings?: DrawingStroke[];
   blocks: BlockV2[];
 }
 
@@ -65,14 +85,28 @@ export function toDoc(st: StudioState, template: string): PageV2 {
     if (c.hideOn) b.hide_on = c.hideOn;
     return b;
   });
+  const theme: PageV2["theme"] = {
+    primary: st.primary.toUpperCase(),
+    font: st.font,
+    surface: st.surface,
+    text_scale: st.textScale ?? 1,
+  };
+  if (st.navbarStyle) theme.navbar_style = st.navbarStyle;
+  if (st.navbarSticky !== undefined) theme.navbar_sticky = st.navbarSticky;
+  if (st.backgroundImage?.trim()) theme.background_image = st.backgroundImage.trim();
+  if (st.backgroundSize) theme.background_size = st.backgroundSize;
+  if (st.backgroundPosition?.trim()) theme.background_position = st.backgroundPosition.trim();
+  if (st.backgroundOpacity !== undefined) theme.background_opacity = st.backgroundOpacity;
+
   const doc: PageV2 = {
     schema_version: 2,
     template,
-    theme: { primary: st.primary.toUpperCase(), font: st.font, surface: st.surface, text_scale: st.textScale ?? 1 },
+    theme,
     blocks,
   };
   const seo = cleanSeo(st.seo);
   if (seo) doc.seo = seo;
+  if (st.drawings && st.drawings.length > 0) doc.drawings = st.drawings;
   return doc;
 }
 
@@ -83,8 +117,21 @@ export function fromDoc(doc: PageV2, minSize: (k: PluginKind) => { minW: number;
     locked: b.locked || undefined, hideOn: b.hide_on,
   }));
   return {
-    primary: doc.theme.primary, onPrimary: onPrimaryOf(doc.theme.primary), font: doc.theme.font, surface: doc.theme.surface ?? "light", textScale: doc.theme.text_scale ?? 1,
-    seo: doc.seo, installed: [], cells,
+    primary: doc.theme.primary,
+    onPrimary: onPrimaryOf(doc.theme.primary),
+    font: doc.theme.font,
+    surface: doc.theme.surface ?? "light",
+    textScale: doc.theme.text_scale ?? 1,
+    navbarStyle: doc.theme.navbar_style,
+    navbarSticky: doc.theme.navbar_sticky,
+    backgroundImage: doc.theme.background_image,
+    backgroundSize: doc.theme.background_size,
+    backgroundPosition: doc.theme.background_position,
+    backgroundOpacity: doc.theme.background_opacity,
+    drawings: doc.drawings,
+    seo: doc.seo,
+    installed: [],
+    cells,
   };
 }
 

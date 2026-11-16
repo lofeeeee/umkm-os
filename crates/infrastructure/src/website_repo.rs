@@ -17,6 +17,8 @@ pub mod actions {
     pub const DRAFT_SAVED: &str = "website.draft_saved";
     pub const PUBLISHED: &str = "website.publish";
     pub const ROLLED_BACK: &str = "website.rollback";
+    pub const PAGE_CREATED: &str = "website.page_created";
+    pub const PAGE_DELETED: &str = "website.page_deleted";
 }
 
 pub const HOME: &str = "home";
@@ -38,6 +40,8 @@ pub struct PageSummary {
     pub draft_revision: i32,
     pub published_version: Option<i32>,
 }
+
+pub type PageView = PageSummary;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct WebsiteState {
@@ -68,6 +72,10 @@ pub enum WebsiteError {
     NotFound,
     #[error("draft telah berubah (revisi {current})")]
     StaleRevision { current: i32 },
+    #[error("halaman sudah ada")]
+    AlreadyExists,
+    #[error("halaman home tidak dapat dihapus")]
+    CannotDeleteHome,
     #[error(transparent)]
     Db(#[from] sqlx::Error),
 }
@@ -317,6 +325,101 @@ pub async fn save_draft(
     .await?;
     tx.commit().await?;
     Ok(rev)
+}
+
+/// Buat halaman baru pada website tenant.
+pub async fn create_page(
+    pool: &PgPool,
+    actor: &Actor,
+    slug: &str,
+    title: &str,
+    initial_content: &Value,
+    ctx: Ctx<'_>,
+) -> Result<PageView, WebsiteError> {
+    let mut tx = tx(pool, actor.tenant_id).await?;
+    let tid = actor.tenant_id.as_uuid();
+    let website_id: Uuid =
+        sqlx::query_scalar("SELECT id FROM tenant_websites WHERE tenant_id = $1")
+            .bind(tid)
+            .fetch_optional(&mut *tx)
+            .await?
+            .ok_or(WebsiteError::NotFound)?;
+
+    let page_id: Uuid = match sqlx::query_scalar(
+        "INSERT INTO website_pages (tenant_id, website_id, slug, title, draft_content, draft_updated_by)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         RETURNING id",
+    )
+    .bind(tid)
+    .bind(website_id)
+    .bind(slug)
+    .bind(title)
+    .bind(Json(initial_content))
+    .bind(actor.user_id)
+    .fetch_one(&mut *tx)
+    .await
+    {
+        Ok(id) => id,
+        Err(e) if crate::pgx::sqlstate(&e).as_deref() == Some("23505") => {
+            return Err(WebsiteError::AlreadyExists);
+        }
+        Err(e) => return Err(WebsiteError::Db(e)),
+    };
+
+    audit(
+        &mut tx,
+        actor,
+        actions::PAGE_CREATED,
+        page_id,
+        serde_json::json!({ "slug": slug, "title": title }),
+        ctx,
+    )
+    .await?;
+    tx.commit().await?;
+
+    Ok(PageView {
+        slug: slug.to_string(),
+        title: title.to_string(),
+        draft_revision: 1,
+        published_version: None,
+    })
+}
+
+/// Hapus halaman website tenant berdasarkan slug. Halaman "home" tidak boleh dihapus.
+pub async fn delete_page(
+    pool: &PgPool,
+    actor: &Actor,
+    slug: &str,
+    ctx: Ctx<'_>,
+) -> Result<(), WebsiteError> {
+    if slug == HOME || slug == "home" {
+        return Err(WebsiteError::CannotDeleteHome);
+    }
+    let mut tx = tx(pool, actor.tenant_id).await?;
+    let tid = actor.tenant_id.as_uuid();
+    let page_id: Option<Uuid> = sqlx::query_scalar(
+        "DELETE FROM website_pages WHERE tenant_id = $1 AND slug = $2 RETURNING id",
+    )
+    .bind(tid)
+    .bind(slug)
+    .fetch_optional(&mut *tx)
+    .await?;
+
+    let Some(page_id) = page_id else {
+        return Err(WebsiteError::NotFound);
+    };
+
+    audit(
+        &mut tx,
+        actor,
+        actions::PAGE_DELETED,
+        page_id,
+        serde_json::json!({ "slug": slug }),
+        ctx,
+    )
+    .await?;
+    tx.commit().await?;
+    Ok(())
 }
 
 /// Publish: `validate` dipanggil ulang atas draft di dalam transaksi (draft bisa berubah

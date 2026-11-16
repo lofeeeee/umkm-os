@@ -568,3 +568,113 @@ async fn public_assets_are_signed_only_for_own_objects(pool: PgPool) {
     assert_eq!(f.status, 200);
     assert_eq!(f.bytes, png());
 }
+
+async fn create_page_req(a: &TestApp, t: Uuid, who: &Who, slug: &str, title: &str) -> Res {
+    json(
+        &a.router,
+        Method::POST,
+        &format!("{}/pages", w(t)),
+        Some(who),
+        Some(json!({"slug": slug, "title": title})),
+    )
+    .await
+}
+
+async fn delete_page_req(a: &TestApp, t: Uuid, who: &Who, slug: &str) -> Res {
+    json(
+        &a.router,
+        Method::DELETE,
+        &format!("{}/pages/{slug}", w(t)),
+        Some(who),
+        None,
+    )
+    .await
+}
+
+#[sqlx::test(migrator = "MIGRATOR")]
+async fn create_page_starter_vs_pro(pool: PgPool) {
+    let a = app(&pool).await;
+    let t = tenant(&pool, "toko-a").await;
+    let owner = member(&pool, t, "Owner").await;
+    let viewer = member(&pool, t, "Viewer").await;
+    select(&a, t, &owner, "modern_store").await;
+
+    // RBAC: viewer tidak punya website.edit -> 403
+    let r = create_page_req(&a, t, &viewer, "about", "Tentang Kami").await;
+    assert_eq!(r.status, 403);
+
+    // Starter: "about" dan "contact" diizinkan (201)
+    let r = create_page_req(&a, t, &owner, "about", "Tentang Kami").await;
+    assert_eq!(r.status, 201, "{}", r.json());
+    assert_eq!(r.json()["data"]["slug"], "about");
+    assert_eq!(r.json()["data"]["title"], "Tentang Kami");
+    assert_eq!(r.json()["data"]["draft_revision"], 1);
+    assert!(r.json()["data"]["published_version"].is_null());
+
+    let r = create_page_req(&a, t, &owner, "contact", "Kontak Kami").await;
+    assert_eq!(r.status, 201, "{}", r.json());
+    assert_eq!(r.json()["data"]["slug"], "contact");
+
+    // Starter: slug kustom ditolak (403 Forbidden dengan pesan khusus)
+    let r = create_page_req(&a, t, &owner, "promo", "Promo Spesial").await;
+    assert_eq!(r.status, 403, "{}", r.json());
+    assert_eq!(
+        r.json()["error"]["message"],
+        "Halaman kustom memerlukan paket Pro"
+    );
+
+    // Format slug tidak valid -> 404 (slug_ok)
+    let r = create_page_req(&a, t, &owner, "-invalid-", "Invalid").await;
+    assert_eq!(r.status, 404);
+
+    // Upgrade ke Pro -> slug kustom sekarang diizinkan
+    pro(&pool, t).await;
+    let r = create_page_req(&a, t, &owner, "promo", "Promo Spesial").await;
+    assert_eq!(r.status, 201, "{}", r.json());
+    assert_eq!(r.json()["data"]["slug"], "promo");
+    assert_eq!(r.json()["data"]["title"], "Promo Spesial");
+
+    // Slug duplikat -> 409 Conflict
+    let r = create_page_req(&a, t, &owner, "about", "Tentang Kami Lagi").await;
+    assert_eq!(r.status, 409, "{}", r.json());
+}
+
+#[sqlx::test(migrator = "MIGRATOR")]
+async fn delete_page_rules(pool: PgPool) {
+    let a = app(&pool).await;
+    let t = tenant(&pool, "toko-a").await;
+    let owner = member(&pool, t, "Owner").await;
+    let viewer = member(&pool, t, "Viewer").await;
+    select(&a, t, &owner, "modern_store").await;
+
+    // Buat halaman "about"
+    let r = create_page_req(&a, t, &owner, "about", "Tentang Kami").await;
+    assert_eq!(r.status, 201);
+
+    // RBAC: viewer tidak punya website.edit -> 403
+    let r = delete_page_req(&a, t, &viewer, "about").await;
+    assert_eq!(r.status, 403);
+
+    // Tolak hapus "home" -> 400 Bad Request
+    let r = delete_page_req(&a, t, &owner, "home").await;
+    assert_eq!(r.status, 400, "{}", r.json());
+
+    // Hapus "about" yang sah -> 200 OK
+    let r = delete_page_req(&a, t, &owner, "about").await;
+    assert_eq!(r.status, 200, "{}", r.json());
+
+    // Pastikan "about" sudah terhapus (draft 404)
+    let r = json(
+        &a.router,
+        Method::GET,
+        &format!("{}/pages/about/draft", w(t)),
+        Some(&owner),
+        None,
+    )
+    .await;
+    assert_eq!(r.status, 404);
+
+    // Hapus halaman yang tidak ada -> 404 Not Found
+    let r = delete_page_req(&a, t, &owner, "nonexistent").await;
+    assert_eq!(r.status, 404);
+}

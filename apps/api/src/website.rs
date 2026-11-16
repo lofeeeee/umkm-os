@@ -11,7 +11,7 @@ use axum::{
     extract::{Path, Query, State},
     http::{HeaderValue, header},
     response::{IntoResponse, Response},
-    routing::{get, post},
+    routing::{delete, get, post},
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -63,6 +63,24 @@ pub struct PageView {
     pub title: String,
     pub draft_revision: i32,
     pub published_version: Option<i32>,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
+pub struct CreatePage {
+    pub slug: String,
+    pub title: String,
+}
+
+impl CreatePage {
+    pub fn validate(&self) -> Result<(), ApiError> {
+        slug_ok(&self.slug)?;
+        let t = self.title.trim();
+        if t.is_empty() || t.len() > 120 {
+            return Err(crate::validation::one("title", "invalid_length"));
+        }
+        Ok(())
+    }
 }
 
 #[derive(Debug, Serialize, ToSchema)]
@@ -185,6 +203,12 @@ fn repo_err(e: WebsiteError) -> ApiError {
             ErrorBody::new(ErrorCode::Conflict)
                 .with_message("Draft sudah diubah orang lain; muat ulang")
                 .with_details(serde_json::json!({ "current_revision": current })),
+        ),
+        WebsiteError::AlreadyExists => ApiError(
+            ErrorBody::new(ErrorCode::Conflict).with_message("Halaman dengan slug ini sudah ada"),
+        ),
+        WebsiteError::CannotDeleteHome => ApiError(
+            ErrorBody::new(ErrorCode::BadRequest).with_message("Halaman home tidak dapat dihapus"),
         ),
         WebsiteError::Db(e) => internal(e),
     }
@@ -397,6 +421,106 @@ pub struct PagePath {
     #[allow(dead_code)]
     tenant_id: Uuid,
     slug: String,
+}
+
+/// Buat halaman baru pada website tenant.
+#[utoipa::path(
+    post, path = "/api/v1/tenants/{tenant_id}/website/pages", tag = "website",
+    params(("tenant_id" = Uuid, Path)), request_body = CreatePage,
+    responses(
+        (status = 201, description = "Halaman dibuat", body = SuccessEnvelope<PageView>),
+        (status = 403, description = "Halaman kustom memerlukan paket Pro", body = umkm_shared::http::ErrorEnvelope),
+        (status = 409, description = "Slug sudah ada", body = umkm_shared::http::ErrorEnvelope)
+    )
+)]
+pub async fn create_page(
+    State(state): State<AppState>,
+    ReqId(id): ReqId,
+    ClientIp(ip): ClientIp,
+    Member(actor): Member,
+    Json(req): Json<CreatePage>,
+) -> Result<(axum::http::StatusCode, Json<SuccessEnvelope<PageView>>), ApiError> {
+    actor.require("website.edit")?;
+    req.validate()?;
+
+    let plan = crate::billing::plan_of(&state, actor.tenant_id).await?;
+    if plan.plan.code != "pro" && !["home", "about", "contact"].contains(&req.slug.as_str()) {
+        return Err(ApiError(
+            ErrorBody::new(ErrorCode::Forbidden)
+                .with_message("Halaman kustom memerlukan paket Pro"),
+        ));
+    }
+
+    let tpl_key = template_of(&state, actor.tenant_id).await?;
+    let initial_content = if let Ok(Some(tpl)) = repo::find_template(pool(&state)?, &tpl_key).await
+    {
+        tpl.default_content
+    } else {
+        serde_json::json!({
+            "schema_version": 1,
+            "template": tpl_key,
+            "theme": { "primary": "#2563EB", "font": "inter" },
+            "sections": []
+        })
+    };
+
+    let p = repo::create_page(
+        pool(&state)?,
+        &actor,
+        &req.slug,
+        req.title.trim(),
+        &initial_content,
+        (Some(id.as_str()), Some(&ip)),
+    )
+    .await
+    .map_err(repo_err)?;
+
+    let view = PageView {
+        slug: p.slug,
+        title: p.title,
+        draft_revision: p.draft_revision,
+        published_version: p.published_version,
+    };
+
+    Ok((
+        axum::http::StatusCode::CREATED,
+        Json(SuccessEnvelope::new(view, &id)),
+    ))
+}
+
+/// Hapus halaman website tenant.
+#[utoipa::path(
+    delete, path = "/api/v1/tenants/{tenant_id}/website/pages/{slug}", tag = "website",
+    params(("tenant_id" = Uuid, Path), ("slug" = String, Path)),
+    responses(
+        (status = 200, description = "Halaman dihapus"),
+        (status = 400, description = "Halaman home tidak dapat dihapus", body = umkm_shared::http::ErrorEnvelope),
+        (status = 404, description = "Halaman tidak ditemukan", body = umkm_shared::http::ErrorEnvelope)
+    )
+)]
+pub async fn delete_page(
+    State(state): State<AppState>,
+    ReqId(id): ReqId,
+    ClientIp(ip): ClientIp,
+    Member(actor): Member,
+    Path(p): Path<PagePath>,
+) -> Result<Json<SuccessEnvelope<()>>, ApiError> {
+    actor.require("website.edit")?;
+    if p.slug == repo::HOME || p.slug == "home" {
+        return Err(ApiError(
+            ErrorBody::new(ErrorCode::BadRequest).with_message("Halaman home tidak dapat dihapus"),
+        ));
+    }
+    repo::delete_page(
+        pool(&state)?,
+        &actor,
+        &p.slug,
+        (Some(id.as_str()), Some(&ip)),
+    )
+    .await
+    .map_err(repo_err)?;
+
+    Ok(Json(SuccessEnvelope::new((), &id)))
 }
 
 /// Draft halaman (untuk editor dan preview di dashboard; AC-WEB-010/011).
@@ -717,6 +841,8 @@ pub fn routes() -> Router<AppState> {
             &format!("{t}/templates/{{key}}/preview"),
             get(preview_template),
         )
+        .route(&format!("{t}/pages"), post(create_page))
+        .route(&format!("{t}/pages/{{slug}}"), delete(delete_page))
         .route(
             &format!("{t}/pages/{{slug}}/draft"),
             get(get_draft).put(save_draft),

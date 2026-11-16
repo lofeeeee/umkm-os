@@ -1383,15 +1383,15 @@ label.st-tool { cursor: pointer; }
 .sx-spacer { flex: 1 1 auto; }
 .sx-zoom { font-size: 0.75rem; color: var(--muted); font-variant-numeric: tabular-nums; min-width: 40px; text-align: center; }
 .sx-top .d-seg svg { width: 13px; height: 13px; vertical-align: -2px; }
-.sx-body { display: grid; grid-template-columns: 300px minmax(0, 1fr); min-height: 0; }
-.sx-body[data-panel="closed"] { grid-template-columns: minmax(0, 1fr); }
+.sx-body { display: grid; grid-template-columns: 56px 320px minmax(0, 1fr); min-height: 0; }
+.sx-body[data-panel="closed"] { grid-template-columns: 56px minmax(0, 1fr); }
 .sx-panel { position: static; max-height: none; height: 100%; overflow-y: auto; border: 0; border-right: 1px solid var(--line); border-radius: 0; align-content: start; }
 .sx-scroll { overflow: auto; min-height: 0; }
 .sx-canvas { padding: 28px 32px 80px; background: var(--bg-subtle); background-image: radial-gradient(var(--line) 1px, transparent 1px); background-size: 18px 18px; }
 .sx-canvas .st-stage { max-width: 1180px; margin: 0 auto; box-shadow: var(--shadow-pop); border: 0; border-radius: 14px; }
 @media (max-width: 900px) {
-  .sx-body { grid-template-columns: minmax(0, 1fr); }
-  .sx-panel { position: fixed; z-index: 20; top: 52px; bottom: 0; left: 0; width: min(320px, 90vw); box-shadow: var(--shadow-dialog); }
+  .sx-body { grid-template-columns: 56px minmax(0, 1fr); }
+  .sx-panel { position: fixed; z-index: 20; top: 52px; bottom: 0; left: 56px; width: min(320px, calc(100vw - 56px)); box-shadow: var(--shadow-dialog); }
   .sx-canvas { padding: 16px; }
 }
 .sx-panel[hidden] { display: none; }

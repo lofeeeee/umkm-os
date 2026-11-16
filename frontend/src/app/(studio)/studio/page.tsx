@@ -13,6 +13,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import {
   LockSimple, LockSimpleOpen, ArrowSquareOut, ClockCounterClockwise, WarningCircle, ArrowClockwise, ArrowCounterClockwise, ArrowLeft, ArrowsIn, ArrowsOut, CaretDown, CaretUp, ChatCircleDots, Check, Copy,
   ArrowDown, ArrowRight, ArrowUp, CornersIn, CornersOut, DesktopTower, DeviceMobile, ImageSquare, MagnifyingGlass, Plus, PuzzlePiece, SidebarSimple, Sparkle, SquaresFour, Trash, WhatsappLogo, X,
+  Crop,
 } from "@phosphor-icons/react/ssr";
 
 import { useUploads } from "@/dashboard/assets";
@@ -28,10 +29,17 @@ import type { Business, Json, PageContent, SectionType } from "@/renderer/types"
 import { Canvas, DESIGN_WIDTH, GAP, ROW, rowsFor } from "@/studio/Canvas";
 import { COLS, compact, insert, mobileOrder, moveBy, place } from "@/studio/grid";
 import { commit, redo, silent, start, undo, type History } from "@/studio/history";
-import { CELL_STYLES, EXTRA_DATA, PALETTES, PLUGINS, needsUpgrade, pluginDef, pluginPlan, type PluginKind } from "@/studio/plugins";
+import { CELL_STYLES, EXTRA_DATA, PALETTES, PLUGINS, needsUpgrade, pluginDef, pluginPlan, type PluginKind, type PluginCategory } from "@/studio/plugins";
 import { readiness, type Issue } from "@/studio/readiness";
 import { TEMPLATES, type TplCell } from "@/studio/templates";
 import { fromDoc, isV2, toDoc, type StudioState } from "@/studio/doc";
+import { IconRail, type StudioTab } from "@/studio/IconRail";
+import { PagesPanel, type PageItem } from "@/studio/PagesPanel";
+import { ThemePanel, type ThemeConfig } from "@/studio/ThemePanel";
+import { DrawPanel, type DrawConfig, type DrawTool, type DrawTarget } from "@/studio/DrawPanel";
+import { DrawingLayer, type DrawingStroke } from "@/studio/DrawingLayer";
+import { StudioNavbar } from "@/studio/StudioNavbar";
+import { ImageCropModal } from "@/ui/ImageCropModal";
 import { ApiError, describe } from "@/lib/api";
 import { waktu } from "@/lib/labels";
 import { confirm, Sheet } from "@/ui/dialog";
@@ -43,6 +51,13 @@ type StudioCell = TplCell;
 type Studio = StudioState;
 type SaveState = "idle" | "saving" | "saved" | "error" | "conflict" | "readonly";
 const TEXT_SCALES = [{ v: 0.9, l: "Kecil" }, { v: 1, l: "Sedang" }, { v: 1.1, l: "Besar" }];
+
+const CATEGORIES: { label: PluginCategory; icon: typeof PuzzlePiece }[] = [
+  { label: "Konten", icon: PuzzlePiece },
+  { label: "Jualan", icon: Sparkle },
+  { label: "Layanan", icon: ChatCircleDots },
+  { label: "Info toko", icon: SquaresFour },
+];
 
 const EMPTY_BUSINESS: Business = {
   profile: { name: "Nama Toko", socials: [], timezone: "Asia/Jakarta", pickup_available: false, delivery_available: false },
@@ -158,6 +173,13 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
   const stageRef = useRef<HTMLDivElement>(null);
   const [clipped, setClipped] = useState<Record<string, boolean>>({});
   const [panelOpen, setPanelOpen] = useState(true);
+  const [activeTab, setActiveTab] = useState<StudioTab>("elements");
+  const [pages, setPages] = useState<PageItem[]>([]);
+  const [activeSlug, setActiveSlug] = useState("home");
+  const [drawTool, setDrawTool] = useState<DrawTool>(null);
+  const [drawConfig, setDrawConfig] = useState<DrawConfig>({ color: "#EF4444", size: 4, opacity: 1 });
+  const [drawTarget, setDrawTarget] = useState<DrawTarget>("background");
+  const [cropModal, setCropModal] = useState<{ open: boolean; cellId: string | null; imageSrc: string | null }>({ open: false, cellId: null, imageSrc: null });
 
   useEffect(() => {
     const el = stageRef.current;
@@ -175,12 +197,16 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
     type Draft = { content: PageContent | Record<string, unknown>; revision: number; published_version: number | null; assets: Record<string, string> };
     // Website belum dibuat → pilih template server pertama (Studio menyusun ulang tampilannya sendiri).
     const ensureWebsite = async () => {
-      const w = await api<{ template_key: string }>("GET", `${base}/website`).catch((e) => (e instanceof ApiError && e.status === 404 ? null : Promise.reject(e)));
-      if (w) return w.template_key;
+      const w = await api<{ template_key: string; pages?: PageItem[] }>("GET", `${base}/website`).catch((e) => (e instanceof ApiError && e.status === 404 ? null : Promise.reject(e)));
+      if (w) {
+        if (w.pages) setPages(w.pages);
+        return w.template_key;
+      }
       const tpls = await api<{ key: string }[]>("GET", `${base}/website/templates`);
       const key = tpls[0]?.key;
       if (!key) throw new Error("Tidak ada template website.");
-      await api("PUT", `${base}/website`, { json: { template_key: key } });
+      const res = await api<{ template_key: string; pages?: PageItem[] }>("PUT", `${base}/website`, { json: { template_key: key } });
+      if (res.pages) setPages(res.pages);
       return key;
     };
     (async () => {
@@ -237,7 +263,7 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
     if (json === srv.savedDoc) return srv.revision;
     setSaveState("saving");
     try {
-      const r = await api<{ revision: number }>("PUT", `${base}/website/pages/home/draft`, { json: { content: doc, base_revision: srv.revision } });
+      const r = await api<{ revision: number }>("PUT", `${base}/website/pages/${activeSlug}/draft`, { json: { content: doc, base_revision: srv.revision } });
       setSrv((x) => (x ? { ...x, revision: r.revision, savedDoc: json } : x));
       setSaveState("saved");
       setSaveErr(null);
@@ -255,7 +281,103 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
       }
       return null;
     }
-  }, [st, srv, canEdit, base, ctx.tenant.id]);
+  }, [st, srv, canEdit, base, activeSlug, ctx.tenant.id]);
+
+  /* ---------------- Multi-Halaman & Tiering ---------------- */
+  const switchPage = useCallback(async (slug: string) => {
+    if (slug === activeSlug) return;
+    await saveNow();
+    setSel(null);
+    setActiveSlug(slug);
+    try {
+      type DraftDoc = { content: PageContent | Record<string, unknown>; revision: number; published_version: number | null; assets: Record<string, string> };
+      const d = await api<DraftDoc>("GET", `${base}/website/pages/${slug}/draft`);
+      setDraftAssetsForUploads(d.assets);
+      const minSize = (k: PluginKind) => ({ minW: pluginDef(k).minW, minH: pluginDef(k).minH });
+      if (isV2(d.content)) {
+        const st0 = withInstalled(fromDoc(d.content, minSize));
+        setHist(start(st0));
+        setSrv((x) => (x ? { ...x, revision: d.revision, published: d.published_version, savedDoc: JSON.stringify(toDoc(st0, x.template)) } : x));
+      } else {
+        const v1 = d.content as PageContent;
+        setHist(start(fromDraft(v1)));
+        setSrv((x) => (x ? { ...x, revision: d.revision, published: d.published_version, savedDoc: "" } : x));
+      }
+    } catch (e) {
+      toast.error(describe(e));
+    }
+  }, [activeSlug, base, saveNow]);
+
+  const createPage = useCallback(async (slug: string, title: string): Promise<boolean> => {
+    try {
+      const r = await api<PageItem>("POST", `${base}/website/pages`, { json: { slug, title } });
+      setPages((p) => [...p, r]);
+      toast.ok(`Halaman ${title} dibuat.`);
+      await switchPage(slug);
+      return true;
+    } catch (e) {
+      toast.error(describe(e));
+      return false;
+    }
+  }, [base, switchPage]);
+
+  const deletePage = useCallback(async (slug: string): Promise<boolean> => {
+    try {
+      await api("DELETE", `${base}/website/pages/${slug}`);
+      setPages((p) => p.filter((x) => x.slug !== slug));
+      toast.ok("Halaman dihapus.");
+      if (activeSlug === slug) await switchPage("home");
+      return true;
+    } catch (e) {
+      toast.error(describe(e));
+      return false;
+    }
+  }, [activeSlug, base, switchPage]);
+
+  /* ---------------- Theme & Background ---------------- */
+  const themeConfig: ThemeConfig = useMemo(() => ({
+    primary: st?.primary ?? "#4F46E5",
+    font: st?.font ?? FONT_PRESETS[0]!,
+    surface: st?.surface ?? "light",
+    textScale: st?.textScale ?? 1,
+    navbarStyle: st?.navbarStyle ?? "top",
+    navbarSticky: st?.navbarSticky ?? false,
+    backgroundImage: st?.backgroundImage,
+    backgroundSize: st?.backgroundSize,
+    backgroundPosition: st?.backgroundPosition,
+    backgroundOpacity: st?.backgroundOpacity ?? 0,
+  }), [st]);
+
+  const updateTheme = useCallback((patch: Partial<ThemeConfig>) => {
+    update((s) => ({ ...s, ...patch }), "theme");
+  }, [update]);
+
+  const uploadBg = useCallback(async (file: File): Promise<string | null> => {
+    const id0 = toast.info("Mengunggah foto latar…");
+    const u = await assets.upload(file);
+    dismissToast(id0);
+    if (!u) return null;
+    update((s) => ({ ...s, backgroundImage: u.ref }), "bg");
+    toast.ok("Foto latar dipasang.");
+    return u.ref;
+  }, [assets, update]);
+
+  /* ---------------- Coretan Bebas (Brush & Eraser) ---------------- */
+  const addStroke = useCallback((stroke: DrawingStroke) => {
+    update((s) => ({ ...s, drawings: [...(s.drawings ?? []), stroke] }), "draw");
+  }, [update]);
+
+  const eraseStroke = useCallback((id: string) => {
+    update((s) => ({ ...s, drawings: (s.drawings ?? []).filter((d) => d.id !== id) }), "erase");
+  }, [update]);
+
+  const clearStrokes = useCallback(() => {
+    update((s) => ({
+      ...s,
+      drawings: (s.drawings ?? []).filter((d) => drawTarget === "background" ? d.target !== "background" : d.target === "background"),
+    }), "clear_draw");
+    toast.ok("Coretan dibersihkan.");
+  }, [drawTarget, update]);
 
   useEffect(() => {
     if (!st || !srv || picking === "first" || !canEdit || saveState === "conflict") return;
@@ -281,7 +403,7 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
     try {
       const rev = await saveNow();
       if (rev === null) { toast.error("Draf belum tersimpan, jadi belum bisa diterbitkan."); return; }
-      const r = await api<{ version: number }>("POST", `${base}/website/pages/home/publish`, { json: { revision: rev } });
+      const r = await api<{ version: number }>("POST", `${base}/website/pages/${activeSlug}/publish`, { json: { revision: rev } });
       setSrv((x) => (x ? { ...x, published: r.version ?? x.published } : x));
       toast.ok("Website diterbitkan. Pengunjung melihat versi baru dalam ±1 menit.");
     } catch (e) {
@@ -461,6 +583,99 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
   const gridCells = st.cells.filter((c) => !isEmbed(c));
   const floating = st.cells.find(isFloating);
   const floatingWa = st.cells.find(isFloatingWa);
+  const canvasRows = Math.max(20, rowsFor(gridCells.reduce((max, c) => Math.max(max, (c.y + c.h) * (ROW + GAP)), 0)));
+  const canvasHeight = canvasRows * (ROW + GAP);
+  const colW = (DESIGN_WIDTH - GAP * (COLS - 1)) / COLS;
+  const pw = (w: number) => w * colW + (w - 1) * GAP;
+  const ph = (h: number) => h * ROW + (h - 1) * GAP;
+  const bgUrl = st.backgroundImage ? (assets.url(st.backgroundImage) ?? st.backgroundImage) : undefined;
+  const isSideNav = st.navbarStyle === "side";
+
+  const canvasElement = (
+    <Canvas
+      scale={scale}
+      cells={gridCells}
+      onChange={(cells) => update((s) => ({ ...s, cells: [...cells, ...s.cells.filter(isEmbed)] }), "drag")}
+      onMeasure={onMeasure}
+      onResizeH={onResizeH}
+      onDropFile={(id, f) => void putPhoto(id, f)}
+      acceptsFile={(c) => takesPhoto(c.kind)}
+      selected={sel}
+      onSelect={setSel}
+      onRemove={remove}
+      onDropPlugin={(k, at) => add(k as PluginKind, at)}
+      render={(c) => renderCell(c, sel === c.id)}
+      label={(c) => pluginDef(c.kind).name}
+      isDrawingActive={activeTab === "draw" && drawTool !== null}
+      backgroundLayer={
+        <DrawingLayer
+          target="background"
+          strokes={st.drawings ?? []}
+          width={DESIGN_WIDTH}
+          height={canvasHeight}
+          activeTool={activeTab === "draw" && drawTarget === "background" ? drawTool : null}
+          currentConfig={drawConfig}
+          onAddStroke={addStroke}
+          onEraseStroke={eraseStroke}
+        />
+      }
+      cellOverlay={(c) => (
+        <DrawingLayer
+          target={c.id}
+          strokes={st.drawings ?? []}
+          width={pw(c.w)}
+          height={ph(c.h)}
+          activeTool={activeTab === "draw" && drawTarget === "cell" && sel === c.id ? drawTool : null}
+          currentConfig={drawConfig}
+          onAddStroke={addStroke}
+          onEraseStroke={eraseStroke}
+        />
+      )}
+      toolbar={(c) => (
+        <>
+          {needsUpgrade(pluginPlan(c.kind), planCode) && <span className="st-clip st-pro" title="Tidak tampil di situs sampai toko memakai paket Pro">Butuh paket Pro</span>}
+          {c.kind === "product_grid" && noPhoto > 0 && (
+            <Link className="st-clip st-nudge" href={`/products?tenant=${ctx.tenant.id}`}>{noPhoto} produk tanpa foto →</Link>
+          )}
+          {clipped[c.id] && c.autoH === false && <span className="st-clip" title="Isi lebih panjang dari kotak">Terpotong</span>}
+          {takesPhoto(c.kind) && (
+            <label className="st-tool" title={c.kind === "gallery" ? "Tambah foto" : "Ganti foto"} aria-label={c.kind === "gallery" ? "Tambah foto" : "Ganti foto"}>
+              <ImageSquare weight="bold" />
+              <input type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void putPhoto(c.id, f); }} />
+            </label>
+          )}
+          {takesPhoto(c.kind) && (
+            <button
+              type="button"
+              className="st-tool"
+              onClick={() => {
+                const k = IMAGE_KEY[c.kind];
+                const ref = k ? (c.data[k] as string) : null;
+                if (ref && assets.url(ref)) {
+                  setCropModal({ open: true, cellId: c.id, imageSrc: assets.url(ref)! });
+                } else {
+                  toast.error("Belum ada foto yang dipasang untuk dipotong.");
+                }
+              }}
+              aria-label="Potong foto"
+              title="Potong foto"
+            >
+              <Crop weight="bold" />
+            </button>
+          )}
+          {c.kind === "chatbot" && (
+            <button type="button" className="st-tool" onClick={() => setChatOpen(c.id, c.chatOpen === false)} aria-label={c.chatOpen === false ? "Maksimalkan chatbot" : "Minimalkan chatbot"} title={c.chatOpen === false ? "Maksimalkan" : "Minimalkan"}>
+              {c.chatOpen === false ? <CaretUp weight="bold" /> : <CaretDown weight="bold" />}
+            </button>
+          )}
+          <button type="button" className={`st-tool${c.locked ? " st-tool-on" : ""}`} onClick={() => setCell(c.id, { locked: !c.locked }, "")} aria-pressed={!!c.locked} aria-label={c.locked ? "Buka kunci posisi" : "Kunci posisi"} title={c.locked ? "Buka kunci posisi" : "Kunci posisi — plugin lain tidak akan menggeser ini"}>
+            {c.locked ? <LockSimple weight="fill" /> : <LockSimpleOpen weight="bold" />}
+          </button>
+          <button type="button" className="st-tool" onClick={() => setFull(c.id)} aria-label={`Lihat penuh ${pluginDef(c.kind).name}`} title="Lihat penuh"><ArrowsOut weight="bold" /></button>
+        </>
+      )}
+    />
+  );
 
   return (
     <Assets.Provider value={assets}>
@@ -471,6 +686,7 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
           <SidebarSimple weight={panelOpen ? "fill" : "bold"} />
         </button>
         <span className="sx-brand"><span className="d-avatar" aria-hidden="true">{(ctx.tenant.name.trim()[0] ?? "T").toUpperCase()}</span>{ctx.tenant.name}<em>Studio</em></span>
+        {activeSlug !== "home" && <Badge tone="brand">{pages.find((p) => p.slug === activeSlug)?.title || activeSlug}</Badge>}
         <SaveBadge state={saveState} saved={saved} err={saveErr} onRetry={() => { setSaveState("idle"); void saveNow(); }} />
         <span className="sx-spacer" />
         <div className="d-row" style={{ gap: 2 }}>
@@ -494,7 +710,19 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
       </header>
 
       <div className="sx-body" data-panel={panelOpen ? "open" : "closed"}>
-        <aside className="st-panel sx-panel" aria-label={selected ? "Pengaturan plugin" : "Plugin"} hidden={!panelOpen}>
+        <IconRail
+          activeTab={selected ? null : activeTab}
+          onSelectTab={(t) => {
+            setSel(null);
+            if (activeTab === t && panelOpen) {
+              setPanelOpen(false);
+            } else {
+              setActiveTab(t);
+              setPanelOpen(true);
+            }
+          }}
+        />
+        <aside className="st-panel sx-panel" aria-label={selected ? "Pengaturan plugin" : activeTab === "pages" ? "Halaman" : activeTab === "theme" ? "Desain" : activeTab === "draw" ? "Coretan" : "Plugin"} hidden={!panelOpen}>
           {selected ? (
             <Inspector
               c={selected}
@@ -511,137 +739,182 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
               onRemove={() => remove(selected.id)}
               onFull={() => setFull(selected.id)}
               onPhoto={(f) => void putPhoto(selected.id, f)}
+              onCrop={() => {
+                const k = IMAGE_KEY[selected.kind];
+                const ref = k ? (selected.data[k] as string) : null;
+                if (ref && assets.url(ref)) {
+                  setCropModal({ open: true, cellId: selected.id, imageSrc: assets.url(ref)! });
+                } else {
+                  toast.error("Belum ada foto yang dipasang untuk dipotong.");
+                }
+              }}
               aiHref={`/ai?tenant=${ctx.tenant.id}`}
               businessHref={`/business?tenant=${ctx.tenant.id}`}
               upgradeHref={needsUpgrade(pluginPlan(selected.kind), planCode) ? `/subscription?tenant=${ctx.tenant.id}` : null}
             />
+          ) : activeTab === "pages" ? (
+            <PagesPanel
+              pages={pages}
+              activeSlug={activeSlug}
+              onSelectPage={(slug) => void switchPage(slug)}
+              onCreatePage={createPage}
+              onDeletePage={deletePage}
+              isPro={planCode === "pro"}
+              onUpgradeClick={() => window.open(`/subscription?tenant=${ctx.tenant.id}`, "_self")}
+            />
+          ) : activeTab === "theme" ? (
+            <ThemePanel
+              config={themeConfig}
+              onChange={updateTheme}
+              onUploadBackground={uploadBg}
+              assetUrl={assets.url}
+            />
+          ) : activeTab === "draw" ? (
+            <DrawPanel
+              activeTool={drawTool}
+              onSelectTool={setDrawTool}
+              target={drawTarget}
+              onSelectTarget={setDrawTarget}
+              selectedCellId={null}
+              config={drawConfig}
+              onChangeConfig={setDrawConfig}
+              primaryColor={st.primary}
+              onClearStrokes={clearStrokes}
+            />
           ) : (
             <>
-              <div className="d-seg" role="tablist" aria-label="Plugin" style={{ width: "100%" }}>
-                <button type="button" role="tab" aria-selected={panel === "installed"} style={{ flex: 1 }} onClick={() => setPanel("installed")}>Terpasang ({st.installed.length})</button>
-                <button type="button" role="tab" aria-selected={panel === "catalog"} style={{ flex: 1 }} onClick={() => setPanel("catalog")}>Cari plugin</button>
+              <div style={{ position: "relative", marginBottom: 12 }}>
+                <MagnifyingGlass aria-hidden="true" weight="bold" style={{ position: "absolute", left: 10, top: "50%", translate: "0 -50%", width: 14, height: 14, color: "var(--muted)" }} />
+                <input type="search" aria-label="Cari plugin" placeholder="Cari plugin (mis. promo, wa, banner)…" value={q} onChange={(e) => setQ(e.target.value)} style={{ paddingLeft: 32, width: "100%" }} />
               </div>
-              {panel === "catalog" && (
-                <div style={{ position: "relative" }}>
-                  <MagnifyingGlass aria-hidden="true" weight="bold" style={{ position: "absolute", left: 10, top: "50%", translate: "0 -50%", width: 14, height: 14, color: "var(--muted)" }} />
-                  <input type="search" aria-label="Cari plugin" placeholder="mis. chatbot, galeri…" value={q} onChange={(e) => setQ(e.target.value)} style={{ paddingLeft: 32 }} />
-                </div>
-              )}
-              <p className="d-hint" style={{ margin: 0 }}>{panel === "installed" ? "Tarik ke kanvas, atau klik + untuk menaruh di bawah." : "Pasang plugin resmi UMKM OS untuk toko Anda."}</p>
-              <ul className="st-plugins">
-                {(panel === "installed" ? PLUGINS.filter((p) => st.installed.includes(p.kind)) : shownPlugins).map((p) => {
-                  const installed = st.installed.includes(p.kind);
-                  return (
-                    <li key={p.kind} draggable={installed} className={installed ? "st-draggable" : undefined}
-                      onDragStart={(e) => { e.dataTransfer.setData("application/x-umkm-plugin", p.kind); e.dataTransfer.effectAllowed = "copy"; }}>
-                      <span className="st-plugin-icon" aria-hidden="true">{p.kind === "chatbot" ? <ChatCircleDots weight="duotone" /> : p.kind === "product_grid" ? <Sparkle weight="duotone" /> : <PuzzlePiece weight="duotone" />}</span>
-                      <span className="st-plugin-text"><strong>{p.name}{pluginPlan(p.kind) === "pro" && <Badge tone="brand" plain>Pro</Badge>}</strong><span>{p.desc}</span></span>
-                      {installed
-                        ? <button type="button" className="d-icon-btn" aria-label={`Tambah ${p.name} ke halaman`} onClick={() => add(p.kind)}><Plus weight="bold" /></button>
-                        : <button type="button" className="d-btn d-btn-sm" onClick={() => { update((s) => ({ ...s, installed: [...s.installed, p.kind] }), ""); toast.ok(`${p.name} terpasang. Tarik ke kanvas untuk memakainya.`); }}>Pasang</button>}
-                    </li>
-                  );
-                })}
-                {panel === "catalog" && shownPlugins.length === 0 && <li className="d-muted d-small">Tidak ada plugin untuk “{q}”.</li>}
-              </ul>
 
-              <div className="st-section">
-                <h3>Warna</h3>
-                <div className="st-palettes">
-                  {PALETTES.map((p) => (
-                    <button key={p.name} type="button" className="st-swatch" aria-pressed={st.primary === p.primary && st.surface === p.surface} title={p.name}
-                      onClick={() => update((s) => ({ ...s, primary: p.primary, surface: p.surface }), "")}
-                      style={{ ["--sw" as string]: p.primary, ["--s-on" as string]: p.onPrimary, ["--sf" as string]: p.surface === "dark" ? "#111118" : p.surface === "cream" ? "#fbf6ee" : "#ffffff" }}>
-                      <span aria-hidden="true" /><em>{p.name}</em>
-                    </button>
-                  ))}
-                </div>
-                <div className="d-grid" style={{ marginTop: 10 }}>
-                  <label className="d-field" style={{ margin: 0 }}><span>Warna bebas</span>
-                    <span className="d-color"><input type="color" value={st.primary} onChange={(e) => update((s) => ({ ...s, primary: e.target.value.toUpperCase() }), "color")} /><code>{st.primary}</code></span>
-                  </label>
-                  <label className="d-field" style={{ margin: 0 }}><span>Latar</span>
-                    <select value={st.surface} onChange={(e) => update((s) => ({ ...s, surface: e.target.value as Studio["surface"] }), "")}>
-                      <option value="light">Putih</option><option value="cream">Krem</option><option value="dark">Gelap</option>
-                    </select>
-                  </label>
-                </div>
-                <label className="d-field" style={{ marginTop: 10 }}><span>Font</span>
-                  <select value={st.font} onChange={(e) => update((s) => ({ ...s, font: e.target.value }), "")}>
-                    {FONT_PRESETS.map((f) => <option key={f}>{f}</option>)}
-                  </select>
-                </label>
-                <div className="d-field" style={{ marginTop: 10, marginBottom: 0 }}>
-                  <span>Ukuran teks</span>
-                  <div className="d-seg" role="group" aria-label="Ukuran teks" style={{ width: "100%" }}>
-                    {TEXT_SCALES.map((t) => (
-                      <button key={t.v} type="button" style={{ flex: 1 }} aria-pressed={(st.textScale ?? 1) === t.v} onClick={() => update((s) => ({ ...s, textScale: t.v }), "")}>
-                        <span style={{ fontSize: `${t.v * 0.8125}rem` }}>{t.l}</span>
-                      </button>
-                    ))}
+              {CATEGORIES.map((cat) => {
+                const catPlugins = shownPlugins.filter((p) => p.category === cat.label);
+                if (catPlugins.length === 0) return null;
+                const CatIcon = cat.icon;
+                return (
+                  <div key={cat.label} className="st-category-section" style={{ marginBottom: 16 }}>
+                    <h3 style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.8125rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em", margin: "0 0 8px" }}>
+                      <CatIcon size={14} weight="bold" /> {cat.label}
+                    </h3>
+                    <div className="st-drawer-grouped">
+                      {catPlugins.map((p) => {
+                        const installed = st.installed.includes(p.kind);
+                        return (
+                          <div
+                            key={p.kind}
+                            draggable={installed}
+                            className={`st-group-card${installed ? " st-draggable" : ""}`}
+                            onDragStart={(e) => { e.dataTransfer.setData("application/x-umkm-plugin", p.kind); e.dataTransfer.effectAllowed = "copy"; }}
+                          >
+                            <div className="d-row d-row-between" style={{ alignItems: "flex-start", width: "100%" }}>
+                              <span className="st-plugin-icon" aria-hidden="true">
+                                {p.kind === "chatbot" ? <ChatCircleDots weight="duotone" /> : p.kind === "product_grid" ? <Sparkle weight="duotone" /> : <PuzzlePiece weight="duotone" />}
+                              </span>
+                              {installed ? (
+                                <button type="button" className="d-icon-btn d-icon-btn-sm" aria-label={`Tambah ${p.name}`} onClick={() => add(p.kind)} title="Tambah ke halaman">
+                                  <Plus weight="bold" size={14} />
+                                </button>
+                              ) : (
+                                <button type="button" className="d-btn d-btn-sm" style={{ padding: "2px 8px", fontSize: "0.6875rem" }} onClick={() => { update((s) => ({ ...s, installed: [...s.installed, p.kind] }), ""); toast.ok(`${p.name} terpasang.`); }}>
+                                  Pasang
+                                </button>
+                              )}
+                            </div>
+                            <strong style={{ fontSize: "0.8125rem", marginTop: 4 }}>
+                              {p.name} {pluginPlan(p.kind) === "pro" && <Badge tone="brand" plain>Pro</Badge>}
+                            </strong>
+                            <span className="d-muted d-small" style={{ fontSize: "0.6875rem", lineHeight: 1.25, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                              {p.desc}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              </div>
-              <div className="st-section">
-                <h3>Google & berbagi</h3>
-                <p className="d-hint" style={{ marginTop: 0 }}>Tampil di hasil pencarian dan pratinjau saat tautan toko dibagikan di WhatsApp. Kosong = nama & deskripsi Profil bisnis.</p>
-                <label className="d-field"><span>Judul halaman <em className="d-muted">{(st.seo?.title ?? "").length}/70</em></span>
-                  <input maxLength={70} placeholder={business.profile.name || "Nama toko"} value={st.seo?.title ?? ""} onChange={(e) => update((s) => ({ ...s, seo: { ...s.seo, title: e.target.value } }), "seo")} />
-                </label>
-                <label className="d-field" style={{ marginBottom: 0 }}><span>Deskripsi <em className="d-muted">{(st.seo?.description ?? "").length}/160</em></span>
-                  <textarea id="seo-description" rows={3} maxLength={160} placeholder={business.profile.description ?? "Satu-dua kalimat tentang toko Anda"} value={st.seo?.description ?? ""} onChange={(e) => update((s) => ({ ...s, seo: { ...s.seo, description: e.target.value } }), "seo")} />
-                </label>
-              </div>
-              <p className="d-hint" style={{ margin: 0 }}>Tips: klik plugin untuk memilih, klik teksnya untuk mengetik, seret foto dari komputer ke plugin. Ctrl+Z untuk membatalkan.</p>
+                );
+              })}
             </>
           )}
         </aside>
 
         <div className="sx-scroll sx-canvas" onPointerDown={(e) => { if (e.target === e.currentTarget) setSel(null); }}>
-        <div className="st-stage" data-surface={st.surface} style={{ ["--s-primary" as string]: st.primary, ["--s-size" as string]: st.textScale ?? 1 }}>
+        <div
+          className="st-stage"
+          data-surface={st.surface}
+          style={{
+            ["--s-primary" as string]: st.primary,
+            ["--s-size" as string]: st.textScale ?? 1,
+            ...(bgUrl ? { ["--s-bg-img" as string]: `url("${bgUrl}")` } : {}),
+            ["--s-bg-size" as string]: st.backgroundSize ?? "cover",
+            ["--s-bg-pos" as string]: st.backgroundPosition ?? "center",
+            ["--s-bg-opacity" as string]: ((st.backgroundOpacity ?? 0) / 100).toString(),
+            position: "relative",
+          }}
+        >
+          {bgUrl && (
+            <div
+              className="s-bg-overlay"
+              aria-hidden="true"
+              style={{
+                position: "absolute",
+                inset: 0,
+                pointerEvents: "none",
+                backgroundImage: "var(--s-bg-img)",
+                backgroundSize: "var(--s-bg-size, cover)",
+                backgroundPosition: "var(--s-bg-pos, center)",
+                backgroundRepeat: st.backgroundSize === "repeat" ? "repeat" : "no-repeat",
+                opacity: "var(--s-bg-opacity, 0)",
+                backdropFilter: "blur(12px)",
+                WebkitBackdropFilter: "blur(12px)",
+                zIndex: 0,
+              }}
+            />
+          )}
           <div ref={stageRef} className="st-measure" />
           {device === "desktop" ? (
-            <Canvas
-              scale={scale}
-              cells={gridCells}
-              onChange={(cells) => update((s) => ({ ...s, cells: [...cells, ...s.cells.filter(isEmbed)] }), "drag")}
-              onMeasure={onMeasure}
-              onResizeH={onResizeH}
-              onDropFile={(id, f) => void putPhoto(id, f)}
-              acceptsFile={(c) => takesPhoto(c.kind)}
-              selected={sel}
-              onSelect={setSel}
-              onRemove={remove}
-              onDropPlugin={(k, at) => add(k as PluginKind, at)}
-              render={(c) => renderCell(c, sel === c.id)}
-              label={(c) => pluginDef(c.kind).name}
-              toolbar={(c) => (
-                <>
-                  {needsUpgrade(pluginPlan(c.kind), planCode) && <span className="st-clip st-pro" title="Tidak tampil di situs sampai toko memakai paket Pro">Butuh paket Pro</span>}
-                  {c.kind === "product_grid" && noPhoto > 0 && (
-                    <Link className="st-clip st-nudge" href={`/products?tenant=${ctx.tenant.id}`}>{noPhoto} produk tanpa foto →</Link>
-                  )}
-                  {clipped[c.id] && c.autoH === false && <span className="st-clip" title="Isi lebih panjang dari kotak">Terpotong</span>}
-                  {takesPhoto(c.kind) && (
-                    <label className="st-tool" title={c.kind === "gallery" ? "Tambah foto" : "Ganti foto"} aria-label={c.kind === "gallery" ? "Tambah foto" : "Ganti foto"}>
-                      <ImageSquare weight="bold" />
-                      <input type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void putPhoto(c.id, f); }} />
-                    </label>
-                  )}
-                  {c.kind === "chatbot" && (
-                    <button type="button" className="st-tool" onClick={() => setChatOpen(c.id, c.chatOpen === false)} aria-label={c.chatOpen === false ? "Maksimalkan chatbot" : "Minimalkan chatbot"} title={c.chatOpen === false ? "Maksimalkan" : "Minimalkan"}>
-                      {c.chatOpen === false ? <CaretUp weight="bold" /> : <CaretDown weight="bold" />}
-                    </button>
-                  )}
-                  <button type="button" className={`st-tool${c.locked ? " st-tool-on" : ""}`} onClick={() => setCell(c.id, { locked: !c.locked }, "")} aria-pressed={!!c.locked} aria-label={c.locked ? "Buka kunci posisi" : "Kunci posisi"} title={c.locked ? "Buka kunci posisi" : "Kunci posisi — plugin lain tidak akan menggeser ini"}>
-                    {c.locked ? <LockSimple weight="fill" /> : <LockSimpleOpen weight="bold" />}
-                  </button>
-                  <button type="button" className="st-tool" onClick={() => setFull(c.id)} aria-label={`Lihat penuh ${pluginDef(c.kind).name}`} title="Lihat penuh"><ArrowsOut weight="bold" /></button>
-                </>
-              )}
-            />
+            isSideNav ? (
+              <div className="st-stage-side-wrap">
+                <StudioNavbar
+                  style="side"
+                  business={business}
+                  pages={pages}
+                  activeSlug={activeSlug}
+                  onSelectPage={(slug) => void switchPage(slug)}
+                  logoUrl={business.profile.logo ? assets.url(business.profile.logo) : undefined}
+                  primaryColor={st.primary}
+                />
+                <div className="st-stage-canvas-flex">
+                  {canvasElement}
+                </div>
+              </div>
+            ) : (
+              <>
+                <StudioNavbar
+                  style="top"
+                  sticky={st.navbarSticky}
+                  business={business}
+                  pages={pages}
+                  activeSlug={activeSlug}
+                  onSelectPage={(slug) => void switchPage(slug)}
+                  logoUrl={business.profile.logo ? assets.url(business.profile.logo) : undefined}
+                  primaryColor={st.primary}
+                />
+                {canvasElement}
+              </>
+            )
           ) : (
             <div className="st-phone">
+              <StudioNavbar
+                style="top"
+                sticky={st.navbarSticky}
+                business={business}
+                pages={pages}
+                activeSlug={activeSlug}
+                onSelectPage={(slug) => void switchPage(slug)}
+                logoUrl={business.profile.logo ? assets.url(business.profile.logo) : undefined}
+                primaryColor={st.primary}
+              />
               {mobileOrder(gridCells).map((c) => <div key={c.id} className="st-phone-cell">{renderCell(c)}</div>)}
               <div className="st-dock"><FloatingChat cell={floating} primary={st.primary} onToggle={setChatOpen} onSelect={setSel} selected={sel} /><FloatingWa cell={floatingWa} onSelect={setSel} selected={sel} /></div>
             </div>
@@ -704,6 +977,18 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
           />
         )}
       </Sheet>
+
+      <ImageCropModal
+        open={cropModal.open}
+        imageSrc={cropModal.imageSrc ?? ""}
+        onClose={() => setCropModal({ open: false, cellId: null, imageSrc: null })}
+        onCrop={async (file) => {
+          if (cropModal.cellId) {
+            await putPhoto(cropModal.cellId, file);
+          }
+          setCropModal({ open: false, cellId: null, imageSrc: null });
+        }}
+      />
     </Assets.Provider>
   );
 }
@@ -834,7 +1119,7 @@ function MiniLayout({ cells, render, theme }: { cells: StudioCell[]; render: (c:
 }
 
 /* ============================================================ Inspektur */
-function Inspector({ c, onBack, onChange, onWidth, onMove, onLayout, onDuplicate, onRemove, onFull, onPhoto, aiHref, businessHref, upgradeHref }: {
+function Inspector({ c, onBack, onChange, onWidth, onMove, onLayout, onDuplicate, onRemove, onFull, onPhoto, onCrop, aiHref, businessHref, upgradeHref }: {
   c: StudioCell;
   onBack: () => void;
   onChange: (patch: Partial<StudioCell>, key?: string) => void;
@@ -845,6 +1130,7 @@ function Inspector({ c, onBack, onChange, onWidth, onMove, onLayout, onDuplicate
   onRemove: () => void;
   onFull: () => void;
   onPhoto: (f: File) => void;
+  onCrop?: () => void;
   aiHref: string;
   businessHref: string;
   /** Diisi bila plugin butuh paket lebih tinggi (ADR-0019). */
@@ -897,7 +1183,31 @@ function Inspector({ c, onBack, onChange, onWidth, onMove, onLayout, onDuplicate
               <input type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) onPhoto(f); }} />
             </label>
           )}
+          {takesPhoto(c.kind) && onCrop && (
+            <button type="button" className="d-btn d-btn-sm" onClick={onCrop} title="Potong foto">
+              <Crop weight="bold" aria-hidden="true" /> Potong
+            </button>
+          )}
         </div>
+        {takesPhoto(c.kind) && (
+          <div style={{ marginTop: 12 }}>
+            <div className="d-field" style={{ margin: 0, marginBottom: 8 }}>
+              <span>Tampilan foto</span>
+              <div className="d-seg" role="group" aria-label="Tampilan foto" style={{ width: "100%" }}>
+                <button type="button" style={{ flex: 1 }} aria-pressed={((c.data.image_fit as string) ?? "cover") === "cover"} onClick={() => onChange({ data: { ...c.data, image_fit: "cover" } }, "image_fit")}>Cover</button>
+                <button type="button" style={{ flex: 1 }} aria-pressed={(c.data.image_fit as string) === "contain"} onClick={() => onChange({ data: { ...c.data, image_fit: "contain" } }, "image_fit")}>Contain (Utuh)</button>
+              </div>
+            </div>
+            <div className="d-field" style={{ margin: 0 }}>
+              <span>Titik fokus (posisi)</span>
+              <div className="d-seg" role="group" aria-label="Posisi foto" style={{ width: "100%" }}>
+                {([["top", "Atas"], ["center", "Tengah"], ["bottom", "Bawah"]] as const).map(([pos, lbl]) => (
+                  <button key={pos} type="button" style={{ flex: 1 }} aria-pressed={((c.data.image_position as string) ?? "center") === pos} onClick={() => onChange({ data: { ...c.data, image_position: pos } }, "image_pos")}>{lbl}</button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </div>}
       <div className="st-section">
         <h3>Gaya</h3>

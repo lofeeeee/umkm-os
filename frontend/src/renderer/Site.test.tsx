@@ -127,6 +127,60 @@ describe("renderer perilaku", () => {
     expect(html).toContain("Jl. Merdeka 1");
     expect(html).toContain("https://wa.me/6281234567890");
   });
+
+  it("navbar_style side me-render container drawer s-nav-side", () => {
+    const html = render(
+      [{ id: "h-1", type: "header", enabled: true, data: { title: "Toko Side", nav: [{ label: "Menu", href: "#menu" }] } }],
+      false,
+      { primary: "#2563EB", font: "inter", navbar_style: "side" } as any,
+    );
+    expect(html).toContain("s-nav-side");
+    expect(html).toContain("s-nav-toggle");
+    expect(html).toContain("Toko Side");
+  });
+
+  it("navbar_style top dengan navbar_sticky me-render s-sticky", () => {
+    const html = render(
+      [{ id: "h-1", type: "header", enabled: true, data: { title: "Toko Top" } }],
+      false,
+      { primary: "#2563EB", font: "inter", navbar_style: "top", navbar_sticky: true } as any,
+    );
+    expect(html).toContain("s-sticky");
+  });
+
+  it("mendukung background CSS variables dan overlay pada .site", () => {
+    const html = render([], false, {
+      primary: "#2563EB",
+      font: "inter",
+      background_image: ASSET,
+      background_size: "contain",
+      background_position: "top center",
+      background_opacity: 75,
+    } as any);
+    expect(html).toContain("--s-bg-img:url(&quot;https://api.example/files/x?sig=1&quot;)");
+    expect(html).toContain("--s-bg-size:contain");
+    expect(html).toContain("--s-bg-pos:top center");
+    expect(html).toContain("--s-bg-opacity:0.75");
+    expect(html).toContain("s-bg-overlay");
+  });
+
+  it("mendukung image_fit dan image_position pada Img", () => {
+    const html = render([
+      {
+        id: "hero-1",
+        type: "hero",
+        enabled: true,
+        data: {
+          title: "Hero Fit",
+          image: ASSET,
+          image_fit: "contain",
+          image_position: "top left",
+        },
+      },
+    ]);
+    expect(html).toContain("object-fit:contain");
+    expect(html).toContain("object-position:top left");
+  });
 });
 
 describe("helper", () => {
