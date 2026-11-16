@@ -6,6 +6,9 @@ use umkm_domain::commerce::qris;
 
 /// Batas sisi terpanjang sebelum gambar diperkecil (jaga CPU & memori).
 const MAX_SIDE: u32 = 1600;
+/// Batas keras dimensi sebelum decode agar gambar raksasa ditolak tanpa alokasi penuh.
+const MAX_DECODE_SIDE: u32 = 4096;
+const MAX_DECODE_ALLOC: u64 = 128 * 1024 * 1024;
 const MIN_PAYLOAD: usize = 20;
 const MAX_PAYLOAD: usize = 1024;
 
@@ -22,7 +25,15 @@ pub enum QrisDecodeError {
 /// Baca QR pertama yang berisi payload QRIS statis valid.
 /// Beberapa QR dalam satu gambar diizinkan: QR non-QRIS dilewati.
 pub fn decode_qris_image(bytes: &[u8]) -> Result<String, QrisDecodeError> {
-    let mut img = image::load_from_memory(bytes).map_err(|_| QrisDecodeError::Image)?;
+    let mut reader = image::ImageReader::new(std::io::Cursor::new(bytes))
+        .with_guessed_format()
+        .map_err(|_| QrisDecodeError::Image)?;
+    let mut limits = image::Limits::default();
+    limits.max_image_width = Some(MAX_DECODE_SIDE);
+    limits.max_image_height = Some(MAX_DECODE_SIDE);
+    limits.max_alloc = Some(MAX_DECODE_ALLOC);
+    reader.limits(limits);
+    let mut img = reader.decode().map_err(|_| QrisDecodeError::Image)?;
     if img.width() > MAX_SIDE || img.height() > MAX_SIDE {
         img = img.resize(MAX_SIDE, MAX_SIDE, image::imageops::FilterType::Lanczos3);
     }
@@ -142,6 +153,24 @@ mod tests {
         assert_eq!(
             decode_qris_image(&blank_png()).unwrap_err(),
             QrisDecodeError::NoQr
+        );
+    }
+
+    fn oversized_png() -> Vec<u8> {
+        let side = MAX_DECODE_SIDE + 1;
+        let img = image::ImageBuffer::<Luma<u8>, Vec<u8>>::from_pixel(side, side, Luma([255]));
+        let mut bytes = Vec::new();
+        DynamicImage::ImageLuma8(img)
+            .write_to(&mut Cursor::new(&mut bytes), ImageFormat::Png)
+            .unwrap();
+        bytes
+    }
+
+    #[test]
+    fn rejects_oversized_dimensions() {
+        assert_eq!(
+            decode_qris_image(&oversized_png()).unwrap_err(),
+            QrisDecodeError::Image
         );
     }
 }
