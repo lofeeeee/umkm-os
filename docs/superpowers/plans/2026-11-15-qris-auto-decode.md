@@ -339,6 +339,9 @@ eval "$(scripts/dev-db.sh up)"   # exports DATABASE_URL and REDIS_URL
 
   /// Batas sisi terpanjang sebelum gambar diperkecil (jaga CPU & memori).
   const MAX_SIDE: u32 = 1600;
+  /// Batas keras sebelum decode: tolak gambar raksasa sebelum alokasi penuh.
+  const MAX_DECODE_SIDE: u32 = 4096;
+  const MAX_DECODE_ALLOC: u64 = 128 * 1024 * 1024;
   const MIN_PAYLOAD: usize = 20;
   const MAX_PAYLOAD: usize = 1024;
 
@@ -355,7 +358,15 @@ eval "$(scripts/dev-db.sh up)"   # exports DATABASE_URL and REDIS_URL
   /// Baca QR pertama yang berisi payload QRIS statis valid.
   /// Beberapa QR dalam satu gambar diizinkan: QR non-QRIS dilewati.
   pub fn decode_qris_image(bytes: &[u8]) -> Result<String, QrisDecodeError> {
-      let mut img = image::load_from_memory(bytes).map_err(|_| QrisDecodeError::Image)?;
+      let mut reader = image::ImageReader::new(std::io::Cursor::new(bytes))
+          .with_guessed_format()
+          .map_err(|_| QrisDecodeError::Image)?;
+      let mut limits = image::Limits::default();
+      limits.max_image_width = Some(MAX_DECODE_SIDE);
+      limits.max_image_height = Some(MAX_DECODE_SIDE);
+      limits.max_alloc = Some(MAX_DECODE_ALLOC);
+      reader.limits(limits);
+      let mut img = reader.decode().map_err(|_| QrisDecodeError::Image)?;
       if img.width() > MAX_SIDE || img.height() > MAX_SIDE {
           img = img.resize(MAX_SIDE, MAX_SIDE, image::imageops::FilterType::Lanczos3);
       }
@@ -378,6 +389,11 @@ eval "$(scripts/dev-db.sh up)"   # exports DATABASE_URL and REDIS_URL
       Err(if saw_qr { QrisDecodeError::InvalidPayload } else { QrisDecodeError::NoQr })
   }
   ```
+
+  > **Review amendment (2026-11-16):** add `rejects_oversized_dimensions` to the
+  > test module. It builds a valid white `Luma8` PNG at
+  > `MAX_DECODE_SIDE + 1` square and asserts `QrisDecodeError::Image`; RED before
+  > the hard cap was `NoQr`, GREEN after is `Image`.
 
 - [ ] **Step 6: Rerun decoder tests.**
 
