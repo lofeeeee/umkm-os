@@ -581,3 +581,45 @@ open/close symmetric; template gallery cards cascade in; reduced-motion still ne
 
 Estimated effort: 1+2+3 ≈ one sitting of CSS/JSX + manual QA at 360px/768px/1440px;
 2 (palette) ≈ another sitting incl. tests.
+
+---
+
+## 5. Implementation Log
+
+Status of each item as it lands. One task per commit, per agreed workflow.
+
+### Done — Commit `55fa23b`: §2.1 + §2 palettes (partial)
+
+- ✅ **§2.1 — 10 new palettes** added to `PALETTES` (plugins.ts): Sawi, Terong, Bata,
+  Sian, Kuningan, Lumut, Abu, Merah, Toska, Koral.
+- ✅ **§2 token model** — `Palette` now carries `onPrimary`; interface updated.
+- ✅ **§2 tests** — `contrast.test.ts` gained the `onPrimary ≥ 4.5:1` assertion.
+- ✅ Swatch forwards `--s-on` to CSS (page.tsx).
+- ⚠️ **Deviations from spec (caught by the new test — the test doing its job):**
+  - `Senja` spec'd `#EA580C` → actually 3.56:1 with white. **Kept `#C2410C`** (original).
+    The §2 "separate from Kopi" concern is instead addressed by Kopi deepening to
+    `#78350F` + cream text, which increases the pair distance more than brightening
+    Senja would.
+  - `Sawi` spec'd `#65A30D` → 3.09:1. **Shipped `#4D7C0F`** (deeper lime, AA-passing).
+  - `Baru` placeholder name → **shipped as `Kuningan`** as suggested in the notes.
+- ⚠️ **Known pre-existing failure (not ours):** `templates.contract.test.ts` "fixture
+  sama dengan keluaran template" fails on clean master too (verified via stash).
+  Do not chase it inside step-1 work.
+- 📋 **Still open from this commit's scope:**
+  - `.st-swatch span` gradient doesn't *use* `--s-on` yet (only forwarded). Next CSS
+    pass should show the true text color on the swatch, e.g. an inner dot/pill:
+    `background: linear-gradient(135deg, var(--sw) 0 50%, var(--sf) 50%)` stays, plus
+    a small centered chip `background: var(--sw); color: var(--s-on)`.
+  - Neutral selection ring (§2 Fix plan item 3) — `.st-swatch[aria-pressed="true"]`
+    still uses `var(--brand)`.
+  - `doc.ts` `onPrimary` derive-on-read fallback for legacy drafts (§2 item 5 / Fix 2e).
+  - Hue-distance test (min ΔL/hue between any two primaries) — only the contrast half
+    of the test suite was added; hue test still to write.
+
+### Next up
+
+1. Finish palette scope: swatch chip using `--s-on`, neutral selection ring, `doc.ts`
+   fallback, hue-distance test.
+2. §2.2 Navbar plugin (A–G) — editor canvas first, then public renderer.
+3. Fix 1.1 → 1.2 → Fix 3 (one CSS sitting), then Fix 1.3.
+
