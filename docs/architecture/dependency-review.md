@@ -32,6 +32,7 @@ Setiap dependency eksternal dicatat di sini **sebelum** ditambahkan ke `Cargo.to
 | sha1 | 0.11.0 | MIT OR Apache-2.0 | 1.85 | infrastructure | HMAC-SHA1 untuk TOTP RFC 6238 (AUTH-011; SHA-1 dipilih di Gate F demi kompatibilitas authenticator — HMAC-SHA1 tidak terdampak serangan tabrakan SHA-1). RustCrypto; sudah ada di Cargo.lock secara transitif, `default-features = false`. Tidak dipakai untuk hal lain | AUTH-011 |
 | webpki-root-certs | 1.0.11 (2026-10-23) | CDLA-Permissive-2.0 | — | transitif | Fallback root CA untuk platform verifier. Lisensi data permisif → pengecualian deny.toml khusus crate ini. 1.0.12 (2026-11-10) belum 2 minggu → dipin 1.0.11 | P5-3 |
 | qrcode | 0.14.1 (2024-07-05) | MIT OR Apache-2.0 | — | infrastructure | Render QRIS dinamis (P10) jadi SVG; hanya fitur `svg` (tanpa raster/font), tanpa dependensi transitif | P10 |
+| rqrr | 0.11.0 | (MIT OR Apache-2.0) AND ISC | 1.85.1 | infrastructure | Decode payload QRIS dari gambar QRIS yang sudah diunggah (ADR-0021). `default-features = false` agar tidak memakai fitur `img`; gambar dibaca oleh `image` workspace, lalu `PreparedImage::prepare_from_greyscale`. Menambah `g2p` 1.x dan `lru` 0.18; lisensi keduanya dicek `cargo deny`. `qrcode` memperoleh fitur `image` **hanya di dev-dependencies** untuk fixture PNG uji | P10 lanjutan |
 
 Kriteria: maintained aktif, tanpa advisory RustSec terbuka, lisensi permisif (MIT/Apache-2.0/BSD/ISC/Unicode/Zlib/BSL-1.0), MSRV ≤ `rust-version` workspace (1.94; dinaikkan dari 1.85 di P0-4 untuk sqlx 0.9.0, rilis 2026-05-21).
 
