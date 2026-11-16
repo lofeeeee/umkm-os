@@ -568,6 +568,51 @@ eval "$(scripts/dev-db.sh up)"   # exports DATABASE_URL and REDIS_URL
 
 **Files:**
 - Modify: `apps/api/src/commerce.rs`
+- Modify: `apps/api/tests/qris_decode_http.rs`
+
+> **Review amendment (2026-11-16):** the HTTP test deferred from Task 3 is
+> added here first, so Task 4 starts RED and ends GREEN.
+
+- [ ] **Step 0: Add the deferred failing HTTP test.**
+
+  Append to `apps/api/tests/qris_decode_http.rs`:
+
+  ```rust
+  use axum::http::Method;
+  use serde_json::json;
+
+  #[sqlx::test(migrator = "MIGRATOR")]
+  async fn settings_save_decodes_uploaded_qris(pool: PgPool) {
+      let a = app(&pool).await;
+      let t = tenant(&pool, "qris-valid").await;
+      let o = member(&pool, t, "Owner").await;
+      let id = upload(&a.router, t, &o, qris_png()).await.json()["data"]["id"]
+          .as_str().unwrap().to_owned();
+      let url = format!("/api/v1/tenants/{t}/commerce/settings");
+      let r = json(&a.router, Method::PUT, &url, Some(&o), Some(json!({
+          "qris": format!("asset:{id}"),
+          "qris_receiver_name": "Toko A",
+          "checkout_enabled": true,
+          "delivery_fee": "0"
+      }))).await;
+      assert_eq!(r.status, 200, "{}", r.json());
+      assert_eq!(r.json()["data"]["qris_static_ready"], true);
+      let payload: Option<String> = sqlx::query_scalar(
+          "SELECT qris_static_payload FROM commerce_settings WHERE tenant_id = $1",
+      ).bind(t).fetch_one(&pool).await.unwrap();
+      assert_eq!(payload.as_deref(), Some(qris_payload().as_str()));
+  }
+  ```
+
+  Remove the scoped `#[allow(unused_imports)]` from the test file now that the
+  QR fixtures are actually used.
+
+  ```bash
+  cargo test -p umkm-api --test qris_decode_http settings_save_decodes_uploaded_qris
+  ```
+
+  Expected: RED — response lacks `qris_static_ready` and the DB payload is NULL
+  until the API decode wiring is added.
 
 - [ ] **Step 1: Add response DTO and rename conversion.**
 
