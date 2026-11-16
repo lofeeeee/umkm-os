@@ -597,3 +597,46 @@
 
 
 
+
+/* ============================================================
+   Isolasi kanvas Studio (mode `studio-edit`).
+
+   `.st-frame` HANYA dipasang di Studio, tidak pernah di situs publik.
+   - `container-type: inline-size` → lebar BINGKAI (bukan jendela) menentukan breakpoint `@container`.
+     Mengubah ponsel → tablet → desktop langsung mengubah jumlah kolom tanpa mengecilkan jendela.
+   - `transform: translateZ(0)` → menurut spesifikasi CSS, elemen ini menjadi containing block bagi
+     keturunan `position: fixed`. Chatbot/WhatsApp/keranjang melayang jadi terkunci di dalam bingkai,
+     tanpa mengubah satu baris pun CSS situs publik (di sana `fixed` tetap relatif ke jendela).
+   ============================================================ */
+.st-frame {
+  container-type: inline-size;
+  container-name: storefront;
+  position: relative;
+  isolation: isolate;
+  transform: translateZ(0);
+  overflow: hidden;
+  border-radius: 16px;
+  background: var(--pg-bg, #fff);
+  box-shadow: 0 0 0 1px var(--line, #e4e4e7);
+}
+.st-frame > .sv2 { min-height: 100%; }
+.st-frame[data-surface="cream"] { --pg-bg: #fbf6ee; }
+.st-frame[data-surface="dark"] { --pg-bg: #0d0d12; }
+/* Ikon perangkat: bingkai ponsel/tablet diberi sudut membulat agar terbaca sebagai perangkat. */
+.sf-frame-outer { display: flex; justify-content: center; padding: 8px 0; }
+.sf-frame-outer[data-device="mobile"],
+.sf-frame-outer[data-device="tablet"] { padding: 0; }
+
+/* Pelapis seleksi blok (hanya mode edit). */
+.sf-editing .sf-block { position: relative; height: 100%; outline: 1px dashed transparent; outline-offset: 2px; border-radius: 12px; transition: outline-color 120ms ease; }
+.sf-editing .sf-block:hover { outline-color: color-mix(in srgb, var(--s-primary) 45%, transparent); }
+.sf-editing .sf-block-selected { outline: 2px solid var(--s-primary); outline-offset: 2px; }
+.sf-editing .sf-block-locked { outline-style: dotted; }
+.sf-block-tag {
+  position: absolute; top: -9px; left: 6px; z-index: 3; display: none;
+  padding: 1px 7px; border-radius: 999px; font-size: 0.6875rem; font-weight: 700;
+  background: var(--s-primary); color: var(--s-on-primary, #fff); pointer-events: none;
+}
+.sf-editing .sf-block:hover > .sf-block-tag,
+.sf-editing .sf-block-selected > .sf-block-tag { display: block; }
+.sf-block-lock { position: absolute; top: -9px; right: 6px; z-index: 3; width: 12px; height: 12px; border-radius: 3px; background: var(--s-muted); }

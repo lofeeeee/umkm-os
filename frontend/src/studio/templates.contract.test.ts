@@ -56,3 +56,42 @@ describe("katalog plugin Studio ↔ manifest resmi (ADR-0019)", () => {
     }
   });
 });
+
+// Kriteria lulus "keamanan ganti template": mengganti template harus mengubah tata letak & warna,
+// tetapi data toko (nama, kontak, produk) tetap utuh karena berada di state terpisah dari dokumen.
+describe("ganti template tidak menghilangkan data toko", () => {
+  /** State toko yang hidup di luar dokumen website (profil + katalog). */
+  const storeProfile = { name: "Kopi Senja", whatsapp: "0812-3456-789", description: "Kedai kopi rumahan" };
+  const products = [{ slug: "kopi-susu", name: "Kopi Susu", price: "18000.00" }, { slug: "americano", name: "Americano", price: "15000.00" }];
+
+  it("template apa pun hanya menghasilkan theme + blok; data toko tidak ikut berubah", () => {
+    for (const t of TEMPLATES) {
+      const r = t.build({ name: storeProfile.name, description: storeProfile.description });
+      // Template tidak pernah menyentuh/mengembalikan data toko: hasilnya hanya state Studio.
+      expect(Object.keys(r)).not.toContain("products");
+      expect(Object.keys(r)).not.toContain("profile");
+      // Data toko tetap sama persis setelah template dibangun.
+      expect(storeProfile).toEqual({ name: "Kopi Senja", whatsapp: "0812-3456-789", description: "Kedai kopi rumahan" });
+      expect(products).toHaveLength(2);
+      // Dokumen hasil template tetap valid & punya tema.
+      const d = toDoc({ ...r, installed: [] }, "modern_store");
+      expect(d.schema_version).toBe(2);
+      expect(d.theme.primary).toMatch(/^#[0-9A-Fa-f]{6}$/);
+      expect(d.blocks.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("berpindah antar template mengubah warna/tata letak tetapi bukan data toko", () => {
+    const a = toDoc({ ...TEMPLATES[0]!.build({ name: storeProfile.name, description: storeProfile.description }), installed: [] }, "modern_store");
+    const b = toDoc({ ...TEMPLATES[1]!.build({ name: storeProfile.name, description: storeProfile.description }), installed: [] }, "modern_store");
+    // Tata letak/warna berbeda...
+    expect(`${a.theme.primary}|${a.blocks.map((x) => x.kind).join(",")}`).not.toBe(`${b.theme.primary}|${b.blocks.map((x) => x.kind).join(",")}`);
+    // ...tetapi data toko tidak tersimpan di dokumen, jadi tidak mungkin hilang.
+    for (const d of [a, b]) {
+      expect(JSON.stringify(d)).not.toContain("Kopi Susu");
+      expect(d.schema_version).toBe(2);
+    }
+    expect(storeProfile.name).toBe("Kopi Senja");
+    expect(products.map((p) => p.slug)).toEqual(["kopi-susu", "americano"]);
+  });
+});

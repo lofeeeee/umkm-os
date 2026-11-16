@@ -1,21 +1,31 @@
-// Renderer publik dokumen Studio (`schema_version = 2`, ADR-0017) — P9-4.
+// Renderer dokumen Studio (`schema_version = 2`, ADR-0017) — SATU-SATUNYA sumber tampilan v2.
+//
+// Dipakai oleh situs publik DAN kanvas Studio lewat prop `mode`, sehingga "preview = terbit" dijamin
+// secara struktural: tidak ada komponen visual kedua yang harus dijaga sinkron.
+// - `customer` (default): tanpa pembungkus editor, tanpa EditContext — perilaku situs publik.
+// - `studio-edit`: tiap blok dibungkus `EditableBlockWrapper`, teks bisa diketik langsung.
+//
 // Desktop: grid 12 kolom sesuai x/y/w/h dari editor. Ponsel (lebar < 720 px): blok ditumpuk berurutan
-// (atas→bawah, kiri→kanan). `hide_on` dihormati. Plugin section memakai renderer v1 (`Site`) per blok
-// sehingga tampilan = pratinjau editor. Semua teks dirender sebagai teks (React escaping).
+// (atas→bawah, kiri→kanan). `hide_on` dihormati. Plugin section memakai renderer v1 (`Site`) per blok.
+// Semua teks dirender sebagai teks (React escaping).
 
-import { T, useEditing } from "./edit";
+import { EditContext, T, useEditing, type EditApi } from "./edit";
 import type { CSSProperties, ReactNode } from "react";
 
 import { ChatWidget } from "@/chat/widget";
+import { EditableBlockWrapper } from "@/studio/EditableBlockWrapper";
 import type { BlockV2, PageV2 } from "@/studio/doc";
+import { pluginDef } from "@/studio/plugins";
 
 import { PublicNav, type NavLink } from "./PublicNav";
-import { fontStack, primaryVars, safeColor, text, waLink } from "./safe";
+import { fontStack, onColor, primaryVars, safeColor, text, waLink } from "./safe";
 import { Site, type GridProduct } from "./Site";
 import type { Business, OpenStatus } from "./types";
 
 /** Halaman terbit yang bisa ditautkan dari navigasi (dari `/public/site`). */
 export interface SitePageLink { slug: string; title: string; current?: boolean }
+
+export type RenderMode = "customer" | "studio-edit";
 
 export interface StudioSiteProps {
   doc: PageV2;
@@ -25,6 +35,13 @@ export interface StudioSiteProps {
   assetUrl: (ref: string) => string | undefined;
   /** Halaman terbit lain untuk tautan navigasi. Kosong = hanya nama toko (tanpa tautan). */
   pages?: SitePageLink[];
+  /** "customer" (default) = situs publik; "studio-edit" = kanvas editor. */
+  mode?: RenderMode;
+  /** Id blok terpilih (hanya mode studio-edit). */
+  selectedId?: string | null;
+  onSelect?: (id: string | null) => void;
+  /** Menulis `data[path]` pada blok (hanya mode studio-edit; dari `T` contentEditable). */
+  onEditBlock?: (id: string, path: string, value: string) => void;
 }
 
 const isEmbed = (b: BlockV2) =>
@@ -63,23 +80,32 @@ export function TextBlock({ b }: { b: Pick<BlockV2, "data"> }) {
   );
 }
 
+/** Ikon WhatsApp (sama di editor & situs terbit — paritas DOM dijaga tes). */
+function WaIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.1 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.1 5.1 0 0 0 1.1 2.7 11.7 11.7 0 0 0 4.5 4c1.7.7 2.3.8 3.2.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.1-1.2l-.4-.3Z" /></svg>
+  );
+}
+
 /** Plugin WhatsApp: tautan wa.me ke nomor Profil bisnis. Di Studio label bisa diketik langsung. */
 export function WhatsAppButton({ b, business, floating }: { b: Pick<BlockV2, "data">; business: Business; floating?: boolean }) {
   const editing = useEditing();
   const href = whatsappHref(business.profile.whatsapp ?? business.profile.phone, text(b.data.message));
   const label = text(b.data.label) || "Pesan via WhatsApp";
   if (editing) {
+    // `<a>` tanpa href: elemen yang sama dengan situs terbit (paritas DOM), tetapi klik tidak
+    // menavigasi sehingga label di dalamnya tetap bisa diketik.
     return (
-      <span className="s-btn s-wa">
-        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="currentColor"><circle cx="12" cy="12" r="10" /></svg>
+      <a className="s-btn s-wa">
+        <WaIcon />
         <T path="label" v={b.data.label} placeholder="Pesan via WhatsApp" />
-      </span>
+      </a>
     );
   }
   if (!href) return floating ? null : <p className="s-muted">Nomor WhatsApp belum diatur di Profil bisnis.</p>;
   return (
     <a className={floating ? "s-wa-float" : "s-btn s-wa"} href={href} target="_blank" rel="noopener noreferrer" aria-label={floating ? label : undefined}>
-      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.1 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.1 5.1 0 0 0 1.1 2.7 11.7 11.7 0 0 0 4.5 4c1.7.7 2.3.8 3.2.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.1-1.2l-.4-.3Z" /></svg>
+      <WaIcon />
       {!floating && <span>{label}</span>}
     </a>
   );
@@ -150,7 +176,8 @@ function anchorsFor(blocks: { id: string; kind: string }[]): Map<string, string[
 }
 
 export function StudioSite(props: StudioSiteProps) {
-  const { doc } = props;
+  const { doc, mode = "customer" } = props;
+  const editing = mode === "studio-edit";
   const navStyle = doc.theme.navbar_style === "side" ? "side" : "top";
   const isSideNav = navStyle === "side";
   const grid = mobileSorted(doc.blocks.filter((b) => !isEmbed(b)));
@@ -174,7 +201,12 @@ export function StudioSite(props: StudioSiteProps) {
     "--s-bg-opacity": ((doc.theme.background_opacity ?? 0) / 100).toString(),
   } as CSSProperties;
   return (
-    <div className={`sv2 site${isSideNav ? " s-has-side-nav" : ""}`} data-surface={doc.theme.surface ?? "light"} style={style}>
+    <div
+      className={`sv2 site${isSideNav ? " s-has-side-nav" : ""}${editing ? " sf-editing" : ""}`}
+      data-surface={doc.theme.surface ?? "light"}
+      data-mode={mode}
+      style={style}
+    >
       {bgUrl && (
         <div
           className="s-bg-overlay"
@@ -204,26 +236,42 @@ export function StudioSite(props: StudioSiteProps) {
         />
         <div className="sv2-main">
           <div className="sv2-grid">
-            {grid.map((b, i) => (
-              <div
-                key={b.id}
-                id={b.id}
-                className="sv2-block"
-                data-kind={b.kind}
-                data-section-type={b.kind}
-                data-hide={b.hide_on}
-                style={{
-                  gridColumn: `${b.x + 1} / span ${b.w}`,
-                  gridRow: `${b.y + 1} / span ${b.h}`,
-                  ["--order" as string]: i,
-                  // Tinggi manual (auto_height=false) dipertahankan persis seperti di editor (baris 24 px + celah 12 px).
-                  ...(b.auto_height === false ? { minHeight: b.h * 36 } : {}),
-                } as CSSProperties}
-              >
-                {anchors.get(b.id)?.map((a) => <span key={a} id={a} className="sv2-anchor" aria-hidden="true" />)}
-                <Block b={b} props={props} />
-              </div>
-            ))}
+            {grid.map((b, i) => {
+              const body = (
+                <>
+                  {anchors.get(b.id)?.map((a) => <span key={a} id={a} className="sv2-anchor" aria-hidden="true" />)}
+                  <Block b={b} props={props} />
+                </>
+              );
+              const cellStyle = {
+                gridColumn: `${b.x + 1} / span ${b.w}`,
+                gridRow: `${b.y + 1} / span ${b.h}`,
+                ["--order" as string]: i,
+                // Tinggi manual (auto_height=false) dipertahankan persis seperti di editor (baris 24 px + celah 12 px).
+                ...(b.auto_height === false ? { minHeight: b.h * 36 } : {}),
+              } as CSSProperties;
+              // Mode editor: blok dibungkus pelapis seleksi. Mode publik: struktur apa adanya.
+              if (editing) {
+                return (
+                  <div key={b.id} id={b.id} className="sv2-block" data-kind={b.kind} data-section-type={b.kind} data-hide={b.hide_on} style={cellStyle}>
+                    <EditableBlockWrapper
+                      blockId={b.id}
+                      label={pluginDef(b.kind).name}
+                      selected={props.selectedId === b.id}
+                      locked={b.locked}
+                      onSelect={() => props.onSelect?.(b.id)}
+                    >
+                      <EditContext.Provider value={editApiFor(b, props.onEditBlock)}>{body}</EditContext.Provider>
+                    </EditableBlockWrapper>
+                  </div>
+                );
+              }
+              return (
+                <div key={b.id} id={b.id} className="sv2-block" data-kind={b.kind} data-section-type={b.kind} data-hide={b.hide_on} style={cellStyle}>
+                  {body}
+                </div>
+              );
+            })}
           </div>
           {/* P9-9: kebijakan privasi & syarat selalu bisa dijangkau dari situs (chat & akun mengumpulkan data). */}
           <footer className="sv2-foot">
@@ -241,8 +289,56 @@ export function StudioSite(props: StudioSiteProps) {
           </footer>
         </div>
       </div>
-      {chat && <ChatWidget variant={chat.layout === "bar" ? "bar" : "bubble"} title={text(chat.data.title)} welcome={text(chat.data.welcome)} startOpen={chat.chat_open === true} primary={safeColor(doc.theme.primary)} />}
-      {wa && <WhatsAppButton b={wa} business={props.business} floating />}
+      {chat && (editing
+        // Di editor widget asli tidak dipasang: jangan memulai percakapan/panggilan API hanya karena
+        // pratinjau. Markup kelasnya sama supaya bentuknya identik dengan situs terbit.
+        ? <ChatPlaceholder b={chat} primary={doc.theme.primary} />
+        : <ChatWidget variant={chat.layout === "bar" ? "bar" : "bubble"} title={text(chat.data.title)} welcome={text(chat.data.welcome)} startOpen={chat.chat_open === true} primary={safeColor(doc.theme.primary)} />)}
+      {wa && (editing
+        ? <WaPlaceholder b={wa} business={props.business} />
+        : <WhatsAppButton b={wa} business={props.business} floating />)}
     </div>
+  );
+}
+
+/** API edit untuk satu blok: menulis `data[path]` pada blok itu. */
+function editApiFor(b: BlockV2, onEditBlock?: (id: string, path: string, value: string) => void): EditApi | null {
+  if (!onEditBlock) return null;
+  return {
+    commit: (path, value) => onEditBlock(b.id, path, value),
+  };
+}
+
+/** Pratinjau chatbot di editor — markup & kelas sama dengan `ChatWidget` versi tertutup. */
+function ChatPlaceholder({ b, primary }: { b: BlockV2; primary: string }) {
+  const title = text(b.data.title) || "Chat dengan toko";
+  const welcome = text(b.data.welcome);
+  const variant = b.layout === "bar" ? "bar" : "bubble";
+  const style = { ["--chat-primary" as string]: safeColor(primary), ["--chat-on-primary" as string]: onColor(safeColor(primary)) } as CSSProperties;
+  return (
+    <div className={`chat chat-v-${variant}`} style={style} aria-hidden="true" data-editor-preview="">
+      {variant === "bar" ? (
+        <span className="chat-bar">
+          <span className="chat-bar-who"><span className="chat-dot" />{title}</span>
+          <span className="chat-bar-input">{welcome || "Tulis pertanyaan…"}</span>
+          <span className="chat-bar-go">➤</span>
+        </span>
+      ) : (
+        <span className="chat-fab">Chat</span>
+      )}
+    </div>
+  );
+}
+
+/** Pratinjau tombol WhatsApp melayang di editor. */
+function WaPlaceholder({ b, business }: { b: BlockV2; business: Business }) {
+  const label = text(b.data.label) || "Pesan via WhatsApp";
+  const href = whatsappHref(business.profile.whatsapp ?? business.profile.phone, text(b.data.message));
+  if (!href) return null;
+  return (
+    <span className="s-wa-float" aria-hidden="true" data-editor-preview="">
+      <svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.1 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.1 5.1 0 0 0 1.1 2.7 11.7 11.7 0 0 0 4.5 4c1.7.7 2.3.8 3.2.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.1-1.2l-.4-.3Z" /></svg>
+      <span className="s-sr-only">{label}</span>
+    </span>
   );
 }

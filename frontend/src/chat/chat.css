@@ -71,3 +71,15 @@
 .chat-inline-min { width: 100%; display: flex; align-items: center; gap: 4px; padding: 12px 16px; border: 0; border-radius: 14px; background: var(--chat-primary); color: var(--chat-on-primary, #fff); font: inherit; font-weight: 700; cursor: pointer; }
 .chat-inline-min span:last-child { margin-left: auto; }
 .chat-welcome { font-weight: 600; }
+
+/* Pratinjau Studio: `.st-frame` adalah container bernama "storefront", jadi aturan di bawah hanya aktif
+   di dalam bingkai Studio. Di situs publik tidak ada container bernama itu, sehingga @media di atas
+   tetap yang berlaku dan perilaku pelanggan tidak berubah. */
+@container storefront (min-width: 720px) {
+  .chat-panel { left: 16px; right: auto; bottom: 16px; width: 380px; max-height: min(600px, calc(100cqh - 32px)); }
+  .chat-v-bubble .chat-panel { left: auto; right: 16px; transform-origin: bottom right; }
+  .chat-v-bar .chat-panel { left: auto; right: 16px; }
+}
+@container storefront (max-width: 479px) {
+  .chat-bar-who { display: none; }
+}

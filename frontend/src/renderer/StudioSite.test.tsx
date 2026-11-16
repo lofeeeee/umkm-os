@@ -135,4 +135,174 @@ describe("renderer publik Studio (v2)", () => {
     expect(html).toContain('href="#kontak"');
     expect(html).toContain(">Kontak<");
   });
+
+  // ---------------------------------------------------------------- paritas Studio ↔ publik
+  // Kriteria lulus: isi tiap blok di kanvas Studio harus sama dengan situs terbit, KECUALI node yang
+  // memang harus berbeda agar bisa disunting:
+  //   - teks: publik `<p>`/`<h2>` berisi teks; editor membungkusnya `<span contentEditable>`;
+  //   - tautan aksi: publik `<a href>`; editor `<span>` agar klik tidak meninggalkan halaman.
+  // Yang diuji: pembungkus grid (kelas + posisi), urutan blok, dan footer identik; perbedaan terbatas
+  // pada dua kategori itu.
+
+  /** Isi (innerHTML) elemen `div#id.sv2-block`, dihitung dengan mencocokkan kedalaman `<div>`. */
+  function blockInner(html: string, id: string): string | null {
+    const start = html.indexOf(`<div id="${id}" class="sv2-block"`);
+    if (start < 0) return null;
+    const open = html.indexOf(">", start) + 1;
+    let depth = 1;
+    let i = open;
+    while (i < html.length && depth > 0) {
+      const nextOpen = html.indexOf("<div", i);
+      const nextClose = html.indexOf("</div>", i);
+      if (nextClose < 0) break;
+      if (nextOpen >= 0 && nextOpen < nextClose) { depth += 1; i = nextOpen + 4; }
+      else { depth -= 1; i = nextClose + 6; }
+    }
+    return html.slice(open, depth === 0 ? i - 6 : i);
+  }
+
+  /**
+   * Urutan tag + kelas, tanpa teks dan tanpa penanda editor. Ini yang harus identik antara kanvas
+   * Studio dan situs terbit: struktur, bukan kosmetik.
+   *
+   * Perbedaan yang MEMANG disengaja (dan karena itu dinormalkan) hanya empat:
+   *   1. pembungkus seleksi `.sf-block` + labelnya,
+   *   2. `<span contentEditable>` di sekitar teks yang bisa diketik,
+   *   3. `<span>` vs `<a href>` untuk tautan aksi (klik di editor tidak boleh menavigasi),
+   *   4. paragraf kosong `<p class="s-lead">` agar subtitle kosong tetap bisa diklik.
+   */
+  function tags(html: string): string[] {
+    const cleaned = html
+      .replace(/<div class="sf-block[^"]*"[^>]*>/g, "")
+      .replace(/<span class="sf-block-tag"[^>]*>[^<]*<\/span>/g, "")
+      .replace(/<span class="sf-block-lock"[^>]*><\/span>/g, "")
+      // Buang pembungkus teks yang bisa disunting beserta isinya (teks polos, tanpa span bersarang).
+      .replace(/<span class="s-edit"[^>]*>[\s\S]*?<\/span>/g, "")
+      // Paragraf kosong yang hanya ada agar bisa diklik di editor.
+      .replace(/<p class="s-lead">\s*<\/p>/g, "")
+      // Tautan aksi: editor memakai <a> tanpa href (tag sama, klik tidak menavigasi).
+      .replace(/ href="[^"]*" target="_blank" rel="noopener noreferrer"/g, "");
+
+    // Telusuri tag dengan stack agar penutup berlebih (sisa wrapper `.sf-block`) terbuang otomatis,
+    // bukan ditebak lewat regex posisi.
+    const out: string[] = [];
+    const stack: string[] = [];
+    for (const m of cleaned.matchAll(/<(\/?)([a-z0-9]+)([^>]*?)(\/?)>/g)) {
+      const close = m[1] === "/";
+      const tag = m[2]!;
+      const attrs = m[3] ?? "";
+      const selfClosing = m[4] === "/";
+      if (["span", "path", "svg", "circle"].includes(tag)) continue;
+      if (selfClosing) { out.push(`${tag}!`); continue; }
+      if (close) {
+        // Hanya terima penutup yang cocok dengan stack; penutup yatim dibuang.
+        if (stack[stack.length - 1] === tag) { stack.pop(); out.push(`/${tag}`); }
+        continue;
+      }
+      stack.push(tag);
+      const cls = /class="([^"]*)"/.exec(attrs)?.[1];
+      out.push(cls ? `${tag}.${cls.trim().split(/\s+/).join(".")}` : tag);
+    }
+    return out;
+  }
+
+  it("paritas DOM: isi blok di mode studio-edit sama dengan mode customer", () => {
+    const d: PageV2 = {
+      ...doc,
+      theme: { ...doc.theme, navbar_style: "top" },
+      blocks: [
+        { id: "hero", kind: "hero", x: 0, y: 0, w: 8, h: 8, style: "plain", data: { title: "Kopi Senja" } },
+        { id: "teks", kind: "text", x: 0, y: 8, w: 6, h: 3, style: "card", data: { title: "Tentang", body: "Baris" } },
+        { id: "wa", kind: "whatsapp", x: 6, y: 8, w: 6, h: 3, style: "plain", layout: "inline", data: { label: "Pesan" } },
+      ],
+    };
+    const customer = renderToStaticMarkup(<StudioSite doc={d} business={biz} assetUrl={() => undefined} mode="customer" />);
+    const editor = renderToStaticMarkup(
+      <StudioSite doc={d} business={biz} assetUrl={() => undefined} mode="studio-edit" selectedId="hero" onSelect={() => {}} onEditBlock={() => {}} />,
+    );
+
+    for (const id of ["hero", "teks", "wa"]) {
+      const a = blockInner(customer, id);
+      const b = blockInner(editor, id);
+      expect(a, `blok ${id} ada di situs terbit`).not.toBeNull();
+      expect(b, `blok ${id} ada di kanvas`).not.toBeNull();
+      // Pembungkus grid (kelas + posisi) identik.
+      const boxOf = (html: string) => html.slice(html.indexOf(`<div id="${id}" class="sv2-block"`), html.indexOf(">", html.indexOf(`<div id="${id}" class="sv2-block"`)) + 1);
+      expect(boxOf(editor)).toBe(boxOf(customer));
+      // Struktur (tag + kelas) identik setelah penanda editor dinormalkan.
+      expect(tags(b!)).toEqual(tags(a!));
+    }
+
+    // Mode edit benar-benar menambahkan pelapis (kalau tidak, tes ini hampa).
+    expect(editor).toContain("sf-block-tag");
+    expect(editor.toLowerCase()).toContain("contenteditable");
+    expect(customer).not.toContain("sf-block-tag");
+    expect(customer.toLowerCase()).not.toContain("contenteditable");
+    // Footer & navigasi sama.
+    expect(editor).toContain('class="sv2-foot"');
+    expect(customer).toContain('class="sv2-foot"');
+    expect(editor).toContain("s-headbar");
+    expect(customer).toContain("s-headbar");
+  });
+
+  it("mode customer (default) tidak memasang pelapis editor", () => {
+    const html = renderToStaticMarkup(<StudioSite doc={doc} business={biz} assetUrl={() => undefined} />);
+    expect(html).toContain('data-mode="customer"');
+    expect(html).not.toContain("sf-block-tag");
+    expect(html).not.toContain("sf-editing");
+  });
+
+  it("mode studio-edit menandai blok terpilih dan meneruskan onSelect", () => {
+    // Dipanggil lewat pointer handler tidak bisa diuji tanpa DOM; yang diuji adalah penanda terpilih.
+    const html = renderToStaticMarkup(
+      <StudioSite doc={doc} business={biz} assetUrl={() => undefined} mode="studio-edit" selectedId="hero" onSelect={() => {}} />,
+    );
+    expect(html).toContain('data-mode="studio-edit"');
+    expect(html).toContain("sf-editing");
+    expect(html).toMatch(/class="sf-block sf-block-selected"[^>]*data-block-id="hero"/);
+    expect(html).toContain('data-block-label="Banner"');
+  });
+
+  it("mode studio-edit tidak memasang widget chat asli (tidak memanggil API saat pratinjau)", () => {
+    const d: PageV2 = { ...doc, blocks: [
+      { id: "chat", kind: "chatbot", x: 8, y: 0, w: 4, h: 9, style: "card", layout: "floating", data: { title: "Tanya" } },
+    ] };
+    const editor = renderToStaticMarkup(<StudioSite doc={d} business={biz} assetUrl={() => undefined} mode="studio-edit" />);
+    // Markup chatbot tetap ada (bentuk sama), tetapi tanpa pemicu fetch: penanda khusus editor.
+    expect(editor).toContain('data-editor-preview=""');
+    expect(editor).toContain("chat-fab");
+    // Widget asli (mode customer) memakai komponen React yang memanggil API; di SSR ia belum merender fab.
+    const customer = renderToStaticMarkup(<StudioSite doc={d} business={biz} assetUrl={() => undefined} mode="customer" />);
+    expect(customer).not.toContain('data-editor-preview=""');
+  });
+});
+
+// Kriteria lulus "isolasi gaya": tema dasbor (gelap) tidak boleh mewarnai kanvas toko. Warna kanvas
+// sepenuhnya berasal dari `theme` dokumen (--s-primary, data-surface), bukan dari ancestor.
+describe("isolasi gaya kanvas", () => {
+  it("warna blok berasal dari tema dokumen, bukan dari ancestor", () => {
+    const d: PageV2 = { ...doc, theme: { ...doc.theme, primary: "#C2410C", surface: "cream" } };
+    const html = renderToStaticMarkup(
+      // Simulasi kanvas dipasang di dalam dashboard bertema gelap.
+      <div data-theme="dark" className="dashboard-dark">
+        <StudioSite doc={d} business={biz} assetUrl={() => undefined} mode="studio-edit" />
+      </div>,
+    );
+    // Token tema toko dipasang inline pada wadah kanvas...
+    expect(html).toContain("--s-primary:#C2410C");
+    expect(html).toContain('data-surface="cream"');
+    expect(html).toContain('data-mode="studio-edit"');
+    // ...dan tidak ada warna latar dashboard yang bocor ke kanvas (tidak ada style latar gelap).
+    expect(html).not.toContain("--bg-surface");
+  });
+
+  it("permukaan gelap toko tetap memakai token toko, bukan token dasbor", () => {
+    const d: PageV2 = { ...doc, theme: { ...doc.theme, surface: "dark" } };
+    const html = renderToStaticMarkup(
+      <div data-theme="light">
+        <StudioSite doc={d} business={biz} assetUrl={() => undefined} />
+      </div>,
+    );
+    expect(html).toContain('data-surface="dark"');
+  });
 });

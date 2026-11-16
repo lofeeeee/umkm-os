@@ -22,11 +22,14 @@ import { WithTenant, type TenantCtx } from "@/dashboard/shell";
 import { api } from "@/lib/api";
 import { EditContext, type EditApi } from "@/renderer/edit";
 import { Site, type GridProduct } from "@/renderer/Site";
+import { StudioSite } from "@/renderer/StudioSite";
+import { normalizePageV2 } from "@/renderer/normalize";
 import { TextBlock, WhatsAppButton } from "@/renderer/StudioSite";
 import { fontStack, primaryVars } from "@/renderer/safe";
 import { FIELDS, FONT_PRESETS, defaultData } from "@/renderer/sections";
 import type { Business, Json, PageContent, SectionType } from "@/renderer/types";
 import { Canvas, DESIGN_WIDTH, GAP, ROW, rowsFor } from "@/studio/Canvas";
+import { DEVICE_LABEL, DeviceFrame, type DeviceViewport } from "@/studio/DeviceFrame";
 import { COLS, compact, insert, mobileOrder, moveBy, place } from "@/studio/grid";
 import { commit, redo, silent, start, undo, type History } from "@/studio/history";
 import { CELL_STYLES, EXTRA_DATA, PALETTES, PLUGINS, needsUpgrade, pluginDef, pluginPlan, type PluginKind, type PluginCategory } from "@/studio/plugins";
@@ -158,7 +161,10 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
   const [sel, setSel] = useState<string | null>(null);
   const [panel, setPanel] = useState<"installed" | "catalog">("installed");
   const [q, setQ] = useState("");
-  const [device, setDevice] = useState<"desktop" | "mobile">("desktop");
+  /** Perangkat pratinjau: lebar BINGKAI menentukan breakpoint @container, bukan lebar jendela. */
+  const [device, setDevice] = useState<DeviceViewport>("desktop");
+  /** Sub-mode kanvas: "content" = renderer situs asli, "layout" = grid drag/resize. */
+  const [canvasMode, setCanvasMode] = useState<"content" | "layout">("content");
   const [full, setFull] = useState<string | null>(null);
   const canEdit = ctx.can("website.edit");
   const canPublish = ctx.can("website.publish");
@@ -553,6 +559,32 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
   }, [q]);
 
   const backHref = `/website?tenant=${ctx.tenant.id}`;
+  /**
+   * Dokumen yang sama dengan yang diterbitkan, dirender oleh renderer yang sama (`StudioSite`).
+   * Mode "Isi" menampilkan hasil persis seperti situs publik; hanya pelapis seleksi & teks yang bisa
+   * diketik yang berbeda (dijaga tes paritas DOM di StreamSite.test.tsx).
+   */
+  const previewDoc = useMemo(() => normalizePageV2(st ? toDoc(st, srv?.template ?? "studio") : null), [st, srv?.template]);
+  const contentElement = (
+    <StudioSite
+      doc={previewDoc}
+      business={business}
+      products={products}
+      assetUrl={assets.url}
+      pages={pages.map((p) => ({ slug: p.slug, title: p.title, current: p.slug === activeSlug }))}
+      mode="studio-edit"
+      selectedId={sel}
+      onSelect={setSel}
+      onEditBlock={(id, path, value) => {
+        const c = st?.cells.find((x) => x.id === id);
+        if (!c) return;
+        const r = setPath(c.kind, c.data, path, value);
+        if (typeof r === "string") { toast.error(r); return; }
+        update((s) => ({ ...s, cells: s.cells.map((x) => (x.id === id ? { ...x, data: setPathOr(x, path, value) } : x)) }), "");
+      }}
+    />
+  );
+
   if (!st || !hist) {
     return (
       <div className="sx">
@@ -701,9 +733,14 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
           <button type="button" className="d-icon-btn" onClick={doUndo} disabled={hist.past.length === 0} aria-label="Urungkan (Ctrl+Z)" title="Urungkan (Ctrl+Z)"><ArrowCounterClockwise weight="bold" /></button>
           <button type="button" className="d-icon-btn" onClick={doRedo} disabled={hist.future.length === 0} aria-label="Ulangi (Ctrl+Shift+Z)" title="Ulangi (Ctrl+Shift+Z)"><ArrowClockwise weight="bold" /></button>
         </div>
+        <div className="d-seg" role="group" aria-label="Mode kanvas">
+          <button type="button" aria-pressed={canvasMode === "content"} onClick={() => setCanvasMode("content")} title="Klik blok untuk mengubah isi — tampilan sama dengan situs terbit">Isi</button>
+          <button type="button" aria-pressed={canvasMode === "layout"} onClick={() => setCanvasMode("layout")} title="Geser dan ubah ukuran blok di grid">Tata letak</button>
+        </div>
         <div className="d-seg" role="group" aria-label="Perangkat">
-          <button type="button" aria-pressed={device === "desktop"} onClick={() => setDevice("desktop")}><DesktopTower weight="bold" aria-hidden="true" /> Desktop</button>
-          <button type="button" aria-pressed={device === "mobile"} onClick={() => setDevice("mobile")}><DeviceMobile weight="bold" aria-hidden="true" /> Ponsel</button>
+          <button type="button" aria-pressed={device === "desktop"} onClick={() => setDevice("desktop")} title={DEVICE_LABEL.desktop}><DesktopTower weight="bold" aria-hidden="true" /> Desktop</button>
+          <button type="button" aria-pressed={device === "tablet"} onClick={() => setDevice("tablet")} title={DEVICE_LABEL.tablet}><CornersOut weight="bold" aria-hidden="true" /> Tablet</button>
+          <button type="button" aria-pressed={device === "mobile"} onClick={() => setDevice("mobile")} title={DEVICE_LABEL.mobile}><DeviceMobile weight="bold" aria-hidden="true" /> Ponsel</button>
         </div>
         <span className="sx-zoom" title="Perbesaran kanvas">{Math.round(scale * 100)}%</span>
         <button className="d-btn d-btn-sm" onClick={() => setPicking("change")}><SquaresFour weight="bold" aria-hidden="true" />Template</button>
@@ -881,7 +918,13 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
             />
           )}
           <div ref={stageRef} className="st-measure" />
-          {device === "desktop" ? (
+          {canvasMode === "content" ? (
+            // Renderer situs asli. Lebar BINGKAI yang menentukan breakpoint (@container), jadi
+            // mengubah perangkat langsung mengubah tata letak tanpa mengecilkan jendela.
+            <DeviceFrame device={device} surface={st.surface}>
+              {contentElement}
+            </DeviceFrame>
+          ) : device === "desktop" ? (
             isSideNav ? (
               <div className="st-stage-side-wrap">
                 <StudioNavbar
@@ -930,7 +973,7 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
           )}
           {st.cells.length === 0 && <p className="st-empty">Tarik plugin dari panel kiri ke sini.</p>}
         </div>
-        {device === "desktop" && <div className="st-dock" style={{ ["--s-size" as string]: st.textScale ?? 1 }}><FloatingChat cell={floating} primary={st.primary} onToggle={setChatOpen} onSelect={setSel} selected={sel} ready={chatReady} /><FloatingWa cell={floatingWa} onSelect={setSel} selected={sel} /></div>}
+        {canvasMode === "layout" && device === "desktop" && <div className="st-dock" style={{ ["--s-size" as string]: st.textScale ?? 1 }}><FloatingChat cell={floating} primary={st.primary} onToggle={setChatOpen} onSelect={setSel} selected={sel} ready={chatReady} /><FloatingWa cell={floatingWa} onSelect={setSel} selected={sel} /></div>}
         </div>
       </div>
       </div>
