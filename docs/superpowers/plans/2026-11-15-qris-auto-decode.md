@@ -419,7 +419,10 @@ eval "$(scripts/dev-db.sh up)"   # exports DATABASE_URL and REDIS_URL
 
 **Files:**
 - Modify: `crates/infrastructure/src/commerce_repo.rs`
-- Modify: `apps/api/tests/qris_decode_http.rs`
+
+> **Review amendment (2026-11-16):** this task is repo-only. The HTTP test below
+> is deferred to the start of Task 4 so every task commit stays green; Task 4
+> adds the test first, then the API wiring.
 
 - [ ] **Step 1: Add a failing HTTP test for “valid QR image saves payload”.**
 
