@@ -58,8 +58,8 @@ acquire_timeout_secs = 5
 key_prefix = "umkm:production"
 
 [tenancy]
-# D-01 DISETUJUI (ADR-0001): tenant = {slug}.umkm-os.web.id
-root_domain = "umkm-os.web.id"
+# D-01 DISETUJUI (ADR-0001): tenant = {slug}.ryasai.my.id
+root_domain = "ryasai.my.id"
 
 [storage]
 # ADR-0009: lokal PostgreSQL. Kuota sementara sampai D-10 (plan limits).
