@@ -30,6 +30,8 @@ pub const ORDER_CREATED_EVENT: &str = umkm_application::notify::events::ORDER_CR
 pub struct Settings {
     pub qris_object_id: Option<Uuid>,
     pub qris_receiver_name: Option<String>,
+    /// Payload EMVCo yang didekode dari `qris_object_id` (bukan input pengguna).
+    pub qris_static_payload: Option<String>,
     pub checkout_enabled: bool,
     pub delivery_fee: Money,
     pub order_approval_required: bool,
@@ -43,6 +45,7 @@ impl Default for Settings {
         Self {
             qris_object_id: None,
             qris_receiver_name: None,
+            qris_static_payload: None,
             checkout_enabled: false,
             delivery_fee: Money::ZERO,
             order_approval_required: false,
@@ -197,8 +200,9 @@ fn ts(col: &str) -> String {
 
 pub async fn settings_in(tx: &mut Tx, t: TenantId) -> Result<Settings, sqlx::Error> {
     let r = sqlx::query(
-        "SELECT qris_object_id, qris_receiver_name, checkout_enabled, (delivery_fee * 100)::bigint AS fee,
-                order_approval_required, reservation_ttl_minutes, separation_of_duties
+        "SELECT qris_object_id, qris_receiver_name, qris_static_payload, checkout_enabled,
+                (delivery_fee * 100)::bigint AS fee, order_approval_required, reservation_ttl_minutes,
+                separation_of_duties
          FROM commerce_settings WHERE tenant_id = $1",
     )
     .bind(t.as_uuid())
@@ -207,6 +211,7 @@ pub async fn settings_in(tx: &mut Tx, t: TenantId) -> Result<Settings, sqlx::Err
     Ok(r.map(|r| Settings {
         qris_object_id: r.get("qris_object_id"),
         qris_receiver_name: r.get("qris_receiver_name"),
+        qris_static_payload: r.get("qris_static_payload"),
         checkout_enabled: r.get("checkout_enabled"),
         delivery_fee: Money::from_sen(r.get("fee")).unwrap_or(Money::ZERO),
         order_approval_required: r.get("order_approval_required"),
@@ -223,6 +228,35 @@ pub async fn settings(pool: &PgPool, t: TenantId) -> Result<Settings, sqlx::Erro
     Ok(s)
 }
 
+/// Simpan payload hasil decode untuk gambar yang masih sama. Dipakai lazy backfill
+/// pada GET settings/status; tanpa audit karena bukan perubahan konfigurasi pengguna.
+pub async fn backfill_qris_payload(
+    pool: &PgPool,
+    t: TenantId,
+    qris_id: Uuid,
+    payload: &str,
+) -> Result<bool, sqlx::Error> {
+    if !(20..=1024).contains(&payload.len())
+        || umkm_domain::commerce::qris::verify(payload).is_err()
+    {
+        return Ok(false);
+    }
+    let mut tx = tenant_tx(pool, t).await?;
+    let n = sqlx::query(
+        "UPDATE commerce_settings
+         SET qris_static_payload = $3, updated_at = now()
+         WHERE tenant_id = $1 AND qris_object_id = $2 AND qris_static_payload IS NULL",
+    )
+    .bind(t.as_uuid())
+    .bind(qris_id)
+    .bind(payload)
+    .execute(&mut *tx)
+    .await?
+    .rows_affected();
+    tx.commit().await?;
+    Ok(n == 1)
+}
+
 /// Simpan pengaturan (`tenant.update`). Pergantian QRIS diaudit before/after (ADR-0004).
 pub async fn put_settings(
     pool: &PgPool,
@@ -233,15 +267,25 @@ pub async fn put_settings(
     let t = actor.tenant_id;
     let mut tx = tenant_tx(pool, t).await?;
     let before = settings_in(&mut tx, t).await?;
+    let upsert_payload = if s.qris_object_id == before.qris_object_id {
+        before
+            .qris_static_payload
+            .clone()
+            .or_else(|| s.qris_static_payload.clone())
+    } else {
+        None
+    };
     sqlx::query(
         "INSERT INTO commerce_settings (tenant_id, qris_object_id, qris_receiver_name, checkout_enabled,
-             delivery_fee, order_approval_required, reservation_ttl_minutes, separation_of_duties)
-         VALUES ($1, $2, $3, $4, $5::bigint::numeric / 100, $6, $7, $8)
+             delivery_fee, order_approval_required, reservation_ttl_minutes, separation_of_duties,
+             qris_static_payload)
+         VALUES ($1, $2, $3, $4, $5::bigint::numeric / 100, $6, $7, $8, $9)
          ON CONFLICT (tenant_id) DO UPDATE SET qris_object_id = EXCLUDED.qris_object_id,
              qris_receiver_name = EXCLUDED.qris_receiver_name, checkout_enabled = EXCLUDED.checkout_enabled,
              delivery_fee = EXCLUDED.delivery_fee, order_approval_required = EXCLUDED.order_approval_required,
              reservation_ttl_minutes = EXCLUDED.reservation_ttl_minutes,
-             separation_of_duties = EXCLUDED.separation_of_duties, updated_at = now()",
+             separation_of_duties = EXCLUDED.separation_of_duties,
+             qris_static_payload = EXCLUDED.qris_static_payload, updated_at = now()",
     )
     .bind(t.as_uuid())
     .bind(s.qris_object_id)
@@ -251,6 +295,7 @@ pub async fn put_settings(
     .bind(s.order_approval_required)
     .bind(s.reservation_ttl_minutes)
     .bind(s.separation_of_duties)
+    .bind(&upsert_payload)
     .execute(&mut *tx)
     .await
     .map_err(|e| match violation(&e) {
@@ -258,6 +303,19 @@ pub async fn put_settings(
         Some((c, n)) if c == "23503" && n == "fk_commerce_settings_qris" => SettingsError::InvalidImage,
         _ => SettingsError::Db(e),
     })?;
+    if let (Some(id), Some(payload)) = (s.qris_object_id, s.qris_static_payload.as_deref()) {
+        sqlx::query(
+            "UPDATE commerce_settings
+             SET qris_static_payload = $3, updated_at = now()
+             WHERE tenant_id = $1 AND qris_object_id = $2
+               AND qris_static_payload IS DISTINCT FROM $3",
+        )
+        .bind(t.as_uuid())
+        .bind(id)
+        .bind(payload)
+        .execute(&mut *tx)
+        .await?;
+    }
     crate::audit_repo::record(
         &mut *tx,
         &AuditEvent::new(COMMERCE_SETTINGS_CHANGED, "commerce_settings")
