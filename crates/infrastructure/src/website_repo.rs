@@ -647,5 +647,8 @@ pub async fn published_pages(
     .fetch_all(&mut *tx)
     .await?;
     tx.commit().await?;
-    Ok(rows.iter().map(|r| (r.get("slug"), r.get("title"))).collect())
+    Ok(rows
+        .iter()
+        .map(|r| (r.get("slug"), r.get("title")))
+        .collect())
 }

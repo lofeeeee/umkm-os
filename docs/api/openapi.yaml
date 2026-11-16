@@ -12243,6 +12243,17 @@ components:
         version:
           type: integer
           format: int32
+    PublicPageLink:
+      type: object
+      description: Satu tautan navigasi situs publik.
+      required:
+      - slug
+      - title
+      properties:
+        slug:
+          type: string
+        title:
+          type: string
     PublicPayment:
       type: object
       required:
@@ -14218,6 +14229,7 @@ components:
           - business
           - status
           - assets
+          - pages
           properties:
             assets:
               type: object
@@ -14229,6 +14241,11 @@ components:
               $ref: '#/components/schemas/BusinessView'
             page:
               $ref: '#/components/schemas/PublicPage'
+            pages:
+              type: array
+              items:
+                $ref: '#/components/schemas/PublicPageLink'
+              description: Halaman terbit untuk navigasi (slug + judul). Halaman draf tidak disertakan.
             status:
               $ref: '#/components/schemas/StatusView'
         meta:
