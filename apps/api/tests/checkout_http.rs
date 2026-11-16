@@ -667,10 +667,100 @@ async fn staff_order_access_is_scoped(pool: PgPool) {
             Method::GET,
             format!("/api/v1/tenants/{}/orders", b.t),
             &b.owner,
-            None
+            None,
         )
         .await
         .json()["data"]["total"],
         0
     );
+}
+
+use umkm_infrastructure::gopay::{GopaySession, poller::now_ms};
+use umkm_infrastructure::gopay_repo;
+
+async fn connect_gopay(a: &TestApp, t: uuid::Uuid) {
+    let session = GopaySession {
+        phone_e164: "+6281200000000".into(),
+        merchant_id: Some("M1".into()),
+        outlet_name: Some("Toko".into()),
+        access_token: "access".into(),
+        refresh_token: "refresh".into(),
+        expires_at_ms: now_ms() + 86_400_000,
+    };
+    let keyring = a.state.auth.as_ref().unwrap().keyring.as_ref().unwrap();
+    gopay_repo::put_session(
+        &a.state.db.clone().unwrap(),
+        TenantId::from_uuid(t),
+        &session,
+        keyring,
+    )
+    .await
+    .unwrap();
+}
+
+#[sqlx::test(migrator = "MIGRATOR")]
+async fn public_gopay_qris_does_not_decode(pool: PgPool) {
+    let a = app(&pool).await;
+    let s = shop(&a, &pool, "toko-a", 5).await;
+
+    // Unggah QRIS yang sebenarnya valid, simpan ke settings (ter-decode)
+    let qris_id = upload(&a.router, s.t, &s.owner, qris_png()).await.json()["data"]["id"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    let r = staff(
+        &a,
+        Method::PUT,
+        format!("/api/v1/tenants/{}/commerce/settings", s.t),
+        &s.owner,
+        Some(json!({
+            "qris": format!("asset:{qris_id}"),
+            "qris_receiver_name": "Toko A",
+            "checkout_enabled": true,
+            "delivery_fee": "0"
+        })),
+    )
+    .await;
+    assert_eq!(r.status, 200, "{}", r.json());
+
+    // Sengaja reset payload ke NULL untuk menguji bahwa endpoint publik TIDAK memicu decode malas
+    sqlx::query("UPDATE commerce_settings SET qris_static_payload = NULL WHERE tenant_id = $1")
+        .bind(s.t)
+        .execute(&pool)
+        .await
+        .unwrap();
+
+    // Hubungkan sesi GoPay aktif
+    connect_gopay(&a, s.t).await;
+
+    // Checkout keranjang untuk buat pesanan AWAITING_PAYMENT
+    let r = checkout(&a, HOST, "key-guard-001", cart(&s.variant, 1)).await;
+    assert_eq!(r.status, 201, "{}", r.json());
+    let token = r.json()["data"]["access_token"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+
+    // Panggil endpoint publik QRIS GoPay
+    let res = req(
+        &a,
+        Method::POST,
+        HOST,
+        "/api/v1/public/orders/current/gopay-qris",
+        &[("x-order-token", &token)],
+        None,
+    )
+    .await;
+    assert_eq!(res.status, 200, "{}", res.json());
+    assert_eq!(res.json()["data"]["available"], false);
+
+    // Pastikan database tetap NULL — endpoint publik tidak mencoba decode gambar
+    let payload_after: Option<String> = sqlx::query_scalar(
+        "SELECT qris_static_payload FROM commerce_settings WHERE tenant_id = $1",
+    )
+    .bind(s.t)
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(payload_after, None);
 }

@@ -327,7 +327,8 @@ use std::io::Cursor;
 use umkm_domain::commerce::qris::crc16_ccitt;
 
 /// QRIS statis valid untuk fixture uji (format TLV + CRC tag 63).
-pub fn qris_payload() -> String {
+/// Nama merchant (tag 59) bisa diubah agar dua payload valid berbeda (CRC dihitung ulang).
+pub fn qris_payload_named(name: &str) -> String {
     let fields = [
         ("00", "01"),
         ("01", "11"),
@@ -335,7 +336,7 @@ pub fn qris_payload() -> String {
         ("52", "5812"),
         ("53", "360"),
         ("58", "ID"),
-        ("59", "WARUNG KOPI"),
+        ("59", name),
         ("60", "JAKARTA"),
         ("62", "0703A01"),
     ];
@@ -349,6 +350,10 @@ pub fn qris_payload() -> String {
     let crc = crc16_ccitt(body.as_bytes());
     body.push_str(&format!("{crc:04X}"));
     body
+}
+
+pub fn qris_payload() -> String {
+    qris_payload_named("WARUNG KOPI")
 }
 
 pub fn qr_png(content: &str) -> Vec<u8> {
@@ -366,6 +371,11 @@ pub fn qr_png(content: &str) -> Vec<u8> {
 
 pub fn qris_png() -> Vec<u8> {
     qr_png(&qris_payload())
+}
+
+/// Gambar QRIS valid dengan nama merchant lain (payload B untuk uji penggantian).
+pub fn qris_png_named(name: &str) -> Vec<u8> {
+    qr_png(&qris_payload_named(name))
 }
 
 pub fn tampered_qris_png() -> Vec<u8> {
