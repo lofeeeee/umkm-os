@@ -65,7 +65,14 @@ function WebsitePage({ slug }: { slug: string }) {
       // ADR-0017: dokumen Studio. Chatbot tampil hanya bila plugin Chatbot dipasang di halaman.
       return (
         <main>
-          <StudioSite doc={content} business={site.business} status={site.status} products={products ?? []} assetUrl={assetUrl} />
+          <StudioSite
+            doc={content}
+            business={site.business}
+            status={site.status}
+            products={products ?? []}
+            assetUrl={assetUrl}
+            pages={(site.pages ?? []).map((p) => ({ slug: p.slug, title: p.title, current: p.slug === site.page.slug }))}
+          />
           <CartFab />
         </main>
       );

@@ -44,4 +44,23 @@ describe("pemeriksa siap terbit", () => {
     const r = readiness({ cells: [cell("t", "text", { body: "x" })], business: biz(), productCount: 0 });
     expect(r).toEqual([{ key: "title", message: expect.any(String), cellId: undefined }]);
   });
+
+  // Regresi: plugin Chatbot terpasang tetapi chatbot belum diaktifkan di Asisten AI → plugin
+  // tidak tampil di situs terbit. Harus diperingatkan sebelum terbit, bukan setelah.
+  it("plugin Chatbot dengan chatbot nonaktif jadi catatan siap terbit", () => {
+    const cells = [cell("h", "hero", { title: "Kopi" }), cell("c", "chatbot", { title: "Tanya" })];
+    const r = readiness({ cells, business: biz(), productCount: 0, chatReady: false });
+    expect(r.find((x) => x.key === "chatbot")).toMatchObject({ cellId: "c", area: "ai" });
+  });
+
+  it("chatbot aktif atau belum diketahui tidak memunculkan catatan", () => {
+    const cells = [cell("h", "hero", { title: "Kopi" }), cell("c", "chatbot", { title: "Tanya" })];
+    expect(keys(readiness({ cells, business: biz(), productCount: 0, chatReady: true }))).not.toContain("chatbot");
+    expect(keys(readiness({ cells, business: biz(), productCount: 0, chatReady: null }))).not.toContain("chatbot");
+  });
+
+  it("tanpa plugin Chatbot, status chatbot tidak relevan", () => {
+    const cells = [cell("h", "hero", { title: "Kopi" })];
+    expect(keys(readiness({ cells, business: biz(), productCount: 0, chatReady: false }))).not.toContain("chatbot");
+  });
 });

@@ -34,7 +34,7 @@ const MODES: { value: string; title: string; desc: string }[] = [
   { value: "hybrid", title: "Hybrid (disarankan)", desc: "AI menjawab pertanyaan yang jelas; sisanya diteruskan ke staf." },
   { value: "auto", title: "Otomatis", desc: "AI menjawab semua pertanyaan langsung." },
   { value: "assisted", title: "Dibantu", desc: "AI menyiapkan draf; staf memeriksa lalu mengirim." },
-  { value: "human_only", title: "Hanya staf", desc: "AI tidak menjawab; semua chat masuk antrean staf." },
+  { value: "human_only", title: "Hanya staf (tanpa AI)", desc: "Tanpa penyedia AI. Semua chat masuk antrean staf — cocok untuk mulai menjual." },
 ];
 const TOOLS: Record<string, string> = {
   search_products: "Cari produk", get_product_detail: "Detail produk", check_stock: "Cek stok",
@@ -97,23 +97,38 @@ function Ai({ ctx }: { ctx: TenantCtx }) {
   const manageProv = ctx.can("ai_provider.manage");
   if (!view || !cfg) return <><Alert kind="error">{err}</Alert>{!err && <PageSkeleton />}</>;
   const active = providers.filter((p) => p.status === "active");
+  /** "Hanya staf": chat tetap jalan (antrean staf) tanpa penyedia AI — server mengizinkan ini
+   *  (`ai.rs`: `enabled && mode != human_only` baru mewajibkan penyedia). */
+  const humanOnly = cfg.mode === "human_only";
+  /** Chat siap menerima pelanggan: aktif dan (mode staf-saja ATAU ada penyedia utama). */
+  const chatReady = cfg.enabled && (humanOnly || !!cfg.primary_provider_id);
   async function saveCfg() {
     if (!cfg) return;
     setSaving(true);
     setCfgErr(null);
+    // Mode "Hanya staf" tidak memanggil penyedia AI. Mengirim penyedia lama akan membuat
+    // penyedia tampak "dipakai chatbot aktif" padahal tidak pernah dipanggil.
+    const body = cfg.mode === "human_only"
+      ? { ...cfg, enabled: true, primary_provider_id: null, fallback_provider_id: null }
+      : cfg;
     // Toast setelah data dimuat ulang: form sudah mencerminkan nilai tersimpan, dan muat ulang yang
     // terlambat tidak menimpa isian yang baru diketik pengguna.
-    try { await api("PUT", `${base}/config`, { json: cfg }); await load(); toast.ok("Pengaturan tersimpan."); } catch (e) { setCfgErr(describe(e)); } finally { setSaving(false); }
+    try { await api("PUT", `${base}/config`, { json: body }); await load(); toast.ok("Pengaturan tersimpan."); } catch (e) { setCfgErr(describe(e)); } finally { setSaving(false); }
   }
   return (
     <>
       <PageHeader
         title="Asisten AI"
         description="Chatbot yang menjawab pelanggan di website toko memakai data produk, jam buka, dan basis pengetahuan Anda."
-        actions={<Badge tone={cfg.enabled && cfg.primary_provider_id ? "ok" : "neutral"}>{cfg.enabled && cfg.primary_provider_id ? "Chatbot aktif" : "Chatbot nonaktif"}</Badge>}
+        actions={<Badge tone={chatReady ? "ok" : "neutral"}>{chatReady ? (humanOnly ? "Chat aktif (staf)" : "Chatbot aktif") : "Chatbot nonaktif"}</Badge>}
       />
       <Alert kind="error">{err}</Alert>
-      {!cfg.primary_provider_id && <Alert kind="info">Langkah pertama: tambahkan penyedia AI, lalu pilih sebagai penyedia utama di pengaturan chatbot.</Alert>}
+      {!chatReady && !humanOnly && (
+        <Alert kind="info">
+          Langkah pertama: pilih mode <strong>Hanya staf</strong> bila chat dilayani manual tanpa AI, atau tambahkan
+          penyedia AI lalu pilih sebagai penyedia utama.
+        </Alert>
+      )}
       {platformBlocked && providers.some((p) => p.source === "platform" && p.id === cfg.primary_provider_id) && (
         <Alert kind="error">
           Penyedia utama memakai AI platform, tetapi paket Anda tidak menyertakan token AI platform. Chatbot akan
@@ -178,7 +193,7 @@ function Ai({ ctx }: { ctx: TenantCtx }) {
               <div className="d-choice-grid">
                 {MODES.map((m) => (
                   <label key={m.value} className="d-choice">
-                    <input type="radio" name="mode" value={m.value} checked={cfg.mode === m.value} onChange={() => setCfg({ ...cfg, mode: m.value })} />
+                    <input type="radio" name="mode" value={m.value} checked={cfg.mode === m.value} onChange={() => setCfg({ ...cfg, mode: m.value, enabled: m.value === "human_only" ? true : cfg.enabled })} />
                     <span><strong>{m.title}</strong><span className="d-muted">{m.desc}</span></span>
                   </label>
                 ))}
@@ -187,13 +202,16 @@ function Ai({ ctx }: { ctx: TenantCtx }) {
             <div className="d-grid">
               {(["primary_provider_id", "fallback_provider_id"] as const).map((f) => (
                 <label key={f} className="d-field"><span>{f === "primary_provider_id" ? "Penyedia utama" : "Penyedia cadangan"}</span>
-                  <select value={cfg[f] ?? ""} onChange={(e) => setCfg({ ...cfg, [f]: e.target.value || null })}>
-                    <option value="">{f === "primary_provider_id" ? "Pilih penyedia…" : "Tanpa cadangan"}</option>
+                  <select value={cfg[f] ?? ""} disabled={humanOnly} onChange={(e) => setCfg({ ...cfg, [f]: e.target.value || null })}>
+                    <option value="">{f === "primary_provider_id" ? (humanOnly ? "Tidak dipakai (hanya staf)" : "Pilih penyedia…") : "Tanpa cadangan"}</option>
                     {active.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                   </select>
                 </label>
               ))}
             </div>
+            {humanOnly && (
+              <p className="d-hint">Mode ini tidak memanggil AI, jadi penyedia tidak diperlukan. Pelanggan tetap bisa memulai chat dan pesan masuk ke menu <strong>Percakapan</strong>.</p>
+            )}
             <label className="d-field"><span>Panduan untuk AI <span className="d-opt">(gaya bahasa, info toko)</span></span><textarea rows={4} maxLength={4000} placeholder="mis. Jawab ramah dan singkat, panggil pelanggan “kak”." value={cfg.system_prompt} onChange={(e) => setCfg({ ...cfg, system_prompt: e.target.value })} /></label>
             <div className="d-grid">
               <label className="d-field"><span>Pesan sambutan</span><input maxLength={500} value={cfg.welcome_message} onChange={(e) => setCfg({ ...cfg, welcome_message: e.target.value })} /></label>

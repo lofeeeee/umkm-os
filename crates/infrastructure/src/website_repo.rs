@@ -630,3 +630,22 @@ pub async fn published_content(
         (r.get("version"), c)
     }))
 }
+
+/// Ringkasan halaman TERBIT untuk navigasi situs publik (judul dipakai sebagai label tautan).
+/// Hanya halaman yang sudah punya versi terbit — halaman draf tidak boleh membocorkan judulnya.
+pub async fn published_pages(
+    pool: &PgPool,
+    t: TenantId,
+) -> Result<Vec<(String, String)>, sqlx::Error> {
+    let mut tx = tx(pool, t).await?;
+    let rows = sqlx::query(
+        "SELECT p.slug, p.title FROM website_pages p
+         WHERE p.tenant_id = $1 AND p.published_version_id IS NOT NULL
+         ORDER BY (p.slug = 'home') DESC, p.slug",
+    )
+    .bind(t.as_uuid())
+    .fetch_all(&mut *tx)
+    .await?;
+    tx.commit().await?;
+    Ok(rows.iter().map(|r| (r.get("slug"), r.get("title"))).collect())
+}

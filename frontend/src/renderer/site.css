@@ -54,11 +54,48 @@
   border-bottom: 1px solid var(--s-line);
 }
 .s-headbar { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between; }
-.s-brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.0625em; letter-spacing: -0.01em; }
-.s-logo { width: 36px; height: 36px; object-fit: cover; border-radius: 10px !important; }
+.s-brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.0625em; letter-spacing: -0.01em; min-width: 0; }
+.s-brand-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.s-logo { width: 36px; height: 36px; object-fit: cover; border-radius: 10px !important; flex: none; }
+.s-logo-fallback { display: grid; place-items: center; background: var(--s-primary); color: var(--s-on-primary, #fff); font-size: 0.875em; font-weight: 700; }
 .s-nav { display: flex; flex-wrap: wrap; gap: 4px; }
-.s-nav a { text-decoration: none; padding: 8px 12px; border-radius: 999px; color: var(--s-ink-2); font-weight: 600; font-size: 0.9375em; transition: background-color 150ms ease, color 150ms ease; }
+.s-nav a { text-decoration: none; padding: 8px 12px; border-radius: 999px; color: var(--s-ink-2); font-weight: 600; font-size: 0.9375em; transition: background-color 150ms ease, color 150ms ease; min-height: 24px; display: inline-flex; align-items: center; }
 .s-nav a:hover { background: var(--s-tint); color: var(--s-primary); }
+
+/* Bilah atas (tema `navbar_style: top`). `s-sticky` hanya menempel bila diminta tema. */
+.s-headbar.s-sticky {
+  position: sticky; top: 0; z-index: 6; padding: 12px 20px;
+  background: color-mix(in srgb, var(--s-bg) 88%, transparent);
+  backdrop-filter: saturate(1.6) blur(12px); -webkit-backdrop-filter: saturate(1.6) blur(12px);
+  border-bottom: 1px solid var(--s-line);
+}
+
+/* Bilah samping (tema `navbar_style: side`, dokumen Studio v2). Desktop = kolom di kiri, isi di kanan;
+   ponsel = bilah atas yang membungkus (layar sempit tidak cukup untuk kolom samping + isi).
+   Grid dipasang di `.sv2-shell`, BUKAN di `.sv2` — `.sv2` sendiri adalah container query, dan aturan
+   `@container` hanya berlaku untuk keturunannya, bukan elemen container itu sendiri. */
+.sv2-shell { display: block; }
+.site.s-has-side-nav .sv2-shell {
+  display: grid; grid-template-columns: 210px minmax(0, 1fr); align-items: start;
+}
+.s-nav-side {
+  position: sticky; top: 0; align-self: start;
+  display: flex; flex-direction: column; gap: 20px;
+  padding: 24px 16px; box-sizing: border-box; min-height: 100vh;
+  background: var(--s-soft); border-right: 1px solid var(--s-line);
+}
+.s-nav-side .s-nav { flex-direction: column; gap: 2px; }
+.s-nav-side .s-nav a { border-radius: 10px; }
+@container (max-width: 719px) {
+  .site.s-has-side-nav .sv2-shell { display: block; }
+  .s-nav-side {
+    position: static; min-height: 0;
+    flex-direction: row; flex-wrap: wrap;
+    align-items: center; justify-content: space-between; gap: 8px 16px;
+    padding: 12px 16px; border-right: 0; border-bottom: 1px solid var(--s-line);
+  }
+  .s-nav-side .s-nav { flex-direction: row; flex-wrap: wrap; }
+}
 
 /* Hero */
 .s.s--hero { background: radial-gradient(900px 400px at 10% -10%, var(--s-tint), transparent 70%), var(--s-bg) !important; }
@@ -151,7 +188,7 @@
 /* ============================================================
    Situs Studio (schema v2, ADR-0017): grid 12 kolom desktop, tumpuk di ponsel.
    ============================================================ */
-.sv2 { container-type: inline-size; --pg-bg: #ffffff; background: var(--pg-bg); min-height: 100vh; padding: 24px 16px 96px; font-family: var(--s-font); }
+.sv2 { container-type: inline-size; --pg-bg: #ffffff; background: var(--pg-bg); min-height: 100vh; padding: 0 0 96px; font-family: var(--s-font); }
 .sv2[data-surface="cream"] { --pg-bg: #fbf6ee; }
 .sv2[data-surface="dark"] { --pg-bg: #0d0d12; color-scheme: dark; }
 .sv2 .site { --s-bg: var(--pg-bg); background: transparent; min-height: 0; }
@@ -161,6 +198,11 @@
 /* Baris grid tanpa tinggi minimum & tanpa celah baris: blok bertinggi otomatis mengikuti isinya,
    baris kosong runtuh ke 0 (data nyata bisa lebih pendek/panjang dari saat disusun). Celah = padding blok. */
 .sv2-grid { max-width: 1080px; margin: 0 auto; display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); grid-auto-rows: minmax(0, auto); column-gap: 12px; row-gap: 0; }
+/* Isi halaman di samping bilah samping (dan di bawah bilah atas). min-width 0 mencegah grid melebar
+   keluar kolom saat isinya panjang. */
+.sv2-main { min-width: 0; padding: 24px 16px 0; }
+/* Bilah atas v2 menempel ke tepi, jadi tidak ikut padding halaman. */
+.sv2 > .sv2-shell > .s-headbar { padding: 12px 16px; }
 .sv2-block { min-width: 0; padding-bottom: 12px; box-sizing: border-box; }
 .sv2-anchor { display: block; height: 0; scroll-margin-top: 16px; }
 .sv2-block > .st-content { height: 100%; }

@@ -44,6 +44,7 @@ import { ApiError, describe } from "@/lib/api";
 import { waktu } from "@/lib/labels";
 import { confirm, Sheet } from "@/ui/dialog";
 import { Badge, Skeleton } from "@/ui/page";
+import { Alert } from "@/dashboard/shell";
 import { dismissToast, toast } from "@/ui/toast";
 
 type StudioCell = TplCell;
@@ -180,6 +181,8 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
   const [drawConfig, setDrawConfig] = useState<DrawConfig>({ color: "#EF4444", size: 4, opacity: 1 });
   const [drawTarget, setDrawTarget] = useState<DrawTarget>("background");
   const [cropModal, setCropModal] = useState<{ open: boolean; cellId: string | null; imageSrc: string | null }>({ open: false, cellId: null, imageSrc: null });
+  /** Status chatbot sebenarnya dari `/ai/config`: pratinjau tidak boleh menjanjikan chat yang tidak aktif. */
+  const [chatReady, setChatReady] = useState<boolean | null>(null);
 
   useEffect(() => {
     const el = stageRef.current;
@@ -217,6 +220,11 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
       ]);
       const d = await api<Draft>("GET", `${base}/website/pages/home/draft`);
       setBusiness(b);
+      // Status chat nyata: plugin Chatbot di kanvas hanya tampil di publik bila chatbot diaktifkan
+      // di menu Asisten AI (mode "Hanya staf" tidak butuh penyedia AI).
+      void api<{ config: { enabled: boolean; mode: string; primary_provider_id: string | null } }>("GET", `${base}/ai/config`)
+        .then((x) => setChatReady(x.config.enabled && (x.config.mode === "human_only" || !!x.config.primary_provider_id)))
+        .catch(() => setChatReady(null));
       void api<{ plan: { code: string } }>("GET", `${base}/subscription`).then((x) => setPlanCode(x.plan.code)).catch(() => setPlanCode(null));
       setRawProducts(p.items.map((x) => ({ slug: x.slug, name: x.name, image: x.images[0], price: x.variants[0]?.price ?? "0.00", promo_price: x.variants[0]?.promo_price ?? null, available: x.available })));
       setDraftAssetsForUploads(d.assets);
@@ -391,7 +399,7 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
   /** Terbitkan: tampilkan catatan siap-terbit dulu bila ada (tidak memblokir). */
   function publish() {
     if (!st) return;
-    const issues = readiness({ cells: st.cells, business, productCount: rawProducts.length, seo: st.seo });
+    const issues = readiness({ cells: st.cells, business, productCount: rawProducts.length, seo: st.seo, chatReady });
     if (issues.length > 0) { setChecks(issues); return; }
     void doPublish();
   }
@@ -517,7 +525,7 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
     <div className={`st-content st-style-${c.style}${c.layout ? ` st-layout-${c.layout}` : ""}`}>
       {c.kind === "chatbot" ? (
         <ChatPreview primary={th.primary} title={String(c.data.title ?? "Tanya kami")} welcome={String(c.data.welcome ?? "")}
-          open={c.chatOpen !== false} onToggle={() => setChatOpen(c.id, c.chatOpen === false)} />
+          open={c.chatOpen !== false} onToggle={() => setChatOpen(c.id, c.chatOpen === false)} ready={chatReady} />
       ) : c.kind === "text" || c.kind === "whatsapp" ? (
         <EditContext.Provider value={editable ? editApi(c) : null}>
           <div className="site s-solo" style={{ ...primaryVars(th.primary), ["--s-font" as string]: fontStack(th.font) }}>
@@ -537,7 +545,7 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
         </EditContext.Provider>
       )}
     </div>
-  ), [theme, business, products, assets.url, setChatOpen, editApi]);
+  ), [theme, business, products, assets.url, setChatOpen, editApi, chatReady]);
 
   const shownPlugins = useMemo(() => {
     const t = q.trim().toLowerCase();
@@ -750,6 +758,7 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
               }}
               aiHref={`/ai?tenant=${ctx.tenant.id}`}
               businessHref={`/business?tenant=${ctx.tenant.id}`}
+              chatReady={chatReady}
               upgradeHref={needsUpgrade(pluginPlan(selected.kind), planCode) ? `/subscription?tenant=${ctx.tenant.id}` : null}
             />
           ) : activeTab === "pages" ? (
@@ -916,12 +925,12 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
                 primaryColor={st.primary}
               />
               {mobileOrder(gridCells).map((c) => <div key={c.id} className="st-phone-cell">{renderCell(c)}</div>)}
-              <div className="st-dock"><FloatingChat cell={floating} primary={st.primary} onToggle={setChatOpen} onSelect={setSel} selected={sel} /><FloatingWa cell={floatingWa} onSelect={setSel} selected={sel} /></div>
+              <div className="st-dock"><FloatingChat cell={floating} primary={st.primary} onToggle={setChatOpen} onSelect={setSel} selected={sel} ready={chatReady} /><FloatingWa cell={floatingWa} onSelect={setSel} selected={sel} /></div>
             </div>
           )}
           {st.cells.length === 0 && <p className="st-empty">Tarik plugin dari panel kiri ke sini.</p>}
         </div>
-        {device === "desktop" && <div className="st-dock" style={{ ["--s-size" as string]: st.textScale ?? 1 }}><FloatingChat cell={floating} primary={st.primary} onToggle={setChatOpen} onSelect={setSel} selected={sel} /><FloatingWa cell={floatingWa} onSelect={setSel} selected={sel} /></div>}
+        {device === "desktop" && <div className="st-dock" style={{ ["--s-size" as string]: st.textScale ?? 1 }}><FloatingChat cell={floating} primary={st.primary} onToggle={setChatOpen} onSelect={setSel} selected={sel} ready={chatReady} /><FloatingWa cell={floatingWa} onSelect={setSel} selected={sel} /></div>}
         </div>
       </div>
       </div>
@@ -952,6 +961,7 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
                 {i.area === "business" && <Link className="d-btn d-btn-sm" href={`/business?tenant=${ctx.tenant.id}`}>Profil bisnis</Link>}
                 {i.area === "products" && <Link className="d-btn d-btn-sm" href={`/products?tenant=${ctx.tenant.id}`}>Produk</Link>}
                 {i.area === "seo" && <button type="button" className="d-btn d-btn-sm" onClick={() => { setSel(null); setPanelOpen(true); setChecks(null); setTimeout(() => document.getElementById("seo-description")?.focus(), 50); }}>Isi deskripsi</button>}
+                {i.area === "ai" && <Link className="d-btn d-btn-sm" href={`/ai?tenant=${ctx.tenant.id}`}>Asisten AI</Link>}
               </span>
             </li>
           ))}
@@ -1119,7 +1129,7 @@ function MiniLayout({ cells, render, theme }: { cells: StudioCell[]; render: (c:
 }
 
 /* ============================================================ Inspektur */
-function Inspector({ c, onBack, onChange, onWidth, onMove, onLayout, onDuplicate, onRemove, onFull, onPhoto, onCrop, aiHref, businessHref, upgradeHref }: {
+function Inspector({ c, onBack, onChange, onWidth, onMove, onLayout, onDuplicate, onRemove, onFull, onPhoto, onCrop, aiHref, businessHref, chatReady, upgradeHref }: {
   c: StudioCell;
   onBack: () => void;
   onChange: (patch: Partial<StudioCell>, key?: string) => void;
@@ -1133,6 +1143,8 @@ function Inspector({ c, onBack, onChange, onWidth, onMove, onLayout, onDuplicate
   onCrop?: () => void;
   aiHref: string;
   businessHref: string;
+  /** Chatbot aktif di Asisten AI? null = belum diketahui. */
+  chatReady: boolean | null;
   /** Diisi bila plugin butuh paket lebih tinggi (ADR-0019). */
   upgradeHref: string | null;
 }) {
@@ -1238,6 +1250,13 @@ function Inspector({ c, onBack, onChange, onWidth, onMove, onLayout, onDuplicate
         <h3>Isi</h3>
         {c.kind === "chatbot" ? (
           <>
+            {chatReady === false && (
+              <Alert kind="warn">
+                Chatbot belum aktif, jadi plugin ini <strong>tidak tampil</strong> di website yang diterbitkan. Buka{" "}
+                <Link href={aiHref}>Asisten AI</Link>, pilih mode <strong>Hanya staf</strong> (tanpa penyedia AI) atau
+                tambahkan penyedia, lalu simpan.
+              </Alert>
+            )}
             <label className="d-field"><span>Judul</span><input maxLength={40} value={String(c.data.title ?? "")} onChange={(e) => onChange({ data: { ...c.data, title: e.target.value } })} /></label>
             <label className="d-field"><span>Pesan sambutan</span><textarea rows={3} maxLength={300} value={String(c.data.welcome ?? "")} onChange={(e) => onChange({ data: { ...c.data, welcome: e.target.value } })} /></label>
             <p className="d-hint">Jawaban memakai pengaturan di menu <Link href={aiHref}>Asisten AI</Link>.</p>
@@ -1287,23 +1306,24 @@ function FloatingWa({ cell, onSelect, selected }: { cell: StudioCell | undefined
 
 /* ============================================================ Chatbot */
 /** Chatbot melayang: gelembung di pojok kanan bawah panggung; klik untuk buka/tutup. */
-function FloatingChat({ cell, primary, onToggle, onSelect, selected }: {
-  cell: StudioCell | undefined; primary: string; onToggle: (id: string, open: boolean) => void; onSelect: (id: string) => void; selected: string | null;
+function FloatingChat({ cell, primary, onToggle, onSelect, selected, ready }: {
+  cell: StudioCell | undefined; primary: string; onToggle: (id: string, open: boolean) => void; onSelect: (id: string) => void; selected: string | null; ready: boolean | null;
 }) {
   if (!cell) return null;
   const open = cell.chatOpen !== false;
   const title = String(cell.data.title ?? "Tanya kami");
   const welcome = String(cell.data.welcome ?? "");
+  const off = ready === false;
   if (cell.layout === "bar") {
     return (
       <div className={`st-chatbar${selected === cell.id ? " st-selected" : ""}`} style={{ ["--c" as string]: primary }} onPointerDown={() => onSelect(cell.id)}>
         {open && (
           <div className="st-chatbar-panel">
-            <ChatPreview primary={primary} title={title} welcome={welcome} open onToggle={() => onToggle(cell.id, false)} />
+            <ChatPreview primary={primary} title={title} welcome={welcome} open onToggle={() => onToggle(cell.id, false)} ready={ready} />
           </div>
         )}
         <div className="st-chatbar-bar">
-          <span className="st-chatbar-who"><span className="st-chat-dot" aria-hidden="true" />{title}<em>Asisten AI · online</em></span>
+          <span className="st-chatbar-who"><span className="st-chat-dot" aria-hidden="true" />{title}<em>{off ? "Nonaktif" : "Asisten AI · online"}</em></span>
           <button type="button" className="st-chatbar-input" style={{ border: 0, textAlign: "left", font: "inherit", cursor: "pointer" }} onClick={() => onToggle(cell.id, true)}>
             {welcome || "Tulis pertanyaan…"}
           </button>
@@ -1318,7 +1338,7 @@ function FloatingChat({ cell, primary, onToggle, onSelect, selected }: {
     <div className={`st-float${selected === cell.id ? " st-selected" : ""}`} onPointerDown={() => onSelect(cell.id)}>
       {open && (
         <div className="st-float-panel">
-          <ChatPreview primary={primary} title={title} welcome={welcome} open onToggle={() => onToggle(cell.id, false)} />
+          <ChatPreview primary={primary} title={title} welcome={welcome} open onToggle={() => onToggle(cell.id, false)} ready={ready} />
         </div>
       )}
       <button type="button" className="st-float-bubble" style={{ ["--c" as string]: primary }} onClick={() => onToggle(cell.id, !open)} aria-label={open ? "Minimalkan chatbot" : "Buka chatbot"}>
@@ -1328,12 +1348,16 @@ function FloatingChat({ cell, primary, onToggle, onSelect, selected }: {
   );
 }
 
-/** Pratinjau chatbot (statis di editor; di situs publik memakai widget chat sungguhan). */
-function ChatPreview({ primary, title, welcome, open, onToggle }: { primary: string; title: string; welcome: string; open: boolean; onToggle: () => void }) {
+/** Pratinjau chatbot (statis di editor; di situs publik memakai widget chat sungguhan).
+ *  `ready` = keadaan chatbot sebenarnya: saat nonaktif, pratinjau TIDAK boleh menampilkan
+ *  "Asisten AI · online" karena pembeli tidak akan melihat apa pun setelah terbit. */
+function ChatPreview({ primary, title, welcome, open, onToggle, ready }: { primary: string; title: string; welcome: string; open: boolean; onToggle: () => void; ready: boolean | null }) {
+  const off = ready === false;
   return (
-    <div className={`st-chat${open ? "" : " st-chat-min"}`} style={{ ["--c" as string]: primary }}>
+    <div className={`st-chat${open ? "" : " st-chat-min"}${off ? " st-chat-off" : ""}`} style={{ ["--c" as string]: primary }}>
       <div className="st-chat-head">
-        <span className="st-chat-dot" aria-hidden="true" />{title}<em>Asisten AI · online</em>
+        <span className="st-chat-dot" aria-hidden="true" />{title}
+        <em>{off ? "Nonaktif — tidak tampil di publik" : "Asisten AI · online"}</em>
         <button type="button" data-interactive className="st-chat-toggle" onClick={onToggle} aria-label={open ? "Minimalkan chatbot" : "Maksimalkan chatbot"} title={open ? "Minimalkan" : "Maksimalkan"}>
           {open ? <CaretDown weight="bold" /> : <CaretUp weight="bold" />}
         </button>
@@ -1342,8 +1366,12 @@ function ChatPreview({ primary, title, welcome, open, onToggle }: { primary: str
         <>
           <div className="st-chat-log">
             <p className="st-chat-msg">{welcome}</p>
-            <p className="st-chat-msg st-chat-me">Kopi susu masih ada?</p>
-            <p className="st-chat-msg">Masih, kak! Kopi Susu Gula Aren tersedia ukuran Regular dan Large 😊</p>
+            {!off && (
+              <>
+                <p className="st-chat-msg st-chat-me">Kopi susu masih ada?</p>
+                <p className="st-chat-msg">Masih, kak! Kopi Susu Gula Aren tersedia ukuran Regular dan Large 😊</p>
+              </>
+            )}
           </div>
           <div className="st-chat-input"><span>Tulis pesan…</span><b aria-hidden="true">➤</b></div>
         </>

@@ -9,9 +9,13 @@ import type { CSSProperties, ReactNode } from "react";
 import { ChatWidget } from "@/chat/widget";
 import type { BlockV2, PageV2 } from "@/studio/doc";
 
+import { PublicNav, type NavLink } from "./PublicNav";
 import { fontStack, primaryVars, safeColor, text, waLink } from "./safe";
 import { Site, type GridProduct } from "./Site";
 import type { Business, OpenStatus } from "./types";
+
+/** Halaman terbit yang bisa ditautkan dari navigasi (dari `/public/site`). */
+export interface SitePageLink { slug: string; title: string; current?: boolean }
 
 export interface StudioSiteProps {
   doc: PageV2;
@@ -19,10 +23,18 @@ export interface StudioSiteProps {
   status?: OpenStatus | null;
   products?: GridProduct[];
   assetUrl: (ref: string) => string | undefined;
+  /** Halaman terbit lain untuk tautan navigasi. Kosong = hanya nama toko (tanpa tautan). */
+  pages?: SitePageLink[];
 }
 
 const isEmbed = (b: BlockV2) =>
   (b.kind === "chatbot" && (b.layout === "floating" || b.layout === "bar")) || (b.kind === "whatsapp" && b.layout === "floating");
+
+/** `jam-buka` → `Jam buka` (label navigasi dari nama anchor, bukan slug mentah). */
+function titleCase(s: string): string {
+  const t = s.replace(/-/g, " ");
+  return t.charAt(0).toUpperCase() + t.slice(1);
+}
 
 /** Urutan tumpukan ponsel: y lalu x (sama dengan mobileOrder di editor). */
 export function mobileSorted(blocks: BlockV2[]): BlockV2[] {
@@ -139,12 +151,19 @@ function anchorsFor(blocks: { id: string; kind: string }[]): Map<string, string[
 
 export function StudioSite(props: StudioSiteProps) {
   const { doc } = props;
-  const isSideNav = doc.theme.navbar_style === "side";
+  const navStyle = doc.theme.navbar_style === "side" ? "side" : "top";
+  const isSideNav = navStyle === "side";
   const grid = mobileSorted(doc.blocks.filter((b) => !isEmbed(b)));
   const anchors = anchorsFor(grid);
   const chat = doc.blocks.find((b) => b.kind === "chatbot" && isEmbed(b));
   const wa = doc.blocks.find((b) => b.kind === "whatsapp" && isEmbed(b));
   const bgUrl = doc.theme.background_image ? (props.assetUrl(doc.theme.background_image) ?? doc.theme.background_image) : undefined;
+  // Tautan navigasi: halaman terbit dari server. Tanpa daftar halaman (mis. pratinjau) tautan jatuh ke
+  // anchor bagian di halaman ini supaya navigasi tidak kosong.
+  const navLinks: NavLink[] = (props.pages ?? []).filter((p) => !p.current).length > 0
+    ? (props.pages ?? []).map((p) => ({ href: p.slug === "home" ? "/" : `/${p.slug}`, label: p.title }))
+    : Array.from(anchors.entries()).map(([id, names]) => ({ href: `#${names[0] ?? id}`, label: titleCase(names[0] ?? id) }));
+  const logoUrl = props.business.profile.logo ? props.assetUrl(props.business.profile.logo) : undefined;
   const style = {
     ...primaryVars(doc.theme.primary),
     "--s-font": fontStack(doc.theme.font),
@@ -175,61 +194,53 @@ export function StudioSite(props: StudioSiteProps) {
           }}
         />
       )}
-      {isSideNav && (
-        <aside className="s-nav-side">
-          <button type="button" className="s-nav-toggle" aria-label="Menu" aria-expanded="false">
-            <span className="s-nav-toggle-icon" />
-          </button>
-          <div className="s-nav-side-drawer">
-            <div className="s-brand">
-              <span>{props.business.profile.name}</span>
-            </div>
-            <nav className="s-nav">
-              {Array.from(anchors.entries()).map(([id, names]) => (
-                <a key={id} href={`#${names[0] ?? id}`}>
-                  {names[0]?.replace(/-/g, " ") ?? id}
-                </a>
-              ))}
+      <div className="sv2-shell">
+        <PublicNav
+          style={navStyle}
+          sticky={doc.theme.navbar_sticky === true}
+          brand={props.business.profile.name}
+          logoUrl={logoUrl}
+          links={navLinks}
+        />
+        <div className="sv2-main">
+          <div className="sv2-grid">
+            {grid.map((b, i) => (
+              <div
+                key={b.id}
+                id={b.id}
+                className="sv2-block"
+                data-kind={b.kind}
+                data-section-type={b.kind}
+                data-hide={b.hide_on}
+                style={{
+                  gridColumn: `${b.x + 1} / span ${b.w}`,
+                  gridRow: `${b.y + 1} / span ${b.h}`,
+                  ["--order" as string]: i,
+                  // Tinggi manual (auto_height=false) dipertahankan persis seperti di editor (baris 24 px + celah 12 px).
+                  ...(b.auto_height === false ? { minHeight: b.h * 36 } : {}),
+                } as CSSProperties}
+              >
+                {anchors.get(b.id)?.map((a) => <span key={a} id={a} className="sv2-anchor" aria-hidden="true" />)}
+                <Block b={b} props={props} />
+              </div>
+            ))}
+          </div>
+          {/* P9-9: kebijakan privasi & syarat selalu bisa dijangkau dari situs (chat & akun mengumpulkan data). */}
+          <footer className="sv2-foot">
+            <span>© {props.business.profile.name}</span>
+            {/* UAT 15 Nov customer #5: keranjang/pesanan/akun terjangkau dari halaman depan juga. */}
+            <nav aria-label="Belanja">
+              <a href="/keranjang">Keranjang</a>
+              <a href="/pesanan">Pesanan saya</a>
+              <a href="/akun">Akun</a>
             </nav>
-          </div>
-        </aside>
-      )}
-      <div className="sv2-grid">
-        {grid.map((b, i) => (
-          <div
-            key={b.id}
-            id={b.id}
-            className="sv2-block"
-            data-kind={b.kind}
-            data-section-type={b.kind}
-            data-hide={b.hide_on}
-            style={{
-              gridColumn: `${b.x + 1} / span ${b.w}`,
-              gridRow: `${b.y + 1} / span ${b.h}`,
-              ["--order" as string]: i,
-              // Tinggi manual (auto_height=false) dipertahankan persis seperti di editor (baris 24 px + celah 12 px).
-              ...(b.auto_height === false ? { minHeight: b.h * 36 } : {}),
-            } as CSSProperties}
-          >
-            {anchors.get(b.id)?.map((a) => <span key={a} id={a} className="sv2-anchor" aria-hidden="true" />)}
-            <Block b={b} props={props} />
-          </div>
-        ))}
+            <nav aria-label="Informasi toko">
+              <a href="/kebijakan-privasi">Kebijakan privasi</a>
+              <a href="/syarat-transaksi">Syarat transaksi</a>
+            </nav>
+          </footer>
+        </div>
       </div>
-      {/* P9-9: kebijakan privasi & syarat selalu bisa dijangkau dari situs (chat & akun mengumpulkan data). */}
-      <footer className="sv2-foot">
-        <span>© {props.business.profile.name}</span>
-        {/* UAT 15 Nov customer #5: keranjang/pesanan/akun terjangkau dari halaman depan juga. */}
-        <nav aria-label="Belanja">
-          <a href="/keranjang">Keranjang</a>
-          <a href="/pesanan">Pesanan saya</a>
-          <a href="/akun">Akun</a>
-        </nav>
-        <nav aria-label="Informasi toko">
-          <a href="/kebijakan-privasi">Kebijakan privasi</a>
-          <a href="/syarat-transaksi">Syarat transaksi</a>
-        </nav>
-      </footer>
       {chat && <ChatWidget variant={chat.layout === "bar" ? "bar" : "bubble"} title={text(chat.data.title)} welcome={text(chat.data.welcome)} startOpen={chat.chat_open === true} primary={safeColor(doc.theme.primary)} />}
       {wa && <WhatsAppButton b={wa} business={props.business} floating />}
     </div>

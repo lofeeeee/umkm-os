@@ -128,14 +128,16 @@ describe("renderer perilaku", () => {
     expect(html).toContain("https://wa.me/6281234567890");
   });
 
-  it("navbar_style side me-render container drawer s-nav-side", () => {
+  // Renderer v1 (warisan) selalu memakai bilah atas: gaya `side` di v1 tidak pernah punya CSS/markup
+  // yang berfungsi. Dokumen baru (Studio, schema_version 2) memakai StudioSite yang mendukung keduanya.
+  it("header v1 selalu jadi bilah atas berisi tautan halaman", () => {
     const html = render(
       [{ id: "h-1", type: "header", enabled: true, data: { title: "Toko Side", nav: [{ label: "Menu", href: "#menu" }] } }],
       false,
       { primary: "#2563EB", font: "inter", navbar_style: "side" } as any,
     );
-    expect(html).toContain("s-nav-side");
-    expect(html).toContain("s-nav-toggle");
+    expect(html).toContain("s-headbar");
+    expect(html).toContain('href="#menu"');
     expect(html).toContain("Toko Side");
   });
 

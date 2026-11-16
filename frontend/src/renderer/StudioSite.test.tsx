@@ -79,4 +79,60 @@ describe("renderer publik Studio (v2)", () => {
     expect(html).toMatch(/id="c1"[^>]*>(<span[^>]*><\/span>)*<span id="kontak"/);
     for (const a of ["produk", "menu", "koleksi", "karya"]) expect(html).toContain(`id="${a}"`);
   });
+
+  // Regresi: navigasi terlihat di Studio tetapi hilang setelah diterbitkan. `navbar_style` default
+  // adalah "top" dan sebelumnya TIDAK dirender sama sekali oleh renderer publik.
+  it("navbar_style top dirender sebagai bilah atas (bukan hanya side)", () => {
+    const top: PageV2 = { ...doc, theme: { ...doc.theme, navbar_style: "top", navbar_sticky: true } };
+    const html = renderToStaticMarkup(<StudioSite doc={top} business={biz} assetUrl={() => undefined} />);
+    expect(html).toContain("s-headbar");
+    expect(html).toContain("s-sticky");
+    expect(html).toContain("Kopi"); // nama toko sebagai brand
+    expect(html).not.toContain("s-nav-side");
+    expect(html).not.toContain("s-has-side-nav");
+  });
+
+  it("tema tanpa navbar_style tetap menampilkan navigasi atas", () => {
+    const { navbar_style: _omitted, ...rest } = doc.theme;
+    const html = renderToStaticMarkup(<StudioSite doc={{ ...doc, theme: rest }} business={biz} assetUrl={() => undefined} />);
+    expect(html).toContain("s-headbar");
+    expect(html).not.toContain("s-sticky");
+  });
+
+  it("navbar_style side merender bilah samping di dalam shell", () => {
+    const side: PageV2 = { ...doc, theme: { ...doc.theme, navbar_style: "side" } };
+    const html = renderToStaticMarkup(<StudioSite doc={side} business={biz} assetUrl={() => undefined} />);
+    expect(html).toContain("s-has-side-nav");
+    expect(html).toContain("sv2-shell");
+    expect(html).toContain("s-nav-side");
+    expect(html).not.toContain("s-headbar");
+  });
+
+  it("tautan navigasi memakai halaman terbit, bukan anchor, saat daftar halaman tersedia", () => {
+    const html = renderToStaticMarkup(
+      <StudioSite
+        doc={doc}
+        business={biz}
+        assetUrl={() => undefined}
+        pages={[
+          { slug: "home", title: "Beranda", current: true },
+          { slug: "menu", title: "Menu" },
+          { slug: "tentang-kami", title: "Tentang kami" },
+        ]}
+      />,
+    );
+    expect(html).toContain('href="/menu"');
+    expect(html).toContain('href="/tentang-kami"');
+    expect(html).toContain('href="/"');
+    expect(html).toContain(">Beranda<");
+  });
+
+  it("tanpa daftar halaman, navigasi jatuh ke anchor bagian di halaman ini", () => {
+    const d: PageV2 = { ...doc, blocks: [
+      { id: "k", kind: "contact", x: 0, y: 0, w: 12, h: 4, style: "plain", data: { title: "Kontak" } },
+    ] };
+    const html = renderToStaticMarkup(<StudioSite doc={d} business={biz} assetUrl={() => undefined} />);
+    expect(html).toContain('href="#kontak"');
+    expect(html).toContain(">Kontak<");
+  });
 });

@@ -1303,6 +1303,10 @@ main.d-legal { max-width: 720px; }
 .st-chat { font-size: calc(0.875rem * var(--s-size, 1)); height: 420px; display: flex; flex-direction: column; font-family: var(--s-font, inherit); color: #0f172a; background: #fff; border-radius: 16px; overflow: hidden; }
 .st-chat-head { display: flex; align-items: center; gap: 8px; padding: 12px 14px; background: var(--c); color: #fff; font-weight: 700; font-size: 1em; }
 .st-chat-head em { margin-left: auto; font-style: normal; font-weight: 500; font-size: 0.78em; opacity: 0.85; }
+/* Chatbot nonaktif di Asisten AI: pratinjau ditandai agar tidak menjanjikan chat yang tidak tampil. */
+.st-chat-off .st-chat-head { background: #64748b; }
+.st-chat-off .st-chat-dot { background: #cbd5e1; box-shadow: none; }
+.st-chat-off .st-chat-log { opacity: 0.6; }
 .st-chat-dot { width: 8px; height: 8px; border-radius: 999px; background: #4ade80; box-shadow: 0 0 0 3px rgb(255 255 255 / 0.25); }
 .st-chat-log { flex: 1; padding: 12px; display: grid; gap: 8px; align-content: start; overflow: hidden; background: #f8fafc; }
 .st-chat-msg { margin: 0; max-width: 85%; padding: 8px 12px; border-radius: 14px; border-bottom-left-radius: 4px; background: #fff; font-size: 0.93em; box-shadow: 0 1px 2px rgb(0 0 0 / 0.06); }

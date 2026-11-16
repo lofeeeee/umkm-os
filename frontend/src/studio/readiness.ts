@@ -13,6 +13,8 @@ export interface ReadyInput {
   /** Produk aktif yang akan tampil di galeri produk. */
   productCount: number;
   seo?: { title?: string; description?: string };
+  /** Chatbot aktif di menu Asisten AI? null/undefined = belum diketahui (jangan memperingatkan). */
+  chatReady?: boolean | null;
 }
 export interface Issue {
   key: string;
@@ -20,13 +22,13 @@ export interface Issue {
   /** Blok yang perlu diperbaiki (dipilih saat butir diklik). */
   cellId?: string;
   /** Data di luar Studio. */
-  area?: "business" | "products" | "seo";
+  area?: "business" | "products" | "seo" | "ai";
 }
 
 const str = (v: Json | undefined) => (typeof v === "string" ? v.trim() : "");
 const PHOTO_KINDS: PluginKind[] = ["hero", "about", "promotion"];
 
-export function readiness({ cells, business, productCount, seo }: ReadyInput): Issue[] {
+export function readiness({ cells, business, productCount, seo, chatReady }: ReadyInput): Issue[] {
   const out: Issue[] = [];
   const p = business.profile;
   const first = (k: PluginKind) => cells.find((c) => c.kind === k);
@@ -58,6 +60,16 @@ export function readiness({ cells, business, productCount, seo }: ReadyInput): I
   }
   if (!str(seo?.description) && !str(p.description ?? "")) {
     out.push({ key: "description", message: "Belum ada deskripsi toko untuk Google & pratinjau tautan WhatsApp.", area: "seo" });
+  }
+  // Plugin Chatbot yang dipasang tidak tampil di publik bila chatbot belum diaktifkan di Asisten AI.
+  const chat = first("chatbot");
+  if (chat && chatReady === false) {
+    out.push({
+      key: "chatbot",
+      message: "Plugin Chatbot terpasang, tetapi chatbot belum aktif — plugin ini tidak akan tampil di website. Aktifkan di Asisten AI (mode “Hanya staf” tidak butuh penyedia AI).",
+      cellId: chat.id,
+      area: "ai",
+    });
   }
   return out;
 }

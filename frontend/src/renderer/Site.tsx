@@ -5,6 +5,7 @@
 import { createContext, useContext, type CSSProperties, type ReactNode } from "react";
 
 import { T, useEditing } from "./edit";
+import { PublicNav } from "./PublicNav";
 import { fontStack, primaryVars, safeColor, safeHref, sizesFor, srcSet, text, waLink } from "./safe";
 import type { Business, Json, OpenStatus, PageContent, Section } from "./types";
 
@@ -145,41 +146,21 @@ function SectionBody({ s, props }: { s: Section; props: SiteProps }) {
   const theme = content.theme as (PageContent["theme"] & SiteTheme) | undefined;
   switch (s.type) {
     case "header": {
-      const isSide = theme?.navbar_style === "side";
-      const isSticky = (theme?.navbar_style ?? "top") === "top" && theme?.navbar_sticky === true;
-      if (isSide) {
-        return (
-          <aside className="s-nav-side">
-            <button
-              type="button"
-              className="s-nav-toggle"
-              aria-label="Menu"
-              aria-expanded="false"
-            >
-              <span className="s-nav-toggle-icon" />
-            </button>
-            <div className="s-nav-side-drawer">
-              <div className="s-brand">
-                <Img r={d.logo ?? b.profile.logo ?? undefined} alt="" assetUrl={assetUrl} className="s-logo" />
-                <span>{text(d.title) || b.profile.name}</span>
-              </div>
-              <nav className="s-nav">
-                {list(d.nav).map((n, i) => <Link key={i} href={n.href}>{text(n.label)}</Link>)}
-              </nav>
-            </div>
-          </aside>
-        );
-      }
+      // Renderer v1 (warisan): header selalu jadi bilah atas. Gaya `side` di v1 tidak pernah
+      // berfungsi (markup lama tanpa CSS) — dokumen baru memakai renderer v2 (StudioSite).
+      const isSticky = theme?.navbar_sticky === true;
+      const links = list(d.nav)
+        .map((n) => ({ href: safeHref(text(n.href)), label: text(n.label) }))
+        .filter((l): l is { href: string; label: string } => !!l.href && !!l.label);
+      const logoRef = typeof d.logo === "string" ? d.logo : b.profile.logo ?? undefined;
       return (
-        <div className={`s-headbar${isSticky ? " s-sticky" : ""}`}>
-          <div className="s-brand">
-            <Img r={d.logo ?? b.profile.logo ?? undefined} alt="" assetUrl={assetUrl} className="s-logo" />
-            <span>{text(d.title) || b.profile.name}</span>
-          </div>
-          <nav className="s-nav">
-            {list(d.nav).map((n, i) => <Link key={i} href={n.href}>{text(n.label)}</Link>)}
-          </nav>
-        </div>
+        <PublicNav
+          style="top"
+          sticky={isSticky}
+          brand={text(d.title) || b.profile.name}
+          logoUrl={logoRef ? assetUrl(logoRef) : undefined}
+          links={links}
+        />
       );
     }
     case "hero":
@@ -404,8 +385,7 @@ export function Site(props: SiteProps) {
   const { content, preview } = props;
   const theme = content.theme as (PageContent["theme"] & SiteTheme) | undefined;
   const bgUrl = theme?.background_image ? (props.assetUrl(theme.background_image) ?? theme.background_image) : undefined;
-  const isSideNav = theme?.navbar_style === "side";
-  const isSticky = (theme?.navbar_style ?? "top") === "top" && theme?.navbar_sticky === true;
+  const isSticky = theme?.navbar_sticky === true;
   const style = {
     ...primaryVars(content.theme?.primary),
     "--s-font": fontStack(content.theme?.font),
@@ -417,7 +397,7 @@ export function Site(props: SiteProps) {
   const sections = (content.sections ?? []).filter((s) => preview || s.enabled);
   return (
     <SlotWidth.Provider value={props.slotWidth ?? 1180}>
-    <div className={`site${isSideNav ? " s-has-side-nav" : ""}`} style={style} data-template={content.template}>
+    <div className="site" style={style} data-template={content.template}>
       {bgUrl && (
         <div
           className="s-bg-overlay"
@@ -436,19 +416,6 @@ export function Site(props: SiteProps) {
             zIndex: 0,
           }}
         />
-      )}
-      {isSideNav && !sections.some((s) => s.type === "header") && (
-        <aside className="s-nav-side">
-          <button type="button" className="s-nav-toggle" aria-label="Menu" aria-expanded="false">
-            <span className="s-nav-toggle-icon" />
-          </button>
-          <div className="s-nav-side-drawer">
-            <div className="s-brand">
-              <Img r={props.business.profile.logo ?? undefined} alt="" assetUrl={props.assetUrl} className="s-logo" />
-              <span>{props.business.profile.name}</span>
-            </div>
-          </div>
-        </aside>
       )}
       {sections.map((s) => (
         <section

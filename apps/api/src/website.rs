@@ -163,6 +163,15 @@ pub struct PublicSite {
     pub business: BusinessView,
     pub status: StatusView,
     pub assets: BTreeMap<String, String>,
+    /// Halaman terbit untuk navigasi (slug + judul). Halaman draf tidak disertakan.
+    pub pages: Vec<PublicPageLink>,
+}
+
+/// Satu tautan navigasi situs publik.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct PublicPageLink {
+    pub slug: String,
+    pub title: String,
 }
 
 // ------------------------------------------------------------------ helper
@@ -812,6 +821,14 @@ pub async fn public_site(
     ids.extend(info.profile.logo_object_id);
     ids.extend(info.profile.cover_object_id);
     let assets = signed_assets(&state, t, ids).await?;
+    // Navigasi situs: halaman terbit. Kegagalan di sini tidak boleh menjatuhkan situs — nav tanpa
+    // tautan masih berguna (nama toko), jadi galat dianggap daftar kosong.
+    let pages = repo::published_pages(p, t)
+        .await
+        .unwrap_or_default()
+        .into_iter()
+        .map(|(slug, title)| PublicPageLink { slug, title })
+        .collect();
     let body = PublicSite {
         page: PublicPage {
             slug,
@@ -821,6 +838,7 @@ pub async fn public_site(
         business: to_view(info),
         status: status_view(status),
         assets,
+        pages,
     };
     let mut res = Json(SuccessEnvelope::new(body, &id)).into_response();
     res.headers_mut().insert(

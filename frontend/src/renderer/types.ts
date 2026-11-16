@@ -60,4 +60,6 @@ export interface PublicSite {
   business: Business;
   status: OpenStatus;
   assets: Record<string, string>;
+  /** Halaman terbit untuk navigasi. Lama/absent = nav hanya nama toko. */
+  pages?: { slug: string; title: string }[];
 }
