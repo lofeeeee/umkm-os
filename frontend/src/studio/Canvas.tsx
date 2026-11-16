@@ -26,6 +26,7 @@ interface Drag { id: string; mode: "move" | "resize"; sx: number; sy: number; or
 
 export function Canvas<T extends Cell>({
   cells, onChange, selected, onSelect, onDropPlugin, onRemove, onMeasure, onResizeH, render, label, toolbar, scale = 1, onDropFile, acceptsFile,
+  backgroundLayer, cellOverlay,
 }: {
   /** Foto dijatuhkan dari komputer ke sebuah plugin. */
   onDropFile?: (id: string, file: File) => void;
@@ -44,6 +45,10 @@ export function Canvas<T extends Cell>({
   label: (c: T) => string;
   toolbar?: (c: T) => ReactNode;
   scale?: number;
+  /** Lapisan latar belakang kanvas (mis. coretan brush latar). */
+  backgroundLayer?: ReactNode;
+  /** Lapisan overlay di atas masing-masing sel (mis. coretan terikat plugin). */
+  cellOverlay?: (c: T) => ReactNode;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const width = DESIGN_WIDTH;
@@ -136,6 +141,7 @@ export function Canvas<T extends Cell>({
         role="application"
         aria-label="Kanvas halaman. Seret plugin untuk memindah; panah untuk menggeser, Shift+panah untuk mengubah ukuran."
       >
+        {backgroundLayer && <div className="st-bg-layer" style={{ position: "absolute", inset: 0, pointerEvents: "all", zIndex: 1 }}>{backgroundLayer}</div>}
         {ghost && <div className="st-ghost" style={{ transform: `translate(${px(Math.min(ghost.x, COLS - 4))}px, ${py(ghost.y)}px)`, width: pw(4), height: ph(4) }} />}
         {cells.map((c) => {
           const active = live?.id === c.id;
@@ -177,6 +183,7 @@ export function Canvas<T extends Cell>({
                 </div>
                 <div className="st-body">
                   <Measure id={c.id} onMeasure={onMeasure}>{render(c)}</Measure>
+                  {cellOverlay && <div className="st-cell-overlay" style={{ position: "absolute", inset: 0, pointerEvents: "all", zIndex: 5 }}>{cellOverlay(c)}</div>}
                   {fileOver === c.id && <div className="st-drop-hint">Lepas untuk memasang foto</div>}
                 </div>
                 {c.locked

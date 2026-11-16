@@ -82,7 +82,21 @@ function Block({ b, props }: { b: BlockV2; props: StudioSiteProps }) {
   } else {
     body = (
       <Site
-        content={{ schema_version: 1, template: "studio", theme: { primary: props.doc.theme.primary, font: props.doc.theme.font }, sections: [{ id: b.id, type: b.kind, enabled: true, data: b.data }] }}
+        content={{
+          schema_version: 1,
+          template: "studio",
+          theme: {
+            primary: props.doc.theme.primary,
+            font: props.doc.theme.font,
+            navbar_style: props.doc.theme.navbar_style,
+            navbar_sticky: props.doc.theme.navbar_sticky,
+            background_image: props.doc.theme.background_image,
+            background_size: props.doc.theme.background_size,
+            background_position: props.doc.theme.background_position,
+            background_opacity: props.doc.theme.background_opacity,
+          },
+          sections: [{ id: b.id, type: b.kind, enabled: true, data: b.data }],
+        }}
         business={props.business}
         status={props.status}
         products={props.products}
@@ -125,17 +139,61 @@ function anchorsFor(blocks: { id: string; kind: string }[]): Map<string, string[
 
 export function StudioSite(props: StudioSiteProps) {
   const { doc } = props;
+  const isSideNav = doc.theme.navbar_style === "side";
   const grid = mobileSorted(doc.blocks.filter((b) => !isEmbed(b)));
   const anchors = anchorsFor(grid);
   const chat = doc.blocks.find((b) => b.kind === "chatbot" && isEmbed(b));
   const wa = doc.blocks.find((b) => b.kind === "whatsapp" && isEmbed(b));
+  const bgUrl = doc.theme.background_image ? (props.assetUrl(doc.theme.background_image) ?? doc.theme.background_image) : undefined;
   const style = {
     ...primaryVars(doc.theme.primary),
     "--s-font": fontStack(doc.theme.font),
     "--s-size": doc.theme.text_scale ?? 1,
+    ...(bgUrl ? { "--s-bg-img": `url("${bgUrl}")` } : {}),
+    "--s-bg-size": doc.theme.background_size ?? "cover",
+    "--s-bg-pos": doc.theme.background_position ?? "center",
+    "--s-bg-opacity": ((doc.theme.background_opacity ?? 0) / 100).toString(),
   } as CSSProperties;
   return (
-    <div className="sv2" data-surface={doc.theme.surface ?? "light"} style={style}>
+    <div className={`sv2 site${isSideNav ? " s-has-side-nav" : ""}`} data-surface={doc.theme.surface ?? "light"} style={style}>
+      {bgUrl && (
+        <div
+          className="s-bg-overlay"
+          aria-hidden="true"
+          style={{
+            position: "fixed",
+            inset: 0,
+            pointerEvents: "none",
+            backgroundImage: "var(--s-bg-img)",
+            backgroundSize: "var(--s-bg-size, cover)",
+            backgroundPosition: "var(--s-bg-pos, center)",
+            backgroundRepeat: doc.theme.background_size === "repeat" ? "repeat" : "no-repeat",
+            opacity: "var(--s-bg-opacity, 0)",
+            backdropFilter: "blur(12px)",
+            WebkitBackdropFilter: "blur(12px)",
+            zIndex: 0,
+          }}
+        />
+      )}
+      {isSideNav && (
+        <aside className="s-nav-side">
+          <button type="button" className="s-nav-toggle" aria-label="Menu" aria-expanded="false">
+            <span className="s-nav-toggle-icon" />
+          </button>
+          <div className="s-nav-side-drawer">
+            <div className="s-brand">
+              <span>{props.business.profile.name}</span>
+            </div>
+            <nav className="s-nav">
+              {Array.from(anchors.entries()).map(([id, names]) => (
+                <a key={id} href={`#${names[0] ?? id}`}>
+                  {names[0]?.replace(/-/g, " ") ?? id}
+                </a>
+              ))}
+            </nav>
+          </div>
+        </aside>
+      )}
       <div className="sv2-grid">
         {grid.map((b, i) => (
           <div

@@ -8,8 +8,23 @@ import { T, useEditing } from "./edit";
 import { fontStack, primaryVars, safeColor, safeHref, sizesFor, srcSet, text, waLink } from "./safe";
 import type { Business, Json, OpenStatus, PageContent, Section } from "./types";
 
+export type SiteTheme = {
+  primary: string;
+  font: string;
+  navbar_style?: "top" | "side";
+  navbar_sticky?: boolean;
+  background_image?: string;
+  background_size?: "cover" | "contain" | "repeat";
+  background_position?: string;
+  background_opacity?: number;
+};
+
+export type SiteContent = Omit<PageContent, "theme"> & {
+  theme: PageContent["theme"] & Partial<SiteTheme>;
+};
+
 export interface SiteProps {
-  content: PageContent;
+  content: SiteContent;
   business: Business;
   status?: OpenStatus | null;
   /** `asset:<uuid>` -> URL absolut gambar; rujukan tak dikenal tidak dirender. */
@@ -56,10 +71,12 @@ function list(v: Json | undefined): { [k: string]: Json }[] {
 }
 
 /** `priority`: gambar LCP (banner) dimuat segera; lainnya lazy. Semua didekode async (P9-7). */
-function Img({ r, alt, assetUrl, className, priority, share = () => 1, mobile = 1 }: {
+export function Img({ r, alt, assetUrl, className, priority, share = () => 1, mobile = 1, fit, position, style }: {
   r: Json | undefined; alt: string; assetUrl: SiteProps["assetUrl"]; className?: string; priority?: boolean;
   /** Porsi lebar slot yang ditempati gambar di desktop, dari lebar slot (container query). */
   share?: (slot: number) => number; mobile?: number;
+  fit?: "cover" | "contain"; position?: string;
+  style?: CSSProperties;
 }) {
   const slot = useContext(SlotWidth);
   const src = typeof r === "string" ? assetUrl(r) : undefined;
@@ -67,7 +84,8 @@ function Img({ r, alt, assetUrl, className, priority, share = () => 1, mobile = 
   return src ? (
     // eslint-disable-next-line @next/next/no-img-element -- static export, gambar dari API bertanda tangan
     <img className={className} src={src} srcSet={set} sizes={set ? sizesFor(slot * share(slot), mobile) : undefined} alt={alt}
-      decoding="async" loading={priority ? "eager" : "lazy"} fetchPriority={priority ? "high" : undefined} />
+      decoding="async" loading={priority ? "eager" : "lazy"} fetchPriority={priority ? "high" : undefined}
+      style={{ objectFit: fit ?? "cover", objectPosition: position ?? "center", ...style }} />
   ) : null;
 }
 
@@ -123,11 +141,37 @@ function Caption({ v, path }: { v: Json | undefined; path: string }) {
 
 function SectionBody({ s, props }: { s: Section; props: SiteProps }) {
   const d: Data = s.data;
-  const { business: b, assetUrl } = props;
+  const { business: b, assetUrl, content } = props;
+  const theme = content.theme as (PageContent["theme"] & SiteTheme) | undefined;
   switch (s.type) {
-    case "header":
+    case "header": {
+      const isSide = theme?.navbar_style === "side";
+      const isSticky = (theme?.navbar_style ?? "top") === "top" && theme?.navbar_sticky === true;
+      if (isSide) {
+        return (
+          <aside className="s-nav-side">
+            <button
+              type="button"
+              className="s-nav-toggle"
+              aria-label="Menu"
+              aria-expanded="false"
+            >
+              <span className="s-nav-toggle-icon" />
+            </button>
+            <div className="s-nav-side-drawer">
+              <div className="s-brand">
+                <Img r={d.logo ?? b.profile.logo ?? undefined} alt="" assetUrl={assetUrl} className="s-logo" />
+                <span>{text(d.title) || b.profile.name}</span>
+              </div>
+              <nav className="s-nav">
+                {list(d.nav).map((n, i) => <Link key={i} href={n.href}>{text(n.label)}</Link>)}
+              </nav>
+            </div>
+          </aside>
+        );
+      }
       return (
-        <div className="s-headbar">
+        <div className={`s-headbar${isSticky ? " s-sticky" : ""}`}>
           <div className="s-brand">
             <Img r={d.logo ?? b.profile.logo ?? undefined} alt="" assetUrl={assetUrl} className="s-logo" />
             <span>{text(d.title) || b.profile.name}</span>
@@ -137,6 +181,7 @@ function SectionBody({ s, props }: { s: Section; props: SiteProps }) {
           </nav>
         </div>
       );
+    }
     case "hero":
       return (
         <div className={`s-hero${hasImg(d.image ?? b.profile.cover ?? undefined, assetUrl) ? " has-media" : ""}`}>
@@ -145,7 +190,16 @@ function SectionBody({ s, props }: { s: Section; props: SiteProps }) {
             <Subtitle v={d.subtitle} />
             <Cta cta={d.cta} />
           </div>
-          <Img r={d.image ?? b.profile.cover ?? undefined} alt={text(d.image_alt)} assetUrl={assetUrl} className="s-hero-img" priority share={splitShare} />
+          <Img
+            r={d.image ?? b.profile.cover ?? undefined}
+            alt={text(d.image_alt)}
+            assetUrl={assetUrl}
+            className="s-hero-img"
+            priority
+            share={splitShare}
+            fit={d.image_fit === "contain" ? "contain" : d.image_fit === "cover" ? "cover" : undefined}
+            position={typeof d.image_position === "string" ? d.image_position : undefined}
+          />
         </div>
       );
     case "about":
@@ -155,7 +209,15 @@ function SectionBody({ s, props }: { s: Section; props: SiteProps }) {
             <Title v={d.title} />
             <Paragraphs v={d.body} />
           </div>
-          <Img r={d.image} alt={text(d.image_alt)} assetUrl={assetUrl} className="s-media" share={splitShare} />
+          <Img
+            r={d.image}
+            alt={text(d.image_alt)}
+            assetUrl={assetUrl}
+            className="s-media"
+            share={splitShare}
+            fit={d.image_fit === "contain" ? "contain" : d.image_fit === "cover" ? "cover" : undefined}
+            position={typeof d.image_position === "string" ? d.image_position : undefined}
+          />
         </div>
       );
     case "product_grid": {
@@ -195,7 +257,15 @@ function SectionBody({ s, props }: { s: Section; props: SiteProps }) {
             <Paragraphs v={d.body} />
             <Cta cta={d.cta} />
           </div>
-          <Img r={d.image} alt={text(d.image_alt)} assetUrl={assetUrl} className="s-media" share={splitShare} />
+          <Img
+            r={d.image}
+            alt={text(d.image_alt)}
+            assetUrl={assetUrl}
+            className="s-media"
+            share={splitShare}
+            fit={d.image_fit === "contain" ? "contain" : d.image_fit === "cover" ? "cover" : undefined}
+            position={typeof d.image_position === "string" ? d.image_position : undefined}
+          />
         </div>
       );
     case "gallery":
@@ -205,7 +275,15 @@ function SectionBody({ s, props }: { s: Section; props: SiteProps }) {
           <div className="s-gallery">
             {list(d.images).map((g, i) => (
               <figure key={i}>
-                <Img r={g.asset} alt={text(g.alt) || text(g.caption)} assetUrl={assetUrl} share={gridShare} mobile={0.5} />
+                <Img
+                  r={g.asset}
+                  alt={text(g.alt) || text(g.caption)}
+                  assetUrl={assetUrl}
+                  share={gridShare}
+                  mobile={0.5}
+                  fit={g.image_fit === "contain" ? "contain" : g.image_fit === "cover" ? "cover" : undefined}
+                  position={typeof g.image_position === "string" ? g.image_position : undefined}
+                />
                 <Caption v={g.caption} path={`images.${i}.caption`} />
               </figure>
             ))}
@@ -324,19 +402,59 @@ function SectionBody({ s, props }: { s: Section; props: SiteProps }) {
 
 export function Site(props: SiteProps) {
   const { content, preview } = props;
+  const theme = content.theme as (PageContent["theme"] & SiteTheme) | undefined;
+  const bgUrl = theme?.background_image ? (props.assetUrl(theme.background_image) ?? theme.background_image) : undefined;
+  const isSideNav = theme?.navbar_style === "side";
+  const isSticky = (theme?.navbar_style ?? "top") === "top" && theme?.navbar_sticky === true;
   const style = {
     ...primaryVars(content.theme?.primary),
     "--s-font": fontStack(content.theme?.font),
+    ...(bgUrl ? { "--s-bg-img": `url("${bgUrl}")` } : {}),
+    "--s-bg-size": theme?.background_size ?? "cover",
+    "--s-bg-pos": theme?.background_position ?? "center",
+    "--s-bg-opacity": ((theme?.background_opacity ?? 0) / 100).toString(),
   } as CSSProperties;
   const sections = (content.sections ?? []).filter((s) => preview || s.enabled);
   return (
     <SlotWidth.Provider value={props.slotWidth ?? 1180}>
-    <div className="site" style={style} data-template={content.template}>
+    <div className={`site${isSideNav ? " s-has-side-nav" : ""}`} style={style} data-template={content.template}>
+      {bgUrl && (
+        <div
+          className="s-bg-overlay"
+          aria-hidden="true"
+          style={{
+            position: "fixed",
+            inset: 0,
+            pointerEvents: "none",
+            backgroundImage: "var(--s-bg-img)",
+            backgroundSize: "var(--s-bg-size, cover)",
+            backgroundPosition: "var(--s-bg-pos, center)",
+            backgroundRepeat: theme?.background_size === "repeat" ? "repeat" : "no-repeat",
+            opacity: "var(--s-bg-opacity, 0)",
+            backdropFilter: "blur(12px)",
+            WebkitBackdropFilter: "blur(12px)",
+            zIndex: 0,
+          }}
+        />
+      )}
+      {isSideNav && !sections.some((s) => s.type === "header") && (
+        <aside className="s-nav-side">
+          <button type="button" className="s-nav-toggle" aria-label="Menu" aria-expanded="false">
+            <span className="s-nav-toggle-icon" />
+          </button>
+          <div className="s-nav-side-drawer">
+            <div className="s-brand">
+              <Img r={props.business.profile.logo ?? undefined} alt="" assetUrl={props.assetUrl} className="s-logo" />
+              <span>{props.business.profile.name}</span>
+            </div>
+          </div>
+        </aside>
+      )}
       {sections.map((s) => (
         <section
           key={s.id}
           id={s.id}
-          className={`s s--${s.type}${s.enabled ? "" : " s-disabled"}`}
+          className={`s s--${s.type}${s.enabled ? "" : " s-disabled"}${s.type === "header" && isSticky ? " s-sticky" : ""}`}
           data-section-type={s.type}
         >
           {preview && !s.enabled && <div className="s-disabled-badge">Nonaktif — tidak tampil di publik</div>}
