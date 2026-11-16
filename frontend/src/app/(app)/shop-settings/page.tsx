@@ -16,6 +16,7 @@ import { api, describe } from "@/lib/api";
 interface Settings {
   qris: string | null; qris_receiver_name: string | null; checkout_enabled: boolean; delivery_fee: string;
   order_approval_required: boolean; reservation_ttl_minutes: number; separation_of_duties: boolean;
+  qris_static_ready: boolean;
 }
 
 export default function ShopSettingsPage() {
@@ -29,6 +30,7 @@ function Form({ ctx }: { ctx: TenantCtx }) {
   const [s, setS] = useState<Settings | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
   // Tanpa ambil di toko maupun pengiriman, checkout publik selalu ditolak (UAT 15 Nov #1).
   const [fulfil, setFulfil] = useState<{ pickup: boolean; delivery: boolean } | null>(null);
   useEffect(() => { api<Settings>("GET", url).then(setS, (e) => setErr(describe(e))); }, [url]);
@@ -37,10 +39,25 @@ function Form({ ctx }: { ctx: TenantCtx }) {
       .then((b) => setFulfil({ pickup: b.profile.pickup_available, delivery: b.profile.delivery_available }), () => setFulfil(null));
   }, [ctx.tenant.id]);
   if (!s) return <><Alert kind="error">{err}</Alert>{!err && <PageSkeleton />}</>;
+  const current = s;
   async function save() {
     setErr(null);
     setBusy(true);
-    try { setS(await api<Settings>("PUT", url, { json: s })); toast.ok("Tersimpan."); } catch (e) { setErr(describe(e)); } finally { setBusy(false); }
+    try {
+      // Kirim hanya field yang dapat ditulis; SettingsDto memakai deny_unknown_fields.
+      const input = {
+        qris: current.qris,
+        qris_receiver_name: current.qris_receiver_name,
+        checkout_enabled: current.checkout_enabled,
+        delivery_fee: current.delivery_fee,
+        order_approval_required: current.order_approval_required,
+        reservation_ttl_minutes: current.reservation_ttl_minutes,
+        separation_of_duties: current.separation_of_duties,
+      };
+      setS(await api<Settings>("PUT", url, { json: input }));
+      setRefreshKey((k) => k + 1);
+      toast.ok("Tersimpan.");
+    } catch (e) { setErr(describe(e)); } finally { setBusy(false); }
   }
   const noFulfil = !!fulfil && !fulfil.pickup && !fulfil.delivery;
   const ready = !!s.qris && s.checkout_enabled && !noFulfil;
@@ -59,19 +76,27 @@ function Form({ ctx }: { ctx: TenantCtx }) {
         </Alert>
       )}
       <form onSubmit={(e) => { e.preventDefault(); void save(); }}>
-        <Card title="Pembayaran QRIS" description="Unggah QRIS merchant milik toko. Pembeli membayar langsung ke rekening toko; Anda mengonfirmasi setiap pembayaran di menu Pesanan. Platform tidak memegang dana.">
+        <Card title="Pembayaran QRIS" description="Unggah gambar QRIS merchant milik toko — sistem membaca QR-nya secara otomatis. Pembeli membayar langsung ke rekening toko; Anda mengonfirmasi setiap pembayaran di menu Pesanan. Platform tidak memegang dana.">
           <div className="d-grid">
             <ImagePicker label="Gambar QRIS" value={s.qris ?? undefined} onChange={(v) => setS({ ...s, qris: v ?? null })} />
             <label className="d-field"><span>Nama penerima (tampil di halaman bayar)</span>
               <input disabled={!can} maxLength={80} placeholder="mis. Kopi Senja" value={s.qris_receiver_name ?? ""} onChange={(e) => setS({ ...s, qris_receiver_name: e.target.value || null })} />
             </label>
           </div>
+          {s.qris && !s.qris_static_ready && (
+            <Alert kind="warn">
+              QRIS belum terbaca dari gambar. Unggah ulang gambar QRIS yang jelas; konfirmasi manual tetap tersedia.
+            </Alert>
+          )}
+          {s.qris && s.qris_static_ready && (
+            <Alert kind="ok">QRIS terbaca — konfirmasi otomatis siap.</Alert>
+          )}
           <label className="d-switch">
             <input type="checkbox" disabled={!can} checked={s.checkout_enabled} onChange={(e) => setS({ ...s, checkout_enabled: e.target.checked })} />
             <span><strong>Terima pesanan online</strong><span className="d-muted">Tombol beli dan keranjang muncul di website.</span></span>
           </label>
         </Card>
-        <GopayCard tenantId={ctx.tenant.id} can={can} />
+        <GopayCard tenantId={ctx.tenant.id} can={can} refreshKey={refreshKey} />
         <Card title="Pengiriman & pesanan" description="Pilihan ambil di toko / diantar diatur di Profil bisnis.">
           <div className="d-grid">
             <label className="d-field"><span>Ongkir datar untuk pengiriman</span>
@@ -117,7 +142,7 @@ function readConnectCookie(): string | null {
   }
 }
 
-function GopayCard({ tenantId, can }: { tenantId: string; can: boolean }) {
+function GopayCard({ tenantId, can, refreshKey }: { tenantId: string; can: boolean; refreshKey: number }) {
   const base = `/api/v1/tenants/${tenantId}/gopay`;
   const [st, setSt] = useState<GopayStatus | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -126,13 +151,12 @@ function GopayCard({ tenantId, can }: { tenantId: string; can: boolean }) {
   const [phone, setPhone] = useState("");
   const [session, setSession] = useState<string>(() => readConnectCookie() ?? "");
   const [help, setHelp] = useState(false);
-  const [qris, setQris] = useState("");
   const [busy, setBusy] = useState(false);
   // Sesi datang dari ekstensi (via #gopay_connect) → kirim otomatis sekali.
   const fromExt = useRef(readConnectCookie() !== null);
   const autoSent = useRef(false);
 
-  useEffect(() => { api<GopayStatus>("GET", base).then(setSt, (e) => setErr(describe(e))); }, [base]);
+  useEffect(() => { api<GopayStatus>("GET", base).then(setSt, (e) => setErr(describe(e))); }, [base, refreshKey]);
   // Satukan nomor HP: prefill dari profil bisnis (bisa diubah). Tak menimpa ketikan pengguna.
   useEffect(() => {
     api<{ profile: { phone?: string | null; whatsapp?: string | null } }>("GET", `/api/v1/tenants/${tenantId}/business/profile`)
@@ -152,10 +176,6 @@ function GopayCard({ tenantId, can }: { tenantId: string; can: boolean }) {
   const connectSession = () => run(async () => {
     setSt(await api<GopayStatus>("POST", `${base}/connect/session`, { json: { phone, session } }));
     setSession(""); toast.ok("Akun GoPay terhubung.");
-  });
-  const saveQris = () => run(async () => {
-    setSt(await api<GopayStatus>("PUT", `${base}/static-qris`, { json: { qris } }));
-    setQris(""); toast.ok("QRIS statis tersimpan.");
   });
   const disconnect = () => run(async () => {
     if (!confirm("Putuskan akun GoPay? Pesanan tidak lagi dikonfirmasi otomatis.")) return;
@@ -225,17 +245,22 @@ function GopayCard({ tenantId, can }: { tenantId: string; can: boolean }) {
               <span>{st.outlet_name ?? "Merchant GoPay"}{st.phone_masked ? ` · ${st.phone_masked}` : ""}</span>
             </div>
           </div>
-          <label className="d-field"><span>QRIS statis toko (teks)</span>
-            <textarea disabled={!can} rows={4} placeholder="Tempel teks QRIS (mulai 00020101...). Dapat dari penyedia/aplikasi QRIS toko." value={qris} onChange={(e) => setQris(e.target.value)} />
+          <div className="d-field">
+            <span>QRIS statis toko</span>
             <span className="d-hint">
-              {st.has_static_qris ? "QRIS statis sudah diatur. Tempel baru untuk mengganti." : "Wajib: dipakai menyusun QR bernominal unik per pesanan."}
+              {st.has_static_qris
+                ? "QRIS terbaca — konfirmasi otomatis siap."
+                : "QRIS diambil otomatis dari gambar di kartu Pembayaran QRIS."}
             </span>
-          </label>
-          {!st.has_static_qris && <Alert kind="warn">Konfirmasi otomatis belum aktif sampai QRIS statis diisi.</Alert>}
+          </div>
+          {!st.has_static_qris && (
+            <Alert kind="warn">
+              QRIS belum terbaca dari gambar. Unggah ulang/unggah QRIS yang jelas di kartu Pembayaran QRIS; konfirmasi manual tetap tersedia.
+            </Alert>
+          )}
           {can && (
             <div className="d-row" style={{ justifyContent: "flex-end", gap: "var(--sp-3)" }}>
               <button type="button" className="d-btn d-btn-ghost" onClick={disconnect}>Putuskan akun</button>
-              <BusyButton type="button" busy={busy} onClick={saveQris} disabled={qris.trim().length < 20}>Simpan QRIS</BusyButton>
             </div>
           )}
         </div>
