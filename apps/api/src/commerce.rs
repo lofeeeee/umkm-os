@@ -38,6 +38,8 @@ use umkm_infrastructure::{
     },
     inventory_repo::InventoryError,
     payment_repo::{self, FlowError},
+    qris_decode,
+    storage::ObjectStorage,
 };
 use umkm_shared::{
     http::{ErrorBody, ErrorCode, SuccessEnvelope},
@@ -81,6 +83,21 @@ pub struct SettingsDto {
     /// Penyetuju order ≠ staf yang mengonfirmasi pembayaran (default aktif)
     #[serde(default = "yes")]
     pub separation_of_duties: bool,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct SettingsView {
+    /// `asset:<uuid>` gambar QRIS merchant milik toko
+    pub qris: Option<String>,
+    pub qris_receiver_name: Option<String>,
+    pub checkout_enabled: bool,
+    /// Ongkir datar untuk delivery, desimal string
+    pub delivery_fee: String,
+    pub order_approval_required: bool,
+    pub reservation_ttl_minutes: i32,
+    pub separation_of_duties: bool,
+    /// True bila payload QRIS berhasil dibaca dari gambar.
+    pub qris_static_ready: bool,
 }
 
 fn yes() -> bool {
@@ -256,8 +273,8 @@ pub struct OrderQuery {
 
 // ------------------------------------------------------------------ konversi
 
-fn settings_dto(s: Settings) -> SettingsDto {
-    SettingsDto {
+fn settings_view(s: Settings) -> SettingsView {
+    SettingsView {
         qris: s.qris_object_id.map(asset_ref),
         qris_receiver_name: s.qris_receiver_name,
         checkout_enabled: s.checkout_enabled,
@@ -265,7 +282,64 @@ fn settings_dto(s: Settings) -> SettingsDto {
         order_approval_required: s.order_approval_required,
         reservation_ttl_minutes: s.reservation_ttl_minutes,
         separation_of_duties: s.separation_of_duties,
+        qris_static_ready: s.qris_static_payload.is_some(),
     }
+}
+
+async fn decode_uploaded_qris(state: &AppState, t: TenantId, id: Uuid) -> Option<String> {
+    let Some(files) = state.files.as_ref() else {
+        tracing::warn!(tenant = %t.as_uuid(), "object storage tidak tersedia; QRIS tidak didekode");
+        return None;
+    };
+    let obj = match files.store.get(t, id).await {
+        Ok(Some(o)) => o,
+        Ok(None) => {
+            tracing::warn!(tenant = %t.as_uuid(), asset = %id, "objek QRIS tidak ditemukan");
+            return None;
+        }
+        Err(e) => {
+            tracing::warn!(error = %e, "gagal membaca objek QRIS");
+            return None;
+        }
+    };
+    let bytes = obj.bytes;
+    match tokio::task::spawn_blocking(move || qris_decode::decode_qris_image(&bytes)).await {
+        Ok(Ok(payload)) => Some(payload),
+        Ok(Err(e)) => {
+            tracing::warn!(error = %e, "QRIS tidak terbaca dari gambar");
+            None
+        }
+        Err(e) => {
+            tracing::warn!(error = %e, "task decode QRIS gagal");
+            None
+        }
+    }
+}
+
+/// Pastikan payload QRIS tersedia untuk gambar saat ini. Kegagalan decode tidak
+/// menggagalkan response; manual checkout tetap memakai gambar.
+pub(crate) async fn ensure_qris_payload(
+    state: &AppState,
+    t: TenantId,
+) -> Result<Settings, ApiError> {
+    let s = repo::settings(pool(state)?, t).await.map_err(internal)?;
+    let Some(id) = s.qris_object_id else {
+        return Ok(s);
+    };
+    if s.qris_static_payload.is_some() {
+        return Ok(s);
+    }
+    let Some(payload) = decode_uploaded_qris(state, t, id).await else {
+        return Ok(s);
+    };
+    let updated = repo::backfill_qris_payload(pool(state)?, t, id, &payload)
+        .await
+        .map_err(internal)?;
+    let mut s = s;
+    if updated {
+        s.qris_static_payload = Some(payload);
+    }
+    Ok(s)
 }
 
 fn items_view(o: &Order) -> Vec<OrderItemView> {
@@ -481,18 +555,16 @@ fn checkout_err(e: CheckoutError) -> ApiError {
 #[utoipa::path(
     get, path = "/api/v1/tenants/{tenant_id}/commerce/settings", tag = "commerce",
     params(("tenant_id" = Uuid, Path)),
-    responses((status = 200, description = "Pengaturan", body = SuccessEnvelope<SettingsDto>))
+    responses((status = 200, description = "Pengaturan", body = SuccessEnvelope<SettingsView>))
 )]
 pub async fn get_settings(
     State(state): State<AppState>,
     ReqId(id): ReqId,
     Member(actor): Member,
-) -> Result<Json<SuccessEnvelope<SettingsDto>>, ApiError> {
+) -> Result<Json<SuccessEnvelope<SettingsView>>, ApiError> {
     actor.require("tenant.read")?;
-    let s = repo::settings(pool(&state)?, actor.tenant_id)
-        .await
-        .map_err(internal)?;
-    Ok(Json(SuccessEnvelope::new(settings_dto(s), &id)))
+    let s = ensure_qris_payload(&state, actor.tenant_id).await?;
+    Ok(Json(SuccessEnvelope::new(settings_view(s), &id)))
 }
 
 /// Ubah pengaturan; mengganti QRIS hanya Owner (`tenant.update`) dan diaudit (ADR-0004).
@@ -501,7 +573,7 @@ pub async fn get_settings(
     params(("tenant_id" = Uuid, Path)), request_body = SettingsDto,
     responses(
         (status = 202, description = "Menunggu approval (kebijakan aktif)", body = SuccessEnvelope<crate::approvals::PendingApproval>),
-        (status = 200, description = "Tersimpan", body = SuccessEnvelope<SettingsDto>),
+        (status = 200, description = "Tersimpan", body = SuccessEnvelope<SettingsView>),
         (status = 422, description = "Validasi gagal / QRIS belum diatur", body = umkm_shared::http::ErrorEnvelope)
     )
 )]
@@ -530,7 +602,7 @@ pub async fn put_settings(
         Gate::Pending(aid) => Ok(crate::approvals::pending_response(aid, &id)),
         Gate::Direct => {
             let s = apply_settings(&state, &actor, &req, (Some(id.as_str()), Some(&ip))).await?;
-            Ok(Json(SuccessEnvelope::new(settings_dto(s), &id)).into_response())
+            Ok(Json(SuccessEnvelope::new(settings_view(s), &id)).into_response())
         }
     }
 }
@@ -590,7 +662,21 @@ pub(crate) async fn apply_settings(
     req: &SettingsDto,
     ctx: (Option<&str>, Option<&str>),
 ) -> Result<Settings, ApiError> {
-    let s = parse_settings(req)?;
+    let before = repo::settings(pool(state)?, actor.tenant_id)
+        .await
+        .map_err(internal)?;
+    let mut s = parse_settings(req)?;
+    s.qris_static_payload = match (s.qris_object_id, before.qris_object_id) {
+        (None, _) => None,
+        (Some(id), Some(prev)) if id == prev => {
+            if let Some(p) = before.qris_static_payload.clone() {
+                Some(p)
+            } else {
+                decode_uploaded_qris(state, actor.tenant_id, id).await
+            }
+        }
+        (Some(id), _) => decode_uploaded_qris(state, actor.tenant_id, id).await,
+    };
     repo::put_settings(pool(state)?, actor, &s, ctx)
         .await
         .map_err(|e| match e {
@@ -872,7 +958,7 @@ pub async fn current_order(
 }
 
 /// QRIS dinamis GoPay untuk order saat ini (P10). `available=false` bila toko belum menghubungkan
-/// GoPay / belum atur QRIS statis / order bukan menunggu bayar. Idempoten: buat-atau-ambil charge.
+/// GoPay / QRIS statis belum terbaca dari gambar / order bukan menunggu bayar. Idempoten: buat-atau-ambil charge.
 #[derive(Debug, Clone, serde::Serialize, utoipa::ToSchema)]
 pub struct GopayQrisView {
     pub available: bool,
@@ -921,8 +1007,11 @@ pub async fn current_gopay_qris(
     else {
         return fail(unavailable);
     };
-    let (Some(static_qris), true) = (stored.static_qris.as_deref(), stored.status == "active")
-    else {
+    let settings = repo::settings(pool(&state)?, t).await.map_err(internal)?;
+    let (Some(static_qris), true) = (
+        settings.qris_static_payload.as_deref(),
+        stored.status == "active",
+    ) else {
         return fail(unavailable);
     };
     if o.total_sen <= 0 || o.total_sen % 100 != 0 {
