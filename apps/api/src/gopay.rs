@@ -1,5 +1,5 @@
 //! Integrasi GoPay Merchant — endpoint pemilik toko (P10, ADR-0020): hubungkan akun GoBiz via OTP,
-//! status, atur QRIS statis, putuskan. Baca: `tenant.read`; ubah: `tenant.update`.
+//! status, putuskan. Baca: `tenant.read`; ubah: `tenant.update`.
 //!
 //! OTP: `request-otp` mengembalikan `otp_token` opaque + metadata; klien mengirimnya kembali ke
 //! `verify` bersama kode OTP. Token GoBiz hanya hidup sesaat di server lalu disegel envelope.
@@ -9,10 +9,9 @@ use std::time::Duration;
 use axum::{
     Json, Router,
     extract::State,
-    routing::{get, post, put},
+    routing::{get, post},
 };
 use serde::{Deserialize, Serialize};
-use umkm_domain::commerce::qris;
 use umkm_infrastructure::{
     gopay::{GobizClient, GobizError, poller::now_ms},
     gopay_repo,
@@ -68,13 +67,6 @@ pub struct ConnectSessionDto {
     pub phone: String,
     /// Cookie/token sesi GoBiz dari browser pemilik (harus memuat `access_token` & `refresh_token`).
     pub session: String,
-}
-
-#[derive(Debug, Clone, Deserialize, ToSchema)]
-#[serde(deny_unknown_fields)]
-pub struct StaticQrisDto {
-    /// Payload EMVCo QRIS statis toko (teks dari pindai QR).
-    pub qris: String,
 }
 
 // ------------------------------------------------------------------ util
@@ -151,6 +143,10 @@ pub async fn get_status(
     Member(actor): Member,
 ) -> Result<Json<SuccessEnvelope<StatusView>>, ApiError> {
     actor.require("tenant.read")?;
+    let qris_ready = crate::commerce::ensure_qris_payload(&state, actor.tenant_id)
+        .await?
+        .qris_static_payload
+        .is_some();
     let view = match gopay_repo::get_session(pool(&state)?, actor.tenant_id, keyring(&state)?)
         .await
         .map_err(repo_err)?
@@ -167,7 +163,7 @@ pub async fn get_status(
             status: Some(s.status),
             outlet_name: s.session.outlet_name.clone(),
             phone_masked: Some(mask_phone(&s.session.phone_e164)),
-            has_static_qris: s.static_qris.is_some(),
+            has_static_qris: qris_ready,
         },
     };
     Ok(Json(SuccessEnvelope::new(view, &id)))
@@ -226,12 +222,16 @@ pub async fn verify_otp(
     gopay_repo::put_session(p, actor.tenant_id, &session, keyring(&state)?)
         .await
         .map_err(repo_err)?;
+    let qris_ready = crate::commerce::ensure_qris_payload(&state, actor.tenant_id)
+        .await?
+        .qris_static_payload
+        .is_some();
     let view = StatusView {
         connected: true,
         status: Some("active".into()),
         outlet_name: session.outlet_name.clone(),
         phone_masked: Some(mask_phone(&session.phone_e164)),
-        has_static_qris: false,
+        has_static_qris: qris_ready,
     };
     Ok(Json(SuccessEnvelope::new(view, &id)))
 }
@@ -270,39 +270,18 @@ pub async fn connect_session(
     gopay_repo::put_session(p, actor.tenant_id, &session, keyring(&state)?)
         .await
         .map_err(repo_err)?;
+    let qris_ready = crate::commerce::ensure_qris_payload(&state, actor.tenant_id)
+        .await?
+        .qris_static_payload
+        .is_some();
     let view = StatusView {
         connected: true,
         status: Some("active".into()),
         outlet_name: session.outlet_name.clone(),
         phone_masked: Some(mask_phone(&session.phone_e164)),
-        has_static_qris: false,
+        has_static_qris: qris_ready,
     };
     Ok(Json(SuccessEnvelope::new(view, &id)))
-}
-
-/// Atur QRIS statis toko (divalidasi EMVCo). Harus sudah terhubung.
-#[utoipa::path(
-    put, path = "/api/v1/tenants/{tenant_id}/gopay/static-qris", tag = "gopay",
-    params(("tenant_id" = Uuid, Path)), request_body = StaticQrisDto,
-    responses(
-        (status = 200, description = "Tersimpan", body = SuccessEnvelope<StatusView>),
-        (status = 422, description = "QRIS tidak valid", body = umkm_shared::http::ErrorEnvelope)
-    )
-)]
-pub async fn put_static_qris(
-    State(state): State<AppState>,
-    ReqId(id): ReqId,
-    Member(actor): Member,
-    Json(body): Json<StaticQrisDto>,
-) -> Result<Json<SuccessEnvelope<StatusView>>, ApiError> {
-    actor.require("tenant.update")?;
-    let trimmed = body.qris.trim();
-    qris::verify(trimmed)
-        .map_err(|_| msg(ErrorCode::ValidationFailed, "QRIS statis tidak valid"))?;
-    gopay_repo::set_static_qris(pool(&state)?, actor.tenant_id, trimmed)
-        .await
-        .map_err(repo_err)?;
-    get_status(State(state), ReqId(id), Member(actor)).await
 }
 
 /// Putuskan hubungan akun GoPay.
@@ -339,5 +318,4 @@ pub fn routes() -> Router<AppState> {
         .route(&format!("{base}/connect/request-otp"), post(request_otp))
         .route(&format!("{base}/connect/verify"), post(verify_otp))
         .route(&format!("{base}/connect/session"), post(connect_session))
-        .route(&format!("{base}/static-qris"), put(put_static_qris))
 }

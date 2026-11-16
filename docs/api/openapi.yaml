@@ -5262,7 +5262,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SuccessEnvelope_SettingsDto'
+                $ref: '#/components/schemas/SuccessEnvelope_SettingsView'
         '405':
           description: Method tidak diizinkan
           content:
@@ -5313,7 +5313,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SuccessEnvelope_SettingsDto'
+                $ref: '#/components/schemas/SuccessEnvelope_SettingsView'
         '202':
           description: Menunggu approval (kebijakan aktif)
           content:
@@ -6790,64 +6790,6 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
         '413':
           description: Body melebihi `server.body_limit_bytes`
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
-        '500':
-          description: Kesalahan internal (tanpa detail internal)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
-      security:
-      - sessionCookie: []
-  /api/v1/tenants/{tenant_id}/gopay/static-qris:
-    put:
-      tags:
-      - gopay
-      summary: Atur QRIS statis toko (divalidasi EMVCo). Harus sudah terhubung.
-      operationId: put_static_qris
-      parameters:
-      - name: tenant_id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/StaticQrisDto'
-        required: true
-      responses:
-        '200':
-          description: Tersimpan
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SuccessEnvelope_StatusView'
-        '405':
-          description: Method tidak diizinkan
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
-        '408':
-          description: Request melebihi `server.request_timeout_secs`
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
-        '413':
-          description: Body melebihi `server.body_limit_bytes`
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
-        '422':
-          description: QRIS tidak valid
           content:
             application/json:
               schema:
@@ -12672,15 +12614,6 @@ components:
           type: string
           description: Harus sama dengan `consent_version` dari `/public/chat/config`.
       additionalProperties: false
-    StaticQrisDto:
-      type: object
-      required:
-      - qris
-      properties:
-        qris:
-          type: string
-          description: Payload EMVCo QRIS statis toko (teks dari pindai QR).
-      additionalProperties: false
     StatusChange:
       type: object
       required:
@@ -13410,7 +13343,7 @@ components:
           type: object
           description: |-
             QRIS dinamis GoPay untuk order saat ini (P10). `available=false` bila toko belum menghubungkan
-            GoPay / belum atur QRIS statis / order bukan menunggu bayar. Idempoten: buat-atau-ambil charge.
+            GoPay / QRIS statis belum terbaca dari gambar / order bukan menunggu bayar. Idempoten: buat-atau-ambil charge.
           required:
           - available
           properties:
@@ -14657,7 +14590,7 @@ components:
           $ref: '#/components/schemas/Meta'
         success:
           type: boolean
-    SuccessEnvelope_SettingsDto:
+    SuccessEnvelope_SettingsView:
       type: object
       required:
       - success
@@ -14666,6 +14599,13 @@ components:
       properties:
         data:
           type: object
+          required:
+          - checkout_enabled
+          - delivery_fee
+          - order_approval_required
+          - reservation_ttl_minutes
+          - separation_of_duties
+          - qris_static_ready
           properties:
             checkout_enabled:
               type: boolean
@@ -14683,13 +14623,14 @@ components:
               type:
               - string
               - 'null'
+            qris_static_ready:
+              type: boolean
+              description: True bila payload QRIS berhasil dibaca dari gambar.
             reservation_ttl_minutes:
               type: integer
               format: int32
             separation_of_duties:
               type: boolean
-              description: Penyetuju order ≠ staf yang mengonfirmasi pembayaran (default aktif)
-          additionalProperties: false
         meta:
           $ref: '#/components/schemas/Meta'
         success:
