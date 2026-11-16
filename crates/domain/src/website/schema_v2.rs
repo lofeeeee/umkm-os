@@ -141,11 +141,7 @@ pub fn validate(doc: &Value) -> Result<ValidPage, Vec<FieldError>> {
         v.err("", "document_too_large");
         return Err(v.errors);
     }
-    let Some(root) = v.object(
-        doc,
-        "",
-        &ROOT_KEYS,
-    ) else {
+    let Some(root) = v.object(doc, "", &ROOT_KEYS) else {
         return Err(v.errors);
     };
     if root.get("schema_version").and_then(Value::as_i64) != Some(SCHEMA_VERSION) {
@@ -814,13 +810,19 @@ mod tests {
         // Invalid navbar style
         d["theme"]["navbar_style"] = json!("invalid");
         let c = codes(&d);
-        assert!(c.contains(&("theme.navbar_style".into(), "invalid_navbar_style")), "{c:?}");
+        assert!(
+            c.contains(&("theme.navbar_style".into(), "invalid_navbar_style")),
+            "{c:?}"
+        );
 
         // Invalid background size
         d["theme"]["navbar_style"] = json!("top");
         d["theme"]["background_size"] = json!("stretched");
         let c = codes(&d);
-        assert!(c.contains(&("theme.background_size".into(), "invalid_background_size")), "{c:?}");
+        assert!(
+            c.contains(&("theme.background_size".into(), "invalid_background_size")),
+            "{c:?}"
+        );
     }
 
     #[test]
@@ -840,21 +842,42 @@ mod tests {
             "blocks": []
         });
         let c = codes(&d);
-        assert!(c.contains(&("theme.navbar_sticky".into(), "expected_boolean")), "{c:?}");
-        assert!(c.contains(&("theme.background_image".into(), "invalid_asset_ref")), "{c:?}");
-        assert!(c.contains(&("theme.background_position".into(), "too_long")), "{c:?}");
-        assert!(c.contains(&("theme.background_opacity".into(), "out_of_range")), "{c:?}");
-        assert!(c.contains(&("theme.extra_theme_prop".into(), "unknown_field")), "{c:?}");
+        assert!(
+            c.contains(&("theme.navbar_sticky".into(), "expected_boolean")),
+            "{c:?}"
+        );
+        assert!(
+            c.contains(&("theme.background_image".into(), "invalid_asset_ref")),
+            "{c:?}"
+        );
+        assert!(
+            c.contains(&("theme.background_position".into(), "too_long")),
+            "{c:?}"
+        );
+        assert!(
+            c.contains(&("theme.background_opacity".into(), "out_of_range")),
+            "{c:?}"
+        );
+        assert!(
+            c.contains(&("theme.extra_theme_prop".into(), "unknown_field")),
+            "{c:?}"
+        );
 
         // Negative opacity
         d["theme"]["background_opacity"] = json!(-5);
         let c = codes(&d);
-        assert!(c.contains(&("theme.background_opacity".into(), "out_of_range")), "{c:?}");
+        assert!(
+            c.contains(&("theme.background_opacity".into(), "out_of_range")),
+            "{c:?}"
+        );
 
         // Float opacity
         d["theme"]["background_opacity"] = json!(50.5);
         let c = codes(&d);
-        assert!(c.contains(&("theme.background_opacity".into(), "out_of_range")), "{c:?}");
+        assert!(
+            c.contains(&("theme.background_opacity".into(), "out_of_range")),
+            "{c:?}"
+        );
     }
 
     #[test]
@@ -883,13 +906,34 @@ mod tests {
             }
         ]);
         let c = codes(&d);
-        assert!(c.contains(&("drawings[0].id".into(), "invalid_id")), "{c:?}");
-        assert!(c.contains(&("drawings[0].target".into(), "invalid_target")), "{c:?}");
-        assert!(c.contains(&("drawings[0].color".into(), "invalid_color")), "{c:?}");
-        assert!(c.contains(&("drawings[0].size".into(), "out_of_range")), "{c:?}");
-        assert!(c.contains(&("drawings[0].opacity".into(), "out_of_range")), "{c:?}");
-        assert!(c.contains(&("drawings[0].points".into(), "expected_array")), "{c:?}");
-        assert!(c.contains(&("drawings[0].unknown_stroke_key".into(), "unknown_field")), "{c:?}");
+        assert!(
+            c.contains(&("drawings[0].id".into(), "invalid_id")),
+            "{c:?}"
+        );
+        assert!(
+            c.contains(&("drawings[0].target".into(), "invalid_target")),
+            "{c:?}"
+        );
+        assert!(
+            c.contains(&("drawings[0].color".into(), "invalid_color")),
+            "{c:?}"
+        );
+        assert!(
+            c.contains(&("drawings[0].size".into(), "out_of_range")),
+            "{c:?}"
+        );
+        assert!(
+            c.contains(&("drawings[0].opacity".into(), "out_of_range")),
+            "{c:?}"
+        );
+        assert!(
+            c.contains(&("drawings[0].points".into(), "expected_array")),
+            "{c:?}"
+        );
+        assert!(
+            c.contains(&("drawings[0].unknown_stroke_key".into(), "unknown_field")),
+            "{c:?}"
+        );
 
         // Stroke with points containing negative or invalid coordinate format
         d["drawings"] = json!([
@@ -903,10 +947,22 @@ mod tests {
             }
         ]);
         let c = codes(&d);
-        assert!(c.contains(&("drawings[0].points[0]".into(), "invalid_point")), "{c:?}");
-        assert!(c.contains(&("drawings[0].points[1]".into(), "invalid_point")), "{c:?}");
-        assert!(c.contains(&("drawings[0].points[2]".into(), "invalid_point")), "{c:?}");
-        assert!(c.contains(&("drawings[0].points[3]".into(), "invalid_point")), "{c:?}");
+        assert!(
+            c.contains(&("drawings[0].points[0]".into(), "invalid_point")),
+            "{c:?}"
+        );
+        assert!(
+            c.contains(&("drawings[0].points[1]".into(), "invalid_point")),
+            "{c:?}"
+        );
+        assert!(
+            c.contains(&("drawings[0].points[2]".into(), "invalid_point")),
+            "{c:?}"
+        );
+        assert!(
+            c.contains(&("drawings[0].points[3]".into(), "invalid_point")),
+            "{c:?}"
+        );
 
         // Size > 64 and Opacity < 0
         d["drawings"] = json!([
@@ -920,8 +976,14 @@ mod tests {
             }
         ]);
         let c = codes(&d);
-        assert!(c.contains(&("drawings[0].size".into(), "out_of_range")), "{c:?}");
-        assert!(c.contains(&("drawings[0].opacity".into(), "out_of_range")), "{c:?}");
+        assert!(
+            c.contains(&("drawings[0].size".into(), "out_of_range")),
+            "{c:?}"
+        );
+        assert!(
+            c.contains(&("drawings[0].opacity".into(), "out_of_range")),
+            "{c:?}"
+        );
 
         // Stroke id too long
         d["drawings"] = json!([
@@ -935,7 +997,10 @@ mod tests {
             }
         ]);
         let c = codes(&d);
-        assert!(c.contains(&("drawings[0].id".into(), "invalid_id")), "{c:?}");
+        assert!(
+            c.contains(&("drawings[0].id".into(), "invalid_id")),
+            "{c:?}"
+        );
     }
 
     #[test]
@@ -961,7 +1026,10 @@ mod tests {
             "drawings": strokes
         });
         let c = codes(&d);
-        assert!(c.contains(&("drawings".into(), "too_many_drawings")), "{c:?}");
+        assert!(
+            c.contains(&("drawings".into(), "too_many_drawings")),
+            "{c:?}"
+        );
 
         // Exceeding MAX_STROKE_POINTS (1000)
         let pts: Vec<[i64; 2]> = (0..1001).map(|i| [i, i]).collect();
@@ -982,7 +1050,10 @@ mod tests {
             ]
         });
         let c2 = codes(&d2);
-        assert!(c2.contains(&("drawings[0].points".into(), "too_many_points")), "{c2:?}");
+        assert!(
+            c2.contains(&("drawings[0].points".into(), "too_many_points")),
+            "{c2:?}"
+        );
     }
 
     #[test]

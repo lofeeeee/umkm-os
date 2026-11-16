@@ -452,7 +452,8 @@ pub async fn create_page(
     }
 
     let tpl_key = template_of(&state, actor.tenant_id).await?;
-    let initial_content = if let Ok(Some(tpl)) = repo::find_template(pool(&state)?, &tpl_key).await {
+    let initial_content = if let Ok(Some(tpl)) = repo::find_template(pool(&state)?, &tpl_key).await
+    {
         tpl.default_content
     } else {
         serde_json::json!({
@@ -507,8 +508,7 @@ pub async fn delete_page(
     actor.require("website.edit")?;
     if p.slug == repo::HOME || p.slug == "home" {
         return Err(ApiError(
-            ErrorBody::new(ErrorCode::BadRequest)
-                .with_message("Halaman home tidak dapat dihapus"),
+            ErrorBody::new(ErrorCode::BadRequest).with_message("Halaman home tidak dapat dihapus"),
         ));
     }
     repo::delete_page(

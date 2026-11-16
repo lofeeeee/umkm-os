@@ -338,13 +338,12 @@ pub async fn create_page(
 ) -> Result<PageView, WebsiteError> {
     let mut tx = tx(pool, actor.tenant_id).await?;
     let tid = actor.tenant_id.as_uuid();
-    let website_id: Uuid = sqlx::query_scalar(
-        "SELECT id FROM tenant_websites WHERE tenant_id = $1",
-    )
-    .bind(tid)
-    .fetch_optional(&mut *tx)
-    .await?
-    .ok_or(WebsiteError::NotFound)?;
+    let website_id: Uuid =
+        sqlx::query_scalar("SELECT id FROM tenant_websites WHERE tenant_id = $1")
+            .bind(tid)
+            .fetch_optional(&mut *tx)
+            .await?
+            .ok_or(WebsiteError::NotFound)?;
 
     let page_id: Uuid = match sqlx::query_scalar(
         "INSERT INTO website_pages (tenant_id, website_id, slug, title, draft_content, draft_updated_by)
