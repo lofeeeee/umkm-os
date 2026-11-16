@@ -17,6 +17,31 @@ pub const MAX_BLOCKS: usize = 40;
 pub const MAX_Y: i64 = 2000;
 pub const MAX_H: i64 = 400;
 
+pub const ROOT_KEYS: [&str; 6] = [
+    "schema_version",
+    "template",
+    "theme",
+    "seo",
+    "blocks",
+    "drawings",
+];
+pub const THEME_KEYS: [&str; 10] = [
+    "primary",
+    "font",
+    "surface",
+    "text_scale",
+    "navbar_style",
+    "navbar_sticky",
+    "background_image",
+    "background_size",
+    "background_position",
+    "background_opacity",
+];
+pub const NAVBAR_STYLES: [&str; 2] = ["top", "side"];
+pub const BACKGROUND_SIZES: [&str; 3] = ["cover", "contain", "repeat"];
+pub const MAX_DRAWING_STROKES: usize = 200;
+pub const MAX_STROKE_POINTS: usize = 1000;
+
 /// Plugin resmi (ADR-0019). Data 9 jenis pertama memakai aturan section v1.
 pub const PLUGIN_KINDS: [&str; 12] = [
     "hero",
@@ -119,7 +144,7 @@ pub fn validate(doc: &Value) -> Result<ValidPage, Vec<FieldError>> {
     let Some(root) = v.object(
         doc,
         "",
-        &["schema_version", "template", "theme", "seo", "blocks"],
+        &ROOT_KEYS,
     ) else {
         return Err(v.errors);
     };
@@ -150,6 +175,11 @@ pub fn validate(doc: &Value) -> Result<ValidPage, Vec<FieldError>> {
         Some(_) => v.err("blocks", "expected_array"),
         None => v.err("blocks", "required"),
     }
+    match root.get("drawings") {
+        None => {}
+        Some(Value::Array(items)) => drawings(&mut v, items),
+        Some(_) => v.err("drawings", "expected_array"),
+    }
     if v.errors.is_empty() {
         Ok(ValidPage {
             canonical: doc.clone(),
@@ -162,7 +192,7 @@ pub fn validate(doc: &Value) -> Result<ValidPage, Vec<FieldError>> {
 }
 
 fn theme(v: &mut V, t: &Value) {
-    let Some(m) = v.object(t, "theme", &["primary", "font", "surface", "text_scale"]) else {
+    let Some(m) = v.object(t, "theme", &THEME_KEYS) else {
         return;
     };
     // primary + font: aturan v1 (dipanggil lewat objek tanpa field v2 agar tidak dilaporkan unknown).
@@ -184,6 +214,125 @@ fn theme(v: &mut V, t: &Value) {
             if n.as_f64()
                 .is_some_and(|f| TEXT_SCALES.iter().any(|t| (t - f).abs() < 1e-9)) => {}
         Some(_) => v.err("theme.text_scale", "invalid_text_scale"),
+    }
+    match m.get("navbar_style") {
+        None => {}
+        Some(Value::String(s)) if NAVBAR_STYLES.contains(&s.as_str()) => {}
+        Some(_) => v.err("theme.navbar_style", "invalid_navbar_style"),
+    }
+    v.boolean(m, "theme", "navbar_sticky");
+    v.asset(m, "theme", "background_image", false);
+    match m.get("background_size") {
+        None => {}
+        Some(Value::String(s)) if BACKGROUND_SIZES.contains(&s.as_str()) => {}
+        Some(_) => v.err("theme.background_size", "invalid_background_size"),
+    }
+    v.text(m, "theme", "background_position", 40, false);
+    match m.get("background_opacity") {
+        None => {}
+        Some(Value::Number(n)) if n.as_i64().is_some_and(|i| (0..=100).contains(&i)) => {}
+        Some(_) => v.err("theme.background_opacity", "out_of_range"),
+    }
+}
+
+fn is_stroke_color(s: &str) -> bool {
+    if s.len() < 3 || s.len() > 30 {
+        return false;
+    }
+    if let Some(rest) = s.strip_prefix('#') {
+        return [3, 4, 6, 8].contains(&rest.len()) && rest.chars().all(|c| c.is_ascii_hexdigit());
+    }
+    if [3, 6, 8].contains(&s.len()) && s.chars().all(|c| c.is_ascii_hexdigit()) {
+        return true;
+    }
+    if let Some(inner) = s.strip_prefix("rgb(").and_then(|r| r.strip_suffix(')')) {
+        let parts: Vec<&str> = if inner.contains(',') {
+            inner.split(',').collect()
+        } else {
+            inner.split_whitespace().collect()
+        };
+        if parts.len() != 3 {
+            return false;
+        }
+        return parts.iter().all(|p| {
+            let p = p.trim().trim_end_matches('%');
+            !p.is_empty() && p.chars().all(|c| c.is_ascii_digit() || c == '.')
+        });
+    }
+    if let Some(inner) = s.strip_prefix("rgba(").and_then(|r| r.strip_suffix(')')) {
+        let parts: Vec<&str> = if inner.contains(',') {
+            inner.split(',').collect()
+        } else {
+            inner.split_whitespace().collect()
+        };
+        if parts.len() != 4 {
+            return false;
+        }
+        return parts.iter().all(|p| {
+            let p = p.trim().trim_end_matches('%');
+            !p.is_empty() && p.chars().all(|c| c.is_ascii_digit() || c == '.')
+        });
+    }
+    false
+}
+
+fn drawings(v: &mut V, items: &[Value]) {
+    if items.len() > MAX_DRAWING_STROKES {
+        v.err("drawings", "too_many_drawings");
+    }
+    for (i, d) in items.iter().take(MAX_DRAWING_STROKES).enumerate() {
+        let p = format!("drawings[{i}]");
+        let Some(m) = v.object(
+            d,
+            &p,
+            &["id", "target", "color", "size", "opacity", "points"],
+        ) else {
+            continue;
+        };
+        match m.get("id") {
+            Some(Value::String(s))
+                if (1..=40).contains(&s.chars().count()) && !s.chars().any(char::is_control) => {}
+            _ => v.err(&join(&p, "id"), "invalid_id"),
+        }
+        match m.get("target") {
+            Some(Value::String(s)) if s == "background" || s.starts_with("cell:") => {}
+            _ => v.err(&join(&p, "target"), "invalid_target"),
+        }
+        match m.get("color") {
+            Some(Value::String(s)) if is_stroke_color(s) => {}
+            _ => v.err(&join(&p, "color"), "invalid_color"),
+        }
+        match m.get("size") {
+            Some(Value::Number(n)) if n.as_f64().is_some_and(|s| (1.0..=64.0).contains(&s)) => {}
+            _ => v.err(&join(&p, "size"), "out_of_range"),
+        }
+        match m.get("opacity") {
+            Some(Value::Number(n)) if n.as_f64().is_some_and(|o| (0.0..=1.0).contains(&o)) => {}
+            _ => v.err(&join(&p, "opacity"), "out_of_range"),
+        }
+        match m.get("points") {
+            Some(Value::Array(pts)) => {
+                if pts.len() > MAX_STROKE_POINTS {
+                    v.err(&join(&p, "points"), "too_many_points");
+                }
+                for (j, pt) in pts.iter().take(MAX_STROKE_POINTS).enumerate() {
+                    let pt_path = format!("{p}.points[{j}]");
+                    match pt {
+                        Value::Array(coords) if coords.len() == 2 => {
+                            let x = coords[0].as_i64();
+                            let y = coords[1].as_i64();
+                            match (x, y) {
+                                (Some(x), Some(y)) if x >= 0 && y >= 0 => {}
+                                _ => v.err(&pt_path, "invalid_point"),
+                            }
+                        }
+                        _ => v.err(&pt_path, "invalid_point"),
+                    }
+                }
+            }
+            Some(_) => v.err(&join(&p, "points"), "expected_array"),
+            None => v.err(&join(&p, "points"), "required"),
+        }
     }
 }
 
@@ -617,5 +766,298 @@ mod tests {
         // Dokumen v1 tidak disentuh.
         let mut v1 = json!({"schema_version": 1, "sections": [{"type": "gallery"}]});
         assert_eq!(hide_unentitled_blocks(&mut v1, false, plan), 0);
+    }
+
+    #[test]
+    fn validates_extended_theme_and_drawings() {
+        let bg_asset = Uuid::new_v4();
+        let mut d = json!({
+            "schema_version": 2,
+            "template": "coffee",
+            "theme": {
+                "primary": "#4F46E5",
+                "font": "inter",
+                "surface": "cream",
+                "text_scale": 1.0,
+                "navbar_style": "side",
+                "navbar_sticky": true,
+                "background_image": format!("asset:{bg_asset}"),
+                "background_size": "cover",
+                "background_position": "center",
+                "background_opacity": 25
+            },
+            "blocks": [],
+            "drawings": [
+                {
+                    "id": "stroke-1",
+                    "target": "background",
+                    "color": "#FF0000",
+                    "size": 4,
+                    "opacity": 0.8,
+                    "points": [[10, 20], [30, 40], [50, 60]]
+                },
+                {
+                    "id": "stroke-2",
+                    "target": "cell:block-1",
+                    "color": "rgb(0, 128, 255)",
+                    "size": 2.5,
+                    "opacity": 1.0,
+                    "points": [[0, 0]]
+                }
+            ]
+        });
+        let res = validate_page(&d);
+        assert!(res.is_ok(), "extended v2 doc should be valid: {res:?}");
+        let valid = res.unwrap();
+        assert!(valid.asset_refs.contains(&bg_asset));
+
+        // Invalid navbar style
+        d["theme"]["navbar_style"] = json!("invalid");
+        let c = codes(&d);
+        assert!(c.contains(&("theme.navbar_style".into(), "invalid_navbar_style")), "{c:?}");
+
+        // Invalid background size
+        d["theme"]["navbar_style"] = json!("top");
+        d["theme"]["background_size"] = json!("stretched");
+        let c = codes(&d);
+        assert!(c.contains(&("theme.background_size".into(), "invalid_background_size")), "{c:?}");
+    }
+
+    #[test]
+    fn theme_extended_validation_rejections() {
+        let mut d = json!({
+            "schema_version": 2,
+            "template": "coffee",
+            "theme": {
+                "primary": "#4F46E5",
+                "font": "inter",
+                "navbar_sticky": "not_a_bool",
+                "background_image": "http://example.com/bad.png",
+                "background_position": "p".repeat(41),
+                "background_opacity": 150,
+                "extra_theme_prop": "illegal"
+            },
+            "blocks": []
+        });
+        let c = codes(&d);
+        assert!(c.contains(&("theme.navbar_sticky".into(), "expected_boolean")), "{c:?}");
+        assert!(c.contains(&("theme.background_image".into(), "invalid_asset_ref")), "{c:?}");
+        assert!(c.contains(&("theme.background_position".into(), "too_long")), "{c:?}");
+        assert!(c.contains(&("theme.background_opacity".into(), "out_of_range")), "{c:?}");
+        assert!(c.contains(&("theme.extra_theme_prop".into(), "unknown_field")), "{c:?}");
+
+        // Negative opacity
+        d["theme"]["background_opacity"] = json!(-5);
+        let c = codes(&d);
+        assert!(c.contains(&("theme.background_opacity".into(), "out_of_range")), "{c:?}");
+
+        // Float opacity
+        d["theme"]["background_opacity"] = json!(50.5);
+        let c = codes(&d);
+        assert!(c.contains(&("theme.background_opacity".into(), "out_of_range")), "{c:?}");
+    }
+
+    #[test]
+    fn drawings_validation_rejections() {
+        // Drawings is not an array
+        let mut d = json!({
+            "schema_version": 2,
+            "template": "coffee",
+            "theme": {"primary": "#000000", "font": "inter"},
+            "blocks": [],
+            "drawings": "not_an_array"
+        });
+        let c = codes(&d);
+        assert!(c.contains(&("drawings".into(), "expected_array")), "{c:?}");
+
+        // Invalid stroke fields
+        d["drawings"] = json!([
+            {
+                "id": "",
+                "target": "header",
+                "color": "not_a_color",
+                "size": 0,
+                "opacity": 1.5,
+                "points": "not_an_array",
+                "unknown_stroke_key": true
+            }
+        ]);
+        let c = codes(&d);
+        assert!(c.contains(&("drawings[0].id".into(), "invalid_id")), "{c:?}");
+        assert!(c.contains(&("drawings[0].target".into(), "invalid_target")), "{c:?}");
+        assert!(c.contains(&("drawings[0].color".into(), "invalid_color")), "{c:?}");
+        assert!(c.contains(&("drawings[0].size".into(), "out_of_range")), "{c:?}");
+        assert!(c.contains(&("drawings[0].opacity".into(), "out_of_range")), "{c:?}");
+        assert!(c.contains(&("drawings[0].points".into(), "expected_array")), "{c:?}");
+        assert!(c.contains(&("drawings[0].unknown_stroke_key".into(), "unknown_field")), "{c:?}");
+
+        // Stroke with points containing negative or invalid coordinate format
+        d["drawings"] = json!([
+            {
+                "id": "stroke-1",
+                "target": "background",
+                "color": "#fff",
+                "size": 10,
+                "opacity": 0.5,
+                "points": [[-1, 10], [5, -2], [1, 2, 3], "bad_point"]
+            }
+        ]);
+        let c = codes(&d);
+        assert!(c.contains(&("drawings[0].points[0]".into(), "invalid_point")), "{c:?}");
+        assert!(c.contains(&("drawings[0].points[1]".into(), "invalid_point")), "{c:?}");
+        assert!(c.contains(&("drawings[0].points[2]".into(), "invalid_point")), "{c:?}");
+        assert!(c.contains(&("drawings[0].points[3]".into(), "invalid_point")), "{c:?}");
+
+        // Size > 64 and Opacity < 0
+        d["drawings"] = json!([
+            {
+                "id": "stroke-1",
+                "target": "cell:x",
+                "color": "#ffffff",
+                "size": 65,
+                "opacity": -0.1,
+                "points": []
+            }
+        ]);
+        let c = codes(&d);
+        assert!(c.contains(&("drawings[0].size".into(), "out_of_range")), "{c:?}");
+        assert!(c.contains(&("drawings[0].opacity".into(), "out_of_range")), "{c:?}");
+
+        // Stroke id too long
+        d["drawings"] = json!([
+            {
+                "id": "x".repeat(41),
+                "target": "background",
+                "color": "#ffffff",
+                "size": 10,
+                "opacity": 0.5,
+                "points": []
+            }
+        ]);
+        let c = codes(&d);
+        assert!(c.contains(&("drawings[0].id".into(), "invalid_id")), "{c:?}");
+    }
+
+    #[test]
+    fn drawings_and_points_length_limits() {
+        // Exceeding MAX_DRAWING_STROKES (200)
+        let strokes: Vec<Value> = (0..201)
+            .map(|i| {
+                json!({
+                    "id": format!("s-{i}"),
+                    "target": "background",
+                    "color": "#000",
+                    "size": 1,
+                    "opacity": 1.0,
+                    "points": []
+                })
+            })
+            .collect();
+        let d = json!({
+            "schema_version": 2,
+            "template": "coffee",
+            "theme": {"primary": "#000000", "font": "inter"},
+            "blocks": [],
+            "drawings": strokes
+        });
+        let c = codes(&d);
+        assert!(c.contains(&("drawings".into(), "too_many_drawings")), "{c:?}");
+
+        // Exceeding MAX_STROKE_POINTS (1000)
+        let pts: Vec<[i64; 2]> = (0..1001).map(|i| [i, i]).collect();
+        let d2 = json!({
+            "schema_version": 2,
+            "template": "coffee",
+            "theme": {"primary": "#000000", "font": "inter"},
+            "blocks": [],
+            "drawings": [
+                {
+                    "id": "s-1",
+                    "target": "background",
+                    "color": "#000",
+                    "size": 1,
+                    "opacity": 1.0,
+                    "points": pts
+                }
+            ]
+        });
+        let c2 = codes(&d2);
+        assert!(c2.contains(&("drawings[0].points".into(), "too_many_points")), "{c2:?}");
+    }
+
+    #[test]
+    fn drawings_color_format_variations() {
+        let valid_colors = [
+            "#fff",
+            "#FFF",
+            "#ffff",
+            "#ffffff",
+            "#ffffffff",
+            "fff",
+            "ffffff",
+            "ffffffff",
+            "rgb(0, 0, 0)",
+            "rgb(255, 128, 0)",
+            "rgba(0, 0, 0, 0)",
+            "rgba(255, 255, 255, 0.85)",
+            "rgb(100%, 50%, 0%)",
+        ];
+        for col in valid_colors {
+            let d = json!({
+                "schema_version": 2,
+                "template": "coffee",
+                "theme": {"primary": "#000000", "font": "inter"},
+                "blocks": [],
+                "drawings": [
+                    {
+                        "id": "s-1",
+                        "target": "background",
+                        "color": col,
+                        "size": 5,
+                        "opacity": 0.5,
+                        "points": [[0, 0]]
+                    }
+                ]
+            });
+            assert!(validate_page(&d).is_ok(), "color '{col}' should be valid");
+        }
+
+        let invalid_colors = [
+            "",
+            "#",
+            "#12",
+            "#12345",
+            "#1234567",
+            "#123456789",
+            "blue",
+            "rgb()",
+            "rgb(alert(1))",
+            "rgba(1,2)",
+            "rgba(0,0,0,1);",
+            "not-a-color-at-all",
+        ];
+        for col in invalid_colors {
+            let d = json!({
+                "schema_version": 2,
+                "template": "coffee",
+                "theme": {"primary": "#000000", "font": "inter"},
+                "blocks": [],
+                "drawings": [
+                    {
+                        "id": "s-1",
+                        "target": "background",
+                        "color": col,
+                        "size": 5,
+                        "opacity": 0.5,
+                        "points": [[0, 0]]
+                    }
+                ]
+            });
+            let c = codes(&d);
+            assert!(
+                c.contains(&("drawings[0].color".into(), "invalid_color")),
+                "color '{col}' should be rejected as invalid_color, got {c:?}"
+            );
+        }
     }
 }
