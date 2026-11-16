@@ -171,9 +171,12 @@ async fn state_in(
         return Ok(None);
     };
     let pages = sqlx::query(
+        // `home` selalu lebih dulu: urutan ini dipakai juga oleh navigasi situs publik dan panel
+        // halaman Studio, jadi beranda tidak boleh muncul di tengah karena urutan abjad slug.
         "SELECT p.slug, p.title, p.draft_revision, v.version AS published_version
          FROM website_pages p LEFT JOIN website_page_versions v ON v.id = p.published_version_id
-         WHERE p.tenant_id = $1 AND p.website_id = $2 ORDER BY p.slug",
+         WHERE p.tenant_id = $1 AND p.website_id = $2
+         ORDER BY (p.slug = 'home') DESC, p.slug",
     )
     .bind(t.as_uuid())
     .bind(w.get::<Uuid, _>("id"))
