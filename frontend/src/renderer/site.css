@@ -619,10 +619,13 @@
   background: var(--pg-bg, #fff);
   box-shadow: 0 0 0 1px var(--line, #e4e4e7);
   /* WAJIB: `container-type: inline-size` menyiratkan inline-size containment, sehingga lebar bingkai
-     tidak bisa berasal dari isinya. Tanpa ini bingkai menyusut ke 0 di induk flex dan kanvas kosong. */
+     tidak bisa berasal dari isinya. Tanpa lebar eksplisit bingkai menyusut ke 0 di induk flex dan
+     kanvas tampak kosong.
+     `flex: none` (bukan `1 1 auto`) supaya lebar dari DeviceFrame (mis. 390px untuk ponsel) TIDAK
+     ditumbuhkan oleh induk flex — kalau boleh tumbuh, semua perangkat jadi selebar panggung. */
   width: 100%;
   max-width: 100%;
-  flex: 1 1 auto;
+  flex: none;
   min-width: 0;
 }
 .st-frame > .sv2 { min-height: 100%; }

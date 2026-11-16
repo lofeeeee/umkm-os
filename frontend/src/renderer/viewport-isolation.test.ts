@@ -75,7 +75,9 @@ describe("regresi: bingkai kanvas tidak boleh berlebar nol", () => {
     // Lebar tidak boleh bergantung pada isi (containment mematikan itu).
     expect(block).toMatch(/(^|;)\s*width:\s*100%/);
     expect(block).toContain("max-width: 100%");
-    expect(block).toContain("flex: 1 1 auto");
+    // `flex: none` — kalau boleh tumbuh (1 1 auto), lebar 390px dari DeviceFrame ditumbuhkan
+    // induk flex sampai selebar panggung dan semua perangkat tampak sama.
+    expect(block).toContain("flex: none");
     expect(block).toContain("min-width: 0");
   });
 
