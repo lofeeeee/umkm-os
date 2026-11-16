@@ -575,6 +575,7 @@ pub(crate) fn parse_settings(req: &SettingsDto) -> Result<Settings, ApiError> {
     Ok(Settings {
         qris_object_id: qris,
         qris_receiver_name: receiver,
+        qris_static_payload: None,
         checkout_enabled: req.checkout_enabled,
         delivery_fee: fee.unwrap_or(Money::ZERO),
         order_approval_required: req.order_approval_required,
