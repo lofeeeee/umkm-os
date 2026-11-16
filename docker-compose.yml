@@ -125,7 +125,7 @@ services:
     # `always` di VPS (IMAGE_PULL_POLICY=always) → `up -d` selalu menarik tag terbaru dari GHCR.
     pull_policy: ${IMAGE_PULL_POLICY:-missing}
     build: { context: ., target: worker }
-    networks: [backend]
+    networks: [edge, backend]
     depends_on:
       migrate: { condition: service_completed_successfully }
       redis: { condition: service_healthy }
