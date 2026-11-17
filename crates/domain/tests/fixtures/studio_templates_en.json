@@ -1,0 +1,885 @@
+{
+  "hangat": {
+    "schema_version": 2,
+    "template": "modern_store",
+    "theme": {
+      "primary": "#C2410C",
+      "font": "poppins",
+      "surface": "cream",
+      "text_scale": 1
+    },
+    "blocks": [
+      {
+        "id": "hero-1",
+        "kind": "hero",
+        "x": 0,
+        "y": 0,
+        "w": 8,
+        "h": 10,
+        "style": "plain",
+        "data": {
+          "title": "Kopi Senja Bandung",
+          "subtitle": "Kedai kopi rumahan dengan biji pilihan.",
+          "cta": {
+            "label": "See the menu",
+            "href": "#menu"
+          }
+        },
+        "auto_height": true
+      },
+      {
+        "id": "chatbot-2",
+        "kind": "chatbot",
+        "x": 8,
+        "y": 0,
+        "w": 4,
+        "h": 10,
+        "style": "card",
+        "data": {
+          "title": "Ask us",
+          "welcome": "Hi! What would you like to order today? 😊"
+        },
+        "auto_height": true,
+        "layout": "inline",
+        "chat_open": true
+      },
+      {
+        "id": "promotion-3",
+        "kind": "promotion",
+        "x": 0,
+        "y": 10,
+        "w": 12,
+        "h": 5,
+        "style": "tint",
+        "data": {
+          "title": "Free delivery this week",
+          "body": "For orders above Rp50,000 within the city.",
+          "cta": {
+            "label": "Order now",
+            "href": "#menu"
+          }
+        },
+        "auto_height": true
+      },
+      {
+        "id": "product-grid-4",
+        "kind": "product_grid",
+        "x": 0,
+        "y": 15,
+        "w": 12,
+        "h": 12,
+        "style": "plain",
+        "data": {
+          "title": "Favorite menu",
+          "limit": 8
+        },
+        "auto_height": true,
+        "layout": "grid"
+      },
+      {
+        "id": "business-hours-5",
+        "kind": "business_hours",
+        "x": 0,
+        "y": 27,
+        "w": 4,
+        "h": 9,
+        "style": "card",
+        "data": {
+          "title": "Opening hours"
+        },
+        "auto_height": true
+      },
+      {
+        "id": "location-6",
+        "kind": "location",
+        "x": 4,
+        "y": 27,
+        "w": 4,
+        "h": 6,
+        "style": "card",
+        "data": {
+          "title": "Location",
+          "show_map": true
+        },
+        "auto_height": true
+      },
+      {
+        "id": "contact-7",
+        "kind": "contact",
+        "x": 8,
+        "y": 27,
+        "w": 4,
+        "h": 6,
+        "style": "card",
+        "data": {
+          "title": "Order via WhatsApp",
+          "show_whatsapp": true,
+          "show_phone": true,
+          "show_email": false,
+          "socials": []
+        },
+        "auto_height": true
+      },
+      {
+        "id": "testimonials-8",
+        "kind": "testimonials",
+        "x": 0,
+        "y": 36,
+        "w": 12,
+        "h": 8,
+        "style": "plain",
+        "data": {
+          "title": "What customers say",
+          "items": [
+            {
+              "name": "Rina",
+              "quote": "Tastes just right — my go-to every morning."
+            },
+            {
+              "name": "Budi",
+              "quote": "Fast delivery and still warm."
+            },
+            {
+              "name": "Sari",
+              "quote": "Generous portions, friendly prices."
+            }
+          ]
+        },
+        "auto_height": true
+      }
+    ]
+  },
+  "butik": {
+    "schema_version": 2,
+    "template": "modern_store",
+    "theme": {
+      "primary": "#BE185D",
+      "font": "merriweather",
+      "surface": "light",
+      "text_scale": 1
+    },
+    "blocks": [
+      {
+        "id": "hero-1",
+        "kind": "hero",
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 10,
+        "style": "dark",
+        "data": {
+          "title": "Kopi Senja Bandung",
+          "subtitle": "Kedai kopi rumahan dengan biji pilihan.",
+          "cta": {
+            "label": "See the collection",
+            "href": "#koleksi"
+          }
+        },
+        "auto_height": true
+      },
+      {
+        "id": "product-grid-2",
+        "kind": "product_grid",
+        "x": 0,
+        "y": 10,
+        "w": 12,
+        "h": 12,
+        "style": "plain",
+        "data": {
+          "title": "New arrivals",
+          "limit": 12
+        },
+        "auto_height": true,
+        "layout": "carousel"
+      },
+      {
+        "id": "about-3",
+        "kind": "about",
+        "x": 0,
+        "y": 22,
+        "w": 6,
+        "h": 8,
+        "style": "plain",
+        "data": {
+          "title": "About us",
+          "body": "We choose quality fabrics and sew with care, so every piece lasts for years."
+        },
+        "auto_height": true
+      },
+      {
+        "id": "gallery-4",
+        "kind": "gallery",
+        "x": 6,
+        "y": 22,
+        "w": 6,
+        "h": 8,
+        "style": "plain",
+        "data": {
+          "title": "Lookbook",
+          "images": []
+        },
+        "auto_height": true
+      },
+      {
+        "id": "testimonials-5",
+        "kind": "testimonials",
+        "x": 0,
+        "y": 30,
+        "w": 12,
+        "h": 8,
+        "style": "tint",
+        "data": {
+          "title": "They've tried it",
+          "items": [
+            {
+              "name": "Dewi",
+              "quote": "Breathable fabric, neat stitching."
+            },
+            {
+              "name": "Putri",
+              "quote": "The size matches the chart."
+            },
+            {
+              "name": "Ayu",
+              "quote": "Admin replies fast and kindly."
+            }
+          ]
+        },
+        "auto_height": true
+      },
+      {
+        "id": "chatbot-6",
+        "kind": "chatbot",
+        "x": 8,
+        "y": 38,
+        "w": 4,
+        "h": 10,
+        "style": "card",
+        "data": {
+          "title": "Need help with sizing?",
+          "welcome": "Hi! Can we help you pick a size or color?"
+        },
+        "auto_height": true,
+        "layout": "floating",
+        "chat_open": false
+      }
+    ]
+  },
+  "profesional": {
+    "schema_version": 2,
+    "template": "modern_store",
+    "theme": {
+      "primary": "#0369A1",
+      "font": "inter",
+      "surface": "light",
+      "text_scale": 1
+    },
+    "blocks": [
+      {
+        "id": "hero-1",
+        "kind": "hero",
+        "x": 0,
+        "y": 0,
+        "w": 7,
+        "h": 10,
+        "style": "plain",
+        "data": {
+          "title": "Kopi Senja Bandung",
+          "subtitle": "Kedai kopi rumahan dengan biji pilihan.",
+          "cta": {
+            "label": "Free consultation",
+            "href": "#kontak"
+          }
+        },
+        "auto_height": true
+      },
+      {
+        "id": "contact-2",
+        "kind": "contact",
+        "x": 7,
+        "y": 0,
+        "w": 5,
+        "h": 10,
+        "style": "card",
+        "data": {
+          "title": "Contact us",
+          "show_whatsapp": true,
+          "show_phone": true,
+          "show_email": true,
+          "socials": []
+        },
+        "auto_height": true
+      },
+      {
+        "id": "about-3",
+        "kind": "about",
+        "x": 0,
+        "y": 10,
+        "w": 12,
+        "h": 7,
+        "style": "tint",
+        "data": {
+          "title": "Why choose us",
+          "body": "An experienced team, flexible scheduling, and transparent work reports."
+        },
+        "auto_height": true
+      },
+      {
+        "id": "product-grid-4",
+        "kind": "product_grid",
+        "x": 0,
+        "y": 17,
+        "w": 12,
+        "h": 10,
+        "style": "plain",
+        "data": {
+          "title": "Services & prices",
+          "limit": 8
+        },
+        "auto_height": true,
+        "layout": "list"
+      },
+      {
+        "id": "testimonials-5",
+        "kind": "testimonials",
+        "x": 0,
+        "y": 27,
+        "w": 12,
+        "h": 8,
+        "style": "plain",
+        "data": {
+          "title": "Customer reviews",
+          "items": [
+            {
+              "name": "Hendra",
+              "quote": "Neat work, on time."
+            },
+            {
+              "name": "Lina",
+              "quote": "The price was exactly as promised."
+            },
+            {
+              "name": "Agus",
+              "quote": "Easy to communicate with — recommended."
+            }
+          ]
+        },
+        "auto_height": true
+      },
+      {
+        "id": "business-hours-6",
+        "kind": "business_hours",
+        "x": 0,
+        "y": 35,
+        "w": 6,
+        "h": 9,
+        "style": "card",
+        "data": {
+          "title": "Service hours"
+        },
+        "auto_height": true
+      },
+      {
+        "id": "location-7",
+        "kind": "location",
+        "x": 6,
+        "y": 35,
+        "w": 6,
+        "h": 6,
+        "style": "card",
+        "data": {
+          "title": "Service area",
+          "show_map": true
+        },
+        "auto_height": true
+      },
+      {
+        "id": "chatbot-8",
+        "kind": "chatbot",
+        "x": 8,
+        "y": 41,
+        "w": 4,
+        "h": 10,
+        "style": "card",
+        "data": {
+          "title": "Ask about availability",
+          "welcome": "Hi! Want to check available slots?"
+        },
+        "auto_height": true,
+        "layout": "floating",
+        "chat_open": false
+      }
+    ]
+  },
+  "galeri": {
+    "schema_version": 2,
+    "template": "modern_store",
+    "theme": {
+      "primary": "#92400E",
+      "font": "merriweather",
+      "surface": "cream",
+      "text_scale": 1
+    },
+    "blocks": [
+      {
+        "id": "hero-1",
+        "kind": "hero",
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 9,
+        "style": "plain",
+        "data": {
+          "title": "Kopi Senja Bandung",
+          "subtitle": "Kedai kopi rumahan dengan biji pilihan.",
+          "cta": {
+            "label": "See our work",
+            "href": "#karya"
+          }
+        },
+        "auto_height": true
+      },
+      {
+        "id": "gallery-2",
+        "kind": "gallery",
+        "x": 0,
+        "y": 9,
+        "w": 12,
+        "h": 8,
+        "style": "plain",
+        "data": {
+          "title": "Our work",
+          "images": []
+        },
+        "auto_height": true
+      },
+      {
+        "id": "product-grid-3",
+        "kind": "product_grid",
+        "x": 0,
+        "y": 17,
+        "w": 12,
+        "h": 12,
+        "style": "plain",
+        "data": {
+          "title": "Available to order",
+          "limit": 8
+        },
+        "auto_height": true,
+        "layout": "grid"
+      },
+      {
+        "id": "about-4",
+        "kind": "about",
+        "x": 0,
+        "y": 29,
+        "w": 6,
+        "h": 8,
+        "style": "card",
+        "data": {
+          "title": "Our story",
+          "body": "It started as a hobby in our garage; now customers in many cities use our work."
+        },
+        "auto_height": true
+      },
+      {
+        "id": "testimonials-5",
+        "kind": "testimonials",
+        "x": 6,
+        "y": 29,
+        "w": 6,
+        "h": 8,
+        "style": "card",
+        "data": {
+          "title": "What they say",
+          "items": [
+            {
+              "name": "Maya",
+              "quote": "The details are beautiful."
+            },
+            {
+              "name": "Rudi",
+              "quote": "Neatly packed, arrived safely."
+            }
+          ]
+        },
+        "auto_height": true
+      },
+      {
+        "id": "chatbot-6",
+        "kind": "chatbot",
+        "x": 0,
+        "y": 37,
+        "w": 4,
+        "h": 10,
+        "style": "card",
+        "data": {
+          "title": "Custom order?",
+          "welcome": "Hi! Would you like a custom design?"
+        },
+        "auto_height": true,
+        "layout": "inline",
+        "chat_open": true
+      },
+      {
+        "id": "contact-7",
+        "kind": "contact",
+        "x": 4,
+        "y": 37,
+        "w": 4,
+        "h": 6,
+        "style": "plain",
+        "data": {
+          "title": "Contact",
+          "show_whatsapp": true,
+          "show_phone": false,
+          "show_email": true,
+          "socials": []
+        },
+        "auto_height": true
+      },
+      {
+        "id": "location-8",
+        "kind": "location",
+        "x": 8,
+        "y": 37,
+        "w": 4,
+        "h": 6,
+        "style": "plain",
+        "data": {
+          "title": "Workshop",
+          "show_map": false
+        },
+        "auto_height": true
+      }
+    ]
+  },
+  "malam": {
+    "schema_version": 2,
+    "template": "modern_store",
+    "theme": {
+      "primary": "#A78BFA",
+      "font": "poppins",
+      "surface": "dark",
+      "text_scale": 1
+    },
+    "blocks": [
+      {
+        "id": "hero-1",
+        "kind": "hero",
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 9,
+        "style": "tint",
+        "data": {
+          "title": "Kopi Senja Bandung",
+          "subtitle": "Kedai kopi rumahan dengan biji pilihan.",
+          "cta": {
+            "label": "See the menu",
+            "href": "#menu"
+          }
+        },
+        "auto_height": true
+      },
+      {
+        "id": "product-grid-2",
+        "kind": "product_grid",
+        "x": 0,
+        "y": 9,
+        "w": 7,
+        "h": 14,
+        "style": "plain",
+        "data": {
+          "title": "Tonight's menu",
+          "limit": 8
+        },
+        "auto_height": true,
+        "layout": "list"
+      },
+      {
+        "id": "chatbot-3",
+        "kind": "chatbot",
+        "x": 7,
+        "y": 9,
+        "w": 5,
+        "h": 12,
+        "style": "card",
+        "data": {
+          "title": "Table reservations",
+          "welcome": "Hi! How many people is the reservation for?"
+        },
+        "auto_height": true,
+        "layout": "inline",
+        "chat_open": true
+      },
+      {
+        "id": "business-hours-4",
+        "kind": "business_hours",
+        "x": 0,
+        "y": 23,
+        "w": 6,
+        "h": 9,
+        "style": "card",
+        "data": {
+          "title": "Open"
+        },
+        "auto_height": true
+      },
+      {
+        "id": "location-5",
+        "kind": "location",
+        "x": 6,
+        "y": 23,
+        "w": 6,
+        "h": 6,
+        "style": "card",
+        "data": {
+          "title": "Find us",
+          "show_map": true
+        },
+        "auto_height": true
+      },
+      {
+        "id": "testimonials-6",
+        "kind": "testimonials",
+        "x": 0,
+        "y": 32,
+        "w": 12,
+        "h": 8,
+        "style": "plain",
+        "data": {
+          "title": "Guest impressions",
+          "items": [
+            {
+              "name": "Dimas",
+              "quote": "Cozy atmosphere, great music."
+            },
+            {
+              "name": "Nadia",
+              "quote": "Great coffee for late nights."
+            }
+          ]
+        },
+        "auto_height": true
+      }
+    ]
+  },
+  "segar": {
+    "schema_version": 2,
+    "template": "modern_store",
+    "theme": {
+      "primary": "#15803D",
+      "font": "nunito",
+      "surface": "light",
+      "text_scale": 1
+    },
+    "blocks": [
+      {
+        "id": "promotion-1",
+        "kind": "promotion",
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 5,
+        "style": "tint",
+        "data": {
+          "title": "Today's promo",
+          "body": "10% off your first order through the website.",
+          "cta": {
+            "label": "Shop now",
+            "href": "#produk"
+          }
+        },
+        "auto_height": true
+      },
+      {
+        "id": "hero-2",
+        "kind": "hero",
+        "x": 0,
+        "y": 5,
+        "w": 12,
+        "h": 8,
+        "style": "plain",
+        "data": {
+          "title": "Kopi Senja Bandung",
+          "subtitle": "Kedai kopi rumahan dengan biji pilihan.",
+          "cta": {
+            "label": "Start shopping",
+            "href": "#produk"
+          }
+        },
+        "auto_height": true
+      },
+      {
+        "id": "product-grid-3",
+        "kind": "product_grid",
+        "x": 0,
+        "y": 13,
+        "w": 12,
+        "h": 12,
+        "style": "plain",
+        "data": {
+          "title": "Best sellers",
+          "limit": 12
+        },
+        "auto_height": true,
+        "layout": "grid"
+      },
+      {
+        "id": "contact-4",
+        "kind": "contact",
+        "x": 0,
+        "y": 25,
+        "w": 6,
+        "h": 6,
+        "style": "card",
+        "data": {
+          "title": "Quick order",
+          "show_whatsapp": true,
+          "show_phone": true,
+          "show_email": false,
+          "socials": []
+        },
+        "auto_height": true
+      },
+      {
+        "id": "business-hours-5",
+        "kind": "business_hours",
+        "x": 6,
+        "y": 25,
+        "w": 6,
+        "h": 9,
+        "style": "card",
+        "data": {
+          "title": "Opening hours"
+        },
+        "auto_height": true
+      },
+      {
+        "id": "chatbot-6",
+        "kind": "chatbot",
+        "x": 8,
+        "y": 34,
+        "w": 4,
+        "h": 10,
+        "style": "card",
+        "data": {
+          "title": "Ask about stock",
+          "welcome": "Hi! Which item would you like to check?"
+        },
+        "auto_height": true,
+        "layout": "floating",
+        "chat_open": false
+      }
+    ]
+  },
+  "plugin-teks-wa": {
+    "schema_version": 2,
+    "template": "modern_store",
+    "theme": {
+      "primary": "#15803D",
+      "font": "inter",
+      "surface": "light",
+      "text_scale": 1
+    },
+    "blocks": [
+      {
+        "id": "hero",
+        "kind": "hero",
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 8,
+        "style": "plain",
+        "data": {
+          "title": "Toko Segar"
+        },
+        "auto_height": true
+      },
+      {
+        "id": "text",
+        "kind": "text",
+        "x": 0,
+        "y": 8,
+        "w": 6,
+        "h": 4,
+        "style": "plain",
+        "data": {
+          "title": "Announcement",
+          "body": "Write important information for buyers here."
+        },
+        "auto_height": true
+      },
+      {
+        "id": "whatsapp",
+        "kind": "whatsapp",
+        "x": 6,
+        "y": 8,
+        "w": 6,
+        "h": 3,
+        "style": "plain",
+        "data": {
+          "label": "Order via WhatsApp",
+          "message": "Hi, I'd like to ask about a product in your shop."
+        },
+        "auto_height": true,
+        "layout": "inline"
+      }
+    ]
+  },
+  "plugin-wa-melayang": {
+    "schema_version": 2,
+    "template": "modern_store",
+    "theme": {
+      "primary": "#15803D",
+      "font": "inter",
+      "surface": "light",
+      "text_scale": 1
+    },
+    "blocks": [
+      {
+        "id": "hero",
+        "kind": "hero",
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 8,
+        "style": "plain",
+        "data": {
+          "title": "Toko Segar"
+        },
+        "auto_height": true
+      },
+      {
+        "id": "text",
+        "kind": "text",
+        "x": 0,
+        "y": 8,
+        "w": 6,
+        "h": 4,
+        "style": "plain",
+        "data": {
+          "title": "Announcement",
+          "body": "Write important information for buyers here."
+        },
+        "auto_height": true
+      },
+      {
+        "id": "whatsapp",
+        "kind": "whatsapp",
+        "x": 0,
+        "y": 0,
+        "w": 4,
+        "h": 3,
+        "style": "plain",
+        "data": {
+          "label": "Order via WhatsApp",
+          "message": "Hi, I'd like to ask about a product in your shop."
+        },
+        "auto_height": true,
+        "layout": "floating"
+      }
+    ]
+  }
+}

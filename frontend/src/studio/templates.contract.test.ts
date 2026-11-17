@@ -10,8 +10,11 @@ import { toDoc } from "./doc";
 import manifest from "./plugin-manifest.json";
 import { EXTRA_DATA, PLUGINS, type PluginKind } from "./plugins";
 import { TEMPLATES, type TplCell } from "./templates";
+import { getLocale, setLocale } from "@/i18n";
 
 const FIXTURE = resolve(__dirname, "../../../crates/domain/tests/fixtures/studio_templates.json");
+/** Isi templat versi English (antarmuka EN) — divalidasi server juga (batas panjang teks, dsb.). */
+const FIXTURE_EN = resolve(__dirname, "../../../crates/domain/tests/fixtures/studio_templates_en.json");
 
 /** Plugin di luar template (Teks, WhatsApp di halaman / melayang) dengan data awal editor. */
 function extraDoc(floatingWa: boolean) {
@@ -44,6 +47,20 @@ describe("kontrak template Studio", () => {
     const now = JSON.stringify(docs(), null, 2) + "\n";
     if (process.env.UPDATE_FIXTURES) writeFileSync(FIXTURE, now);
     expect(readFileSync(FIXTURE, "utf8")).toBe(now);
+  });
+
+  it("fixture English sama dengan keluaran template saat antarmuka EN", () => {
+    const before = getLocale();
+    let now: string;
+    try {
+      setLocale("en", false);
+      now = JSON.stringify(docs(), null, 2) + "\n";
+    } finally {
+      setLocale(before, false);
+    }
+    expect(now).toContain("Free delivery this week");
+    if (process.env.UPDATE_FIXTURES) writeFileSync(FIXTURE_EN, now);
+    expect(readFileSync(FIXTURE_EN, "utf8")).toBe(now);
   });
 });
 

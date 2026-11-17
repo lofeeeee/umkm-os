@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Studio website (pratinjau)" };
+import { TITLES } from "@/i18n/titles";
+
+export const metadata: Metadata = { title: TITLES.studio };
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   return children;

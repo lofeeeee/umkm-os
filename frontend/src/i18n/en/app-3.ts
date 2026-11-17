@@ -231,6 +231,8 @@ export const APP_3: Record<string, string> = {
   ", lalu buka tautan ini lagi. Belum punya akun? Buat password di bawah.": ", then open this link again. No account yet? Create a password below.",
   "Password baru (bila belum punya akun)": "New password (if you don't have an account)",
   "Kebijakan Privasi": "Privacy Policy",
+  "Kebijakan Privasi — UMKM Business OS": "Privacy Policy — UMKM Business OS",
+  "Syarat & Ketentuan — UMKM Business OS": "Terms & Conditions — UMKM Business OS",
   "Kembali ke pendaftaran": "Back to sign-up",
   "Satu tempat untuk semua operasional usaha Anda": "One place for all your business operations",
   "Verifikasi dua langkah": "Two-step verification",

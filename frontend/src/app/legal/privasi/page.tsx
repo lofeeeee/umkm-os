@@ -3,8 +3,9 @@ import Link from "@/ui/link";
 import { PRIVACY } from "@/legal/content";
 import { LegalDoc } from "@/legal/LegalDoc";
 import { t } from "@/i18n";
+import { TITLES } from "@/i18n/titles";
 
-export const metadata = { title: "Kebijakan Privasi — UMKM Business OS" };
+export const metadata = { title: TITLES.privacy };
 
 export default function PrivacyPage() {
   return (

@@ -63,3 +63,21 @@ describe("t() & tmap()", () => {
     }
   });
 });
+
+describe("judul tab", () => {
+  it("hanya judul halaman terdaftar yang diterjemahkan, nama produk/toko tidak", async () => {
+    const { translateTitle } = await import("./titles");
+    const before = getLocale();
+    try {
+      setLocale("en", false);
+      expect(translateTitle("Pesanan · UMKM OS")).toBe("Orders · UMKM OS");
+      expect(translateTitle("Pembayaran & pengiriman · UMKM OS")).toBe("Payments & delivery · UMKM OS");
+      // "Kopi" ada di kamus (nama palet), tetapi sebagai judul produk tidak boleh berubah.
+      expect(translateTitle("Kopi")).toBe("Kopi");
+      setLocale("id", false);
+      expect(translateTitle("Pesanan · UMKM OS")).toBe("Pesanan · UMKM OS");
+    } finally {
+      setLocale(before, false);
+    }
+  });
+});

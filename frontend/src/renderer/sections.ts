@@ -85,8 +85,25 @@ export const FIELDS: Record<SectionType, Field[]> = {
   footer: [{ key: "text", get label() { return t("Teks"); }, kind: "text", max: 240 }],
 };
 
+/** Kunci teks bawaan section (isi awal; ikut bahasa antarmuka saat blok dibuat). */
+const DEFAULT_TEXT_KEYS = new Set(["title", "subtitle", "body", "text", "quote", "name"]);
+const DEFAULT_TEXTS = [
+  m("Nama Toko"), m("Judul utama"), m("Kalimat pendek tentang bisnis Anda"), m("Tentang Kami"), m("Ceritakan bisnis Anda di sini."),
+  m("Produk"), m("Promo"), m("Tulis promo Anda"), m("Galeri"), m("Kata Pelanggan"), m("Pelanggan"), m("Pelayanannya ramah."),
+  m("Jam Buka"), m("Lokasi"), m("Hubungi Kami"), m("Terima kasih telah berkunjung"),
+];
+const KNOWN_DEFAULTS = new Set<string>(DEFAULT_TEXTS);
+
+function localizeDefaults(v: Json, key = ""): Json {
+  if (typeof v === "string") return DEFAULT_TEXT_KEYS.has(key) && KNOWN_DEFAULTS.has(v) ? t(v) : v;
+  if (Array.isArray(v)) return v.map((x) => localizeDefaults(x, key));
+  if (v && typeof v === "object") return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, localizeDefaults(x as Json, k)]));
+  return v;
+}
+
+/** Data awal section; teks contoh mengikuti bahasa antarmuka saat ini (konten milik pemilik toko setelahnya). */
 export function defaultData(type: SectionType): { [k: string]: Json } {
-  return structuredClone((defaults as Record<SectionType, { [k: string]: Json }>)[type]);
+  return localizeDefaults(structuredClone((defaults as Record<SectionType, { [k: string]: Json }>)[type])) as { [k: string]: Json };
 }
 
 /** Id unik `[a-z0-9-]` dalam halaman. */

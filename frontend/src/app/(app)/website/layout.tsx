@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Website" };
+import { TITLES } from "@/i18n/titles";
+
+export const metadata: Metadata = { title: TITLES.website };
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   return children;

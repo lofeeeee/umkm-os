@@ -97,13 +97,18 @@ fn studio_document_from_defaults_validates() {
 /// Setiap template Studio (frontend/src/studio/templates.ts → toDoc) lolos validator v2.
 #[test]
 fn every_studio_template_validates() {
-    let all: Value =
-        serde_json::from_str(include_str!("fixtures/studio_templates.json")).expect("JSON");
-    let map = all.as_object().expect("objek");
-    assert!(map.len() >= 6, "fixture template kosong");
-    for (key, doc) in map {
-        if let Err(e) = validate_page(doc) {
-            panic!("template {key} ditolak validator: {e:?}");
+    // Isi templat mengikuti bahasa antarmuka (ID/EN); keduanya harus lolos validator.
+    for (lang, raw) in [
+        ("id", include_str!("fixtures/studio_templates.json")),
+        ("en", include_str!("fixtures/studio_templates_en.json")),
+    ] {
+        let all: Value = serde_json::from_str(raw).expect("JSON");
+        let map = all.as_object().expect("objek");
+        assert!(map.len() >= 6, "fixture template {lang} kosong");
+        for (key, doc) in map {
+            if let Err(e) = validate_page(doc) {
+                panic!("template {key} ({lang}) ditolak validator: {e:?}");
+            }
         }
     }
 }
