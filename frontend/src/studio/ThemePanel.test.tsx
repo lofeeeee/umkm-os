@@ -25,8 +25,7 @@ describe("ThemePanel (Studio Enhancement Task 6)", () => {
   const defaultProps: ThemePanelProps = {
     config: defaultConfig,
     onChange: vi.fn(),
-    onUploadBackground: vi.fn().mockResolvedValue("asset:bg-123"),
-    assetUrl: (ref: string) => (ref ? `https://storage.test/${ref}` : undefined),
+    onAddBackground: vi.fn(),
   };
 
   it("renders navbar navigation section and triggers onChange({ navbarStyle: 'side' })", () => {
@@ -194,109 +193,12 @@ describe("ThemePanel (Studio Enhancement Task 6)", () => {
     expect(onChange).toHaveBeenCalledWith({ textScale: 1.1 });
   });
 
-  it("renders background controls, handles upload, and triggers onChange", async () => {
-    const onChange = vi.fn();
-    const onUploadBackground = vi.fn().mockResolvedValue("asset:bg-uploaded");
-    const props: ThemePanelProps = {
-      ...defaultProps,
-      config: {
-        ...defaultConfig,
-        backgroundImage: "asset:existing-bg",
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        backgroundOpacity: 20,
-      },
-      onChange,
-      onUploadBackground,
-    };
-
-    const html = renderToStaticMarkup(<ThemePanel {...props} />);
-    expect(html).toContain("Gambar latar");
-    expect(html).toContain("Hapus latar");
-    expect(html).toContain("https://storage.test/asset:existing-bg");
-    expect(html).toContain("Penuh");
-    expect(html).toContain("Proporsional");
-    expect(html).toContain("Motif berulang");
-    expect(html).toContain("Tengah");
-    expect(html).toContain("Atas");
-    expect(html).toContain("Bawah");
-    expect(html).toContain("Kiri");
-    expect(html).toContain("Kanan");
-    expect(html).toContain(
-      "Transparansi tembus pandang pada blok website"
-    );
-
-    const tree = ThemePanel(props);
-    function findElement(node: any, predicate: (el: any) => boolean): any {
-      if (!node) return null;
-      if (predicate(node)) return node;
-      if (node.props?.children) {
-        const children = Array.isArray(node.props.children)
-          ? node.props.children
-          : [node.props.children];
-        for (const child of children) {
-          const found = findElement(child, predicate);
-          if (found) return found;
-        }
-      }
-      return null;
-    }
-
-    // 1. Remove background button
-    const removeBtn = findElement(
-      tree,
-      (el) =>
-        el.type === "button" &&
-        (el.props?.children === "Hapus latar" ||
-          (Array.isArray(el.props?.children) &&
-            el.props.children.includes("Hapus latar")))
-    );
-    expect(removeBtn).toBeTruthy();
-    removeBtn.props.onClick();
-    expect(onChange).toHaveBeenCalledWith({ backgroundImage: undefined });
-
-    // 2. Upload file input
-    const fileInput = findElement(
-      tree,
-      (el) => el.type === "input" && el.props?.type === "file"
-    );
-    expect(fileInput).toBeTruthy();
-    const dummyFile = new File(["dummy"], "bg.png", { type: "image/png" });
-    await fileInput.props.onChange({ target: { files: [dummyFile] } });
-    expect(onUploadBackground).toHaveBeenCalledWith(dummyFile);
-    expect(onChange).toHaveBeenCalledWith({ backgroundImage: "asset:bg-uploaded" });
-
-    // 3. Opacity slider
-    const opacitySlider = findElement(
-      tree,
-      (el) => el.type === "input" && el.props?.type === "range"
-    );
-    expect(opacitySlider).toBeTruthy();
-    expect(opacitySlider.props.min).toBe(0);
-    expect(opacitySlider.props.max).toBe(90);
-    opacitySlider.props.onChange({ target: { value: "45" } });
-    expect(onChange).toHaveBeenCalledWith({ backgroundOpacity: 45 });
-
-    // 4. Background size select / buttons
-    const sizeSelect = findElement(
-      tree,
-      (el) =>
-        el.type === "select" &&
-        el.props?.["aria-label"] === "Ukuran gambar latar"
-    );
-    expect(sizeSelect).toBeTruthy();
-    sizeSelect.props.onChange({ target: { value: "repeat" } });
-    expect(onChange).toHaveBeenCalledWith({ backgroundSize: "repeat" });
-
-    // 5. Background position select / buttons
-    const posSelect = findElement(
-      tree,
-      (el) =>
-        el.type === "select" &&
-        el.props?.["aria-label"] === "Posisi gambar latar"
-    );
-    expect(posSelect).toBeTruthy();
-    posSelect.props.onChange({ target: { value: "top" } });
-    expect(onChange).toHaveBeenCalledWith({ backgroundPosition: "top" });
+  it("latar diarahkan ke plugin Latar; latar tema lama bisa dipindahkan", () => {
+    const fresh = renderToStaticMarkup(<ThemePanel {...defaultProps} />);
+    expect(fresh).toContain("Tambah plugin Latar");
+    expect(fresh).not.toContain("Pindahkan ke plugin Latar");
+    const legacy = renderToStaticMarkup(<ThemePanel {...defaultProps} config={{ ...defaultConfig, backgroundImage: "asset:lama" }} />);
+    expect(legacy).toContain("Pindahkan ke plugin Latar");
+    expect(legacy).not.toContain("Kepekatan gambar latar");
   });
 });

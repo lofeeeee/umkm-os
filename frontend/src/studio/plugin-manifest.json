@@ -12,7 +12,8 @@
     "testimonials":   { "version": 1, "plan": "starter", "max_per_page": 40, "layouts": [] },
     "business_hours": { "version": 1, "plan": "starter", "max_per_page": 40, "layouts": [] },
     "location":       { "version": 1, "plan": "starter", "max_per_page": 40, "layouts": [] },
-    "contact":        { "version": 1, "plan": "starter", "max_per_page": 40, "layouts": [] }
+    "contact":        { "version": 1, "plan": "starter", "max_per_page": 40, "layouts": [] },
+    "background":     { "version": 1, "plan": "starter", "max_per_page": 40, "layouts": [] }
   },
   "embed_layouts": { "chatbot": ["floating", "bar"], "whatsapp": ["floating"] }
 }

@@ -4,8 +4,10 @@
 
 export const COLS = 12;
 
-/** `locked`: posisi & ukuran dikunci — tidak pernah digeser oleh item lain; item lain mengalir di sekitarnya. */
-export interface Cell { id: string; x: number; y: number; w: number; h: number; minW?: number; minH?: number; locked?: boolean }
+/** `locked`: posisi & ukuran dikunci — tidak pernah digeser oleh item lain; item lain mengalir di sekitarnya.
+ *  `layer`: lapisan "tembus" (plugin Latar) — di belakang blok lain, tidak bertabrakan, tidak dirapatkan, dan
+ *  tidak pernah mendorong atau didorong; tetap persis di posisi yang dipilih pengguna. */
+export interface Cell { id: string; x: number; y: number; w: number; h: number; minW?: number; minH?: number; locked?: boolean; layer?: boolean }
 
 export function clamp(c: Cell): Cell {
   const minW = c.minW ?? 2;
@@ -18,7 +20,7 @@ export function clamp(c: Cell): Cell {
 }
 
 export function collides(a: Cell, b: Cell): boolean {
-  return a.id !== b.id && a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+  return a.id !== b.id && !a.layer && !b.layer && a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 }
 
 const byPos = (a: Cell, b: Cell) => a.y - b.y || a.x - b.x || a.id.localeCompare(b.id);
@@ -26,8 +28,8 @@ const byPos = (a: Cell, b: Cell) => a.y - b.y || a.x - b.x || a.id.localeCompare
 /** Naikkan setiap item setinggi mungkin tanpa bertabrakan. `pinned` tidak dipindah. */
 export function compact(cells: Cell[], pinned?: string): Cell[] {
   // Item terkunci & item yang sedang dipindah adalah penghalang tetap.
-  const placed: Cell[] = cells.filter((c) => c.locked || c.id === pinned);
-  for (const c of [...cells].filter((c) => !c.locked && c.id !== pinned).sort(byPos)) {
+  const placed: Cell[] = cells.filter((c) => c.locked || c.layer || c.id === pinned);
+  for (const c of [...cells].filter((c) => !c.locked && !c.layer && c.id !== pinned).sort(byPos)) {
     let next = { ...c, y: 0 };
     // Turunkan sampai tidak bertabrakan dengan item yang sudah diletakkan.
     for (;;) {
@@ -45,6 +47,8 @@ export function place(cells: Cell[], next: Cell): Cell[] {
   const prev = cells.find((c) => c.id === next.id);
   if (prev?.locked) return cells;
   let moved = clamp(next);
+  // Lapisan bebas ditaruh di mana saja (menumpuk blok lain); susunan blok lain tidak berubah.
+  if (moved.layer) return prev ? cells.map((c) => (c.id === moved.id ? moved : c)) : [...cells, moved];
   const others = cells.filter((c) => c.id !== moved.id);
   // Tidak boleh menimpa item terkunci: turunkan sampai lewat di bawahnya.
   for (;;) {
@@ -69,8 +73,9 @@ const sharesColumns = (a: Cell, b: Cell) => a.x < b.x + b.w && b.x < a.x + a.w;
 export function moveBy(cells: Cell[], id: string, dir: "up" | "down" | "left" | "right"): Cell[] {
   const c = cells.find((x) => x.id === id);
   if (!c || c.locked) return cells;
+  if (c.layer) return place(cells, { ...c, x: c.x + (dir === "left" ? -1 : dir === "right" ? 1 : 0), y: c.y + (dir === "up" ? -1 : dir === "down" ? 1 : 0) });
   if (dir === "left" || dir === "right") return place(cells, { ...c, x: c.x + (dir === "left" ? -1 : 1) });
-  const others = cells.filter((x) => x.id !== id && sharesColumns(x, c));
+  const others = cells.filter((x) => x.id !== id && !x.layer && sharesColumns(x, c));
   if (dir === "up") {
     const above = others.filter((x) => x.y + x.h <= c.y).sort((a, b) => b.y + b.h - (a.y + a.h))[0];
     if (!above) return cells;
@@ -85,6 +90,8 @@ export function moveBy(cells: Cell[], id: string, dir: "up" | "down" | "left" | 
 /** Tambah item baru di posisi tertentu (atau paling bawah bila `at` kosong). */
 export function insert(cells: Cell[], cell: Cell, at?: { x: number; y: number }): Cell[] {
   const bottom = cells.reduce((m, c) => Math.max(m, c.y + c.h), 0);
+  // Lapisan baru tanpa posisi: tutupi seluruh halaman dari atas (latar halaman penuh).
+  if (cell.layer && !at) return place(cells, { ...cell, x: 0, y: 0, w: COLS, h: Math.max(cell.h, bottom) });
   return place([...cells, clamp({ ...cell, ...(at ?? { x: 0, y: bottom }) })], clamp({ ...cell, ...(at ?? { x: 0, y: bottom }) }));
 }
 

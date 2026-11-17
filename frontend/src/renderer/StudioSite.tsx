@@ -22,10 +22,11 @@ import { pluginDef } from "@/studio/plugins";
 import { bandSpans } from "./bands";
 import { InkLayer } from "./ink";
 import { PublicNav, type NavLink } from "./PublicNav";
+import { BackgroundLayer, isLayer, layerImage, mobileRows } from "./layers";
 import { SiteFooter } from "./SiteFooter";
 import { fontStack, primaryVars, safeColor, text, waLink } from "./safe";
 import { Site, type GridProduct, hasPublicContent } from "./Site";
-import type { Business, OpenStatus } from "./types";
+import type { Business, OpenStatus, SectionType } from "./types";
 import { t as tx, tmap } from "@/i18n";
 
 /** Halaman terbit yang bisa ditautkan dari navigasi (dari `/public/site`). */
@@ -134,17 +135,20 @@ function hiddenReason(b: BlockV2): string {
     case "contact": return tx("Tidak tampil di situs — isi WhatsApp, telepon, atau email di Profil bisnis.");
     case "gallery": return tx("Tidak tampil di situs — tambahkan foto ke galeri.");
     case "whatsapp": return tx("Tidak tampil di situs — isi nomor WhatsApp di Profil bisnis.");
+    case "background": return tx("Tidak tampil di situs — pasang gambar latar.");
     default: return tx("Tidak tampil di situs.");
   }
 }
 
 function publicBlock(b: BlockV2, props: StudioSiteProps): boolean {
+  if (isLayer(b)) return !!layerImage(b, props.assetUrl);
   if (b.kind === "whatsapp") return !!whatsappHref(props.business.profile.whatsapp ?? props.business.profile.phone, text(b.data.message));
   return hasPublicContent(b.kind, b.data, props.business, props.assetUrl);
 }
 
 function Block({ b, props }: { b: BlockV2; props: StudioSiteProps }) {
   let body: ReactNode;
+  if (isLayer(b)) return <BackgroundLayer b={b} assetUrl={props.assetUrl} editing={props.mode === "studio-edit"} />;
   if (b.kind === "text") body = <div className="site s-solo"><section className="s"><div className="s-inner"><TextBlock b={b} /></div></section></div>;
   else if (b.kind === "whatsapp") body = <div className="site s-solo"><section className="s"><div className="s-inner"><WhatsAppButton b={b} business={props.business} /></div></section></div>;
   else if (b.kind === "chatbot") {
@@ -167,7 +171,7 @@ function Block({ b, props }: { b: BlockV2; props: StudioSiteProps }) {
             background_position: props.doc.theme.background_position,
             background_opacity: props.doc.theme.background_opacity,
           },
-          sections: [{ id: b.id, type: b.kind, enabled: true, data: b.data }],
+          sections: [{ id: b.id, type: b.kind as SectionType, enabled: true, data: b.data }],
         }}
         business={props.business}
         status={props.status}
@@ -215,9 +219,14 @@ export function StudioSite(props: StudioSiteProps) {
   const navStyle = doc.theme.navbar_style === "side" ? "side" : "top";
   const isSideNav = navStyle === "side";
   // Situs publik: blok tanpa data toko (jam/alamat/kontak/galeri kosong, WhatsApp tanpa nomor) tidak dirender.
-  const grid = mobileSorted(doc.blocks.filter((b) => !isEmbed(b) && (editing || publicBlock(b, props))));
+  const visible = mobileSorted(doc.blocks.filter((b) => !isEmbed(b) && (editing || publicBlock(b, props))));
+  // Latar dirender lebih dulu (dan z-index di bawah blok): tidak pernah menimpa plugin lain.
+  const layers = visible.filter(isLayer);
+  const grid = visible.filter((b) => !isLayer(b));
   const anchors = anchorsFor(grid);
   const spans = bandSpans(grid);
+  const mrows = mobileRows(visible);
+  const layerSelected = editing && layers.some((b) => b.id === props.selectedId);
   const chat = doc.blocks.find((b) => b.kind === "chatbot" && isEmbed(b));
   const wa = doc.blocks.find((b) => b.kind === "whatsapp" && isEmbed(b));
   const bgUrl = doc.theme.background_image ? (props.assetUrl(doc.theme.background_image) ?? doc.theme.background_image) : undefined;
@@ -238,7 +247,7 @@ export function StudioSite(props: StudioSiteProps) {
   } as CSSProperties;
   return (
     <div
-      className={`sv2 site${isSideNav ? " s-has-side-nav" : ""}${editing ? " sf-editing" : ""}${chat?.layout === "bar" ? " s-dock-bar" : chat || wa ? " s-dock-float" : ""}`}
+      className={`sv2 site${isSideNav ? " s-has-side-nav" : ""}${editing ? " sf-editing" : ""}${layerSelected ? " sf-layer-sel" : ""}${chat?.layout === "bar" ? " s-dock-bar" : chat || wa ? " s-dock-float" : ""}`}
       data-surface={doc.theme.surface ?? "light"}
       data-mode={mode}
       style={style}
@@ -272,6 +281,25 @@ export function StudioSite(props: StudioSiteProps) {
         />
         <div className="sv2-main">
           <div className="sv2-grid">
+            {layers.map((b) => {
+              const under = grid.some((g) => g.hide_on !== "mobile" && g.x < b.x + b.w && b.x < g.x + g.w && g.y < b.y + b.h && b.y < g.y + g.h);
+              const cellStyle = {
+                gridColumn: `${b.x + 1} / span ${b.w}`,
+                gridRow: `${b.y + 1} / span ${b.h}`,
+                ["--mrow" as string]: mrows.get(b.id),
+                minHeight: b.h * 36,
+              } as CSSProperties;
+              const body = <Block b={b} props={props} />;
+              return (
+                <div key={b.id} id={b.id} className="sv2-block" data-kind={b.kind} data-layer={under ? "cover" : "own"} data-hide={b.hide_on} style={cellStyle} aria-hidden="true">
+                  {editing ? (
+                    <EditableBlockWrapper blockId={b.id} label={pluginDef(b.kind).name} selected={props.selectedId === b.id} locked={b.locked} onSelect={() => props.onSelect?.(b.id)}>
+                      {body}
+                    </EditableBlockWrapper>
+                  ) : body}
+                </div>
+              );
+            })}
             <InkLayer strokes={inkFor(doc, "background")} viewWidth={DESIGN_WIDTH} className="sv2-ink-bg" />
             {grid.map((b, i) => {
               const body = (
@@ -285,6 +313,7 @@ export function StudioSite(props: StudioSiteProps) {
                 gridColumn: `${b.x + 1} / span ${b.w}`,
                 gridRow: `${b.y + 1} / span ${spans.get(b.id) ?? b.h}`,
                 ["--order" as string]: i,
+                ["--mrow" as string]: mrows.get(b.id),
                 // Tinggi manual (auto_height=false) dipertahankan persis seperti di editor (baris 24 px + celah 12 px).
                 ...(b.auto_height === false ? { minHeight: b.h * 36 } : {}),
               } as CSSProperties;

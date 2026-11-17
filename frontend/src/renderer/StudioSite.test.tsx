@@ -347,3 +347,29 @@ describe("isolasi gaya kanvas", () => {
     expect(html).toContain('data-surface="dark"');
   });
 });
+
+describe("plugin Latar (lapisan tembus)", () => {
+  const page: PageV2 = { schema_version: 2, template: "t", theme: { primary: "#C2410C", font: "inter" }, blocks: [
+    { id: "a", kind: "text", x: 0, y: 0, w: 6, h: 4, style: "plain", data: { body: "A" } },
+    { id: "b", kind: "text", x: 6, y: 0, w: 6, h: 4, style: "plain", data: { body: "B" } },
+    { id: "c", kind: "text", x: 0, y: 8, w: 12, h: 4, style: "plain", data: { body: "C" } },
+    { id: "latar", kind: "background", x: 0, y: 0, w: 12, h: 6, style: "card", data: { image: "asset:11111111-1111-1111-1111-111111111111", fit: "stretch", position: "top", opacity: 70 } },
+    { id: "kosong", kind: "background", x: 0, y: 20, w: 6, h: 4, style: "plain", data: {} },
+  ] };
+  const asset = (r: string) => (r.startsWith("asset:") ? "/files/bg.webp" : undefined);
+  const html = renderToStaticMarkup(<StudioSite doc={page} business={biz} assetUrl={asset} />);
+  it("dirender paling awal di grid (di belakang blok), dengan gaya isi yang dipilih", () => {
+    const grid = html.slice(html.indexOf('class="sv2-grid"'));
+    expect(grid.indexOf('id="latar"')).toBeLessThan(grid.indexOf('id="a"'));
+    expect(html).toMatch(/id="latar"[^>]*data-layer="cover"/);
+    expect(html).toContain('background-size:100% 100%');
+    expect(html).toContain('background-position:top');
+    expect(html).toContain("opacity:0.7");
+    expect(html).toContain("data-round");
+  });
+  it("situs publik: latar tanpa gambar tidak dirender; baris ponsel membentang di belakang blok yang ditumpuk", () => {
+    expect(html).not.toContain('id="kosong"');
+    expect(html).toMatch(/id="latar"[^>]*style="[^"]*--mrow:1 \/ 3/);
+    expect(html).toMatch(/id="c"[^>]*style="[^"]*--mrow:3/);
+  });
+});

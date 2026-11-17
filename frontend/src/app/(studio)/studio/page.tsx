@@ -25,7 +25,7 @@ import { fontStack, primaryVars, safeColor } from "@/renderer/safe";
 import { FONT_PRESETS } from "@/renderer/sections";
 import type { Business,PageContent,SectionType } from "@/renderer/types";
 import { DEVICE_LABEL, DEVICE_WIDTH, type DeviceViewport } from "@/studio/DeviceFrame";
-import { COLS, insert, moveBy, place } from "@/studio/grid";
+import { COLS, height, insert, moveBy, place } from "@/studio/grid";
 import { commit, redo, start, undo, type History } from "@/studio/history";
 import { PLUGINS, needsUpgrade, pluginDef, pluginPlan, type PluginKind } from "@/studio/plugins";
 import { PluginIcon } from "@/studio/PluginIcon";
@@ -268,16 +268,6 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
     update((s) => ({ ...s, ...patch }), "theme");
   }, [update]);
 
-  const uploadBg = useCallback(async (file: File): Promise<string | null> => {
-    const id0 = toast.info(tx("Mengunggah foto latar…"));
-    const u = await assets.upload(file);
-    dismissToast(id0);
-    if (!u) return null;
-    update((s) => ({ ...s, backgroundImage: u.ref }), "bg");
-    toast.ok(tx("Foto latar dipasang."));
-    return u.ref;
-  }, [assets, update]);
-
   /* ---------------- Coretan Bebas (Brush & Eraser) ---------------- */
   const addStroke = useCallback((stroke: DrawingStroke) => {
     update((s) => ({ ...s, drawings: [...(s.drawings ?? []), stroke] }), "draw");
@@ -357,6 +347,21 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
     if (SINGLE.includes(kind) && st?.cells.some((c) => c.kind === kind)) { toast.info(tx("{0} sudah ada di halaman.", pluginDef(kind).name)); return; }
     const c = cellFor(kind);
     update((s) => ({ ...s, installed: s.installed.includes(kind) ? s.installed : [...s.installed, kind], cells: insert(s.cells, c, at) as StudioCell[] }), "");
+    setSel(c.id);
+  }
+  /** Tema → plugin Latar. Gambar latar tema lama (yang tidak pernah terlihat) dipindah ke plugin dan
+   *  dihapus dari tema supaya tidak ada dua sumber latar. */
+  function addBackground() {
+    const c = cellFor("background");
+    update((s) => {
+      const legacy = s.backgroundImage;
+      const cell = legacy ? { ...c, data: { ...c.data, image: legacy } } : c;
+      return {
+        ...s, backgroundImage: undefined, backgroundSize: undefined, backgroundPosition: undefined, backgroundOpacity: undefined,
+        installed: s.installed.includes("background") ? s.installed : [...s.installed, "background"],
+        cells: insert(s.cells, cell) as StudioCell[],
+      };
+    }, "");
     setSel(c.id);
   }
   function remove(id: string) {
@@ -621,6 +626,7 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
               onFull={() => setFull(selected.id)}
               onPhoto={(f) => void putPhoto(selected.id, f)}
               onCrop={() => cropOf(selected)}
+              onCoverPage={() => update((s) => ({ ...s, cells: place(s.cells, { ...selected, x: 0, y: 0, w: COLS, h: Math.max(selected.minH ?? 2, height(s.cells.filter((x) => !isEmbed(x) && !x.layer))) }) as StudioCell[] }), "")}
               aiHref={`/ai?tenant=${ctx.tenant.id}`}
               businessHref={`/business?tenant=${ctx.tenant.id}`}
               chatReady={chatReady}
@@ -637,7 +643,7 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
               onUpgradeClick={() => window.open(`/subscription?tenant=${ctx.tenant.id}`, "_self")}
             />
           ) : activeTab === "theme" ? (
-            <ThemePanel config={themeConfig} onChange={updateTheme} onUploadBackground={uploadBg} assetUrl={assets.url}
+            <ThemePanel config={themeConfig} onChange={updateTheme} onAddBackground={addBackground}
               isPro={planCode === "pro"} onUpgradeClick={() => window.open(`/subscription?tenant=${ctx.tenant.id}`, "_self")} />
           ) : activeTab === "draw" ? (
             <DrawPanel

@@ -35,11 +35,14 @@ export const EXTRA_LIMITS: Partial<Record<PluginKind, Record<string, { max: numb
   chatbot: { title: { max: 40, required: true }, welcome: { max: 300 } },
   text: { title: { max: 120 }, body: { max: 5000, required: true } },
   whatsapp: { label: { max: 40, required: true }, message: { max: 300 } },
+  background: {},
 };
 /** Satu per halaman (ADR-0019 max_per_page). */
 export const SINGLE: PluginKind[] = ["chatbot", "whatsapp"];
 /** Plugin yang punya satu foto utama (diganti saat foto dijatuhkan). Galeri: foto ditambahkan. */
-export const IMAGE_KEY: Partial<Record<PluginKind, string>> = { hero: "image", about: "image", promotion: "image" };
+export const IMAGE_KEY: Partial<Record<PluginKind, string>> = { hero: "image", about: "image", promotion: "image", background: "image" };
+/** Lapisan "tembus" di belakang blok lain (server: `is_layer`). */
+export const isLayerKind = (k: PluginKind) => k === "background";
 export const takesPhoto = (k: PluginKind) => k in IMAGE_KEY || k === "gallery";
 
 export function cellFor(kind: PluginKind, data?: { [k: string]: Json }): StudioCell {
@@ -48,7 +51,8 @@ export function cellFor(kind: PluginKind, data?: { [k: string]: Json }): StudioC
     id: newId(kind), kind, x: 0, y: 0, w: d.w, h: d.h, minW: d.minW, minH: d.minH,
     data: data ?? (EXTRA_DATA[kind] ? { ...EXTRA_DATA[kind] } : defaultData(kind as SectionType)),
     style: kind === "promotion" ? "tint" : kind === "chatbot" ? "card" : "plain",
-    layout: d.layouts?.[0]?.value, autoH: true, chatOpen: true,
+    layout: d.layouts?.[0]?.value, autoH: !isLayerKind(kind), chatOpen: true,
+    ...(isLayerKind(kind) ? { layer: true } : {}),
   };
 }
 

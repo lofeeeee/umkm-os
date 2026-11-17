@@ -84,7 +84,7 @@ export function toDoc(st: StudioState, template: string): PageV2 {
     while (used.has(id)) id = `${id.slice(0, 36)}-${used.size}`;
     used.add(id);
     idMap.set(c.id, id);
-    const b: BlockV2 = { id, kind: c.kind, x: c.x, y: c.y, w: c.w, h: c.h, style: c.style, data: c.data, auto_height: c.autoH !== false };
+    const b: BlockV2 = { id, kind: c.kind, x: c.x, y: c.y, w: c.w, h: c.h, style: c.style, data: c.data, auto_height: !c.layer && c.autoH !== false };
     if (c.locked) b.locked = true;
     if (hasLayouts(c.kind) && c.layout) b.layout = c.layout;
     if (c.kind === "chatbot") b.chat_open = c.chatOpen !== false;
@@ -148,7 +148,7 @@ export function fromDoc(doc: PageV2, minSize: (k: PluginKind) => { minW: number;
   const cells: TplCell[] = doc.blocks.map((b) => ({
     id: b.id, kind: b.kind, x: b.x, y: b.y, w: b.w, h: b.h, ...minSize(b.kind),
     style: b.style, data: b.data, layout: b.layout, autoH: b.auto_height !== false, chatOpen: b.chat_open !== false,
-    locked: b.locked || undefined, hideOn: b.hide_on,
+    locked: b.locked || undefined, hideOn: b.hide_on, ...(b.kind === "background" ? { layer: true, autoH: false } : {}),
   }));
   return {
     primary: doc.theme.primary,

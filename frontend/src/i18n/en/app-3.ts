@@ -80,8 +80,6 @@ export const APP_3: Record<string, string> = {
   "Draf diubah di tempat lain (tab atau perangkat lain). Muat ulang halaman untuk melihat versi terbaru.": "The draft was changed elsewhere (another tab or device). Reload the page to see the latest version.",
   "Halaman {0} dibuat.": "Page {0} created.",
   "Halaman dihapus.": "Page deleted.",
-  "Mengunggah foto latar…": "Uploading background photo…",
-  "Foto latar dipasang.": "Background photo set.",
   "Semua coretan dihapus. Tekan Ctrl+Z untuk membatalkan.": "All drawings deleted. Press Ctrl+Z to undo.",
   "Draf belum tersimpan, jadi belum bisa diterbitkan.": "The draft isn't saved yet, so it can't be published.",
   "Website diterbitkan. Pengunjung melihat versi baru dalam ±1 menit.": "Website published. Visitors see the new version within about a minute.",

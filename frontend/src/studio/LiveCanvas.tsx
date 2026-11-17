@@ -47,8 +47,22 @@ interface Gesture {
   zoom: number;
   /** Susunan hasil jatuhan (null = tidak berubah). */
   result: TplCell[] | null;
+  /** Tinggi tiap baris grid (px CSS) saat gerakan dimulai — untuk menaruh latar di baris yang tepat. */
+  tracks: number[];
 }
 interface Insert { left: number; top: number; width: number }
+
+/** Garis baris grid terdekat dari `px` (px CSS dari atas grid). Di bawah baris terakhir: ROW + GAP per baris. */
+export function lineAt(tracks: number[], px: number): number {
+  if (px <= 0) return 0;
+  let top = 0;
+  for (let i = 0; i < tracks.length; i++) {
+    const bottom = top + tracks[i]!;
+    if (px < bottom) return px - top < bottom - px ? i : i + 1;
+    top = bottom;
+  }
+  return tracks.length + Math.max(0, Math.round((px - top) / (ROW + GAP)));
+}
 
 export interface LiveCanvasProps {
   device: DeviceViewport;
@@ -151,7 +165,8 @@ export function LiveCanvas(p: LiveCanvasProps) {
 
   const gridEl = () => wrap.current?.querySelector<HTMLElement>(".sv2-grid") ?? null;
   const blockEl = (id: string) => wrap.current?.querySelector<HTMLElement>(`.sv2-grid [data-block-id="${CSS.escape(id)}"]`) ?? null;
-  const isStacked = (g: HTMLElement) => getComputedStyle(g).display !== "grid";
+  /** Ponsel: grid satu kolom (blok ditumpuk). */
+  const isStacked = (g: HTMLElement) => { const cs = getComputedStyle(g); return cs.display !== "grid" || cs.gridTemplateColumns.trim().split(/\s+/).length < 2; };
   /** Jarak antarkolom dalam px LAYAR (celah 12 px CSS ikut diperkecil zoom). */
   const pitchOf = (g: HTMLElement) => { const w = g.getBoundingClientRect().width; const z = zoomOf(g); return (w - GAP * z * (COLS - 1)) / COLS + GAP * z; };
 
@@ -160,6 +175,8 @@ export function LiveCanvas(p: LiveCanvasProps) {
     const gr = g.getBoundingClientRect();
     const out: Rect[] = [];
     for (const c of latest.current.cells) {
+      // Latar tidak ikut menentukan slot sisip blok lain (blok boleh jatuh di atasnya).
+      if (c.layer) continue;
       const el = blockEl(c.id);
       if (!el) continue;
       const r = el.getBoundingClientRect();
@@ -206,6 +223,22 @@ export function LiveCanvas(p: LiveCanvasProps) {
     const o = G.orig;
     let next: TplCell;
     let key: string;
+    if (o.layer && G.mode !== "resize-x") {
+      // Latar: bebas di posisi kursor (tidak menyisip/mendorong blok lain). Baris dipetakan dari tinggi
+      // baris grid sebenarnya, karena tinggi baris mengikuti isi blok.
+      const px = (ev.clientY - gr.top) / G.zoom;
+      if (G.mode === "move") {
+        const col = Math.max(0, Math.min(COLS - o.w, Math.round((ev.clientX - gr.left - G.grabDx) / G.pitch)));
+        next = { ...o, x: col, y: lineAt(G.tracks, px - G.grabDy / G.zoom) };
+      } else {
+        next = { ...o, h: Math.max(o.minH ?? 2, lineAt(G.tracks, px) - o.y) };
+      }
+      key = `l${next.x},${next.y},${next.h}`;
+      if (key === G.last) return;
+      G.last = key;
+      latest.current.onCellsChange(place(G.base, next) as TplCell[]);
+      return;
+    }
     if (G.mode === "move") {
       // Blok mengikuti kursor 1:1 (transform langsung di DOM — halus, tanpa render ulang React).
       const scrolled = (G.frame?.scrollTop ?? 0) - G.scroll0;
@@ -290,6 +323,7 @@ export function LiveCanvas(p: LiveCanvasProps) {
       rects: snapshot(g), pitch: pitchOf(g), grabDx: e.clientX - br.left, grabDy: e.clientY - br.top, relLeft: br.left - gr.left, relTop: br.top - gr.top,
       k: DESIGN_WIDTH / gr.width, last: "", frame, scroll0: frame?.scrollTop ?? 0,
       outer: el.closest<HTMLElement>(".sv2-block") ?? el, height: br.height, result: null, zoom: zoomOf(g),
+      tracks: getComputedStyle(g).gridTemplateRows.split(/\s+/).map(parseFloat).filter(Number.isFinite),
     };
     const up = () => {
       const G = gesture.current;

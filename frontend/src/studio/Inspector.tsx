@@ -16,8 +16,9 @@ import { Alert } from "@/dashboard/shell";
 import { t as tx } from "@/i18n";
 import { Tr } from "@/i18n/react";
 import { type StudioCell, isEmbed, SINGLE, IMAGE_KEY, takesPhoto } from "@/studio/editor-model";
+import { BackgroundFields } from "@/studio/BackgroundFields";
 
-export function Inspector({ c, onBack, onChange, onWidth, onMove, onLayout, onDuplicate, onRemove, onFull, onPhoto, onCrop, aiHref, businessHref, chatReady, upgradeHref }: {
+export function Inspector({ c, onBack, onChange, onWidth, onMove, onLayout, onDuplicate, onRemove, onFull, onPhoto, onCrop, onCoverPage, aiHref, businessHref, chatReady, upgradeHref }: {
   c: StudioCell;
   onBack: () => void;
   onChange: (patch: Partial<StudioCell>, key?: string) => void;
@@ -29,6 +30,8 @@ export function Inspector({ c, onBack, onChange, onWidth, onMove, onLayout, onDu
   onFull: () => void;
   onPhoto: (f: File) => void;
   onCrop?: () => void;
+  /** Plugin Latar: bentangkan ke seluruh halaman. */
+  onCoverPage?: () => void;
   aiHref: string;
   businessHref: string;
   /** Chatbot aktif di Asisten AI? null = belum diketahui. */
@@ -37,6 +40,7 @@ export function Inspector({ c, onBack, onChange, onWidth, onMove, onLayout, onDu
   upgradeHref: string | null;
 }) {
   const def = pluginDef(c.kind);
+  const layer = !!c.layer;
   return (
     <>
       <div className="d-row d-row-between">
@@ -53,7 +57,8 @@ export function Inspector({ c, onBack, onChange, onWidth, onMove, onLayout, onDu
           <Link href={upgradeHref}>{tx("Lihat paket")}</Link>
         </div></div>
       )}
-      {c.kind !== "chatbot" && <p className="d-hint u-m-0">{tx("Klik teks di kanvas untuk mengetik langsung.")}{takesPhoto(c.kind) && tx(" Seret foto dari komputer ke blok untuk memasangnya.")}</p>}
+      {layer && <p className="d-hint u-m-0">{tx("Latar selalu berada di belakang blok lain dan tidak pernah menutupinya. Saat latar dipilih, blok lain dibuat tembus pandang supaya latar mudah diseret dan diubah ukurannya — tekan Esc bila selesai.")}</p>}
+      {c.kind !== "chatbot" && !layer && <p className="d-hint u-m-0">{tx("Klik teks di kanvas untuk mengetik langsung.")}{takesPhoto(c.kind) && tx(" Seret foto dari komputer ke blok untuk memasangnya.")}</p>}
       {!isEmbed(c) && <div className="st-section">
         <label className="d-switch">
           <input type="checkbox" checked={!!c.locked} onChange={(e) => onChange({ locked: e.target.checked }, "")} />
@@ -72,12 +77,14 @@ export function Inspector({ c, onBack, onChange, onWidth, onMove, onLayout, onDu
             <button key={w} type="button" className="u-grow" aria-pressed={c.w === w} disabled={w < (c.minW ?? 2) || !!c.locked} onClick={() => onWidth(w)}>{l}</button>
           ))}
         </div>
-        <label className="d-switch u-mt-2">
+        {!layer && <label className="d-switch u-mt-2">
           <input type="checkbox" checked={c.autoH !== false} onChange={(e) => onChange({ autoH: e.target.checked }, "")} />
           <span><strong>{tx("Tinggi otomatis")}</strong><span className="d-muted">{tx("Kotak mengikuti panjang isi sehingga tidak terpotong. Mati otomatis bila tinggi ditarik manual.")}</span></span>
-        </label>
+        </label>}
         <div className="d-row">
-          <button type="button" className="d-btn d-btn-sm" onClick={onFull}><ArrowsOut weight="bold" aria-hidden="true" />{tx("Lihat penuh")}</button>
+          {layer
+            ? onCoverPage && <button type="button" className="d-btn d-btn-sm" disabled={!!c.locked} onClick={onCoverPage}><ArrowsOut weight="bold" aria-hidden="true" />{tx("Tutupi seluruh halaman")}</button>
+            : <button type="button" className="d-btn d-btn-sm" onClick={onFull}><ArrowsOut weight="bold" aria-hidden="true" />{tx("Lihat penuh")}</button>}
           {takesPhoto(c.kind) && (
             <label className="d-btn d-btn-sm"><ImageSquare weight="bold" aria-hidden="true" />{c.kind === "gallery" ? tx("Tambah foto") : tx("Ganti foto")}
               <input type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) onPhoto(f); }} />
@@ -89,7 +96,7 @@ export function Inspector({ c, onBack, onChange, onWidth, onMove, onLayout, onDu
             </button>
           )}
         </div>
-        {takesPhoto(c.kind) && (
+        {takesPhoto(c.kind) && !layer && (
           <div className="u-mt-3">
             <div className="d-field u-m-0 u-mb-2">
               <span>{tx("Tampilan foto")}</span>
@@ -109,6 +116,7 @@ export function Inspector({ c, onBack, onChange, onWidth, onMove, onLayout, onDu
           </div>
         )}
       </div>}
+      {layer ? <BackgroundFields c={c} onChange={onChange} /> : <>
       <div className="st-section">
         <h3>{tx("Gaya")}</h3>
         <div className="st-styles" role="group" aria-label={tx("Gaya")}>
@@ -180,6 +188,7 @@ export function Inspector({ c, onBack, onChange, onWidth, onMove, onLayout, onDu
           </>
         )}
       </div>
+      </>}
     </>
   );
 }

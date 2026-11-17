@@ -44,7 +44,7 @@ pub const MAX_DRAWING_STROKES: usize = 200;
 pub const MAX_STROKE_POINTS: usize = 1000;
 
 /// Plugin resmi (ADR-0019). Data 9 jenis pertama memakai aturan section v1.
-pub const PLUGIN_KINDS: [&str; 12] = [
+pub const PLUGIN_KINDS: [&str; 13] = [
     "hero",
     "about",
     "product_grid",
@@ -57,12 +57,25 @@ pub const PLUGIN_KINDS: [&str; 12] = [
     "text",
     "chatbot",
     "whatsapp",
+    "background",
 ];
 /// Gaya kotak blok. `soft` = 3D lembut (neumorphism), `flat` = 2D datar tanpa bayangan.
 pub const STYLES: [&str; 6] = ["plain", "card", "tint", "dark", "soft", "flat"];
 pub const SURFACES: [&str; 3] = ["light", "cream", "dark"];
 pub const TEXT_SCALES: [f64; 3] = [0.9, 1.0, 1.1];
 pub const HIDE_ON: [&str; 2] = ["mobile", "desktop"];
+
+/// Plugin Latar: cara gambar mengisi kotak. `crop` = selalu penuh, sisi yang lebih dipotong saat lebar layar
+/// berubah; `stretch` = gambar utuh ikut melar/menyusut mengikuti kotak.
+pub const BACKGROUND_FITS: [&str; 2] = ["crop", "stretch"];
+pub const IMAGE_POSITIONS: [&str; 5] = ["center", "top", "bottom", "left", "right"];
+/// Foto plugin (Banner/Tentang/Promo/Galeri): penuhi kotak vs tampil utuh.
+pub const IMAGE_FITS: [&str; 2] = ["cover", "contain"];
+
+/// Lapisan "tembus": berada di belakang blok lain sehingga boleh tumpang tindih (tidak ikut cek tabrakan).
+pub fn is_layer(kind: &str) -> bool {
+    kind == "background"
+}
 
 /// Varian tata letak per plugin; plugin tanpa varian tidak boleh mengirim `layout`.
 pub fn layouts(kind: &str) -> &'static [&'static str] {
@@ -456,7 +469,7 @@ fn blocks(v: &mut V, items: &[Value]) {
         if let (Some(x), Some(y), Some(w), Some(h)) = (x, y, w, h) {
             if x + w > COLS {
                 v.err(&join(&p, "w"), "out_of_bounds");
-            } else if !is_embed(kind, layout) {
+            } else if !is_embed(kind, layout) && !is_layer(kind) {
                 grid.push((i, Rect { x, y, w, h }));
             }
         }
@@ -497,6 +510,16 @@ fn data(v: &mut V, kind: &str, d: &Value, p: &str) {
                 v.text(m, p, "message", 300, false);
             }
         }
+        "background" => {
+            if let Some(m) = v.object(d, p, &["image", "fit", "position", "opacity"]) {
+                v.asset(m, p, "image", false);
+                enum_opt(v, m, p, "fit", &BACKGROUND_FITS);
+                enum_opt(v, m, p, "position", &IMAGE_POSITIONS);
+                if m.contains_key("opacity") {
+                    v.int(m, p, "opacity", 0, 100);
+                }
+            }
+        }
         "hero" | "about" | "promotion" | "gallery" => {
             // Validasi field v2 (alt) lalu serahkan sisanya ke aturan v1 tanpa field tersebut.
             let Value::Object(m) = d else {
@@ -504,20 +527,39 @@ fn data(v: &mut V, kind: &str, d: &Value, p: &str) {
                 return;
             };
             let mut base = m.clone();
+            // Studio: tampilan foto (`image_fit`/`image_position`) — field v2, divalidasi di sini.
             if kind != "gallery" {
                 v.text(m, p, "image_alt", IMAGE_ALT_MAX, false);
-                base.remove("image_alt");
+                enum_opt(v, m, p, "image_fit", &IMAGE_FITS);
+                enum_opt(v, m, p, "image_position", &IMAGE_POSITIONS);
+                for k in ["image_alt", "image_fit", "image_position"] {
+                    base.remove(k);
+                }
             } else if let Some(Value::Array(items)) = base.get_mut("images") {
                 for (i, it) in items.iter_mut().enumerate() {
                     if let Value::Object(im) = it {
-                        v.text(im, &format!("{p}.images[{i}]"), "alt", IMAGE_ALT_MAX, false);
-                        im.remove("alt");
+                        let ip = format!("{p}.images[{i}]");
+                        v.text(im, &ip, "alt", IMAGE_ALT_MAX, false);
+                        enum_opt(v, im, &ip, "image_fit", &IMAGE_FITS);
+                        enum_opt(v, im, &ip, "image_position", &IMAGE_POSITIONS);
+                        for k in ["alt", "image_fit", "image_position"] {
+                            im.remove(k);
+                        }
                     }
                 }
             }
             v.section_data(kind, &Value::Object(base), p);
         }
         _ => v.section_data(kind, d, p),
+    }
+}
+
+/// Field string opsional yang nilainya harus salah satu dari `allowed`.
+fn enum_opt(v: &mut V, m: &Map<String, Value>, p: &str, key: &str, allowed: &[&str]) {
+    match m.get(key) {
+        None => {}
+        Some(Value::String(s)) if allowed.contains(&s.as_str()) => {}
+        Some(_) => v.err(&join(p, key), "invalid_value"),
     }
 }
 
@@ -789,6 +831,62 @@ mod tests {
         // Dokumen v1 tidak disentuh.
         let mut v1 = json!({"schema_version": 1, "sections": [{"type": "gallery"}]});
         assert_eq!(hide_unentitled_blocks(&mut v1, false, plan), 0);
+    }
+
+    #[test]
+    fn background_layer_may_overlap_blocks_and_validates_its_data() {
+        let img = Uuid::new_v4();
+        let mut bg = block(
+            "latar-1",
+            "background",
+            0,
+            0,
+            12,
+            20,
+            json!({"image": format!("asset:{img}"), "fit": "stretch", "position": "top", "opacity": 80}),
+        );
+        bg["auto_height"] = json!(false);
+        let d = doc(vec![
+            bg,
+            block("a", "text", 0, 0, 6, 4, json!({"body": "x"})),
+            block(
+                "b",
+                "hero",
+                6,
+                2,
+                6,
+                8,
+                json!({"title": "Hai", "image_fit": "contain", "image_position": "top"}),
+            ),
+        ]);
+        let ok = validate_page(&d).expect("lapisan latar boleh menumpuk blok lain");
+        assert!(ok.asset_refs.contains(&img));
+
+        let bad = doc(vec![
+            block(
+                "latar-1",
+                "background",
+                0,
+                0,
+                12,
+                4,
+                json!({"fit": "tile", "opacity": 101, "x": 1}),
+            ),
+            block(
+                "h",
+                "hero",
+                0,
+                4,
+                12,
+                4,
+                json!({"title": "Hai", "image_fit": "zoom"}),
+            ),
+        ]);
+        let c = codes(&bad);
+        assert!(c.contains(&("blocks[0].data.fit".into(), "invalid_value")));
+        assert!(c.contains(&("blocks[0].data.opacity".into(), "out_of_range")));
+        assert!(c.contains(&("blocks[0].data.x".into(), "unknown_field")));
+        assert!(c.contains(&("blocks[1].data.image_fit".into(), "invalid_value")));
     }
 
     #[test]

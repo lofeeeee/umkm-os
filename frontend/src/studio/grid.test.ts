@@ -116,3 +116,30 @@ describe("moveBy — pindah tanpa menyeret (WCAG 2.5.7)", () => {
   });
 });
 
+
+describe("lapisan tembus (plugin Latar)", () => {
+  const blocks = [
+    { id: "a", x: 0, y: 0, w: 6, h: 4 },
+    { id: "b", x: 6, y: 0, w: 6, h: 6 },
+    { id: "c", x: 0, y: 6, w: 12, h: 4 },
+  ];
+  const bg = { id: "bg", x: 0, y: 0, w: 12, h: 3, layer: true };
+  it("tidak bertabrakan, tidak mendorong, dan tidak dirapatkan", () => {
+    const placed = place(blocks, { ...bg, y: 2 });
+    expect(placed.find((c) => c.id === "bg")).toMatchObject({ x: 0, y: 2, w: 12, h: 3 });
+    for (const b of blocks) expect(placed.find((c) => c.id === b.id)).toMatchObject(b);
+    expect(compact([...blocks, { ...bg, y: 9 }]).find((c) => c.id === "bg")!.y).toBe(9);
+  });
+  it("blok lain yang dipindah tidak terhalang lapisan", () => {
+    const out = place([...blocks, bg], { id: "c", x: 0, y: 0, w: 12, h: 4 });
+    expect(out.find((c) => c.id === "bg")).toMatchObject({ x: 0, y: 0, h: 3 });
+    expect(out.find((c) => c.id === "c")!.y).toBe(0);
+  });
+  it("tanpa posisi menutupi seluruh halaman; tombol pindah menggeser satu langkah", () => {
+    const ins = insert(blocks, { ...bg, h: 2 });
+    expect(ins.find((c) => c.id === "bg")).toMatchObject({ x: 0, y: 0, w: 12, h: 10 });
+    const moved = moveBy([...blocks, { ...bg, w: 6 }], "bg", "down");
+    expect(moved.find((c) => c.id === "bg")).toMatchObject({ x: 0, y: 1 });
+    expect(moveBy([...blocks, { ...bg, w: 6 }], "bg", "right").find((c) => c.id === "bg")!.x).toBe(1);
+  });
+});

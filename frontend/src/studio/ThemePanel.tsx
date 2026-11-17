@@ -1,5 +1,4 @@
-import type { ChangeEvent } from "react";
-import { Crown, LockSimple, Trash, UploadSimple } from "@phosphor-icons/react/ssr";
+import { Crown, ImageSquare, LockSimple } from "@phosphor-icons/react/ssr";
 
 import { FONT_LABELS, FONT_PRESETS } from "@/renderer/sections";
 import { PALETTES } from "@/studio/plugins";
@@ -22,8 +21,8 @@ export interface ThemeConfig {
 export interface ThemePanelProps {
   config: ThemeConfig;
   onChange: (patch: Partial<ThemeConfig>) => void;
-  onUploadBackground: (file: File) => Promise<string | null>; // returns asset:uuid
-  assetUrl: (ref: string) => string | undefined;
+  /** Tambah plugin Latar (memindahkan gambar latar tema lama bila ada). */
+  onAddBackground?: () => void;
   className?: string;
   /** Paket Pro: boleh menyembunyikan lencana "Dibuat dengan UMKM OS". */
   isPro?: boolean;
@@ -56,25 +55,11 @@ export const BACKGROUND_POSITION_OPTIONS = [
 export function ThemePanel({
   config,
   onChange,
-  onUploadBackground,
-  assetUrl,
+  onAddBackground,
   className = "",
   isPro = false,
   onUpgradeClick,
 }: ThemePanelProps) {
-  const bgUrl = config.backgroundImage
-    ? assetUrl(config.backgroundImage)
-    : undefined;
-
-  const handleFileUpload = async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const ref = await onUploadBackground(file);
-    if (ref) {
-      onChange({ backgroundImage: ref });
-    }
-  };
-
   return (
     <div className={`st-theme-panel ${className}`.trim()}>
       {/* 1. Navigasi Website (Navbar) */}
@@ -269,127 +254,23 @@ export function ThemePanel({
         </div>
       </div>
 
-      {/* 4. Latar Belakang Gambar & In-Through */}
+      {/* 4. Gambar latar → plugin Latar (lapisan tembus di belakang blok, bisa diseret & diubah ukurannya). */}
       <div className="st-section">
         <h3>{tx("Gambar latar")}</h3>
         <p className="d-hint u-mt-0">
-          {tx("Gunakan gambar latar website toko dan atur transparansi tembus pandang.")}
+          {tx("Gambar latar sekarang berupa plugin Latar: seret, pindah, dan ubah ukurannya di kanvas. Latar selalu berada di belakang blok lain dan tidak pernah menutupinya.")}
         </p>
-
         {config.backgroundImage && (
-          <div
-            className="st-bg-row"
-          >
-            {bgUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element -- Thumbnail pratinjau latar statis / signed
-              <img
-                src={bgUrl}
-                alt={tx("Pratinjau gambar latar")}
-                className="st-bg-thumb"
-              />
-            ) : (
-              <span
-                className="st-bg-thumb st-bg-thumb-empty"
-              />
-            )}
-            <div className="u-grow u-min-w-0">
-              <div
-                className="d-small st-bg-name"
-
-              >
-                {tx("Foto latar aktif")}
-              </div>
-              <button
-                type="button"
-                className="d-btn d-btn-sm d-btn-ghost st-bg-remove"
-                onClick={() => onChange({ backgroundImage: undefined })}
-              >
-                <Trash size={14} weight="bold" aria-hidden="true" />
-                {tx("Hapus latar")}
-              </button>
-            </div>
-          </div>
+          <p className="d-hint u-mt-0">
+            {tx("Halaman ini masih menyimpan gambar latar dari pengaturan lama. Pindahkan ke plugin Latar agar tampil dan bisa diatur.")}
+          </p>
         )}
-
-        <div className="u-mb-3">
-          <label
-            className="d-btn d-btn-sm st-bg-upload"
-
-          >
-            <UploadSimple size={16} weight="bold" aria-hidden="true" />
-            <span>
-              {config.backgroundImage ? tx("Ganti foto latar") : tx("Unggah foto latar")}
-            </span>
-            <input
-              type="file"
-              accept="image/*"
-              className="u-hide"
-              onChange={handleFileUpload}
-            />
-          </label>
-        </div>
-
-        <div className="d-grid u-mb-3">
-          <label className="d-field u-m-0">
-            <span>{tx("Pilihan ukuran")}</span>
-            <select
-              aria-label={tx("Ukuran gambar latar")}
-              value={config.backgroundSize ?? "cover"}
-              onChange={(e) =>
-                onChange({
-                  backgroundSize: e.target.value as
-                    | "cover"
-                    | "contain"
-                    | "repeat",
-                })
-              }
-            >
-              {BACKGROUND_SIZE_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="d-field u-m-0">
-            <span>{tx("Pilihan posisi")}</span>
-            <select
-              aria-label={tx("Posisi gambar latar")}
-              value={config.backgroundPosition ?? "center"}
-              onChange={(e) => onChange({ backgroundPosition: e.target.value })}
-            >
-              {BACKGROUND_POSITION_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-
-        <label className="d-field u-m-0">
-          <span
-            className="st-row-between"
-          >
-            <span>{tx("Kepekatan gambar latar")}</span>
-            <strong>{config.backgroundOpacity ?? 0}%</strong>
-          </span>
-          <input
-            type="range"
-            min={0}
-            max={90}
-            step={5}
-            aria-label={tx("Kepekatan gambar latar")}
-            value={config.backgroundOpacity ?? 0}
-            onChange={(e) =>
-              onChange({ backgroundOpacity: Number(e.target.value) })
-            }
-          />
-          <span className="d-hint u-mt-1">
-            {tx("Transparansi tembus pandang pada blok website")}
-          </span>
-        </label>
+        {onAddBackground && (
+          <button type="button" className="d-btn d-btn-sm" onClick={onAddBackground}>
+            <ImageSquare size={16} weight="bold" aria-hidden="true" />
+            {config.backgroundImage ? tx("Pindahkan ke plugin Latar") : tx("Tambah plugin Latar")}
+          </button>
+        )}
       </div>
     </div>
   );

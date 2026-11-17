@@ -249,8 +249,10 @@
 .sv2 .s-solo .s { padding: 28px 24px; background: transparent !important; }
 .sv2-block[data-hide="desktop"] { display: none; }
 @container (max-width: 719px) {
-  .sv2-grid { display: flex; flex-direction: column; gap: 12px; }
-  .sv2-block { order: var(--order); }
+  /* Satu kolom, baris eksplisit (--mrow): latar bisa membentang di belakang blok yang ditumpuknya. */
+  .sv2-grid { grid-template-columns: minmax(0, 1fr); row-gap: 12px; }
+  .sv2-grid > .sv2-block { grid-column: 1 / -1 !important; grid-row: var(--mrow) !important; }
+  .sv2-grid > .sv2-block[data-layer="cover"] { min-height: 0 !important; }
   .sv2-block[data-hide="mobile"] { display: none; }
   .sv2-block[data-hide="desktop"] { display: block; }
 }
@@ -498,6 +500,25 @@
 .sv2-block { position: relative; z-index: 1; }
 .sv2-ink { position: absolute; left: 0; top: 0; width: 100%; height: auto; aspect-ratio: 1 / 1; overflow: visible; pointer-events: none; }
 .sv2-ink-bg { z-index: 0; }
+/* Plugin Latar: SELALU di belakang blok lain — juga saat dipilih, di-hover, atau diseret di Studio.
+   Dirender sebelum coretan latar, jadi coretan tetap di atasnya. */
+.sv2 .sv2-grid > .sv2-block[data-layer] { z-index: 0 !important; display: flex; flex-direction: column; }
+.sv2-block[data-layer] > *, .sv2-block[data-layer] .sf-block { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+.sv2-bg { flex: 1 1 auto; min-height: 0; background-repeat: no-repeat; border-radius: inherit; pointer-events: none; }
+.sv2-bg[data-round] { border-radius: 20px; }
+.sv2 .sv2-grid > .sv2-block[data-layer][data-hide="desktop"] { display: none; }
+@container (max-width: 719px) {
+  .sv2 .sv2-grid > .sv2-block[data-layer][data-hide="desktop"] { display: flex; }
+  .sv2 .sv2-grid > .sv2-block[data-layer][data-hide="mobile"] { display: none; }
+}
+.sv2-bg-empty {
+  display: grid; place-items: center; text-align: center; padding: 16px; color: var(--s-muted, #63636e); font-size: 0.8125rem;
+  background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--s-ink, #18181b) 6%, transparent) 0 10px, transparent 10px 20px);
+  border: 1.5px dashed color-mix(in srgb, var(--s-ink, #18181b) 22%, transparent); border-radius: 16px;
+}
+/* Studio: saat latar dipilih, blok lain menjadi tembus pandang & tembus klik supaya latar bisa diseret
+   dan diubah ukurannya — gambar latar tetap di belakang, tidak pernah menutupi plugin. */
+.sf-layer-sel .sv2-grid > .sv2-block:not([data-layer]) { opacity: 0.4; pointer-events: none; transition: opacity 0.15s ease-out; }
 .sv2-ink-cell { z-index: 4; }
 
 /* ============================================================
