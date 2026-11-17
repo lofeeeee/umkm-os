@@ -88,10 +88,13 @@
    ponsel = bilah atas yang membungkus (layar sempit tidak cukup untuk kolom samping + isi).
    Grid dipasang di `.sv2-shell`, BUKAN di `.sv2` — `.sv2` sendiri adalah container query, dan aturan
    `@container` hanya berlaku untuk keturunannya, bukan elemen container itu sendiri. */
+/* Footer menempel di dasar: shell & kolom isi tumbuh mengisi ruang kosong pada konten pendek. */
+.sv2 > .sv2-shell { flex: 1; }
 .sv2-shell { display: block; }
 .site.s-has-side-nav .sv2-shell {
-  display: grid; grid-template-columns: 210px minmax(0, 1fr); align-items: start;
+  display: grid; grid-template-columns: 210px minmax(0, 1fr); align-items: stretch;
 }
+.sv2-main { flex: 1; }
 .s-nav-side {
   position: sticky; top: 0; align-self: start;
   display: flex; flex-direction: column; gap: 20px;
@@ -219,7 +222,7 @@
 /* ============================================================
    Situs Studio (schema v2, ADR-0017): grid 12 kolom desktop, tumpuk di ponsel.
    ============================================================ */
-.sv2 { container-type: inline-size; --pg-bg: #ffffff; background: var(--pg-bg); min-height: 100vh; padding: 0 0 96px; font-family: var(--s-font); }
+.sv2 { container-type: inline-size; --pg-bg: #ffffff; background: var(--pg-bg); min-height: 100vh; padding: 0 0 96px; font-family: var(--s-font); display: flex; flex-direction: column; }
 .sv2[data-surface="cream"] { --pg-bg: #fbf6ee; }
 .sv2[data-surface="dark"] { --pg-bg: #0d0d12; color-scheme: dark; }
 .sv2 .site { --s-bg: var(--pg-bg); background: transparent; min-height: 0; }
