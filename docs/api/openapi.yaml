@@ -6637,6 +6637,54 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
       security:
       - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/gopay/check:
+    post:
+      tags:
+      - gopay
+      summary: |-
+        Cek & perbarui sesi GoPay sekarang (refresh token). Tidak perlu login ulang selama GoBiz masih
+        menerima refresh token; sesi yang ditandai perlu login ulang dicoba sekali lagi.
+      operationId: check_session
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Hasil pemeriksaan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope_CheckView'
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
   /api/v1/tenants/{tenant_id}/gopay/connect/request-otp:
     post:
       tags:
@@ -12880,6 +12928,28 @@ components:
           $ref: '#/components/schemas/Meta'
         success:
           type: boolean
+    SuccessEnvelope_CheckView:
+      type: object
+      required:
+      - success
+      - data
+      - meta
+      properties:
+        data:
+          allOf:
+          - $ref: '#/components/schemas/StatusView'
+          - type: object
+            required:
+            - result
+            properties:
+              result:
+                type: string
+                description: '`refreshed` | `needs_relogin` | `transient` | `busy`'
+          description: 'Hasil "Cek sekarang": status terbaru + apa yang terjadi saat sesi diperbarui.'
+        meta:
+          $ref: '#/components/schemas/Meta'
+        success:
+          type: boolean
     SuccessEnvelope_CheckoutConfig:
       type: object
       required:
@@ -14709,8 +14779,19 @@ components:
           properties:
             connected:
               type: boolean
+            expires_at_unix:
+              type:
+              - integer
+              - 'null'
+              format: int64
+              description: Kapan token akses saat ini kedaluwarsa (detik epoch).
             has_static_qris:
               type: boolean
+            last_error:
+              type:
+              - string
+              - 'null'
+              description: Kode kegagalan refresh terakhir (mis. `network`, `status_503`); `null` bila terakhir berhasil.
             outlet_name:
               type:
               - string
@@ -14720,6 +14801,14 @@ components:
               - string
               - 'null'
               description: Nomor HP ter-mask, mis. `+62••••7890`.
+            refreshed_at_unix:
+              type:
+              - integer
+              - 'null'
+              format: int64
+              description: |-
+                Kapan token terakhir berhasil diperbarui (detik epoch). Sesi diperbarui otomatis sebelum
+                kedaluwarsa dan minimal tiap 6 jam.
             status:
               type:
               - string

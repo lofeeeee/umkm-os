@@ -171,6 +171,19 @@ async fn run() -> Result<(), BoxError> {
                 Ok(_) => {}
                 Err(e) => tracing::error!(error = %e, "gopay charge expiry failed"),
             }
+            // Penjaga sesi GoPay: perbarui token sebelum kedaluwarsa & minimal tiap 6 jam, walau
+            // tidak ada pesanan — supaya pemilik tidak perlu login ulang.
+            let ka =
+                umkm_infrastructure::gopay::keepalive_due(&pool, &gopay_keyring, &gobiz, 200).await;
+            if ka.due > 0 {
+                tracing::info!(
+                    due = ka.due,
+                    refreshed = ka.refreshed,
+                    relogin = ka.relogin,
+                    transient = ka.transient,
+                    "gopay keep-alive"
+                );
+            }
             let gp = umkm_infrastructure::gopay::poll_due(&pool, &gopay_keyring, &gobiz, 200).await;
             if gp.confirmed > 0 || gp.errors > 0 {
                 tracing::info!(

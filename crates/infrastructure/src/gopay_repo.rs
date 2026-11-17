@@ -40,6 +40,12 @@ pub struct StoredSession {
     pub session: GopaySession,
     pub static_qris: Option<String>,
     pub status: String,
+    /// Kapan token terakhir berhasil diperbarui (epoch-ms); `None` = belum pernah sejak terhubung.
+    pub refreshed_at_ms: Option<i64>,
+    /// Kode kegagalan refresh terakhir (mis. `status_503`), `None` bila terakhir berhasil.
+    pub last_error: Option<String>,
+    /// Gagal-sementara beruntun sejak refresh terakhir yang berhasil.
+    pub refresh_failures: i32,
 }
 
 /// Charge QRIS dinamis satu pesanan.
@@ -77,7 +83,8 @@ pub async fn put_session(
            phone_e164 = EXCLUDED.phone_e164, merchant_id = EXCLUDED.merchant_id,
            outlet_name = EXCLUDED.outlet_name, kek_version = EXCLUDED.kek_version,
            wrapped_dek = EXCLUDED.wrapped_dek, ciphertext = EXCLUDED.ciphertext,
-           status = 'active', expires_at = EXCLUDED.expires_at, updated_at = now()",
+           status = 'active', expires_at = EXCLUDED.expires_at, updated_at = now(),
+           refreshed_at = now(), refresh_failures = 0, last_error = NULL",
     )
     .bind(t.as_uuid())
     .bind(&session.phone_e164)
@@ -101,17 +108,23 @@ pub async fn get_session(
 ) -> Result<Option<StoredSession>, GopayRepoError> {
     let mut tx = tenant_tx(pool, t).await?;
     let row = sqlx::query(
-        "SELECT kek_version, wrapped_dek, ciphertext, static_qris, status
+        "SELECT kek_version, wrapped_dek, ciphertext, static_qris, status,
+                (extract(epoch FROM refreshed_at) * 1000)::bigint AS refreshed_ms,
+                refresh_failures, last_error
          FROM gopay_sessions WHERE tenant_id = $1",
     )
     .bind(t.as_uuid())
     .fetch_optional(&mut *tx)
     .await?;
     tx.commit().await?;
+    row.map(|r| stored_from_row(&r, t, k)).transpose()
+}
 
-    let Some(r) = row else {
-        return Ok(None);
-    };
+fn stored_from_row(
+    r: &sqlx::postgres::PgRow,
+    t: TenantId,
+    k: &Keyring,
+) -> Result<StoredSession, GopayRepoError> {
     let sealed = crypto::Sealed {
         kek_version: r.try_get("kek_version")?,
         wrapped_dek: r.try_get("wrapped_dek")?,
@@ -121,11 +134,128 @@ pub async fn get_session(
         crypto::open(k, &sealed, session_aad(t).as_bytes()).map_err(|_| GopayRepoError::Crypto)?;
     let session: GopaySession =
         serde_json::from_slice(secret.expose()).map_err(|_| GopayRepoError::Crypto)?;
-    Ok(Some(StoredSession {
+    Ok(StoredSession {
         session,
         static_qris: r.try_get("static_qris")?,
         status: r.try_get("status")?,
-    }))
+        refreshed_at_ms: r.try_get("refreshed_ms")?,
+        last_error: r.try_get("last_error")?,
+        refresh_failures: r.try_get("refresh_failures")?,
+    })
+}
+
+// ---- refresh terkunci (keep-alive) ----
+
+/// Sesi yang sedang dikunci untuk diperbarui. Selama transaksi ini hidup, worker/API lain melewati
+/// toko ini (`SKIP LOCKED`), jadi refresh token tidak pernah dirotasi dua kali secara bersamaan —
+/// rotasi ganda membuat salah satu token langsung tidak sah dan memaksa login ulang.
+pub struct RefreshLock {
+    tx: Tx,
+    tenant: TenantId,
+    pub stored: StoredSession,
+}
+
+pub enum LockResult {
+    Locked(Box<RefreshLock>),
+    /// Proses lain sedang memperbarui sesi toko ini.
+    Busy,
+    NotConnected,
+}
+
+/// Kunci baris sesi toko untuk refresh (tanpa menunggu).
+pub async fn lock_for_refresh(
+    pool: &PgPool,
+    t: TenantId,
+    k: &Keyring,
+) -> Result<LockResult, GopayRepoError> {
+    let mut tx = tenant_tx(pool, t).await?;
+    let row = sqlx::query(
+        "SELECT kek_version, wrapped_dek, ciphertext, static_qris, status,
+                (extract(epoch FROM refreshed_at) * 1000)::bigint AS refreshed_ms,
+                refresh_failures, last_error
+         FROM gopay_sessions WHERE tenant_id = $1 FOR UPDATE SKIP LOCKED",
+    )
+    .bind(t.as_uuid())
+    .fetch_optional(&mut *tx)
+    .await?;
+    if let Some(r) = row {
+        let stored = stored_from_row(&r, t, k)?;
+        return Ok(LockResult::Locked(Box::new(RefreshLock {
+            tx,
+            tenant: t,
+            stored,
+        })));
+    }
+    let exists: bool =
+        sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM gopay_sessions WHERE tenant_id = $1)")
+            .bind(t.as_uuid())
+            .fetch_one(&mut *tx)
+            .await?;
+    tx.commit().await?;
+    Ok(if exists {
+        LockResult::Busy
+    } else {
+        LockResult::NotConnected
+    })
+}
+
+impl RefreshLock {
+    /// Simpan token hasil refresh (segel ulang) dan reset penghitung kegagalan, lalu lepas kunci.
+    pub async fn save(mut self, session: &GopaySession, k: &Keyring) -> Result<(), GopayRepoError> {
+        let plain = serde_json::to_vec(session).map_err(|_| GopayRepoError::Crypto)?;
+        let sealed = crypto::seal(k, &plain, session_aad(self.tenant).as_bytes())
+            .map_err(|_| GopayRepoError::Crypto)?;
+        sqlx::query(
+            "UPDATE gopay_sessions SET kek_version = $2, wrapped_dek = $3, ciphertext = $4,
+               expires_at = to_timestamp($5::double precision / 1000.0), status = 'active',
+               refreshed_at = now(), refresh_failures = 0, last_error = NULL, updated_at = now()
+             WHERE tenant_id = $1",
+        )
+        .bind(self.tenant.as_uuid())
+        .bind(sealed.kek_version)
+        .bind(&sealed.wrapped_dek)
+        .bind(&sealed.ciphertext)
+        .bind(session.expires_at_ms)
+        .execute(&mut *self.tx)
+        .await?;
+        self.tx.commit().await?;
+        Ok(())
+    }
+
+    /// Catat kegagalan refresh. `relogin` = GoBiz menolak kredensial secara definitif.
+    pub async fn fail(mut self, code: &str, relogin: bool) -> Result<(), GopayRepoError> {
+        let code: String = code.chars().take(40).collect();
+        sqlx::query(
+            "UPDATE gopay_sessions SET refresh_failures = refresh_failures + 1, last_error = $2,
+               status = CASE WHEN $3 THEN 'needs_relogin' ELSE status END, updated_at = now()
+             WHERE tenant_id = $1",
+        )
+        .bind(self.tenant.as_uuid())
+        .bind(code)
+        .bind(relogin)
+        .execute(&mut *self.tx)
+        .await?;
+        self.tx.commit().await?;
+        Ok(())
+    }
+
+    /// Lepas kunci tanpa perubahan (sesi masih segar).
+    pub async fn release(self) -> Result<(), GopayRepoError> {
+        self.tx.commit().await?;
+        Ok(())
+    }
+}
+
+/// Toko dengan sesi aktif yang perlu diperbarui sekarang (lintas-tenant, untuk worker keep-alive).
+pub async fn refresh_due_tenants(
+    pool: &PgPool,
+    limit: i32,
+) -> Result<Vec<TenantId>, GopayRepoError> {
+    let ids: Vec<Uuid> = sqlx::query_scalar("SELECT app.gopay_refresh_due_tenants($1)")
+        .bind(limit)
+        .fetch_all(pool)
+        .await?;
+    Ok(ids.into_iter().map(TenantId::from_uuid).collect())
 }
 
 /// Atur QRIS statis toko (payload EMVCo tervalidasi). Toko harus sudah terhubung.

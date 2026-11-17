@@ -13,7 +13,7 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use umkm_infrastructure::{
-    gopay::{GobizClient, GobizError, poller::now_ms},
+    gopay::{GobizClient, GobizError, RefreshMode, RefreshOutcome, ensure_fresh, poller::now_ms},
     gopay_repo,
     http_client::{Egress, EgressPolicy, Resolver},
 };
@@ -38,6 +38,50 @@ pub struct StatusView {
     /// Nomor HP ter-mask, mis. `+62••••7890`.
     pub phone_masked: Option<String>,
     pub has_static_qris: bool,
+    /// Kapan token terakhir berhasil diperbarui (detik epoch). Sesi diperbarui otomatis sebelum
+    /// kedaluwarsa dan minimal tiap 6 jam.
+    pub refreshed_at_unix: Option<i64>,
+    /// Kapan token akses saat ini kedaluwarsa (detik epoch).
+    pub expires_at_unix: Option<i64>,
+    /// Kode kegagalan refresh terakhir (mis. `network`, `status_503`); `null` bila terakhir berhasil.
+    pub last_error: Option<String>,
+}
+
+impl StatusView {
+    fn disconnected() -> Self {
+        Self {
+            connected: false,
+            status: None,
+            outlet_name: None,
+            phone_masked: None,
+            has_static_qris: false,
+            refreshed_at_unix: None,
+            expires_at_unix: None,
+            last_error: None,
+        }
+    }
+
+    fn from_stored(s: &gopay_repo::StoredSession, has_static_qris: bool) -> Self {
+        Self {
+            connected: true,
+            status: Some(s.status.clone()),
+            outlet_name: s.session.outlet_name.clone(),
+            phone_masked: Some(mask_phone(&s.session.phone_e164)),
+            has_static_qris,
+            refreshed_at_unix: s.refreshed_at_ms.map(|m| m / 1000),
+            expires_at_unix: Some(s.session.expires_at_ms / 1000),
+            last_error: s.last_error.clone(),
+        }
+    }
+}
+
+/// Hasil "Cek sekarang": status terbaru + apa yang terjadi saat sesi diperbarui.
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct CheckView {
+    /// `refreshed` | `needs_relogin` | `transient` | `busy`
+    pub result: String,
+    #[serde(flatten)]
+    pub status: StatusView,
 }
 
 #[derive(Debug, Clone, Deserialize, ToSchema)]
@@ -151,22 +195,53 @@ pub async fn get_status(
         .await
         .map_err(repo_err)?
     {
-        None => StatusView {
-            connected: false,
-            status: None,
-            outlet_name: None,
-            phone_masked: None,
-            has_static_qris: false,
-        },
-        Some(s) => StatusView {
-            connected: true,
-            status: Some(s.status),
-            outlet_name: s.session.outlet_name.clone(),
-            phone_masked: Some(mask_phone(&s.session.phone_e164)),
-            has_static_qris: qris_ready,
-        },
+        None => StatusView::disconnected(),
+        Some(s) => StatusView::from_stored(&s, qris_ready),
     };
     Ok(Json(SuccessEnvelope::new(view, &id)))
+}
+
+/// Cek & perbarui sesi GoPay sekarang (refresh token). Tidak perlu login ulang selama GoBiz masih
+/// menerima refresh token; sesi yang ditandai perlu login ulang dicoba sekali lagi.
+#[utoipa::path(
+    post, path = "/api/v1/tenants/{tenant_id}/gopay/check", tag = "gopay",
+    params(("tenant_id" = Uuid, Path)),
+    responses((status = 200, description = "Hasil pemeriksaan", body = SuccessEnvelope<CheckView>))
+)]
+pub async fn check_session(
+    State(state): State<AppState>,
+    ReqId(id): ReqId,
+    Member(actor): Member,
+) -> Result<Json<SuccessEnvelope<CheckView>>, ApiError> {
+    actor.require("tenant.update")?;
+    let (p, k) = (pool(&state)?, keyring(&state)?);
+    let result = match ensure_fresh(p, k, &client(), actor.tenant_id, RefreshMode::Force)
+        .await
+        .map_err(repo_err)?
+    {
+        RefreshOutcome::Refreshed(_) | RefreshOutcome::Fresh(_) => "refreshed",
+        RefreshOutcome::NeedsRelogin { .. } => "needs_relogin",
+        RefreshOutcome::Transient { .. } => "transient",
+        RefreshOutcome::Busy => "busy",
+        RefreshOutcome::NotConnected => {
+            return Err(repo_err(gopay_repo::GopayRepoError::NotConnected));
+        }
+    };
+    let qris_ready = crate::commerce::ensure_qris_payload(&state, actor.tenant_id)
+        .await?
+        .qris_static_payload
+        .is_some();
+    let stored = gopay_repo::get_session(p, actor.tenant_id, k)
+        .await
+        .map_err(repo_err)?
+        .ok_or_else(|| repo_err(gopay_repo::GopayRepoError::NotConnected))?;
+    Ok(Json(SuccessEnvelope::new(
+        CheckView {
+            result: result.into(),
+            status: StatusView::from_stored(&stored, qris_ready),
+        },
+        &id,
+    )))
 }
 
 /// Minta OTP ke nomor HP GoBiz toko.
@@ -232,6 +307,9 @@ pub async fn verify_otp(
         outlet_name: session.outlet_name.clone(),
         phone_masked: Some(mask_phone(&session.phone_e164)),
         has_static_qris: qris_ready,
+        refreshed_at_unix: Some(now_ms() / 1000),
+        expires_at_unix: Some(session.expires_at_ms / 1000),
+        last_error: None,
     };
     Ok(Json(SuccessEnvelope::new(view, &id)))
 }
@@ -280,6 +358,9 @@ pub async fn connect_session(
         outlet_name: session.outlet_name.clone(),
         phone_masked: Some(mask_phone(&session.phone_e164)),
         has_static_qris: qris_ready,
+        refreshed_at_unix: Some(now_ms() / 1000),
+        expires_at_unix: Some(session.expires_at_ms / 1000),
+        last_error: None,
     };
     Ok(Json(SuccessEnvelope::new(view, &id)))
 }
@@ -299,22 +380,14 @@ pub async fn disconnect(
     gopay_repo::delete_session(pool(&state)?, actor.tenant_id)
         .await
         .map_err(repo_err)?;
-    Ok(Json(SuccessEnvelope::new(
-        StatusView {
-            connected: false,
-            status: None,
-            outlet_name: None,
-            phone_masked: None,
-            has_static_qris: false,
-        },
-        &id,
-    )))
+    Ok(Json(SuccessEnvelope::new(StatusView::disconnected(), &id)))
 }
 
 pub fn routes() -> Router<AppState> {
     let base = "/api/v1/tenants/{tenant_id}/gopay";
     Router::new()
         .route(base, get(get_status).delete(disconnect))
+        .route(&format!("{base}/check"), post(check_session))
         .route(&format!("{base}/connect/request-otp"), post(request_otp))
         .route(&format!("{base}/connect/verify"), post(verify_otp))
         .route(&format!("{base}/connect/session"), post(connect_session))

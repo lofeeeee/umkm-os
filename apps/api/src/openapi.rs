@@ -96,6 +96,7 @@ use crate::{
         business::put_exceptions,
         business::get_status,
         gopay::get_status,
+        gopay::check_session,
         gopay::request_otp,
         gopay::verify_otp,
         gopay::connect_session,

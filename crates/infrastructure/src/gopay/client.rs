@@ -11,7 +11,7 @@
 use serde_json::{Value, json};
 use umkm_domain::commerce::gopay::{GopayTxn, TxnStatus};
 
-use super::session::{GopaySession, TOKEN_TTL_MS, TokenPair};
+use super::session::{GopaySession, TokenPair, token_expiry_ms};
 use super::time::{iso8601_utc, parse_iso8601_ms};
 use crate::http_client::{Egress, Header, SsrfError};
 
@@ -35,6 +35,26 @@ pub enum GobizError {
     Parse(&'static str),
     #[error("nomor HP tidak valid")]
     BadPhone,
+}
+
+impl GobizError {
+    /// GoBiz menolak kredensial secara definitif (token dicabut/kedaluwarsa, refresh token tidak sah):
+    /// hanya ini yang membuat sesi perlu login ulang. Gangguan jaringan, 5xx, 429, dan respons yang
+    /// tak terurai dianggap sementara — sesi tetap aktif dan dicoba lagi siklus berikutnya.
+    pub fn is_auth_rejected(&self) -> bool {
+        matches!(self, Self::Unauthorized | Self::Status(400 | 403))
+    }
+
+    /// Kode singkat untuk dicatat & ditampilkan (tanpa isi token).
+    pub fn code(&self) -> String {
+        match self {
+            Self::Egress(_) => "network".into(),
+            Self::Unauthorized => "unauthorized".into(),
+            Self::Status(s) => format!("status_{s}"),
+            Self::Parse(_) => "parse".into(),
+            Self::BadPhone => "bad_phone".into(),
+        }
+    }
 }
 
 /// Tantangan OTP yang dikembalikan GoBiz.
@@ -112,13 +132,20 @@ fn deep<'a>(v: &'a Value, key: &str) -> Option<&'a Value> {
 fn parse_token(v: &Value) -> Result<TokenPair, GobizError> {
     let access = deep(v, "access_token")
         .and_then(Value::as_str)
+        .filter(|s| !s.is_empty())
         .ok_or(GobizError::Parse("access_token hilang"))?;
     let refresh = deep(v, "refresh_token")
         .and_then(Value::as_str)
-        .ok_or(GobizError::Parse("refresh_token hilang"))?;
+        .filter(|s| !s.is_empty())
+        .map(str::to_string);
+    let expires_in_secs = deep(v, "expires_in").and_then(|x| {
+        x.as_i64()
+            .or_else(|| x.as_str().and_then(|s| s.trim().parse().ok()))
+    });
     Ok(TokenPair {
         access_token: access.to_string(),
-        refresh_token: refresh.to_string(),
+        refresh_token: refresh,
+        expires_in_secs,
     })
 }
 
@@ -333,6 +360,9 @@ impl GobizClient {
             .await?;
         let v = Self::status_check(resp.status, &resp.body).await?;
         let token = parse_token(&v)?;
+        let refresh_token = token
+            .refresh_token
+            .ok_or(GobizError::Parse("refresh_token hilang"))?;
 
         // Ambil info merchant/outlet (best-effort; gagal tidak membatalkan login).
         let (merchant_id, outlet_name) = self.fetch_merchant(&token.access_token).await;
@@ -341,9 +371,9 @@ impl GobizClient {
             phone_e164: phone_e164.to_string(),
             merchant_id,
             outlet_name,
+            expires_at_ms: token_expiry_ms(&token.access_token, token.expires_in_secs, now_ms),
             access_token: token.access_token,
-            refresh_token: token.refresh_token,
-            expires_at_ms: now_ms + TOKEN_TTL_MS,
+            refresh_token,
         })
     }
 
@@ -361,9 +391,11 @@ impl GobizClient {
             phone_e164: phone_e164.to_string(),
             merchant_id,
             outlet_name,
+            // Token tempelan bisa sudah berumur: pakai `exp` JWT-nya bila ada, jadi refresh pertama
+            // terjadi tepat waktu alih-alih menunggu 401.
+            expires_at_ms: token_expiry_ms(&access_token, None, now_ms),
             access_token,
             refresh_token,
-            expires_at_ms: now_ms + TOKEN_TTL_MS,
         }
     }
 
@@ -418,9 +450,12 @@ impl GobizClient {
         let v = Self::status_check(resp.status, &resp.body).await?;
         let token = parse_token(&v)?;
         Ok(GopaySession {
+            expires_at_ms: token_expiry_ms(&token.access_token, token.expires_in_secs, now_ms),
             access_token: token.access_token,
-            refresh_token: token.refresh_token,
-            expires_at_ms: now_ms + TOKEN_TTL_MS,
+            // Tanpa rotasi: refresh token lama tetap berlaku.
+            refresh_token: token
+                .refresh_token
+                .unwrap_or_else(|| session.refresh_token.clone()),
             ..session.clone()
         })
     }
@@ -485,8 +520,27 @@ mod tests {
             "A"
         );
         let nested = json!({"data": {"access_token": "A2", "refresh_token": "R2"}});
-        assert_eq!(parse_token(&nested).unwrap().refresh_token, "R2");
-        assert!(parse_token(&json!({"access_token": "A"})).is_err());
+        assert_eq!(
+            parse_token(&nested).unwrap().refresh_token.as_deref(),
+            Some("R2")
+        );
+        // Refresh tanpa rotasi: refresh_token boleh tidak ada; expires_in angka atau string.
+        let no_rotate = parse_token(&json!({"access_token": "A", "expires_in": "3600"})).unwrap();
+        assert_eq!(no_rotate.refresh_token, None);
+        assert_eq!(no_rotate.expires_in_secs, Some(3600));
+        assert!(parse_token(&json!({"refresh_token": "R"})).is_err());
+        assert!(parse_token(&json!({"access_token": ""})).is_err());
+    }
+
+    #[test]
+    fn error_classification() {
+        assert!(GobizError::Unauthorized.is_auth_rejected());
+        assert!(GobizError::Status(400).is_auth_rejected());
+        assert!(GobizError::Status(403).is_auth_rejected());
+        assert!(!GobizError::Status(429).is_auth_rejected());
+        assert!(!GobizError::Status(503).is_auth_rejected());
+        assert!(!GobizError::Parse("x").is_auth_rejected());
+        assert_eq!(GobizError::Status(503).code(), "status_503");
     }
 
     #[test]

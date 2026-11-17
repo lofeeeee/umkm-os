@@ -9,6 +9,7 @@ use umkm_domain::{catalog::Money, commerce::gopay::match_payment};
 use umkm_shared::ids::TenantId;
 
 use super::client::{GobizClient, GobizError};
+use super::keepalive::{RefreshMode, RefreshOutcome, ensure_fresh};
 use crate::{crypto::Keyring, gopay_repo, payment_repo};
 
 /// Berapa transaksi terbaru yang diambil per toko tiap siklus.
@@ -78,21 +79,18 @@ async fn poll_tenant(
     }
 
     let now = now_ms();
-    let mut session = stored.session;
-    // Segarkan token bila mau kedaluwarsa; 401 → tandai perlu login ulang.
-    if session.needs_refresh(now) {
-        match client.refresh(&session, now).await {
-            Ok(fresh) => {
-                let _ = gopay_repo::put_session(pool, t, &fresh, k).await;
-                session = fresh;
-            }
-            Err(GobizError::Unauthorized) => {
-                let _ = gopay_repo::mark_needs_relogin(pool, t).await;
-                return Ok(0);
-            }
-            Err(_) => return Ok(0), // transien; coba lagi siklus berikutnya
-        }
-    }
+    // Token disegarkan lewat jalur keep-alive bersama (terkunci, tahan gangguan sementara).
+    let session = match ensure_fresh(pool, k, client, t, RefreshMode::WhenDue)
+        .await
+        .map_err(|_| GobizError::Parse("sesi"))?
+    {
+        RefreshOutcome::Refreshed(s) | RefreshOutcome::Fresh(s) => s,
+        // Gagal sementara: coba poll dengan token lama (bisa jadi masih berlaku).
+        RefreshOutcome::Transient { session, .. } => session,
+        // Worker lain sedang memperbarui; poll siklus berikutnya.
+        RefreshOutcome::Busy => return Ok(0),
+        RefreshOutcome::NeedsRelogin { .. } | RefreshOutcome::NotConnected => return Ok(0),
+    };
 
     let start = charges.iter().map(|c| c.issued_at_ms).min().unwrap_or(now) - WINDOW_SKEW_MS;
 
@@ -102,18 +100,18 @@ async fn poll_tenant(
     {
         Ok(tx) => tx,
         Err(GobizError::Unauthorized) => {
-            // Refresh sekali lalu ulang.
-            match client.refresh(&session, now).await {
-                Ok(fresh) => {
-                    let _ = gopay_repo::put_session(pool, t, &fresh, k).await;
+            // Token ditolak lebih awal dari perkiraan: paksa refresh sekali lalu ulang. Hanya penolakan
+            // definitif saat refresh yang menandai sesi perlu login ulang (di dalam ensure_fresh).
+            match ensure_fresh(pool, k, client, t, RefreshMode::Force)
+                .await
+                .map_err(|_| GobizError::Parse("sesi"))?
+            {
+                RefreshOutcome::Refreshed(fresh) => {
                     client
                         .fetch_transactions(&fresh, start, now, FETCH_SIZE)
                         .await?
                 }
-                Err(_) => {
-                    let _ = gopay_repo::mark_needs_relogin(pool, t).await;
-                    return Ok(0);
-                }
+                _ => return Ok(0),
             }
         }
         Err(e) => return Err(e),
