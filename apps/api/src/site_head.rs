@@ -758,7 +758,15 @@ mod tests {
             { "kind": "hero", "data": { "limit": 99 } }
         ] });
         assert_eq!(grid_limit(&v2), Some(8));
-        assert_eq!(grid_limit(&json!({ "sections": [{ "type": "product_grid", "data": { "limit": 99 } }] })), Some(24));
-        assert_eq!(grid_limit(&json!({ "blocks": [{ "kind": "hero", "data": {} }] })), None);
+        assert_eq!(
+            grid_limit(
+                &json!({ "sections": [{ "type": "product_grid", "data": { "limit": 99 } }] })
+            ),
+            Some(24)
+        );
+        assert_eq!(
+            grid_limit(&json!({ "blocks": [{ "kind": "hero", "data": {} }] })),
+            None
+        );
     }
 }
