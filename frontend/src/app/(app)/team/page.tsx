@@ -53,7 +53,7 @@ function Team({ ctx }: { ctx: TenantCtx }) {
       <PageHeader
         title={t("Tim")}
         description={t("Undang staf dan atur apa saja yang boleh mereka lakukan lewat peran.")}
-        actions={manage && <button className="d-btn" onClick={() => setRole({ name: "", permissions: [] })}><Plus weight="bold" aria-hidden="true" />{t("Peran kustom baru")}</button>}
+        actions={manage && <button type="button" className="d-btn" onClick={() => setRole({ name: "", permissions: [] })}><Plus weight="bold" aria-hidden="true" />{t("Peran kustom baru")}</button>}
       />
       <Alert kind="error">{err}</Alert>
 
@@ -82,7 +82,7 @@ function Team({ ctx }: { ctx: TenantCtx }) {
                 {invites.map((i) => (
                   <li key={i.id}>
                     <div className="d-list-main"><strong>{i.email}</strong><span className="d-muted">{roleLabel(i.role_name)}{" "}{t("· berlaku s.d.")}{" "}{tanggal(i.expires_at)}</span></div>
-                    <button className="d-btn d-btn-sm d-btn-ghost" onClick={() => void run(() => api("DELETE", `${base}/invitations/${i.id}`), t("Undangan dicabut."))}>{t("Cabut")}</button>
+                    <button type="button" className="d-btn d-btn-sm d-btn-ghost" onClick={() => void run(() => api("DELETE", `${base}/invitations/${i.id}`), t("Undangan dicabut."))}>{t("Cabut")}</button>
                   </li>
                 ))}
               </ul>
@@ -150,8 +150,8 @@ function Team({ ctx }: { ctx: TenantCtx }) {
               </div>
               {manage && !r.is_system && (
                 <div className="d-row">
-                  <button className="d-btn d-btn-sm" onClick={() => setRole({ id: r.id, name: r.name, permissions: r.permissions })}>{t("Ubah")}</button>
-                  <button className="d-icon-btn" aria-label={t("Hapus peran {0}", r.name)} onClick={async () => {
+                  <button type="button" className="d-btn d-btn-sm" onClick={() => setRole({ id: r.id, name: r.name, permissions: r.permissions })}>{t("Ubah")}</button>
+                  <button type="button" className="d-icon-btn" aria-label={t("Hapus peran {0}", r.name)} onClick={async () => {
                     if (await confirm({ title: t("Hapus peran “{0}”?", r.name), body: r.members > 0 ? t("{0} anggota masih memakai peran ini.", r.members) : undefined, confirmLabel: t("Hapus"), danger: true })) void run(() => api("DELETE", `${base}/roles/${r.id}`), t("Peran dihapus."));
                   }}><Trash weight="bold" /></button>
                 </div>
@@ -169,7 +169,7 @@ function Team({ ctx }: { ctx: TenantCtx }) {
         footer={role && (
           <>
             <span className="d-muted">{role.permissions.length}{" "}{t("izin dipilih")}</span>
-            <button className="d-btn" onClick={() => setRole(null)}>{t("Batal")}</button>
+            <button type="button" className="d-btn" onClick={() => setRole(null)}>{t("Batal")}</button>
             <BusyButton type="button" busy={busy} disabled={!role.name.trim()} onClick={async () => {
               setBusy(true);
               const ok = await run(() => api(role.id ? "PUT" : "POST", role.id ? `${base}/roles/${role.id}` : `${base}/roles`, { json: { name: role.name, permissions: role.permissions } }), t("Peran tersimpan."));

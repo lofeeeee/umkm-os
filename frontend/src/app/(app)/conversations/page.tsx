@@ -133,7 +133,7 @@ function Conversations({ ctx }: { ctx: TenantCtx }) {
             const st = status(CONVERSATION_STATUS, c.status);
             return (
               <li key={c.id}>
-                <button className="cv-open" onClick={() => { setErr(null); setOpenId(c.id); }}>
+                <button type="button" className="cv-open" onClick={() => { setErr(null); setOpenId(c.id); }}>
                   <span className="d-cell-main">
                     <span className="d-avatar d-avatar-muted" aria-hidden="true">{(c.customer?.name?.trim()[0] ?? "?").toUpperCase()}</span>
                     <span style={{ minWidth: 0 }}>
@@ -194,13 +194,13 @@ function StaffPanel({ ctx, d, url, onDone }: { ctx: TenantCtx; d: ConversationDe
         <div className="d-card-head-text"><h2>{t("Tindakan staf")}</h2>{d.status !== "HUMAN" && !closed && <p>{t("Membalas = mengambil alih; AI berhenti menjawab.")}</p>}</div>
         <div className="d-card-head-actions">
           {canTake && !closed && d.status !== "HUMAN" && (
-            <button className="d-btn d-btn-sm" disabled={busy} onClick={() => void run(() => api("POST", `${url}/takeover`), t("Percakapan Anda tangani."))}>{t("Ambil alih")}</button>
+            <button type="button" className="d-btn d-btn-sm" disabled={busy} onClick={() => void run(() => api("POST", `${url}/takeover`), t("Percakapan Anda tangani."))}>{t("Ambil alih")}</button>
           )}
           {canTake && !closed && d.status !== "AI" && !byOther && (
-            <button className="d-btn d-btn-sm" disabled={busy} onClick={() => void run(() => api("POST", `${url}/release`), t("Dikembalikan ke asisten AI."))}>{t("Kembalikan ke AI")}</button>
+            <button type="button" className="d-btn d-btn-sm" disabled={busy} onClick={() => void run(() => api("POST", `${url}/release`), t("Dikembalikan ke asisten AI."))}>{t("Kembalikan ke AI")}</button>
           )}
           {!closed && !byOther && (
-            <button className="d-btn d-btn-sm d-btn-danger" disabled={busy} onClick={async () => {
+            <button type="button" className="d-btn d-btn-sm d-btn-danger" disabled={busy} onClick={async () => {
               if (await confirm({ title: t("Tutup percakapan?"), body: t("Pelanggan perlu memulai chat baru untuk menghubungi toko lagi."), confirmLabel: t("Tutup percakapan"), danger: true })) void run(() => api("POST", `${url}/close`), t("Percakapan ditutup."));
             }}>{t("Tutup percakapan")}</button>
           )}
@@ -222,9 +222,9 @@ function StaffPanel({ ctx, d, url, onDone }: { ctx: TenantCtx; d: ConversationDe
                     <textarea rows={3} maxLength={4000} value={edit[x.id] ?? x.body} onChange={(e) => setEdit({ ...edit, [x.id]: e.target.value })} />
                   </label>
                   <div className="d-row">
-                    <button className="d-btn d-btn-primary" disabled={busy || byOther} onClick={() => void run(
+                    <button type="button" className="d-btn d-btn-primary" disabled={busy || byOther} onClick={() => void run(
                       () => api("POST", `${url}/drafts/${x.id}/send`, { json: { body: edit[x.id] ?? null } }), t("Draf terkirim."))}>{t("Kirim draf")}</button>
-                    <button className="d-btn" disabled={busy} onClick={() => void run(
+                    <button type="button" className="d-btn" disabled={busy} onClick={() => void run(
                       () => api("POST", `${url}/drafts/${x.id}/discard`), t("Draf dibuang."))}>{t("Buang")}</button>
                   </div>
                 </>
@@ -265,7 +265,7 @@ function StaffPanel({ ctx, d, url, onDone }: { ctx: TenantCtx; d: ConversationDe
           </label>
           </div>
           <label className="d-field"><span>{t("Keterangan")}{" "}<span className="d-opt">{t("(opsional)")}</span></span><textarea name="description" rows={2} maxLength={5000} /></label>
-          <button className="d-btn" disabled={busy}>{t("Buat tiket")}</button>
+          <button type="submit" className="d-btn" disabled={busy}>{t("Buat tiket")}</button>
         </form>
         </details>
       )}
@@ -298,7 +298,7 @@ function AssignForm({ ctx, d, url, run, busy }: {
           {members.map((m) => <option key={m.user_id} value={m.user_id}>{m.email} ({m.role_name})</option>)}
         </select>
       </label>
-      <button className="d-btn" disabled={busy || !to} onClick={() => void run(() => api("POST", `${url}/assign`, { json: { user_id: to } }), t("Percakapan ditugaskan."))}>{t("Tugaskan")}</button>
+      <button type="button" className="d-btn" disabled={busy || !to} onClick={() => void run(() => api("POST", `${url}/assign`, { json: { user_id: to } }), t("Percakapan ditugaskan."))}>{t("Tugaskan")}</button>
     </div>
   );
 }

@@ -40,10 +40,10 @@
   background: var(--s-primary); color: var(--s-on-primary, #fff) !important; text-decoration: none;
   padding: 12px 22px; border-radius: 999px; font-weight: 700; min-height: 48px;
   box-shadow: 0 6px 16px -6px color-mix(in srgb, var(--s-primary) 60%, transparent);
-  transition: transform 160ms var(--s-ease), box-shadow 160ms var(--s-ease), filter 160ms ease;
+  transition: transform var(--dur, 180ms) var(--s-ease), box-shadow var(--dur, 180ms) var(--s-ease), filter var(--dur, 180ms) ease;
 }
 .s-btn:hover { filter: brightness(1.06); box-shadow: 0 10px 22px -8px color-mix(in srgb, var(--s-primary) 70%, transparent); }
-.s-btn:active { transform: scale(0.97); }
+.s-btn:active { transform: scale(var(--press, 0.97)); }
 .s-btn:focus-visible, .site a:focus-visible { outline: 3px solid var(--s-ink); outline-offset: 2px; }
 
 /* Kepala halaman */
@@ -59,7 +59,7 @@
 .s-logo { width: 36px; height: 36px; object-fit: cover; border-radius: 10px !important; flex: none; }
 .s-logo-fallback { display: grid; place-items: center; background: var(--s-primary); color: var(--s-on-primary, #fff); font-size: 0.875em; font-weight: 700; }
 .s-nav { display: flex; flex-wrap: wrap; gap: 4px; }
-.s-nav a { text-decoration: none; padding: 8px 12px; border-radius: 999px; color: var(--s-ink-2); font-weight: 600; font-size: 0.9375em; transition: background-color 150ms ease, color 150ms ease; min-height: 24px; display: inline-flex; align-items: center; }
+.s-nav a { text-decoration: none; padding: 8px 12px; border-radius: 999px; color: var(--s-ink-2); font-weight: 600; font-size: 0.9375em; transition: background-color var(--dur, 180ms) ease, color var(--dur, 180ms) ease; min-height: 24px; display: inline-flex; align-items: center; }
 .s-nav a:hover { background: var(--s-tint); color: var(--s-primary); }
 
 /* Bilah atas (tema `navbar_style: top`). `s-sticky` hanya menempel bila diminta tema. */
@@ -165,10 +165,10 @@
 .s-product {
   display: flex; flex-direction: column; gap: 4px; text-decoration: none; color: var(--s-ink) !important;
   background: var(--s-bg); border-radius: var(--s-radius); padding: 8px 8px 14px; border: 1px solid var(--s-line); min-width: 0;
-  transition: transform 200ms var(--s-ease), box-shadow 200ms var(--s-ease), border-color 200ms ease;
+  transition: transform var(--dur, 180ms) var(--s-ease), box-shadow var(--dur, 180ms) var(--s-ease), border-color var(--dur, 180ms) ease;
 }
 @media (hover: hover) { .s-product:hover { transform: translateY(-3px); box-shadow: 0 16px 32px -16px rgb(15 23 42 / 0.25); border-color: transparent; } }
-.s-product:active { transform: scale(0.98); }
+.s-product:active { transform: scale(var(--press-card, 0.98)); }
 .s-product img, .s-product-noimg { aspect-ratio: 1 / 1; width: 100%; object-fit: cover; border-radius: calc(var(--s-radius) - 4px) !important; background: var(--s-soft); margin-bottom: 6px; }
 .s-product-noimg { display: block; background: linear-gradient(135deg, var(--s-tint), var(--s-soft)); }
 .s-product-name { font-weight: 600; line-height: 1.35; padding: 0 4px; }
@@ -278,7 +278,7 @@
   font-weight: 500;
   color: var(--muted, #63636e);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background-color var(--dur-fast, 120ms) ease, color var(--dur-fast, 120ms) ease;
   box-sizing: border-box;
   padding: 0;
   user-select: none;
@@ -370,7 +370,7 @@
   --sf-accent: #4f46e5;
   position: relative; height: 100%; border-radius: 14px; cursor: grab;
   outline: 1.5px dashed transparent; outline-offset: 3px;
-  transition: outline-color 120ms ease, opacity 160ms ease, box-shadow 160ms ease;
+  transition: outline-color var(--dur-fast, 120ms) ease, opacity var(--dur, 180ms) ease, box-shadow var(--dur, 180ms) ease;
 }
 .sf-editing .sf-block:hover { outline-color: color-mix(in srgb, var(--sf-accent) 55%, transparent); }
 .sf-editing .sf-block-selected { outline: 2px solid var(--sf-accent); outline-offset: 3px; }
@@ -384,7 +384,7 @@
 .sf-block-bar {
   position: absolute; z-index: 8; left: 0; right: 0; bottom: 100%; padding-bottom: 7px;
   display: flex; align-items: flex-end; gap: 6px; pointer-events: none;
-  opacity: 0; transform: translateY(3px); transition: opacity 120ms ease, transform 160ms cubic-bezier(0.23, 1, 0.32, 1);
+  opacity: 0; transform: translateY(3px); transition: opacity var(--dur-fast, 120ms) ease, transform var(--dur, 180ms) cubic-bezier(0.23, 1, 0.32, 1);
 }
 .sf-editing .sf-block:hover > .sf-block-bar,
 .sf-editing .sf-block-selected > .sf-block-bar,
@@ -408,7 +408,7 @@
 /* Pegangan ubah ukuran (kanan = lebar, bawah = tinggi). */
 .sf-handle {
   position: absolute; z-index: 7; display: block; background: #fff; border: 2px solid var(--sf-accent, #4f46e5); border-radius: 999px;
-  box-shadow: 0 2px 6px rgb(15 23 42 / 0.25); opacity: 0; touch-action: none; transition: opacity 120ms ease, transform 120ms ease;
+  box-shadow: 0 2px 6px rgb(15 23 42 / 0.25); opacity: 0; touch-action: none; transition: opacity var(--dur-fast, 120ms) ease, transform var(--dur-fast, 120ms) ease;
 }
 .sf-handle-x { top: 50%; right: -7px; width: 10px; height: 36px; margin-top: -18px; cursor: ew-resize; }
 .sf-handle-y { left: 50%; bottom: -7px; width: 36px; height: 10px; margin-left: -18px; cursor: ns-resize; }

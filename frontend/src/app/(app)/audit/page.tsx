@@ -80,8 +80,8 @@ function Audit({ ctx }: { ctx: TenantCtx }) {
         <div className="d-row d-row-between">
           <span className="d-muted d-small">{offset + 1}<Tr s="–{0} dari" a={[Math.min(offset + PAGE, total)]} />{" "}{angka(total)}</span>
           <div className="d-row">
-            <button className="d-btn d-btn-sm" disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - PAGE))}>{t("Sebelumnya")}</button>
-            <button className="d-btn d-btn-sm" disabled={offset + PAGE >= total} onClick={() => setOffset(offset + PAGE)}>{t("Berikutnya")}</button>
+            <button type="button" className="d-btn d-btn-sm" disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - PAGE))}>{t("Sebelumnya")}</button>
+            <button type="button" className="d-btn d-btn-sm" disabled={offset + PAGE >= total} onClick={() => setOffset(offset + PAGE)}>{t("Berikutnya")}</button>
           </div>
         </div>
       )}

@@ -91,7 +91,7 @@ function Orders({ ctx }: { ctx: TenantCtx }) {
       <PageHeader
         title={t("Pesanan")}
         description={t("Pesanan dari website toko. Cek bukti bayar QRIS, konfirmasi, lalu proses sampai selesai.")}
-        actions={<button className="d-btn" onClick={() => void load()}><ArrowCounterClockwise weight="bold" aria-hidden="true" />{t("Muat ulang")}</button>}
+        actions={<button type="button" className="d-btn" onClick={() => void load()}><ArrowCounterClockwise weight="bold" aria-hidden="true" />{t("Muat ulang")}</button>}
       />
       <Alert kind="error">{err}</Alert>
       <Tabs label={t("Filter status pesanan")} value={tab} onChange={setTab} items={TABS} />
@@ -118,7 +118,7 @@ function Orders({ ctx }: { ctx: TenantCtx }) {
                     <td><Badge tone={st.tone}>{st.label}</Badge></td>
                     <td>{pay ? <Badge tone={pay.tone} plain>{pay.label}</Badge> : <span className="d-muted">—</span>}</td>
                     <td className="d-num d-strong">{rupiah(o.total)}</td>
-                    <td className="d-actions"><button className="d-btn d-btn-sm" onClick={() => setOpenParam(o.id)}>{t("Buka")}</button></td>
+                    <td className="d-actions"><button type="button" className="d-btn d-btn-sm" onClick={() => setOpenParam(o.id)}>{t("Buka")}</button></td>
                   </tr>
                 );
               })}
@@ -171,10 +171,16 @@ function Detail({ ctx, base, id, onBack }: { ctx: TenantCtx; base: string; id: s
   }
   async function showProof() {
     // Bukti bayar = data pelanggan: diambil dengan sesi staf, ditampilkan sebagai object URL lokal.
-    const r = await fetch(`${API_ORIGIN}${url}/payment/proof`, { credentials: "include" });
-    if (r.ok) setProof(URL.createObjectURL(await r.blob()));
-    else setErr(t("Bukti tidak dapat dimuat."));
+    try {
+      const r = await fetch(`${API_ORIGIN}${url}/payment/proof`, { credentials: "include" });
+      if (!r.ok) throw new Error(String(r.status));
+      setProof(URL.createObjectURL(await r.blob()));
+    } catch {
+      setErr(t("Bukti tidak dapat dimuat."));
+    }
   }
+  // Object URL bukti dilepas saat diganti/ditutup agar memori tidak bocor.
+  useEffect(() => () => { if (proof) URL.revokeObjectURL(proof); }, [proof]);
   if (!o) return <><Alert kind="error">{err}</Alert>{!err && <PageSkeleton />}</>;
   const p = o.payment;
   const payOpen = o.status === "AWAITING_PAYMENT" && p && (p.status === "pending" || p.status === "claimed");
@@ -251,7 +257,7 @@ function Detail({ ctx, base, id, onBack }: { ctx: TenantCtx; base: string; id: s
               {p.has_proof && (proof
                 // eslint-disable-next-line @next/next/no-img-element -- object URL lokal
                 ? <img src={proof} alt={t("Bukti pembayaran")} style={{ maxWidth: 320, width: "100%", borderRadius: 8, marginTop: 16, border: "1px solid var(--line)" }} />
-                : <button className="d-btn d-btn-sm" style={{ marginTop: 16 }} onClick={showProof}><ImageIcon weight="bold" aria-hidden="true" />{t("Lihat bukti pembayaran")}</button>)}
+                : <button type="button" className="d-btn d-btn-sm" style={{ marginTop: 16 }} onClick={showProof}><ImageIcon weight="bold" aria-hidden="true" />{t("Lihat bukti pembayaran")}</button>)}
               {payOpen && ctx.can("payments.verify") && (
                 <div className="d-verify">
                   <p className="d-muted d-small" style={{ margin: "0 0 12px" }}>{t("Cocokkan dengan mutasi di aplikasi merchant QRIS Anda sebelum mengonfirmasi.")}</p>

@@ -3,8 +3,7 @@
 // satu bahasa. Daftar kunci = kamus src/i18n/en/server-6.ts; server.test.ts memeriksa bahwa setiap
 // pesan di kode Rust punya padanan (gagal bila server menambah pesan tanpa terjemahan).
 
-import { CONSENT_EN, SERVER_EN } from "./en/server-6";
-import { getLocale, tmap } from "./index";
+import { englishDict, getLocale, tmap } from "./index";
 
 /** Pesan pengganti untuk teks generik ErrorCode (server mengirim bahasa Inggris tanpa konteks). */
 const GENERIC: Record<string, string> = tmap({
@@ -32,10 +31,12 @@ export const ERRORCODE_DEFAULTS = [
 const DEFAULTS = new Set(ERRORCODE_DEFAULTS);
 
 const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-/** Templat berparameter ("stok tidak cukup (tersedia {0}, diminta {1})") → regex pencocok. */
-const PATTERNS = Object.keys(SERVER_EN)
-  .filter((k) => /\{\d+\}/.test(k))
-  .map((k) => ({ key: k, re: new RegExp(`^${esc(k).replace(/\\\{(\d+)\\\}/g, "(.+?)")}$`) }));
+/** Templat berparameter ("stok tidak cukup (tersedia {0}, diminta {1})") → regex pencocok (dibuat sekali). */
+let patterns: { key: string; re: RegExp }[] | null = null;
+const patternsOf = (en: Record<string, string>) =>
+  (patterns ??= Object.keys(en)
+    .filter((k) => /\{\d+\}/.test(k))
+    .map((k) => ({ key: k, re: new RegExp(`^${esc(k).replace(/\\\{(\d+)\\\}/g, "(.+?)")}$`) })));
 
 const capitalize = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 const fill = (s: string, args: string[]) => s.replace(/\{(\d+)\}/g, (m, i: string) => args[Number(i)] ?? m);
@@ -45,17 +46,20 @@ const fill = (s: string, args: string[]) => s.replace(/\{(\d+)\}/g, (m, i: strin
  * ErrorCode diganti kalimat yang bisa ditindaklanjuti. Huruf pertama dikapitalkan.
  */
 export function serverMessage(code: string, message: string): string {
-  const en = getLocale() === "en";
   if (!message || DEFAULTS.has(message)) return GENERIC[code] ?? capitalize(message);
-  if (message in SERVER_EN) return capitalize(en ? SERVER_EN[message]! : message);
-  for (const p of PATTERNS) {
+  // Bahasa Indonesia = bahasa server: pesan tampil apa adanya.
+  const d = getLocale() === "en" ? englishDict() : null;
+  if (!d) return capitalize(message);
+  if (message in d.SERVER_EN) return capitalize(d.SERVER_EN[message]!);
+  for (const p of patternsOf(d.SERVER_EN)) {
     const m = p.re.exec(message);
-    if (m) return capitalize(en ? fill(SERVER_EN[p.key]!, m.slice(1)) : message);
+    if (m) return capitalize(fill(d.SERVER_EN[p.key]!, m.slice(1)));
   }
   return capitalize(message);
 }
 
 /** Teks persetujuan AI (D-12) dari server, dalam bahasa antarmuka. Versi persetujuan tidak berubah. */
 export function consentText(text: string): string {
-  return getLocale() === "en" && CONSENT_EN[text] ? CONSENT_EN[text]! : text;
+  const en = getLocale() === "en" ? englishDict()?.CONSENT_EN[text] : undefined;
+  return en ?? text;
 }

@@ -152,7 +152,7 @@ function View({ ctx }: { ctx: TenantCtx }) {
           )}
           <div className="d-row" style={{ marginTop: 16 }}>
             {open.has_proof && <a className="d-btn" href={`${API_ORIGIN}${base}/invoices/${open.id}/proof`} target="_blank" rel="noreferrer">{t("Lihat bukti yang diunggah")}</a>}
-            {canPay && <button className="d-btn d-btn-ghost" disabled={busy} onClick={async () => {
+            {canPay && <button type="button" className="d-btn d-btn-ghost" disabled={busy} onClick={async () => {
               if (await confirm({ title: t("Batalkan tagihan {0}?", open.code), body: t("Anda bisa memilih paket lagi setelahnya."), confirmLabel: t("Batalkan tagihan"), cancelLabel: t("Kembali"), danger: true })) void run(() => api("POST", `${base}/invoices/${open.id}/cancel`), t("Tagihan dibatalkan."));
             }}>{t("Batalkan tagihan")}</button>}
           </div>
@@ -174,7 +174,7 @@ function View({ ctx }: { ctx: TenantCtx }) {
                     <li><Check weight="bold" aria-hidden="true" />{limit(p.limits.conversations_monthly)} percakapan/bulan</li>
                     <li><Check weight="bold" aria-hidden="true" />{p.limits.platform_ai_tokens_monthly === 0 ? t("Tanpa token AI platform") : t("{0} token AI/bulan", limit(p.limits.platform_ai_tokens_monthly))}</li>
                   </ul>
-                  <button className={`d-btn ${current ? "" : "d-btn-primary"} d-btn-block`} disabled={busy} onClick={() => void run(() => api("POST", `${base}/invoices`, { json: { plan_code: p.code } }), t("Tagihan paket {0} dibuat.", p.name))}>
+                  <button type="button" className={`d-btn ${current ? "" : "d-btn-primary"} d-btn-block`} disabled={busy} onClick={() => void run(() => api("POST", `${base}/invoices`, { json: { plan_code: p.code } }), t("Tagihan paket {0} dibuat.", p.name))}>
                     {sub.status === "active" && current ? t("Perpanjang") : t("Pilih {0}", p.name)}
                   </button>
                 </div>

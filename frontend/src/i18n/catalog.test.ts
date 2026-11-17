@@ -1,11 +1,14 @@
 // Kelengkapan kamus EN: setiap teks antarmuka di kode punya terjemahan, placeholder-nya sama,
 // tidak ada terjemahan yatim, dan kunci ganda di beberapa berkas kamus tidak saling bertentangan.
 import { resolve } from "node:path";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 
 import { extractKeys, placeholders } from "./catalog";
 import { EN, EN_PARTS } from "./en";
-import { getLocale, setLocale, t, tmap } from "./index";
+import { getLocale, loadEnglish, setLocale, t, tmap } from "./index";
+
+// Kamus EN dimuat malas (chunk terpisah); tes memuatnya dulu agar setLocale("en") langsung berlaku.
+beforeAll(() => loadEnglish());
 
 const keys = extractKeys(resolve(__dirname, ".."));
 /** Kunci tanpa huruf (mis. "{0} – {1}") sama di semua bahasa — tidak wajib di kamus. */

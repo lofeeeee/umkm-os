@@ -2,10 +2,13 @@
 // terjemahan, dan teks persetujuan AI di server sama dengan yang diterjemahkan.
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 
 import { CONSENT_EN, SERVER_EN } from "./en/server-6";
-import { getLocale, setLocale } from "./index";
+import { getLocale, loadEnglish, setLocale } from "./index";
+
+// Kamus EN dimuat malas (chunk terpisah); tes memuatnya dulu agar setLocale("en") langsung berlaku.
+beforeAll(() => loadEnglish());
 import { consentText, serverMessage } from "./server";
 
 const ROOT = resolve(__dirname, "../../..");

@@ -75,7 +75,7 @@
 .lc-insert {
   position: absolute; z-index: 30; left: 0; top: 0; height: 4px; border-radius: 999px; pointer-events: none;
   background: #4f46e5; box-shadow: 0 0 0 3px rgb(79 70 229 / 0.2);
-  transition: transform 120ms var(--ease-out), width 120ms var(--ease-out);
+  transition: transform var(--dur-fast, 120ms) var(--ease-out), width var(--dur-fast, 120ms) var(--ease-out);
 }
 .lc-insert::before, .lc-insert::after { content: ""; position: absolute; top: -4px; width: 12px; height: 12px; border-radius: 999px; background: #4f46e5; }
 .lc-insert::before { left: -6px; }
@@ -97,7 +97,7 @@
 .sx-drawbar {
   position: absolute; z-index: 5; top: 10px; left: 50%; translate: -50% 0; display: inline-flex; align-items: center; gap: 10px; padding: 6px 6px 6px 14px; border-radius: 999px;
   background: var(--ink); color: var(--bg); font-size: 0.8125rem; font-weight: 500; box-shadow: var(--shadow-pop);
-  animation: lc-drop 200ms var(--ease-out) both;
+  animation: lc-drop var(--dur, 180ms) var(--ease-out) both;
 }
 .sx-drawbar-dot { width: 12px; height: 12px; border-radius: 999px; box-shadow: 0 0 0 2px rgb(255 255 255 / 0.5); }
 .sx-drawbar .d-btn { height: 28px; border-radius: 999px; }
@@ -112,10 +112,10 @@
 /* Aksi blok (di bilah atas blok terpilih). */
 .lc-tool {
   display: inline-grid; place-items: center; width: 28px; height: 28px; border: 0; border-radius: 999px; background: transparent; color: #27272a;
-  cursor: pointer; transition: background-color 120ms ease, transform 120ms var(--ease-out);
+  cursor: pointer; transition: background-color var(--dur-fast, 120ms) ease, transform var(--dur-fast, 120ms) var(--ease-out);
 }
 .lc-tool:hover { background: #f4f4f5; }
-.lc-tool:active { transform: scale(0.92); }
+.lc-tool:active { transform: scale(var(--press-icon, 0.94)); }
 .lc-tool svg { width: 15px; height: 15px; }
 .lc-tool-on { background: #18181b; color: #fff; }
 .lc-tool-on:hover { background: #27272a; }
@@ -155,7 +155,7 @@
   transition: border-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease, transform var(--dur-fast) var(--ease-out);
 }
 .st-card:hover { border-color: color-mix(in srgb, var(--brand) 55%, var(--line)); box-shadow: 0 6px 18px -12px rgb(79 70 229 / 0.5); }
-.st-card:active { transform: scale(0.985); cursor: grabbing; }
+.st-card:active { transform: scale(var(--press-card, 0.98)); cursor: grabbing; }
 .st-card:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 .st-card[aria-disabled="true"] { cursor: default; opacity: 0.65; }
 .st-card[aria-disabled="true"]:hover { border-color: var(--line); box-shadow: none; }
@@ -198,7 +198,7 @@
 }
 .st-add-page:hover { background: var(--brand-soft); border-color: var(--brand); }
 .st-add-page svg { width: 15px; height: 15px; }
-.st-add-card { display: grid; gap: 14px; padding: 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--bg-subtle); animation: lc-drop 180ms var(--ease-out) both; }
+.st-add-card { display: grid; gap: 14px; padding: 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--bg-subtle); animation: lc-drop var(--dur, 180ms) var(--ease-out) both; }
 .st-add-card-head { display: flex; align-items: center; justify-content: space-between; }
 .st-add-card-head strong { font-size: 0.875rem; }
 .st-add-sec { display: grid; gap: 10px; }
@@ -234,7 +234,7 @@
 }
 .st-tools2 button svg { width: 26px; height: 26px; }
 .st-tools2 button:hover { border-color: var(--line-strong); }
-.st-tools2 button:active { transform: scale(0.97); }
+.st-tools2 button:active { transform: scale(var(--press, 0.97)); }
 .st-tools2 button[aria-pressed="true"] { border-color: var(--brand); background: var(--brand-soft); color: var(--brand-ink-soft); box-shadow: 0 0 0 3px var(--ring); }
 .st-draw-tip { margin: -6px 0 0; }
 .st-stroke-preview { height: 48px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg-subtle); display: flex; align-items: center; padding: 0 8px; overflow: hidden; }
@@ -281,3 +281,8 @@
 
 /* ---------- Status simpan ---------- */
 .st-save { padding: 0 6px; white-space: nowrap; }
+
+/* Gerak dikurangi: tanpa animasi masuk/transisi di Studio (drag tetap mengikuti jari, tanpa animasi FLIP). */
+@media (prefers-reduced-motion: reduce) {
+  .sx *, .sx *::before, .sx *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}

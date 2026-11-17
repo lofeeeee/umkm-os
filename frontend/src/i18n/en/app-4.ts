@@ -275,7 +275,6 @@ export const APP_4: Record<string, string> = {
   "Hapus halaman?": "Delete page?",
   "Halaman \"{0}\" ({1}) akan dihapus permanen. Tindakan ini tidak dapat dibatalkan.": "Page \"{0}\" ({1}) will be deleted permanently. This can't be undone.",
   "Hapus halaman": "Delete page",
-  "Apakah Anda yakin ingin menghapus halaman \"{0}\"?": "Are you sure you want to delete page \"{0}\"?",
   "Gagal membuat halaman siap pakai": "Couldn't create the ready-made page",
   "Judul halaman wajib diisi.": "A page title is required.",
   "Alamat URL wajib diisi.": "A URL address is required.",

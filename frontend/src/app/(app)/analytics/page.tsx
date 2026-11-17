@@ -119,7 +119,7 @@ function View({ ctx }: { ctx: TenantCtx }) {
       <form className="d-toolbar" onSubmit={(e) => { e.preventDefault(); setPreset(null); setRange({ from, to }); }}>
         <label className="d-row" style={{ flexWrap: "nowrap" }}><span className="d-muted d-small">{t("Dari")}</span><input type="date" aria-label={t("Dari")} value={from} onChange={(e) => setFrom(e.target.value)} style={{ width: 160 }} /></label>
         <label className="d-row" style={{ flexWrap: "nowrap" }}><span className="d-muted d-small">{t("Sampai")}</span><input type="date" aria-label={t("Sampai")} value={to} onChange={(e) => setTo(e.target.value)} style={{ width: 160 }} /></label>
-        <button className="d-btn">{t("Terapkan")}</button>
+        <button type="submit" className="d-btn">{t("Terapkan")}</button>
       </form>
       <Alert kind="error">{err}</Alert>
       {!a && !err && <PageSkeleton />}

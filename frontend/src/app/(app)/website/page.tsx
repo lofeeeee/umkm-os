@@ -214,7 +214,7 @@ function Editor({ ctx }: { ctx: TenantCtx }) {
             {ctx.tenant.primary_hostname && published && (
               <a className="d-btn d-btn-ghost" href={`https://${ctx.tenant.primary_hostname}`} target="_blank" rel="noopener noreferrer"><ArrowSquareOut weight="bold" aria-hidden="true" />{tx("Lihat situs")}</a>
             )}
-            <button className="d-btn" onClick={save} disabled={!canEdit || busy || !dirty}>{tx("Simpan draf")}</button>
+            <button type="button" className="d-btn" onClick={save} disabled={!canEdit || busy || !dirty}>{tx("Simpan draf")}</button>
             <BusyButton type="button" busy={busy} onClick={publish} disabled={!canPublish}>{tx("Terbitkan")}</BusyButton>
           </>
         }
@@ -302,8 +302,8 @@ function Editor({ ctx }: { ctx: TenantCtx }) {
                       <strong>{tx("Versi")}{" "}{v.version}</strong> {v.is_current && <Badge tone="ok">{tx("Aktif")}</Badge>}
                       <span className="d-sub d-muted d-small" style={{ display: "block" }}>{waktu(v.created_at_unix * 1000)}</span>
                     </span>
-                    <button className="d-btn d-btn-sm" onClick={() => showVersion(v.version)}>{tx("Lihat")}</button>
-                    {!v.is_current && <button className="d-btn d-btn-sm" disabled={!canPublish || busy} onClick={() => void rollback(v.version)}>{tx("Kembalikan")}</button>}
+                    <button type="button" className="d-btn d-btn-sm" onClick={() => showVersion(v.version)}>{tx("Lihat")}</button>
+                    {!v.is_current && <button type="button" className="d-btn d-btn-sm" disabled={!canPublish || busy} onClick={() => void rollback(v.version)}>{tx("Kembalikan")}</button>}
                   </li>
                 ))}
               </ul>
@@ -314,7 +314,7 @@ function Editor({ ctx }: { ctx: TenantCtx }) {
         <div className="e-preview-col">
           <div className="e-preview-bar">
             <span className="d-muted d-small">{viewing ? tx("Pratinjau versi {0}", viewing.version) : tx("Pratinjau draf")}</span>
-            {viewing && <button className="d-btn d-btn-sm" onClick={() => setViewing(null)}>{tx("Kembali ke draf")}</button>}
+            {viewing && <button type="button" className="d-btn d-btn-sm" onClick={() => setViewing(null)}>{tx("Kembali ke draf")}</button>}
             <div className="d-seg" role="group" aria-label={tx("Ukuran pratinjau")} style={{ marginLeft: "auto" }}>
               <button type="button" aria-pressed={view === "mobile"} onClick={() => setView("mobile")}><DeviceMobile weight="bold" aria-hidden="true" style={{ verticalAlign: "-2px" }} />{" "}{tx("Ponsel")}</button>
               <button type="button" aria-pressed={view === "desktop"} onClick={() => setView("desktop")}><DesktopTower weight="bold" aria-hidden="true" style={{ verticalAlign: "-2px" }} />{" "}{tx("Layar lebar")}</button>
@@ -383,14 +383,14 @@ function TemplatePicker({ base, canEdit, business, studioHref, onSelected }: { b
             <h2>{t.name}</h2>
             <p className="d-muted d-small">{t.category}{" "}{tx("· v")}{t.version}</p>
             <div className="d-row">
-              <button className="d-btn" onClick={async () => setPreview({ key: t.key, content: (await api<{ content: PageContent }>("GET", `${base}/website/templates/${t.key}/preview`)).content })}>{tx("Pratinjau")}</button>
+              <button type="button" className="d-btn" onClick={async () => setPreview({ key: t.key, content: (await api<{ content: PageContent }>("GET", `${base}/website/templates/${t.key}/preview`)).content })}>{tx("Pratinjau")}</button>
               <BusyButton type="button" busy={busy} disabled={!canEdit} onClick={() => choose(t.key)}>{tx("Pakai templat ini")}</BusyButton>
             </div>
           </div>
         ))}
       </div>
       <Sheet open={!!preview} onClose={() => setPreview(null)} wide title={tx("Pratinjau templat")}
-        footer={preview && <><button className="d-btn" onClick={() => setPreview(null)}>{tx("Tutup")}</button><BusyButton type="button" busy={busy} disabled={!canEdit} onClick={() => choose(preview.key)}>{tx("Pakai templat ini")}</BusyButton></>}>
+        footer={preview && <><button type="button" className="d-btn" onClick={() => setPreview(null)}>{tx("Tutup")}</button><BusyButton type="button" busy={busy} disabled={!canEdit} onClick={() => choose(preview.key)}>{tx("Pakai templat ini")}</BusyButton></>}>
         {preview && (
           <div className="e-preview">
             <Site content={preview.content} business={{ ...business, profile: { ...business.profile, name: business.profile.name || tx("Nama Toko") } }} assetUrl={() => undefined} />

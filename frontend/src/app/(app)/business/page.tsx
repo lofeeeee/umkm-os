@@ -150,10 +150,10 @@ function Form({ ctx }: { ctx: TenantCtx }) {
               </select>
               <input style={{ flex: 1 }} value={s.url} placeholder="https://" disabled={!canEdit} aria-label="URL"
                 onChange={(e) => setP({ socials: p.socials.map((x, j) => (j === i ? { ...x, url: e.target.value } : x)) })} />
-              <button className="d-icon-btn" aria-label={t("Hapus media sosial")} disabled={!canEdit} onClick={() => setP({ socials: p.socials.filter((_, j) => j !== i) })}><Trash weight="bold" /></button>
+              <button type="button" className="d-icon-btn" aria-label={t("Hapus media sosial")} disabled={!canEdit} onClick={() => setP({ socials: p.socials.filter((_, j) => j !== i) })}><Trash weight="bold" /></button>
             </div>
           ))}
-          <button className="d-btn d-btn-sm" style={{ marginTop: 8 }} disabled={!canEdit || p.socials.length >= 10}
+          <button type="button" className="d-btn d-btn-sm" style={{ marginTop: 8 }} disabled={!canEdit || p.socials.length >= 10}
             onClick={() => setP({ socials: [...p.socials, { platform: "instagram", url: "https://" }] })}><Plus weight="bold" aria-hidden="true" />{t("Tambah media sosial")}</button>
         </fieldset>
         <h3>{t("Cara pesanan diterima")}</h3>
@@ -180,11 +180,11 @@ function Form({ ctx }: { ctx: TenantCtx }) {
                 <label className="d-field"><span>{t("Latitude")}</span><input inputMode="decimal" value={a.latitude ?? ""} disabled={!canEdit} onChange={(e) => set({ latitude: num(e.target.value) })} /></label>
                 <label className="d-field"><span>{t("Longitude")}</span><input inputMode="decimal" value={a.longitude ?? ""} disabled={!canEdit} onChange={(e) => set({ longitude: num(e.target.value) })} /></label>
               </div>
-              <button className="d-btn d-btn-sm d-btn-ghost" style={{ color: "var(--danger)" }} disabled={!canEdit} onClick={() => setData({ ...data, addresses: data.addresses.filter((_, j) => j !== i) })}><Trash weight="bold" aria-hidden="true" />{t("Hapus alamat")}</button>
+              <button type="button" className="d-btn d-btn-sm d-btn-ghost" style={{ color: "var(--danger)" }} disabled={!canEdit} onClick={() => setData({ ...data, addresses: data.addresses.filter((_, j) => j !== i) })}><Trash weight="bold" aria-hidden="true" />{t("Hapus alamat")}</button>
             </div>
           );
         })}
-        <p><button className="d-btn d-btn-sm" disabled={!canEdit || data.addresses.length >= 10}
+        <p><button type="button" className="d-btn d-btn-sm" disabled={!canEdit || data.addresses.length >= 10}
           onClick={() => setData({ ...data, addresses: [...data.addresses, { address: "" }] })}><Plus weight="bold" aria-hidden="true" />{t("Tambah alamat")}</button></p>
       </Section>
 
@@ -232,11 +232,11 @@ function Form({ ctx }: { ctx: TenantCtx }) {
                 <input type="time" aria-label={t("Waktu tutup")} value={x.close ?? ""} disabled={!canEdit} onChange={(e) => set({ close: e.target.value })} />
               </>}
               <input aria-label={t("Catatan")} placeholder={t("Catatan")} value={x.note ?? ""} maxLength={120} disabled={!canEdit} onChange={(e) => set({ note: e.target.value })} />
-              <button className="d-icon-btn" aria-label={t("Hapus tanggal")} disabled={!canEdit} onClick={() => setData({ ...data, exceptions: data.exceptions.filter((_, j) => j !== i) })}><Trash weight="bold" /></button>
+              <button type="button" className="d-icon-btn" aria-label={t("Hapus tanggal")} disabled={!canEdit} onClick={() => setData({ ...data, exceptions: data.exceptions.filter((_, j) => j !== i) })}><Trash weight="bold" /></button>
             </div>
           );
         })}
-        <p><button className="d-btn d-btn-sm" disabled={!canEdit}
+        <p><button type="button" className="d-btn d-btn-sm" disabled={!canEdit}
           onClick={() => setData({ ...data, exceptions: [...data.exceptions, { date: new Date().toISOString().slice(0, 10), is_closed: true }] })}><Plus weight="bold" aria-hidden="true" />{t("Tambah tanggal")}</button></p>
       </Section>
     </Assets.Provider>

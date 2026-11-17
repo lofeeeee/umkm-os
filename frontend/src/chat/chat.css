@@ -24,11 +24,11 @@
   display: inline-flex; align-items: center; gap: 8px; min-height: 52px; padding: 0 20px 0 16px;
   border: 0; border-radius: 999px; background: var(--chat-primary); color: var(--chat-on-primary); font-weight: 700; cursor: pointer;
   box-shadow: 0 14px 30px -10px color-mix(in srgb, var(--chat-primary) 75%, #000), 0 0 0 1px rgb(255 255 255 / 0.12) inset;
-  transition: transform 160ms var(--chat-ease), box-shadow 160ms var(--chat-ease);
-  animation: chat-pop 260ms var(--chat-ease) both;
+  transition: transform var(--dur, 180ms) var(--chat-ease), box-shadow var(--dur, 180ms) var(--chat-ease);
+  animation: chat-pop var(--dur-slow, 240ms) var(--chat-ease) both;
 }
 .chat-fab:hover { transform: translateY(-2px); }
-.chat-fab:active { transform: scale(0.96); }
+.chat-fab:active { transform: scale(var(--press, 0.97)); }
 .chat-fab:focus-visible, .chat-bar:focus-visible, .chat-inline-min:focus-visible { outline: 3px solid color-mix(in srgb, var(--chat-primary) 45%, transparent); outline-offset: 3px; }
 
 /* ---------- Peluncur: bilah bawah ---------- */
@@ -37,7 +37,7 @@
   display: flex; align-items: center; gap: 10px; padding: 7px 7px 7px 8px; border: 0; border-radius: 999px;
   background: var(--chat-bg); color: var(--chat-ink); cursor: pointer; text-align: left;
   box-shadow: 0 0 0 1px rgb(15 23 42 / 0.08), 0 18px 44px -14px rgb(15 23 42 / 0.4);
-  animation: chat-rise 260ms var(--chat-ease) both;
+  animation: chat-rise var(--dur-slow, 240ms) var(--chat-ease) both;
 }
 .chat-bar-who { font-weight: 700; white-space: nowrap; }
 .chat-bar-input { flex: 1; min-width: 0; padding: 10px 14px; border-radius: 999px; background: var(--chat-soft); color: var(--chat-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -69,7 +69,7 @@
   display: flex; flex-direction: column; background: var(--chat-bg); border-radius: 20px; overflow: hidden;
   box-shadow: 0 0 0 1px rgb(15 23 42 / 0.06), 0 28px 64px -16px rgb(15 23 42 / 0.45);
   transform-origin: bottom right;
-  animation: chat-in 240ms var(--chat-ease) both;
+  animation: chat-in var(--dur-slow, 240ms) var(--chat-ease) both;
 }
 @media (min-width: 640px) {
   .chat-panel { left: auto; right: 16px; bottom: 16px; width: 380px; height: min(620px, calc(100vh - 32px)); max-height: none; }
@@ -85,7 +85,7 @@
 .chat-status { font-size: 0.8em; opacity: 0.85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .chat-x {
   display: grid; place-items: center; width: 40px; height: 40px; flex: none; border: 0; border-radius: 999px;
-  background: transparent; color: inherit; cursor: pointer; transition: background-color 120ms ease;
+  background: transparent; color: inherit; cursor: pointer; transition: background-color var(--dur-fast, 120ms) ease;
 }
 .chat-x:hover { background: rgb(255 255 255 / 0.16); }
 
@@ -97,7 +97,7 @@
 .chat-msg {
   display: grid; gap: 2px; max-width: 82%; margin: 0; padding: 9px 13px; align-self: flex-start;
   border-radius: 18px; border-bottom-left-radius: 6px; background: var(--chat-bg); overflow-wrap: anywhere; white-space: pre-wrap;
-  box-shadow: 0 1px 2px rgb(15 23 42 / 0.06); animation: chat-msg 220ms var(--chat-ease) both;
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.06); animation: chat-msg var(--dur-slow, 240ms) var(--chat-ease) both;
 }
 .chat-customer { align-self: flex-end; background: var(--chat-primary); color: var(--chat-on-primary); border-radius: 18px; border-bottom-right-radius: 6px; box-shadow: none; }
 .chat-customer .chat-who { color: inherit; opacity: 0.75; }
@@ -122,21 +122,21 @@
 .chat-form textarea {
   flex: 1; min-width: 0; max-height: 120px; font: inherit; padding: 11px 14px; border: 1px solid var(--chat-line); border-radius: 22px;
   background: var(--chat-soft); color: var(--chat-ink); resize: none; field-sizing: content;
-  transition: border-color 120ms ease, box-shadow 120ms ease, background-color 120ms ease;
+  transition: border-color var(--dur-fast, 120ms) ease, box-shadow var(--dur-fast, 120ms) ease, background-color var(--dur-fast, 120ms) ease;
 }
 .chat-form textarea:focus-visible { outline: none; background: var(--chat-bg); border-color: var(--chat-primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--chat-primary) 20%, transparent); }
 .chat-fake-input { flex: 1; padding: 11px 14px; border-radius: 22px; background: var(--chat-soft); color: var(--chat-muted); }
 .chat-send {
   display: grid; place-items: center; width: 44px; height: 44px; flex: none; border: 0; border-radius: 999px;
-  background: var(--chat-primary); color: var(--chat-on-primary); cursor: pointer; transition: transform 140ms var(--chat-ease);
+  background: var(--chat-primary); color: var(--chat-on-primary); cursor: pointer; transition: transform var(--dur-fast, 120ms) var(--chat-ease);
 }
-.chat-send:active { transform: scale(0.92); }
+.chat-send:active { transform: scale(var(--press-icon, 0.94)); }
 .chat-btn {
   background: var(--chat-primary); color: var(--chat-on-primary); border: 0; border-radius: 999px; padding: 11px 18px; min-height: 44px;
-  font-weight: 650; cursor: pointer; transition: transform 140ms var(--chat-ease), filter 140ms ease;
+  font-weight: 650; cursor: pointer; transition: transform var(--dur-fast, 120ms) var(--chat-ease), filter var(--dur-fast, 120ms) ease;
 }
 .chat-btn:hover { filter: brightness(1.06); }
-.chat-btn:active { transform: scale(0.98); }
+.chat-btn:active { transform: scale(var(--press-card, 0.98)); }
 .chat-btn:disabled, .chat-link:disabled, .chat-send:disabled { opacity: 0.5; cursor: not-allowed; }
 .chat-actions { display: flex; justify-content: space-between; gap: 8px; padding: 0 14px 8px; flex-wrap: wrap; background: var(--chat-bg); flex: none; }
 .chat-link { border: 0; background: none; color: var(--chat-muted); text-decoration: underline; text-underline-offset: 3px; padding: 6px 0; min-height: 36px; cursor: pointer; font-size: 0.85em; }
@@ -166,7 +166,7 @@
 }
 
 @keyframes chat-in { from { opacity: 0; transform: translateY(12px) scale(0.96); } }
-@keyframes chat-pop { from { opacity: 0; transform: scale(0.8); } }
+@keyframes chat-pop { from { opacity: 0; transform: scale(0.9); } }
 @keyframes chat-rise { from { opacity: 0; transform: translateY(12px); } }
 @keyframes chat-msg { from { opacity: 0; transform: translateY(6px); } }
 @keyframes chat-dot { 0%, 80%, 100% { transform: scale(0.6); opacity: 0.5; } 40% { transform: scale(1); opacity: 1; } }

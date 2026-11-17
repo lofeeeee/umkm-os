@@ -153,7 +153,7 @@ export function ProductPage({ slug }: { slug: string }) {
             {tx("Jumlah")}
             <input type="number" min={1} max={999} value={qty} onChange={(e) => setQty(Math.max(1, Math.min(999, Number(e.target.value) || 1)))} />
           </label>
-          <button
+          <button type="button"
             className="s-btn"
             disabled={!sellable}
             onClick={() => {
@@ -308,7 +308,7 @@ export function CartPage() {
               </label>
               {customer && <p className="s-muted"><Tr s="Masuk sebagai {0}." a={[customer.email]} /></p>}
               <Msg kind="error">{err}</Msg>
-              <button className="s-btn" disabled={busy || !form.accept}>{busy ? tx("Memproses…") : tx("Buat pesanan")}</button>
+              <button type="submit" className="s-btn" disabled={busy || !form.accept}>{busy ? tx("Memproses…") : tx("Buat pesanan")}</button>
             </form>
           )}
           {!cfg && <Msg kind="error">{err}</Msg>}
@@ -455,7 +455,7 @@ export function OrderPage() {
           ) : (
             <>
               <label className="shop-field">{tx("Nama pembayar / catatan (opsional)")}<input maxLength={120} value={ref} onChange={(e) => setRef(e.target.value)} /></label>
-              <button className="s-btn" onClick={claim} disabled={busy}>{tx("Saya sudah membayar")}</button>
+              <button type="button" className="s-btn" onClick={claim} disabled={busy}>{tx("Saya sudah membayar")}</button>
             </>
           )}
           <label className="shop-field">{tx("Unggah bukti pembayaran (opsional, PNG/JPEG/WebP)")}
@@ -476,7 +476,7 @@ export function OrderPage() {
       {order.delivery_fee !== "0.00" && <p>{tx("Ongkir:")}{" "}{rupiah(order.delivery_fee)}</p>}
       <p className="shop-total">{tx("Total:")}{" "}<strong>{rupiah(order.total)}</strong></p>
       <p className="s-muted">{order.fulfillment === "delivery" ? tx("Dikirim ke: {0}", order.delivery_address ?? "") : tx("Ambil di toko")}</p>
-      <button className="d-link" onClick={() => token && load(token)}>{tx("Perbarui status")}</button>
+      <button type="button" className="d-link" onClick={() => token && load(token)}>{tx("Perbarui status")}</button>
       <OrderTickets token={token} />
     </Shell>
   );
@@ -516,7 +516,7 @@ function OrderTickets({ token }: { token: string }) {
             {t.messages.map((m) => <li key={m.id}><strong>{m.author_type === "customer" ? tx("Anda") : tx("Toko")}:</strong> {m.body}</li>)}
           </ul>
           <label className="shop-field">{tx("Balas")}<textarea maxLength={5000} value={reply[t.id] ?? ""} onChange={(e) => setReply({ ...reply, [t.id]: e.target.value })} /></label>
-          <button className="s-btn" disabled={!(reply[t.id] ?? "").trim()} onClick={() => run(async () => {
+          <button type="button" className="s-btn" disabled={!(reply[t.id] ?? "").trim()} onClick={() => run(async () => {
             await shopApi("POST", `/orders/current/tickets/${t.id}/messages`, { json: { body: reply[t.id] } }, h);
             setReply({ ...reply, [t.id]: "" });
           })}>{tx("Kirim balasan")}</button>
@@ -524,7 +524,7 @@ function OrderTickets({ token }: { token: string }) {
       ))}
       <label className="shop-field">{tx("Judul masalah")}<input maxLength={200} value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} /></label>
       <label className="shop-field">{tx("Ceritakan masalahnya")}<textarea maxLength={5000} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></label>
-      <button className="s-btn" disabled={!form.subject.trim()} onClick={() => run(async () => {
+      <button type="button" className="s-btn" disabled={!form.subject.trim()} onClick={() => run(async () => {
         await shopApi("POST", "/orders/current/tickets", { json: { subject: form.subject, description: form.description || null } }, h);
         setForm({ subject: "", description: "" });
       })}>{tx("Laporkan masalah")}</button>
@@ -584,7 +584,7 @@ export function AccountPage() {
         <ul className="shop-list">
           {orders.map((o) => <li key={o.id}>{o.code} — {STATUS_TEXT[o.status] ?? o.status} — {rupiah(o.total)}</li>)}
         </ul>
-        <button className="s-btn" onClick={async () => { await shopApi("POST", "/customer/logout").catch(() => null); setCustomerCsrf(null); setMe(null); }}>{tx("Keluar")}</button>
+        <button type="button" className="s-btn" onClick={async () => { await shopApi("POST", "/customer/logout").catch(() => null); setCustomerCsrf(null); setMe(null); }}>{tx("Keluar")}</button>
       </Shell>
     );
   }
@@ -602,9 +602,9 @@ export function AccountPage() {
         )}
         <Msg kind="error">{err}</Msg>
         <Msg kind="ok">{ok}</Msg>
-        <button className="s-btn">{mode === "login" ? tx("Masuk") : tx("Daftar")}</button>
+        <button type="submit" className="s-btn">{mode === "login" ? tx("Masuk") : tx("Daftar")}</button>
       </form>
-      <button className="d-link" onClick={() => setMode(mode === "login" ? "register" : "login")}>
+      <button type="button" className="d-link" onClick={() => setMode(mode === "login" ? "register" : "login")}>
         {mode === "login" ? tx("Belum punya akun? Daftar") : tx("Sudah punya akun? Masuk")}
       </button>
     </Shell>

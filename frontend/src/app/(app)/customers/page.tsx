@@ -77,7 +77,7 @@ function Customers({ ctx }: { ctx: TenantCtx }) {
                   <td>{c.email ?? <span className="d-muted">—</span>}{c.phone && <span className="d-sub">{c.phone}</span>}</td>
                   <td className="d-hide-sm"><div className="d-chips">{c.tags.map((t) => <span key={t} className="d-chip" style={{ paddingRight: 10 }}>{t}</span>)}</div></td>
                   <td className="d-hide-sm d-muted">{tanggal(c.created_at)}</td>
-                  <td className="d-actions"><button className="d-btn d-btn-sm" onClick={() => setOpen(c.id)}>{tx("Buka")}</button></td>
+                  <td className="d-actions"><button type="button" className="d-btn d-btn-sm" onClick={() => setOpen(c.id)}>{tx("Buka")}</button></td>
                 </tr>
               ))}
             </tbody>
@@ -124,9 +124,9 @@ function Detail({ ctx, url, onBack }: { ctx: TenantCtx; url: string; onBack: () 
         description={tx("{0} · tercatat sejak {1}", c.has_account ? tx("Punya akun") : tx("Pelanggan tamu"), tanggal(c.created_at))}
         actions={can ? (
           <>
-            <button className="d-btn" onClick={exportJson}><DownloadSimple weight="bold" aria-hidden="true" />{tx("Ekspor data")}</button>
+            <button type="button" className="d-btn" onClick={exportJson}><DownloadSimple weight="bold" aria-hidden="true" />{tx("Ekspor data")}</button>
             {!c.deletion_requested && (
-              <button className="d-btn d-btn-danger" onClick={async () => {
+              <button type="button" className="d-btn d-btn-danger" onClick={async () => {
                 if (await confirm({ title: tx("Minta hapus data pelanggan?"), body: tx("Data pelanggan akan dianonimkan otomatis 30 hari setelah permintaan ini. Riwayat pesanan tetap tersimpan tanpa identitas."), confirmLabel: tx("Minta hapus data"), danger: true })) {
                   void run(() => api("POST", `${url}/deletion-request`), tx("Permintaan hapus dicatat."));
                 }

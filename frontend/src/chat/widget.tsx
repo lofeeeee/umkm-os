@@ -270,7 +270,7 @@ export function ChatWidget({ variant = "bubble", title, welcome, startOpen = fal
               id="chat-input" name="body" rows={1} maxLength={4000} required placeholder={t("Tulis pesan…")}
               onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); e.currentTarget.form?.requestSubmit(); } }}
             />
-            <button className="chat-send" disabled={busy} aria-label={t("Kirim")}><IconSend /></button>
+            <button type="submit" className="chat-send" disabled={busy} aria-label={t("Kirim")}><IconSend /></button>
           </form>
           <div className="chat-actions">
             {conv.status === "AI" && <button type="button" className="chat-link" disabled={busy} onClick={handover}>{t("Bicara dengan admin")}</button>}

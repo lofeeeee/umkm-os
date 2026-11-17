@@ -73,7 +73,7 @@ function Stock({ ctx }: { ctx: TenantCtx }) {
                   <td className="d-num d-muted">{r.reserved}</td>
                   <td className="d-num">{r.is_low ? <Badge tone="warn">{r.available}</Badge> : <span className="d-strong">{r.available}</span>}</td>
                   <td className="d-num d-hide-sm d-muted">{r.min_stock ?? "—"}</td>
-                  <td className="d-actions"><button className="d-btn d-btn-sm" onClick={() => setOpen(r.variant_id)}>{tx("Kelola")}</button></td>
+                  <td className="d-actions"><button type="button" className="d-btn d-btn-sm" onClick={() => setOpen(r.variant_id)}>{tx("Kelola")}</button></td>
                 </tr>
               ))}
             </tbody>

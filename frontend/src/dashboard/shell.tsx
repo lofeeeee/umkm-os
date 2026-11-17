@@ -62,10 +62,10 @@ const THEME_EVENT = "umkm-theme-change";
 
 export function setStoredTheme(mode: "light" | "dark" | null) {
   if (mode) {
-    localStorage.setItem(THEME_KEY, mode);
+    try { localStorage.setItem(THEME_KEY, mode); } catch { /* storage diblokir: tema tetap berlaku di sesi ini */ }
     document.documentElement.dataset.theme = mode;
   } else {
-    localStorage.removeItem(THEME_KEY);
+    try { localStorage.removeItem(THEME_KEY); } catch { /* storage diblokir */ }
     delete document.documentElement.dataset.theme;
   }
   window.dispatchEvent(new Event(THEME_EVENT));

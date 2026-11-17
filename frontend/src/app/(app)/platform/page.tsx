@@ -170,8 +170,8 @@ export default function PlatformPage() {
                         <input aria-label={tx("Alasan penolakan {0}", x.code)} placeholder={tx("Alasan penolakan (wajib bila menolak)")} maxLength={300}
                           value={reasons[x.id] ?? ""} onChange={(e) => setReasons({ ...reasons, [x.id]: e.target.value })} />
                         <div className="d-row" style={{ justifyContent: "flex-end" }}>
-                          <button className="d-btn d-btn-danger" onClick={() => void decide(x.id, false)}>{tx("Tolak")}</button>
-                          <button className="d-btn d-btn-primary" onClick={() => void decide(x.id, true)}>{tx("Setujui")}</button>
+                          <button type="button" className="d-btn d-btn-danger" onClick={() => void decide(x.id, false)}>{tx("Tolak")}</button>
+                          <button type="button" className="d-btn d-btn-primary" onClick={() => void decide(x.id, true)}>{tx("Setujui")}</button>
                         </div>
                       </div>
                     )}
@@ -253,7 +253,8 @@ function TenantsSection() {
               <tbody>
                 {data.items.map((t) => (
                   <tr key={t.id} onClick={() => setOpen(open === t.id ? null : t.id)} style={{ cursor: "pointer" }}
-                      aria-expanded={open === t.id}>
+                      tabIndex={0} aria-expanded={open === t.id}
+                      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpen(open === t.id ? null : t.id); } }}>
                     <td><strong className="d-strong">{t.name}</strong><span className="d-sub">{t.slug}</span></td>
                     <td>{planLabel(t.plan)}{t.sub_status ? <span className="d-sub">{status(SUBSCRIPTION_STATUS, t.sub_status).label}</span> : null}</td>
                     <td><Badge tone={tenantTone(t.tenant_status)}>{t.tenant_status}</Badge></td>
@@ -268,14 +269,14 @@ function TenantsSection() {
           <div className="d-row" style={{ justifyContent: "space-between", marginTop: 12 }}>
             <span className="d-muted d-small">{nf.format(total)}{" "}<Tr s="toko · halaman {0}/" a={[page + 1]} />{pages}</span>
             <div className="d-row">
-              <button className="d-btn d-btn-sm d-btn-ghost" disabled={page === 0} onClick={() => setPage((p) => Math.max(0, p - 1))}>{tx("Sebelumnya")}</button>
-              <button className="d-btn d-btn-sm d-btn-ghost" disabled={page + 1 >= pages} onClick={() => setPage((p) => p + 1)}>{tx("Berikutnya")}</button>
+              <button type="button" className="d-btn d-btn-sm d-btn-ghost" disabled={page === 0} onClick={() => setPage((p) => Math.max(0, p - 1))}>{tx("Sebelumnya")}</button>
+              <button type="button" className="d-btn d-btn-sm d-btn-ghost" disabled={page + 1 >= pages} onClick={() => setPage((p) => p + 1)}>{tx("Berikutnya")}</button>
             </div>
           </div>
         </>
       )}
       {open && (
-        <Card title={shown ? shown.name : tx("Memuat…")} actions={<button className="d-btn d-btn-sm d-btn-ghost" onClick={() => setOpen(null)}>{tx("Tutup")}</button>}>
+        <Card title={shown ? shown.name : tx("Memuat…")} actions={<button type="button" className="d-btn d-btn-sm d-btn-ghost" onClick={() => setOpen(null)}>{tx("Tutup")}</button>}>
           {!shown ? <PageSkeleton /> : (
             <div className="an-grid">
               <div className="an-tile"><div className="an-label">{tx("Omzet (periode)")}</div><div className="an-value">{rupiah(shown.range.gmv)}</div>

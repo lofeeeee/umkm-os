@@ -79,6 +79,10 @@
   --dur-fast: 120ms;
   --dur: 180ms;
   --dur-slow: 240ms;
+  /* Umpan balik tekan (:active): tombol, ikon/tombol bulat kecil, kartu besar. */
+  --press: 0.97;
+  --press-icon: 0.94;
+  --press-card: 0.98;
 
   /* --- Ritme 4px --- */
   --sp-1: 4px;
@@ -336,7 +340,7 @@ kbd, .d-kbd {
 }
 .d-icon-btn svg, .d-theme-toggle svg, .d-burger svg { width: 16px; height: 16px; }
 .d-icon-btn:hover, .d-theme-toggle:hover, .d-burger:hover { background: var(--surface-hover); color: var(--ink); }
-.d-icon-btn:active, .d-theme-toggle:active, .d-burger:active { transform: scale(0.94); }
+.d-icon-btn:active, .d-theme-toggle:active, .d-burger:active { transform: scale(var(--press-icon, 0.94)); }
 .d-theme-dot { width: 12px; height: 12px; border-radius: 999px; background: currentColor; opacity: 0.4; }
 @media (pointer: coarse) { .d-icon-btn, .d-theme-toggle, .d-burger { width: 40px; height: 40px; } }
 
@@ -572,7 +576,7 @@ input[aria-invalid="true"]:focus-visible, textarea[aria-invalid="true"]:focus-vi
 }
 .d-btn svg { width: 15px; height: 15px; flex: none; }
 .d-btn:hover { background: var(--surface-hover); }
-.d-btn:active:not(:disabled) { transform: scale(0.97); }
+.d-btn:active:not(:disabled) { transform: scale(var(--press, 0.97)); }
 .d-btn:disabled, .d-btn[aria-disabled="true"] { opacity: 0.5; cursor: not-allowed; }
 .d-btn-primary { background: var(--brand-solid); border-color: var(--brand-solid); color: var(--brand-ink); box-shadow: 0 1px 2px rgb(79 70 229 / 0.3), inset 0 1px 0 rgb(255 255 255 / 0.12); }
 .d-btn-primary:hover { background: var(--brand-solid-hover); border-color: var(--brand-solid-hover); }
@@ -776,7 +780,7 @@ input[aria-invalid="true"]:focus-visible, textarea[aria-invalid="true"]:focus-vi
   background: var(--card); border-radius: var(--radius-lg);
   box-shadow: var(--shadow-pop); padding: 4px;
   transform-origin: var(--origin, top left);
-  animation: d-pop-in 150ms var(--ease-out) both;
+  animation: d-pop-in var(--dur, 180ms) var(--ease-out) both;
 }
 @keyframes d-pop-in { from { opacity: 0; transform: scale(0.97) translateY(-2px); } }
 .d-menu-item {
@@ -796,12 +800,14 @@ dialog.d-dialog {
   background: var(--card); color: var(--ink);
   width: min(440px, calc(100vw - 32px)); max-height: calc(100vh - 64px);
   box-shadow: var(--shadow-dialog);
-  opacity: 1; transform: none;
-  transition: opacity var(--dur) var(--ease-out), transform var(--dur) var(--ease-out), overlay var(--dur) allow-discrete, display var(--dur) allow-discrete;
+  /* Keluar lebih cepat dari masuk (dur-fast vs dur); allow-discrete menahan dialog di top layer
+     sampai animasi keluar selesai. Browser lama: menutup seketika. */
+  opacity: 0; transform: scale(0.98);
+  transition: opacity var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out), overlay var(--dur-fast) allow-discrete, display var(--dur-fast) allow-discrete;
 }
-dialog.d-dialog[open] { @starting-style { opacity: 0; transform: scale(0.96); } }
-dialog.d-dialog::backdrop { background: var(--overlay); transition: opacity var(--dur) ease-out; }
-dialog.d-dialog[open]::backdrop { @starting-style { opacity: 0; } }
+dialog.d-dialog[open] { opacity: 1; transform: none; transition-duration: var(--dur); @starting-style { opacity: 0; transform: scale(0.96); } }
+dialog.d-dialog::backdrop { background: var(--overlay); opacity: 0; transition: opacity var(--dur-fast) ease-out, overlay var(--dur-fast) allow-discrete, display var(--dur-fast) allow-discrete; }
+dialog.d-dialog[open]::backdrop { opacity: 1; transition-duration: var(--dur); @starting-style { opacity: 0; } }
 .d-dialog-body { padding: var(--sp-5) var(--sp-5) var(--sp-4); }
 .d-dialog-body h2 { margin: 0 0 var(--sp-2); font-size: 1rem; }
 .d-dialog-body p { color: var(--muted); margin: 0; }
@@ -813,12 +819,12 @@ dialog.d-sheet {
   background: var(--card); color: var(--ink);
   box-shadow: var(--shadow-dialog);
   display: none; flex-direction: column;
-  transform: none;
-  transition: transform var(--dur-slow) var(--ease-drawer), overlay var(--dur-slow) allow-discrete, display var(--dur-slow) allow-discrete;
+  transform: translateX(100%);
+  transition: transform var(--dur) var(--ease-drawer), overlay var(--dur) allow-discrete, display var(--dur) allow-discrete;
 }
-dialog.d-sheet[open] { display: flex; @starting-style { transform: translateX(100%); } }
-dialog.d-sheet::backdrop { background: var(--overlay); transition: opacity var(--dur-slow) ease-out; }
-dialog.d-sheet[open]::backdrop { @starting-style { opacity: 0; } }
+dialog.d-sheet[open] { display: flex; transform: none; transition-duration: var(--dur-slow); @starting-style { transform: translateX(100%); } }
+dialog.d-sheet::backdrop { background: var(--overlay); opacity: 0; transition: opacity var(--dur) ease-out, overlay var(--dur) allow-discrete, display var(--dur) allow-discrete; }
+dialog.d-sheet[open]::backdrop { opacity: 1; transition-duration: var(--dur-slow); @starting-style { opacity: 0; } }
 .d-sheet-wide { width: min(880px, 100vw) !important; }
 .d-sheet-head { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-4) var(--sp-5); border-bottom: 1px solid var(--line); flex: none; }
 .d-sheet-head h2 { margin: 0; font-size: 1rem; flex: 1; min-width: 0; }
@@ -850,7 +856,10 @@ dialog.d-sheet[open]::backdrop { @starting-style { opacity: 0; } }
 
 .d-cmdk { width: min(560px, calc(100vw - 32px)); margin-top: 12vh; border-radius: var(--radius-xl); }
 /* Command palette dibuka ratusan kali: tanpa animasi masuk. */
+/* …dan tanpa animasi keluar. */
 dialog.d-cmdk[open] { @starting-style { opacity: 1; transform: none; } }
+dialog.d-cmdk, dialog.d-cmdk[open], dialog.d-cmdk::backdrop, dialog.d-cmdk[open]::backdrop { transition: none; }
+dialog.d-cmdk[open]::backdrop { @starting-style { opacity: 1; } }
 dialog.d-cmdk::backdrop { background: rgb(0 0 0 / 0.25); }
 .d-cmdk-input { display: flex; align-items: center; gap: 10px; padding: 0 var(--sp-4); border-bottom: 1px solid var(--line); }
 .d-cmdk-input svg { width: 16px; height: 16px; color: var(--muted); flex: none; }
@@ -1057,7 +1066,7 @@ fieldset.e-list-item > legend { font-weight: 600; font-size: 0.8125rem; padding:
 .e-thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 6px; margin-top: var(--sp-2); }
 .e-thumbs button { padding: 0; border: 2px solid transparent; border-radius: var(--radius-sm); background: var(--surface-hover); cursor: pointer; aspect-ratio: 1; overflow: hidden; transition: border-color var(--dur-fast) ease, transform var(--dur-fast) var(--ease-out); }
 .e-thumbs button:hover { border-color: var(--line-strong); }
-.e-thumbs button:active { transform: scale(0.96); }
+.e-thumbs button:active { transform: scale(var(--press, 0.97)); }
 .e-thumbs button[aria-pressed="true"] { border-color: var(--brand); }
 .e-thumbs img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .d-img-tile { width: 64px; height: 64px; flex: none; border-radius: var(--radius); object-fit: cover; border: 1px solid var(--line); background: var(--bg-subtle); display: grid; place-items: center; color: var(--subtle); }
@@ -1304,7 +1313,7 @@ main.d-legal { max-width: 720px; }
 /* Studio — edit langsung, foto, simpan otomatis, template */
 .st-save { display: inline-flex; align-items: center; gap: 4px; font-size: 0.75rem; color: var(--muted); }
 .st-save svg { width: 12px; height: 12px; color: var(--ok); }
-.s-edit { outline: 1.5px dashed transparent; outline-offset: 3px; border-radius: 4px; cursor: text !important; transition: outline-color 120ms ease, background-color 120ms ease; }
+.s-edit { outline: 1.5px dashed transparent; outline-offset: 3px; border-radius: 4px; cursor: text !important; transition: outline-color var(--dur-fast, 120ms) ease, background-color var(--dur-fast, 120ms) ease; }
 /* Teks yang bisa diketik baru ditandai saat bloknya disorot/dipilih — kanvas diam tetap bersih. */
 .sf-block:hover .s-edit, .sf-block-selected .s-edit { outline-color: color-mix(in srgb, var(--s-primary, #4f46e5) 40%, transparent); }
 .s-edit:hover { outline-color: var(--s-primary, #4f46e5) !important; }
@@ -1318,7 +1327,7 @@ main.d-legal { max-width: 720px; }
 .st-tpls { display: grid; gap: 20px; grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr)); }
 .st-tpl { display: grid; gap: 0; padding: 0; text-align: left; border: 1px solid var(--line); border-radius: var(--radius-xl); background: var(--card); cursor: pointer; overflow: hidden; font: inherit; color: inherit; transition: transform var(--dur) var(--ease-out), box-shadow var(--dur) var(--ease-out), border-color var(--dur) ease; animation: fadeIn var(--dur-slow) var(--ease-out) both; }
 .st-tpl:hover { transform: translateY(-3px); border-color: var(--brand); box-shadow: 0 20px 40px -20px rgb(15 23 42 / 0.35); }
-.st-tpl:active { transform: scale(0.99); }
+.st-tpl:active { transform: scale(var(--press-card, 0.98)); }
 .st-tpl-thumb { position: relative; display: block; height: 240px; overflow: hidden; --pg-bg: #fff; background: var(--pg-bg); border-bottom: 1px solid var(--line); }
 .st-tpl-thumb[data-surface="cream"] { --pg-bg: #fbf6ee; }
 .st-tpl-thumb[data-surface="dark"] { --pg-bg: #0d0d12; }

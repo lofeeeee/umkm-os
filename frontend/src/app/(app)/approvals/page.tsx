@@ -98,12 +98,12 @@ function Approvals({ ctx }: { ctx: TenantCtx }) {
                         <label className="d-field" style={{ flex: "1 1 240px", margin: 0 }}><span>{t("Alasan")}{" "}<span className="d-opt">{t("(wajib bila menolak)")}</span></span>
                           <input aria-label={t("Alasan")} value={reason[r.id] ?? ""} onChange={(e) => setReason({ ...reason, [r.id]: e.target.value })} />
                         </label>
-                        <button className="d-btn d-btn-danger" disabled={!(reason[r.id] ?? "").trim()} onClick={() => run(() => api("POST", `${base}/approvals/${r.id}/reject`, { json: { step: r.current_step, reason: reason[r.id] || null } }), t("Ditolak."))}>{t("Tolak")}</button>
-                        <button className="d-btn d-btn-primary" onClick={() => run(() => api("POST", `${base}/approvals/${r.id}/approve`, { json: { step: r.current_step, reason: reason[r.id] || null } }), t("Disetujui."))}>{t("Setujui langkah ini")}</button>
+                        <button type="button" className="d-btn d-btn-danger" disabled={!(reason[r.id] ?? "").trim()} onClick={() => run(() => api("POST", `${base}/approvals/${r.id}/reject`, { json: { step: r.current_step, reason: reason[r.id] || null } }), t("Ditolak."))}>{t("Tolak")}</button>
+                        <button type="button" className="d-btn d-btn-primary" onClick={() => run(() => api("POST", `${base}/approvals/${r.id}/approve`, { json: { step: r.current_step, reason: reason[r.id] || null } }), t("Disetujui."))}>{t("Setujui langkah ini")}</button>
                       </>
                     )}
                     {r.requested_by === ctx.session.user_id && (
-                      <button className="d-btn d-btn-ghost" onClick={async () => {
+                      <button type="button" className="d-btn d-btn-ghost" onClick={async () => {
                         if (await confirm({ title: t("Batalkan permintaan ini?"), confirmLabel: t("Batalkan permintaan"), cancelLabel: t("Kembali"), danger: true })) void run(() => api("POST", `${base}/approvals/${r.id}/cancel`), t("Permintaan dibatalkan."));
                       }}>{t("Batalkan permintaan saya")}</button>
                     )}
@@ -173,7 +173,7 @@ function Delegate({ base, members, run }: { base: string; members: MemberRow[]; 
         <label className="d-field" style={{ flex: "0 0 140px", margin: 0 }}><span>{t("Lama")}</span>
           <div className="d-input-suffix"><input aria-label={t("Hari")} type="number" min={1} max={90} value={days} onChange={(e) => setDays(Number(e.target.value))} /><em aria-hidden="true">hari</em></div>
         </label>
-        <button className="d-btn" disabled={!to} onClick={() => run(() => api("POST", `${base}/approval-delegations`, { json: { to_user: to, hours: days * 24 } }), t("Delegasi dibuat."))}>{t("Delegasikan")}</button>
+        <button type="button" className="d-btn" disabled={!to} onClick={() => run(() => api("POST", `${base}/approval-delegations`, { json: { to_user: to, hours: days * 24 } }), t("Delegasi dibuat."))}>{t("Delegasikan")}</button>
       </div>
     </Card>
   );

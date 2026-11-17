@@ -12,6 +12,7 @@ import { Alert, WithTenant, type TenantCtx } from "@/dashboard/shell";
 import { Badge, BusyButton, Card, PageHeader, PageSkeleton } from "@/ui/page";
 import { toast } from "@/ui/toast";
 import { api, describe } from "@/lib/api";
+import { confirm } from "@/ui/dialog";
 import { t } from "@/i18n";
 import { relatif, waktu } from "@/lib/labels";
 
@@ -202,7 +203,13 @@ function GopayCard({ tenantId, can, refreshKey }: { tenantId: string; can: boole
     else toast.info(t("GoBiz sedang tidak dapat dihubungi. Sesi tetap aktif dan dicoba lagi otomatis."));
   });
   const disconnect = () => run(async () => {
-    if (!confirm(t("Putuskan akun GoPay? Pesanan tidak lagi dikonfirmasi otomatis."))) return;
+    const ok = await confirm({
+      title: t("Putuskan akun GoPay?"),
+      body: t("Pesanan tidak lagi dikonfirmasi otomatis."),
+      confirmLabel: t("Putuskan akun"),
+      danger: true,
+    });
+    if (!ok) return;
     setSt(await api<GopayStatus>("DELETE", base)); toast.ok(t("Akun GoPay diputus."));
   });
 

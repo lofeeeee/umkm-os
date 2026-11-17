@@ -6,9 +6,28 @@
 //   semua teks — termasuk konstanta modul yang memakai getter — dirender ulang.
 // - Kelengkapan kamus dijaga tes (src/i18n/catalog.test.ts): setiap t("…") di kode wajib punya
 //   terjemahan EN dengan placeholder {0}, {1}, … yang sama.
+// - Kamus EN adalah chunk terpisah (dynamic import): pengguna bahasa Indonesia — mayoritas, termasuk
+//   pengunjung situs toko — tidak mengunduhnya. Bahasa baru berlaku setelah kamus termuat.
 // Konten buatan pemilik toko (nama produk, teks situs) TIDAK diterjemahkan.
 
-import { EN } from "./en";
+export interface EnglishDict {
+  EN: Record<string, string>;
+  SERVER_EN: Record<string, string>;
+  CONSENT_EN: Record<string, string>;
+}
+let dict: EnglishDict | null = null;
+let loading: Promise<EnglishDict> | null = null;
+
+/** Muat kamus English (sekali; dipakai juga oleh tes sebelum setLocale("en")). */
+export function loadEnglish(): Promise<EnglishDict> {
+  loading ??= import("./en").then(
+    (m) => (dict = { EN: m.EN, SERVER_EN: m.SERVER_EN, CONSENT_EN: m.CONSENT_EN }),
+    (e: unknown) => { loading = null; throw e; },
+  );
+  return loading;
+}
+/** Kamus English bila sudah termuat. */
+export const englishDict = (): EnglishDict | null => dict;
 
 export type Locale = "id" | "en";
 export const LOCALES: { value: Locale; label: string; short: string }[] = [
@@ -18,6 +37,8 @@ export const LOCALES: { value: Locale; label: string; short: string }[] = [
 const STORAGE_KEY = "umkm-lang";
 
 let current: Locale = "id";
+/** Bahasa yang terakhir diminta (kamus EN mungkin masih diunduh). */
+let wanted: Locale = "id";
 const listeners = new Set<() => void>();
 
 export const getLocale = (): Locale => current;
@@ -35,6 +56,15 @@ export function setLocale(l: Locale, persist = true) {
   if (persist) {
     try { localStorage.setItem(STORAGE_KEY, l); } catch { /* mode privat: tetap berlaku di sesi ini */ }
   }
+  wanted = l;
+  if (l === "en" && !dict) {
+    void loadEnglish().then(() => { if (wanted === "en") apply("en"); }, () => { /* jaringan gagal: tetap Indonesia */ });
+    return;
+  }
+  apply(l);
+}
+
+function apply(l: Locale) {
   if (l === current) return;
   current = l;
   if (typeof document !== "undefined") document.documentElement.lang = l;
@@ -55,7 +85,7 @@ function fill(s: string, args: readonly unknown[]): string {
 
 /** Terjemahkan teks antarmuka. Placeholder posisi: t("Halaman {0} dibuat.", judul). */
 export function t(id: string, ...args: unknown[]): string {
-  const s = current === "en" ? (EN[id] ?? id) : id;
+  const s = current === "en" && dict ? (dict.EN[id] ?? id) : id;
   return fill(s, args);
 }
 

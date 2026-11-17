@@ -103,7 +103,7 @@ function Tickets({ ctx }: { ctx: TenantCtx }) {
                     <td><Badge tone={pr.tone} plain>{pr.label}</Badge></td>
                     <td><Badge tone={st.tone}>{st.label}</Badge></td>
                     <td className="d-hide-sm">{late ? <Badge tone="danger" plain>{tx("Terlewat")}</Badge> : <span className="d-muted">{tx("Aman")}</span>}</td>
-                    <td className="d-actions"><button className="d-btn d-btn-sm" onClick={() => setOpen(t.id)}>{tx("Buka")}</button></td>
+                    <td className="d-actions"><button type="button" className="d-btn d-btn-sm" onClick={() => setOpen(t.id)}>{tx("Buka")}</button></td>
                   </tr>
                 );
               })}

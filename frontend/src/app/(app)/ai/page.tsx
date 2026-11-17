@@ -167,8 +167,8 @@ function Ai({ ctx }: { ctx: TenantCtx }) {
                 {manageProv && (
                   <div className="d-row">
                     {p.source === "byok" && <RotateKey onSave={(k) => run(() => api("PATCH", `${base}/providers/${p.id}`, { json: { api_key: k } }), tx("Kunci diganti."))} />}
-                    <button className="d-btn d-btn-sm" onClick={() => run(() => api("PATCH", `${base}/providers/${p.id}`, { json: { active: p.status !== "active" } }), tx("Penyedia diperbarui."))}>{p.status === "active" ? tx("Nonaktifkan") : tx("Aktifkan")}</button>
-                    <button className="d-btn d-btn-sm d-btn-ghost" aria-label={tx("Hapus penyedia {0}", p.name)} onClick={async () => {
+                    <button type="button" className="d-btn d-btn-sm" onClick={() => run(() => api("PATCH", `${base}/providers/${p.id}`, { json: { active: p.status !== "active" } }), tx("Penyedia diperbarui."))}>{p.status === "active" ? tx("Nonaktifkan") : tx("Aktifkan")}</button>
+                    <button type="button" className="d-btn d-btn-sm d-btn-ghost" aria-label={tx("Hapus penyedia {0}", p.name)} onClick={async () => {
                       if (await confirm({ title: tx("Hapus penyedia “{0}”?", p.name), body: tx("Chatbot berhenti memakai penyedia ini. Kunci API yang tersimpan ikut dihapus."), confirmLabel: tx("Hapus"), danger: true })) void run(() => api("DELETE", `${base}/providers/${p.id}`), tx("Penyedia dihapus."));
                     }}><Trash weight="bold" aria-hidden="true" /></button>
                   </div>
@@ -259,8 +259,8 @@ function Ai({ ctx }: { ctx: TenantCtx }) {
                 <Badge tone={d.status === "indexed" ? "ok" : d.status === "pending" ? "info" : "danger"} plain>{d.status === "indexed" ? tx("Siap") : d.status === "pending" ? tx("Diproses") : tx("Gagal")}</Badge>
                 {manage && (
                   <div className="d-row">
-                    <button className="d-btn d-btn-sm" onClick={() => run(() => api("POST", `${base}/knowledge/${d.id}/reindex`), tx("Dijadwalkan ulang."))}>{tx("Proses ulang")}</button>
-                    <button className="d-btn d-btn-sm d-btn-ghost" aria-label={tx("Hapus dokumen {0}", d.title)} onClick={async () => {
+                    <button type="button" className="d-btn d-btn-sm" onClick={() => run(() => api("POST", `${base}/knowledge/${d.id}/reindex`), tx("Dijadwalkan ulang."))}>{tx("Proses ulang")}</button>
+                    <button type="button" className="d-btn d-btn-sm d-btn-ghost" aria-label={tx("Hapus dokumen {0}", d.title)} onClick={async () => {
                       if (await confirm({ title: tx("Hapus dokumen “{0}”?", d.title), confirmLabel: tx("Hapus"), danger: true })) void run(() => api("DELETE", `${base}/knowledge/${d.id}`), tx("Dokumen dihapus."));
                     }}><Trash weight="bold" aria-hidden="true" /></button>
                   </div>
@@ -280,11 +280,11 @@ function Ai({ ctx }: { ctx: TenantCtx }) {
 function RotateKey({ onSave }: { onSave: (k: string) => void }) {
   const [open, setOpen] = useState(false);
   const [k, setK] = useState("");
-  if (!open) return <button className="d-btn d-btn-sm" onClick={() => setOpen(true)}>{tx("Ganti kunci")}</button>;
+  if (!open) return <button type="button" className="d-btn d-btn-sm" onClick={() => setOpen(true)}>{tx("Ganti kunci")}</button>;
   return (
     <form className="d-row" onSubmit={(e) => { e.preventDefault(); onSave(k); setK(""); setOpen(false); }}>
       <input aria-label={tx("Kunci API baru")} type="password" autoComplete="off" placeholder={tx("Kunci baru")} value={k} onChange={(e) => setK(e.target.value)} style={{ width: 180 }} autoFocus />
-      <button className="d-btn d-btn-sm d-btn-primary" disabled={k.length < 8}>{tx("Simpan")}</button>
+      <button type="submit" className="d-btn d-btn-sm d-btn-primary" disabled={k.length < 8}>{tx("Simpan")}</button>
       <button type="button" className="d-btn d-btn-sm d-btn-ghost" onClick={() => setOpen(false)}>{tx("Batal")}</button>
     </form>
   );
@@ -335,7 +335,7 @@ function AddProvider({ view, onAdd, first, platformBlocked, subscriptionHref }: 
         {source !== "platform" && (
           <label className="d-field"><span>{tx("Kunci API")}</span><input required type="password" autoComplete="off" minLength={8} value={f.api_key} onChange={(e) => setF({ ...f, api_key: e.target.value })} /><span className="d-hint">{tx("Disimpan terenkripsi dan tidak ditampilkan lagi.")}</span></label>
         )}
-        <button className="d-btn d-btn-primary">{tx("Tambah penyedia")}</button>
+        <button type="submit" className="d-btn d-btn-primary">{tx("Tambah penyedia")}</button>
       </form>
     </details>
   );
@@ -349,7 +349,7 @@ function AddDoc({ onAdd }: { onAdd: (t: string, b: string) => void }) {
       <summary><Plus weight="bold" aria-hidden="true" />{" "}{tx("Dokumen baru")}</summary>
       <label className="d-field"><span>{tx("Judul dokumen")}</span><input id="kb-title" maxLength={200} placeholder={tx("mis. Kebijakan pengiriman")} value={t} onChange={(e) => setT(e.target.value)} /></label>
       <label className="d-field"><span>{tx("Isi")}</span><textarea rows={5} maxLength={50000} value={b} onChange={(e) => setB(e.target.value)} /></label>
-      <button className="d-btn" disabled={!t.trim() || !b.trim()} onClick={() => { onAdd(t, b); setT(""); setB(""); }}>{tx("Tambah dokumen")}</button>
+      <button type="button" className="d-btn" disabled={!t.trim() || !b.trim()} onClick={() => { onAdd(t, b); setT(""); setB(""); }}>{tx("Tambah dokumen")}</button>
     </details>
   );
 }

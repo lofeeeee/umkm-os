@@ -662,13 +662,13 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
         </div>
         <span className="sx-zoom" title={tx("Pratinjau {0} selebar layar asli ({1} px), diperkecil agar muat", DEVICE_LABEL[device], DEVICE_WIDTH[device])}>{Math.round(zoom * 100)}%</span>
         <span className="sx-sep" aria-hidden="true" />
-        <button className="d-btn d-btn-sm d-btn-ghost" onClick={() => setPicking("change")}><SquaresFour weight="bold" aria-hidden="true" /><span className="sx-hide-md">{tx("Templat")}</span></button>
-        <button className="d-btn d-btn-sm d-btn-ghost" onClick={() => setVersionsOpen(true)}><ClockCounterClockwise weight="bold" aria-hidden="true" /><span className="sx-hide-md">{tx("Riwayat")}</span></button>
+        <button type="button" className="d-btn d-btn-sm d-btn-ghost" onClick={() => setPicking("change")}><SquaresFour weight="bold" aria-hidden="true" /><span className="sx-hide-md">{tx("Templat")}</span></button>
+        <button type="button" className="d-btn d-btn-sm d-btn-ghost" onClick={() => setVersionsOpen(true)}><ClockCounterClockwise weight="bold" aria-hidden="true" /><span className="sx-hide-md">{tx("Riwayat")}</span></button>
         <FullscreenButton />
         {ctx.tenant.primary_hostname && srv?.published && (
           <a className="d-btn d-btn-sm d-btn-ghost" href={`https://${ctx.tenant.primary_hostname}`} target="_blank" rel="noopener noreferrer"><ArrowSquareOut weight="bold" aria-hidden="true" /><span className="sx-hide-md">{tx("Lihat situs")}</span></a>
         )}
-        <button className="d-btn d-btn-sm d-btn-primary" onClick={publish} disabled={!canPublish || publishing || saveState === "conflict"} title={canPublish ? tx("Terbitkan ke situs publik") : tx("Butuh izin terbitkan website")}>
+        <button type="button" className="d-btn d-btn-sm d-btn-primary" onClick={publish} disabled={!canPublish || publishing || saveState === "conflict"} title={canPublish ? tx("Terbitkan ke situs publik") : tx("Butuh izin terbitkan website")}>
           {publishing ? tx("Menerbitkan…") : srv?.published ? tx("Terbitkan perubahan") : tx("Terbitkan")}
         </button>
       </header>
@@ -837,7 +837,7 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
 
       <Sheet open={checks !== null} onClose={() => setChecks(null)} title={tx("Sebelum terbit")}
         description={tx("Website tetap bisa diterbitkan. Butir di bawah membuat toko lebih meyakinkan bagi pembeli.")}
-        footer={<><button className="d-btn" onClick={() => setChecks(null)}>{tx("Perbaiki dulu")}</button><button className="d-btn d-btn-primary" onClick={() => void doPublish()} disabled={publishing}>{tx("Terbitkan sekarang")}</button></>}>
+        footer={<><button type="button" className="d-btn" onClick={() => setChecks(null)}>{tx("Perbaiki dulu")}</button><button type="button" className="d-btn d-btn-primary" onClick={() => void doPublish()} disabled={publishing}>{tx("Terbitkan sekarang")}</button></>}>
         <ul className="d-list" aria-label={tx("Catatan siap terbit")}>
           {(checks ?? []).map((i) => (
             <li key={i.key} className="d-row d-row-between" style={{ gap: 12 }}>

@@ -83,22 +83,15 @@ export async function confirmDeletePage(
     return false;
   }
 
-  let ok = false;
-  try {
-    ok = await confirmFn({
-      title: t("Hapus halaman?"),
-      body: t("Halaman \"{0}\" ({1}) akan dihapus permanen. Tindakan ini tidak dapat dibatalkan.", page.title, formatSlugPath(
-        page.slug
-      )),
-      confirmLabel: t("Hapus halaman"),
-      cancelLabel: t("Batal"),
-      danger: true,
-    });
-  } catch {
-    if (typeof window !== "undefined" && window.confirm) {
-      ok = window.confirm(t("Apakah Anda yakin ingin menghapus halaman \"{0}\"?", page.title));
-    }
-  }
+  const ok = await confirmFn({
+    title: t("Hapus halaman?"),
+    body: t("Halaman \"{0}\" ({1}) akan dihapus permanen. Tindakan ini tidak dapat dibatalkan.", page.title, formatSlugPath(
+      page.slug
+    )),
+    confirmLabel: t("Hapus halaman"),
+    cancelLabel: t("Batal"),
+    danger: true,
+  });
 
   if (ok) {
     await onDeletePage(page.slug);

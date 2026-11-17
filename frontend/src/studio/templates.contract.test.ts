@@ -4,13 +4,16 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 
 import { toDoc } from "./doc";
 import manifest from "./plugin-manifest.json";
 import { EXTRA_DATA, PLUGINS, type PluginKind } from "./plugins";
 import { TEMPLATES, type TplCell } from "./templates";
-import { getLocale, setLocale } from "@/i18n";
+import { getLocale, loadEnglish, setLocale } from "@/i18n";
+
+// Kamus EN dimuat malas (chunk terpisah); tes memuatnya dulu agar setLocale("en") langsung berlaku.
+beforeAll(() => loadEnglish());
 
 const FIXTURE = resolve(__dirname, "../../../crates/domain/tests/fixtures/studio_templates.json");
 /** Isi templat versi English (antarmuka EN) — divalidasi server juga (batas panjang teks, dsb.). */
