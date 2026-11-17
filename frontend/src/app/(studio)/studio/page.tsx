@@ -27,7 +27,7 @@ import { TextBlock, WhatsAppButton } from "@/renderer/StudioSite";
 import { fontStack, primaryVars, safeColor } from "@/renderer/safe";
 import { FIELDS, FONT_PRESETS, defaultData } from "@/renderer/sections";
 import type { Business, Json, PageContent, SectionType } from "@/renderer/types";
-import { DEVICE_LABEL, type DeviceViewport } from "@/studio/DeviceFrame";
+import { DEVICE_LABEL, DEVICE_WIDTH, type DeviceViewport } from "@/studio/DeviceFrame";
 import { COLS, DESIGN_WIDTH, GAP, ROW, insert, moveBy, place } from "@/studio/grid";
 import { commit, redo, start, undo, type History } from "@/studio/history";
 import { CELL_STYLES, EXTRA_DATA, PLUGINS, needsUpgrade, pluginDef, pluginPlan, type PluginKind, type PluginCategory } from "@/studio/plugins";
@@ -155,6 +155,8 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
   const [q, setQ] = useState("");
   /** Perangkat pratinjau: lebar BINGKAI menentukan breakpoint @container, bukan lebar jendela. */
   const [device, setDevice] = useState<DeviceViewport>("desktop");
+  /** Perbesaran pratinjau: bingkai selalu selebar layar asli perangkat, lalu diperkecil agar muat. */
+  const [zoom, setZoom] = useState(1);
   const [full, setFull] = useState<string | null>(null);
   const canEdit = ctx.can("website.edit");
   const canPublish = ctx.can("website.publish");
@@ -655,6 +657,7 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
             </button>
           ))}
         </div>
+        <span className="sx-zoom" title={`Pratinjau ${DEVICE_LABEL[device]} selebar layar asli (${DEVICE_WIDTH[device]} px), diperkecil agar muat`}>{Math.round(zoom * 100)}%</span>
         <span className="sx-sep" aria-hidden="true" />
         <button className="d-btn d-btn-sm d-btn-ghost" onClick={() => setPicking("change")}><SquaresFour weight="bold" aria-hidden="true" /><span className="sx-hide-md">Template</span></button>
         <button className="d-btn d-btn-sm d-btn-ghost" onClick={() => setVersionsOpen(true)}><ClockCounterClockwise weight="bold" aria-hidden="true" /><span className="sx-hide-md">Riwayat</span></button>
@@ -799,6 +802,7 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
             onAddStroke={addStroke}
             onEraseStroke={eraseStroke}
             onHint={(m) => toast.info(m)}
+            onZoom={setZoom}
           />
           {st.cells.length === 0 && (
             <div className="sx-empty">
@@ -1102,8 +1106,13 @@ function Inspector({ c, onBack, onChange, onWidth, onMove, onLayout, onDuplicate
       </div>}
       <div className="st-section">
         <h3>Gaya</h3>
-        <div className="d-seg" role="group" aria-label="Gaya" style={{ width: "100%" }}>
-          {CELL_STYLES.map((s) => <button key={s.value} type="button" style={{ flex: 1 }} aria-pressed={c.style === s.value} onClick={() => onChange({ style: s.value }, "")}>{s.label}</button>)}
+        <div className="st-styles" role="group" aria-label="Gaya">
+          {CELL_STYLES.map((s) => (
+            <button key={s.value} type="button" className="st-style-tile" aria-pressed={c.style === s.value} onClick={() => onChange({ style: s.value }, "")}>
+              <span className={`st-style-sample st-style-${s.value}`} aria-hidden="true"><i /><b /></span>
+              {s.label}
+            </button>
+          ))}
         </div>
         {def.layouts && (
           <>

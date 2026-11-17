@@ -15,7 +15,7 @@ import { PLUGINS } from "@/studio/plugins";
 const KINDS = new Set(PLUGINS.map((p) => p.kind));
 /** Varian tata letak yang sah per plugin — sama dengan `layouts()` di server. */
 const LAYOUTS: Record<string, readonly string[]> = Object.fromEntries(PLUGINS.map((p) => [p.kind, (p.layouts ?? []).map((l) => l.value)]));
-const STYLES = new Set(["plain", "card", "tint", "dark"]);
+const STYLES = new Set(["plain", "card", "tint", "dark", "soft", "flat"]);
 const SURFACES = new Set(["light", "cream", "dark"]);
 const TEXT_SCALES = [0.9, 1.0, 1.1];
 const NAVBAR_STYLES = new Set(["top", "side"]);

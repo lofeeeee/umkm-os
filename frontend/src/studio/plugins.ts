@@ -57,12 +57,14 @@ export const EXTRA_DATA: Partial<Record<PluginKind, { [k: string]: Json }>> = {
   whatsapp: { label: "Pesan via WhatsApp", message: "Halo, saya mau tanya produk di toko Anda." },
 };
 
-export type CellStyle = "plain" | "card" | "tint" | "dark";
+export type CellStyle = "plain" | "card" | "tint" | "dark" | "soft" | "flat";
 export const CELL_STYLES: { value: CellStyle; label: string }[] = [
   { value: "plain", label: "Polos" },
   { value: "card", label: "Kartu" },
   { value: "tint", label: "Warna lembut" },
   { value: "dark", label: "Gelap" },
+  { value: "soft", label: "3D lembut" },
+  { value: "flat", label: "2D datar" },
 ];
 
 /** Palet siap pakai: warna utama + warna teks di atas warna utama + permukaan halaman.

@@ -17,7 +17,7 @@ import { StudioSite, type SitePageLink } from "@/renderer/StudioSite";
 import type { GridProduct } from "@/renderer/Site";
 import type { Business } from "@/renderer/types";
 
-import { DeviceFrame, type DeviceViewport } from "./DeviceFrame";
+import { DeviceFrame, zoomOf, type DeviceViewport } from "./DeviceFrame";
 import type { PageV2 } from "./doc";
 import type { DrawConfig, DrawTarget, DrawTool } from "./DrawPanel";
 import type { DrawingStroke } from "./DrawingLayer";
@@ -42,6 +42,8 @@ interface Gesture {
   frame: HTMLElement | null; scroll0: number;
   /** Elemen `.sv2-block` yang diseret (digeser dengan transform, tanpa render ulang). */
   outer: HTMLElement; height: number;
+  /** Perbesaran bingkai: px layar ÷ px CSS. Nilai transform/garis sisip ditulis dalam px CSS. */
+  zoom: number;
   /** Susunan hasil jatuhan (null = tidak berubah). */
   result: TplCell[] | null;
 }
@@ -73,6 +75,7 @@ export interface LiveCanvasProps {
   onEraseStroke: (id: string) => void;
   /** Pesan singkat (mis. "geser di tampilan Desktop"). */
   onHint: (msg: string) => void;
+  onZoom?: (zoom: number) => void;
 }
 
 /**
@@ -115,7 +118,10 @@ const outerEls = (root: HTMLElement | null) => Array.from(root?.querySelectorAll
 const recordRects = (root: HTMLElement | null) => new Map(outerEls(root).map((el) => [el.id, el.getBoundingClientRect()]));
 const reducedMotion = () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 /** Geser elemen secara visual dari (dx, dy) ke posisi aslinya. */
-function animateFrom(el: HTMLElement, dx: number, dy: number) {
+function animateFrom(el: HTMLElement, sdx: number, sdy: number) {
+  // Selisih diukur di px layar; transform ditulis dalam px CSS (bingkai bisa diperkecil).
+  const z = zoomOf(el);
+  const dx = sdx / z, dy = sdy / z;
   if (reducedMotion() || (Math.abs(dx) < 1 && Math.abs(dy) < 1)) return;
   el.style.transition = "none";
   el.style.transform = `translate(${dx}px, ${dy}px)`;
@@ -145,7 +151,8 @@ export function LiveCanvas(p: LiveCanvasProps) {
   const gridEl = () => wrap.current?.querySelector<HTMLElement>(".sv2-grid") ?? null;
   const blockEl = (id: string) => wrap.current?.querySelector<HTMLElement>(`.sv2-grid [data-block-id="${CSS.escape(id)}"]`) ?? null;
   const isStacked = (g: HTMLElement) => getComputedStyle(g).display !== "grid";
-  const pitchOf = (g: HTMLElement) => (g.getBoundingClientRect().width - GAP * (COLS - 1)) / COLS + GAP;
+  /** Jarak antarkolom dalam px LAYAR (celah 12 px CSS ikut diperkecil zoom). */
+  const pitchOf = (g: HTMLElement) => { const w = g.getBoundingClientRect().width; const z = zoomOf(g); return (w - GAP * z * (COLS - 1)) / COLS + GAP * z; };
 
   /** Posisi layar semua blok, relatif ke pojok kiri atas grid. */
   const snapshot = useCallback((g: HTMLElement): Rect[] => {
@@ -201,7 +208,7 @@ export function LiveCanvas(p: LiveCanvasProps) {
     if (G.mode === "move") {
       // Blok mengikuti kursor 1:1 (transform langsung di DOM — halus, tanpa render ulang React).
       const scrolled = (G.frame?.scrollTop ?? 0) - G.scroll0;
-      G.outer.style.transform = `translate(${ev.clientX - G.sx}px, ${ev.clientY - G.sy + scrolled}px)`;
+      G.outer.style.transform = `translate(${(ev.clientX - G.sx) / G.zoom}px, ${(ev.clientY - G.sy) / G.zoom + scrolled}px)`;
       const col = Math.max(0, Math.min(COLS - o.w, Math.round((ev.clientX - gr.left - G.grabDx) / G.pitch)));
       const cy = ev.clientY - gr.top - G.grabDy + G.height / 2;
       const t = slotFor(G.rects, G.id, col, o.w, cy, false);
@@ -217,10 +224,10 @@ export function LiveCanvas(p: LiveCanvasProps) {
       const moved = { ...o, x: col, y };
       const out = place([...rest, moved], moved) as TplCell[];
       G.result = sameLayout(out, G.base) ? null : out;
-      setInsert(G.result ? { left: col * G.pitch, top: t.line, width: o.w * G.pitch - GAP } : null);
+      setInsert(G.result ? { left: (col * G.pitch) / G.zoom, top: t.line / G.zoom, width: (o.w * G.pitch) / G.zoom - GAP } : null);
       return;
     } else if (G.mode === "resize-x") {
-      const w = Math.max(o.minW ?? 2, Math.min(COLS - o.x, Math.round((ev.clientX - gr.left - G.relLeft + GAP) / G.pitch)));
+      const w = Math.max(o.minW ?? 2, Math.min(COLS - o.x, Math.round((ev.clientX - gr.left - G.relLeft + GAP * G.zoom) / G.pitch)));
       next = { ...o, w };
       key = `w${w}`;
     } else {
@@ -281,7 +288,7 @@ export function LiveCanvas(p: LiveCanvasProps) {
       id, mode, sx: e.clientX, sy: e.clientY, started: false, base: P.cells, orig: c, grid: g,
       rects: snapshot(g), pitch: pitchOf(g), grabDx: e.clientX - br.left, grabDy: e.clientY - br.top, relLeft: br.left - gr.left, relTop: br.top - gr.top,
       k: DESIGN_WIDTH / gr.width, last: "", frame, scroll0: frame?.scrollTop ?? 0,
-      outer: el.closest<HTMLElement>(".sv2-block") ?? el, height: br.height, result: null,
+      outer: el.closest<HTMLElement>(".sv2-block") ?? el, height: br.height, result: null, zoom: zoomOf(g),
     };
     const up = () => {
       const G = gesture.current;
@@ -319,7 +326,8 @@ export function LiveCanvas(p: LiveCanvasProps) {
     const w = stacked ? COLS : Math.min(COLS, paletteDrag.w);
     const col = stacked ? 0 : Math.max(0, Math.min(COLS - w, Math.round((clientX - gr.left) / pitch - w / 2)));
     const t = slotFor(snapshot(g), null, col, w, clientY - gr.top, stacked);
-    return { x: col, y: t.y, ins: { left: stacked ? 0 : col * pitch, top: t.line, width: stacked ? gr.width : w * pitch - GAP } };
+    const z = zoomOf(g);
+    return { x: col, y: t.y, ins: { left: stacked ? 0 : (col * pitch) / z, top: t.line / z, width: stacked ? gr.width / z : (w * pitch) / z - GAP } };
   };
 
   /* ------------------------------------------------------------ kuas & penghapus */
@@ -386,7 +394,8 @@ export function LiveCanvas(p: LiveCanvasProps) {
     if (P.draw.tool === "eraser") { erase(e.clientX, e.clientY); return; }
     const g0 = g.getBoundingClientRect();
     const r = el.getBoundingClientRect();
-    const box = el === g ? null : { left: r.left - g0.left, top: r.top - g0.top, width: r.width, height: r.height };
+    const z = zoomOf(g);
+    const box = el === g ? null : { left: (r.left - g0.left) / z, top: (r.top - g0.top) / z, width: r.width / z, height: r.height / z };
     setLive({ stroke: strokeOf(ink.current.points, P.draw.config), box, viewW: box ? r.width * scale : DESIGN_WIDTH });
   };
   const inkMove = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -481,7 +490,7 @@ export function LiveCanvas(p: LiveCanvasProps) {
         p.onDropPlugin(kind, t ? { x: t.x, y: t.y } : { x: 0, y: 9999 });
       }}
     >
-      <DeviceFrame device={p.device} surface={p.doc.theme.surface ?? "light"}>
+      <DeviceFrame device={p.device} surface={p.doc.theme.surface ?? "light"} onZoom={p.onZoom}>
         <BlockEditorContext.Provider value={editor}>
           <StudioSite
             doc={p.doc}

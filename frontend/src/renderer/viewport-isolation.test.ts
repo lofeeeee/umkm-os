@@ -17,7 +17,7 @@ describe("isolasi viewport kanvas", () => {
   it("lebar bingkai per perangkat sesuai spesifikasi", () => {
     expect(DEVICE_WIDTH.mobile).toBe(390);
     expect(DEVICE_WIDTH.tablet).toBe(768);
-    expect(DEVICE_WIDTH.desktop).toBeNull(); // mengikuti lebar induk
+    expect(DEVICE_WIDTH.desktop).toBe(1280); // layar laptop: grid situs penuh 1080 px
   });
 
   it(".st-frame adalah container bernama storefront dan mengunci elemen fixed", () => {
@@ -81,12 +81,10 @@ describe("regresi: bingkai kanvas tidak boleh berlebar nol", () => {
     expect(block).toContain("min-width: 0");
   });
 
-  it("desktop memakai lebar eksplisit; ponsel/tablet memakai lebar tetap", () => {
-    // DEVICE_WIDTH.desktop === null berarti "ikuti induk", dan DeviceFrame menerjemahkannya menjadi
-    // width: 100% — bukan undefined, yang akan kembali ke auto dan menyusut ke 0.
-    expect(DEVICE_WIDTH.desktop).toBeNull();
+  it("semua perangkat memakai lebar layar asli (desktop 1280 = grid penuh 1080 seperti situs terbit)", () => {
+    expect(DEVICE_WIDTH).toEqual({ mobile: 390, tablet: 768, desktop: 1280 });
     const src = readFileSync(resolve(__dirname, "../studio/DeviceFrame.tsx"), "utf8");
-    expect(src).toContain('width: "100%"');
-    expect(src).toMatch(/width === null \? \{ width: "100%" \}/);
+    // Diperkecil dengan scale(), bukan dengan mengubah lebar (lebar menentukan tata letak).
+    expect(src).toContain("transform: `scale(${zoom})`");
   });
 });

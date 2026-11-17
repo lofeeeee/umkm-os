@@ -19,6 +19,7 @@
 .sx-page-name { font-weight: 650; font-size: 0.875rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sx-page-path { font: 500 0.75rem/1 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--muted); }
 .sx-group { display: inline-flex; gap: 2px; }
+.sx-zoom { min-width: 40px; text-align: center; font-size: 0.75rem; font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums; }
 .sx-devices { display: inline-flex; gap: 2px; padding: 3px; border-radius: 10px; background: var(--surface-hover); }
 .sx-devices button {
   display: grid; place-items: center; width: 34px; height: 28px; border: 0; border-radius: 7px; background: transparent; color: var(--muted); cursor: pointer;
@@ -51,7 +52,10 @@
 }
 @media (max-width: 900px) { .sx-canvas { padding: 12px; } }
 .lc { flex: 1; min-height: 0; display: flex; }
-.lc .sf-frame-outer { flex: 1; min-height: 0; padding: 0; align-items: stretch; }
+.lc .sf-frame-outer { flex: 1; min-height: 0; min-width: 0; padding: 0; align-items: flex-start; overflow: hidden; }
+.lc .sf-frame-outer:not([data-device="desktop"]) { padding: 9px; }
+.lc .sf-frame-box { position: relative; flex: none; }
+.lc .st-frame { position: absolute; top: 0; left: 0; max-width: none; }
 .lc .st-frame {
   height: 100%; overflow: hidden;
   border-radius: 14px; box-shadow: 0 0 0 1px rgb(9 9 11 / 0.08), 0 24px 60px -28px rgb(9 9 11 / 0.35);
@@ -60,7 +64,6 @@
 /* Bingkai perangkat: bezel tipis supaya ponsel/tablet terbaca sebagai perangkat. */
 .lc[data-device="mobile"] .st-frame, .lc[data-device="tablet"] .st-frame {
   border-radius: 28px; box-shadow: 0 0 0 8px #18181b, 0 0 0 9px #3f3f46, 0 30px 60px -20px rgb(9 9 11 / 0.5);
-  margin: 9px 0; height: calc(100% - 18px);
 }
 .lc[data-device="tablet"] .st-frame { border-radius: 22px; }
 .lc .st-frame-scroll { height: 100%; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
@@ -250,6 +253,31 @@
 .st-danger-btn { color: var(--danger); border-color: var(--danger-line); }
 .st-danger-btn:hover:not(:disabled) { background: var(--danger-bg); }
 .st-danger-btn:disabled { color: var(--muted); border-color: var(--line); }
+
+/* ---------- Pemilih gaya blok (inspektur) ---------- */
+.st-styles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.st-style-tile {
+  display: grid; gap: 6px; justify-items: center; padding: 8px 4px 7px; border: 1px solid var(--line); border-radius: 10px;
+  background: var(--card); color: var(--ink-2); font: inherit; font-size: 0.6875rem; font-weight: 600; cursor: pointer;
+  transition: border-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease;
+}
+.st-style-tile:hover { border-color: var(--line-strong); }
+.st-style-tile[aria-pressed="true"] { border-color: var(--brand); box-shadow: 0 0 0 3px var(--ring); color: var(--ink); }
+/* Contoh mini: memakai kelas gaya yang sama dengan blok di kanvas. */
+.st-style-sample {
+  --pg-bg: #f4f1ec; --s-primary: #4f46e5;
+  position: relative; display: grid; align-content: center; gap: 4px; width: 100%; max-width: 64px; height: 40px; padding: 0 9px;
+}
+.st-style-tile .st-style-sample { box-sizing: border-box; }
+.st-style-sample.st-style-plain { background: transparent; outline: 1px dashed #d4d4d8; outline-offset: -1px; border-radius: 8px; }
+.st-style-sample.st-style-card, .st-style-sample.st-style-tint, .st-style-sample.st-style-dark, .st-style-sample.st-style-flat { border-radius: 8px; }
+.st-style-sample.st-style-soft { border-radius: 10px; box-shadow: 4px 4px 9px var(--nm-dark), -4px -4px 9px var(--nm-light); }
+.st-style-sample i, .st-style-sample b { display: block; height: 4px; border-radius: 99px; background: #a1a1aa; }
+.st-style-sample i { width: 70%; }
+.st-style-sample b { width: 40%; background: var(--s-primary); }
+.st-style-sample.st-style-dark i { background: #64748b; }
+.st-style-tile:has(.st-style-soft), .st-style-tile:has(.st-style-plain) { background: #f4f1ec; }
+.st-style-tile:has(.st-style-soft)[aria-pressed="true"], .st-style-tile:has(.st-style-plain)[aria-pressed="true"] { background: #f4f1ec; }
 
 /* ---------- Status simpan ---------- */
 .st-save { padding: 0 6px; white-space: nowrap; }

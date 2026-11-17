@@ -57,7 +57,8 @@ pub const PLUGIN_KINDS: [&str; 12] = [
     "chatbot",
     "whatsapp",
 ];
-pub const STYLES: [&str; 4] = ["plain", "card", "tint", "dark"];
+/// Gaya kotak blok. `soft` = 3D lembut (neumorphism), `flat` = 2D datar tanpa bayangan.
+pub const STYLES: [&str; 6] = ["plain", "card", "tint", "dark", "soft", "flat"];
 pub const SURFACES: [&str; 3] = ["light", "cream", "dark"];
 pub const TEXT_SCALES: [f64; 3] = [0.9, 1.0, 1.1];
 pub const HIDE_ON: [&str; 2] = ["mobile", "desktop"];
@@ -628,6 +629,16 @@ mod tests {
             c.contains(&("blocks[2].kind".into(), "too_many_of_kind")),
             "{c:?}"
         );
+    }
+
+    #[test]
+    fn soft_and_flat_styles_are_accepted() {
+        let mut a = block("a", "text", 0, 0, 6, 4, json!({"body": "x"}));
+        a["style"] = json!("soft");
+        let mut b = block("b", "text", 6, 0, 6, 4, json!({"body": "y"}));
+        b["style"] = json!("flat");
+        let c = codes(&doc(vec![a, b]));
+        assert!(!c.iter().any(|(_, k)| *k == "invalid_style"), "{c:?}");
     }
 
     #[test]
