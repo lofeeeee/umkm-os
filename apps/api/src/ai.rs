@@ -203,8 +203,8 @@ fn svc(state: &AppState) -> Result<&Arc<AiService>, ApiError> {
 fn repo_err(e: AiRepoError) -> ApiError {
     match e {
         AiRepoError::NotFound => not_found(),
-        AiRepoError::NameTaken => conflict("name_taken", "Nama provider sudah dipakai"),
-        AiRepoError::InUse => conflict("provider_in_use", "Provider dipakai chatbot yang aktif"),
+        AiRepoError::NameTaken => conflict("name_taken", "Nama penyedia sudah dipakai"),
+        AiRepoError::InUse => conflict("provider_in_use", "Penyedia dipakai chatbot yang aktif"),
         AiRepoError::Crypto => internal("ai secret crypto failure"),
         AiRepoError::Db(e) => internal(e),
     }
@@ -310,7 +310,7 @@ pub async fn create_provider(
             if s.platform.is_none() {
                 return Err(conflict(
                     "platform_unavailable",
-                    "Provider AI platform belum tersedia",
+                    "Penyedia AI platform belum tersedia",
                 ));
             }
             if !platform_model_ok(s, &req.model) {
@@ -726,7 +726,7 @@ pub async fn test_turn(
         .await
         .map_err(|e| match e {
             umkm_infrastructure::ai::runtime::AiRunError::NotConfigured => {
-                conflict("ai_not_configured", "Pilih provider utama terlebih dahulu")
+                conflict("ai_not_configured", "Pilih penyedia utama terlebih dahulu")
             }
             e => internal(e),
         })?;

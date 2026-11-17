@@ -105,24 +105,25 @@ fn team_err(e: TeamRepoError) -> ApiError {
         TeamRepoError::NotFound => not_found(),
         TeamRepoError::Rule(TeamError::Escalation) => ApiError(
             ErrorBody::new(ErrorCode::Forbidden)
-                .with_message("Tidak boleh memberi permission yang tidak Anda miliki")
+                .with_message("Tidak boleh memberi izin yang tidak Anda miliki")
                 .with_details(serde_json::json!({ "reason": "permission_escalation" })),
         ),
         TeamRepoError::Rule(TeamError::SelfChange) => {
             conflict("self_change", "Tidak dapat mengubah keanggotaan sendiri")
         }
-        TeamRepoError::Rule(TeamError::LastOwner) => {
-            conflict("last_owner", "Toko harus memiliki minimal satu Owner aktif")
-        }
+        TeamRepoError::Rule(TeamError::LastOwner) => conflict(
+            "last_owner",
+            "Toko harus memiliki minimal satu Pemilik aktif",
+        ),
         TeamRepoError::Rule(TeamError::UnknownPermission(_)) => {
             one("permissions", "unknown_permission")
         }
         TeamRepoError::Rule(TeamError::InvalidName) => one("name", "invalid"),
-        TeamRepoError::SystemRole => conflict("system_role", "Role bawaan tidak dapat diubah"),
+        TeamRepoError::SystemRole => conflict("system_role", "Peran bawaan tidak dapat diubah"),
         TeamRepoError::RoleInUse => {
-            conflict("role_in_use", "Role masih dipakai anggota atau undangan")
+            conflict("role_in_use", "Peran masih dipakai anggota atau undangan")
         }
-        TeamRepoError::RoleNameTaken => conflict("role_name_taken", "Nama role sudah dipakai"),
+        TeamRepoError::RoleNameTaken => conflict("role_name_taken", "Nama peran sudah dipakai"),
         TeamRepoError::AlreadyMember => {
             conflict("already_member", "Sudah menjadi anggota toko ini")
         }

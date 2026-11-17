@@ -22,6 +22,7 @@ import { addToCart, cartCount, clearCart, displaySubtotalSen, getCart, saveOrder
 import { t as tx, tmap, intlLocale } from "@/i18n";
 import { Tr } from "@/i18n/react";
 import { LanguageSwitch } from "@/i18n/react";
+import { serverMessage } from "@/i18n/server";
 
 const ERR: Record<string, string> = tmap({
   required: "wajib diisi",
@@ -50,7 +51,7 @@ function explain(e: unknown): string {
     if (reason === "payment_not_configured") return tx("Toko belum menerima pesanan online.");
     if (reason === "email_taken") return tx("Email sudah terdaftar di toko ini. Silakan masuk.");
     if (e.status === 429) return tx("Terlalu banyak percobaan. Coba lagi beberapa menit lagi.");
-    return e.message;
+    return serverMessage(e.code, e.message);
   }
   return tx("Tidak dapat menghubungi toko. Periksa koneksi Anda.");
 }

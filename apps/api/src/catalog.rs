@@ -299,7 +299,7 @@ fn repo_err(e: CatalogError) -> ApiError {
                 .with_message("SKU sudah dipakai produk lain")
                 .with_details(serde_json::json!({ "reason": "sku_taken", "sku": sku })),
         ),
-        CatalogError::SlugTaken => conflict("slug_taken", "Slug sudah dipakai produk lain"),
+        CatalogError::SlugTaken => conflict("slug_taken", "Alamat URL sudah dipakai produk lain"),
         CatalogError::CategoryNameTaken => {
             conflict("category_name_taken", "Nama kategori sudah dipakai")
         }

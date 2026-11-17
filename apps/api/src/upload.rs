@@ -85,7 +85,7 @@ fn storage_error(e: StorageError) -> ApiError {
         StorageError::Rejected(u) => upload_error(u),
         StorageError::InUse => ApiError(
             ErrorBody::new(ErrorCode::Conflict)
-                .with_message("file masih dipakai di halaman website (draft atau versi terbit)"),
+                .with_message("File masih dipakai di halaman website (draf atau versi terbit)"),
         ),
         StorageError::Db(e) => {
             tracing::error!(error = %e, "storage query failed");

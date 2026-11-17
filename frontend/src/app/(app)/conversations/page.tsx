@@ -145,7 +145,7 @@ function Conversations({ ctx }: { ctx: TenantCtx }) {
                     <span className="d-muted d-small">{relatif(c.last_message_at)}</span>
                     <span className="cv-badge" data-status={c.status}>{st.label}</span>
                   </span>
-                  <span className="d-muted">{c.message_count} pesan{c.assignee_email ? t(" · {0}", c.assignee_email) : ""}</span>
+                  <span className="d-muted">{t("{0} pesan", c.message_count)}{c.assignee_email ? t(" · {0}", c.assignee_email) : ""}</span>
                 </button>
               </li>
             );

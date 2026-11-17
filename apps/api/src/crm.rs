@@ -117,7 +117,7 @@ fn reject(e: &[umkm_domain::business::FieldError]) -> ApiError {
 fn repo_err(e: CrmError) -> ApiError {
     match e {
         CrmError::NotFound => not_found(),
-        CrmError::Deleted => conflict("customer_deleted", "Customer sedang/sudah dihapus"),
+        CrmError::Deleted => conflict("customer_deleted", "Pelanggan sedang/sudah dihapus"),
         CrmError::Db(e) => internal(e),
     }
 }

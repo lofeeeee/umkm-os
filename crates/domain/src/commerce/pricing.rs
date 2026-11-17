@@ -52,7 +52,7 @@ impl Quote {
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum CartError {
-    #[error("cart kosong")]
+    #[error("keranjang kosong")]
     Empty,
     #[error("terlalu banyak baris")]
     TooManyLines,

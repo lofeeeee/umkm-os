@@ -16,6 +16,7 @@ import { shopApi } from "@/shop/api";
 
 import "./chat.css";
 import { t, tmap } from "@/i18n";
+import { consentText, serverMessage } from "@/i18n/server";
 
 export interface ChatMessage { id: string; seq: number; sender: "CUSTOMER" | "AI" | "ADMIN" | "SYSTEM"; body: string; created_at: string }
 interface Conversation { conversation_id: string; status: string; messages: ChatMessage[] }
@@ -39,7 +40,7 @@ function errorText(e: unknown): string {
   if (e instanceof ApiError) {
     if (e.status === 429) return t("Terlalu banyak pesan. Coba lagi sebentar lagi.");
     if (e.status === 422) return t("Pesan tidak valid (1–4000 karakter).");
-    return e.message;
+    return serverMessage(e.code, e.message);
   }
   return t("Tidak dapat menghubungi toko.");
 }
@@ -247,7 +248,7 @@ export function ChatWidget({ variant = "bubble", title, welcome, startOpen = fal
         <div className="chat-consent">
           {welcome?.trim() && <p className="chat-msg chat-ai chat-welcome"><span className="chat-body">{welcome}</span></p>}
           <div className="chat-consent-card">
-            <p>{cfg.consent_text}</p>
+            <p>{consentText(cfg.consent_text)}</p>
             <button type="button" className="chat-btn" disabled={busy} onClick={begin}>{t("Setuju & mulai chat")}</button>
           </div>
         </div>

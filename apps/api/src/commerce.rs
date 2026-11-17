@@ -503,7 +503,7 @@ pub(crate) fn check_shop_origin(state: &AppState, h: &HeaderMap) -> Result<(), A
         Ok(())
     } else {
         Err(ApiError(
-            ErrorBody::new(ErrorCode::Forbidden).with_message("Origin not allowed"),
+            ErrorBody::new(ErrorCode::Forbidden).with_message("Asal permintaan tidak diizinkan"),
         ))
     }
 }
@@ -1130,7 +1130,7 @@ fn flow_err(e: FlowError) -> ApiError {
         FlowError::NotFound => not_found(),
         FlowError::WrongStatus(s) => ApiError(
             ErrorBody::new(ErrorCode::Conflict)
-                .with_message("Status order tidak mengizinkan aksi ini")
+                .with_message("Status pesanan tidak mengizinkan aksi ini")
                 .with_details(serde_json::json!({ "reason": "invalid_order_status", "status": s })),
         ),
         FlowError::Payment(PaymentError::AlreadyDecided) => {
@@ -1145,7 +1145,7 @@ fn flow_err(e: FlowError) -> ApiError {
         FlowError::Payment(PaymentError::InvalidAmount) => one("amount", "invalid_price"),
         FlowError::SelfApproval => ApiError(
             ErrorBody::new(ErrorCode::Forbidden)
-                .with_message("Penyetuju tidak boleh pemohon (separation of duties)")
+                .with_message("Penyetuju tidak boleh pemohon (pemisahan tugas)")
                 .with_details(serde_json::json!({ "reason": "separation_of_duties" })),
         ),
         FlowError::Upload(e) => crate::upload::upload_error(e),

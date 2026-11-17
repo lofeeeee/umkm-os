@@ -50,7 +50,7 @@ fn repo_err(e: ConversationError) -> ApiError {
         ConversationError::InvalidTransition => {
             conflict("invalid_transition", "Status percakapan tidak dapat diubah")
         }
-        ConversationError::DraftDecided => conflict("draft_decided", "Draft sudah diputus"),
+        ConversationError::DraftDecided => conflict("draft_decided", "Draf sudah diputus"),
         e => internal(e),
     }
 }
@@ -734,7 +734,7 @@ pub async fn send_draft(
         .map_err(repo_err)?
         .ok_or_else(not_found)?;
     if d.status != "pending" {
-        return Err(conflict("draft_decided", "Draft sudah diputus"));
+        return Err(conflict("draft_decided", "Draf sudah diputus"));
     }
     let body = umkm_domain::conversation::validate_body(
         req.body
@@ -786,7 +786,7 @@ pub async fn send_draft(
     responses(
         (status = 204, description = "Dibuang"),
         (status = 404, description = "Draft tidak ada", body = umkm_shared::http::ErrorEnvelope),
-        (status = 409, description = "Draft sudah diputus", body = umkm_shared::http::ErrorEnvelope)
+        (status = 409, description = "Draf sudah diputus", body = umkm_shared::http::ErrorEnvelope)
     )
 )]
 pub async fn discard_draft(

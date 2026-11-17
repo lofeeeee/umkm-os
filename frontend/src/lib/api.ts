@@ -1,6 +1,7 @@
 // Klien API dashboard (ADR-0015): cookie sesi HttpOnly (dikirim browser) + header CSRF.
 // Token CSRF tidak disimpan di storage persisten; diambil ulang dari GET /auth/session.
 import { t as tx, tmap } from "@/i18n";
+import { serverMessage } from "@/i18n/server";
 
 export const API_ORIGIN = (process.env.NEXT_PUBLIC_API_ORIGIN ?? "").replace(/\/$/, "");
 
@@ -246,8 +247,8 @@ export function describe(e: unknown, labels?: Record<string, string>): string {
     }
     if (e.status === 403 && reason === "subscription_expired") return tx("Langganan toko sudah berakhir. Perpanjang di menu Langganan.");
     if (e.status === 403) return tx("Anda tidak punya izin untuk aksi ini.");
-    if (e.status === 409) return e.message;
-    return e.message;
+    // Pesan server diterjemahkan ke bahasa antarmuka (teks generik ErrorCode diganti kalimat jelas).
+    return serverMessage(e.code, e.message);
   }
   return tx("Tidak dapat menghubungi server.");
 }

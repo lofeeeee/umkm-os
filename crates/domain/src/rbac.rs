@@ -49,7 +49,7 @@ pub const ALL_PERMISSIONS: [&str; 37] = [
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum AuthzError {
-    #[error("permission {0} diperlukan")]
+    #[error("izin {0} diperlukan")]
     MissingPermission(&'static str),
     /// Objek milik tenant lain / tidak ditugaskan. Pemanggil HTTP memetakan ke 404
     /// agar keberadaan objek tidak bocor.

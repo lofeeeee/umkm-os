@@ -99,7 +99,8 @@ impl AuthService {
             None => Ok(()),
             Some(o) if self.allowed_origins.iter().any(|a| a == o) => Ok(()),
             Some(_) => Err(ApiError(
-                ErrorBody::new(ErrorCode::Forbidden).with_message("Origin not allowed"),
+                ErrorBody::new(ErrorCode::Forbidden)
+                    .with_message("Asal permintaan tidak diizinkan"),
             )),
         }
     }

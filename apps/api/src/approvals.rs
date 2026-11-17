@@ -201,10 +201,12 @@ fn repo_err(e: ApprovalRepoError) -> ApiError {
     use crate::http_util::conflict;
     match e {
         ApprovalRepoError::NotFound => not_found(),
-        ApprovalRepoError::NoPolicy => conflict("no_policy", "Tidak ada kebijakan approval aktif"),
+        ApprovalRepoError::NoPolicy => {
+            conflict("no_policy", "Tidak ada kebijakan persetujuan aktif")
+        }
         ApprovalRepoError::AlreadyPending(id) => ApiError(
             ErrorBody::new(ErrorCode::Conflict)
-                .with_message("Sudah ada permintaan approval yang menunggu")
+                .with_message("Sudah ada permintaan persetujuan yang menunggu")
                 .with_details(
                     serde_json::json!({ "reason": "approval_pending", "approval_request_id": id }),
                 ),

@@ -12,15 +12,15 @@ pub const OWNER: &str = "Owner";
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum TeamError {
-    #[error("permission tidak dikenal: {0}")]
+    #[error("izin tidak dikenal: {0}")]
     UnknownPermission(String),
-    #[error("tidak boleh memberi permission yang tidak Anda miliki")]
+    #[error("tidak boleh memberi izin yang tidak Anda miliki")]
     Escalation,
     #[error("tidak dapat mengubah keanggotaan sendiri")]
     SelfChange,
-    #[error("tenant harus memiliki minimal satu Owner aktif")]
+    #[error("toko harus memiliki minimal satu Pemilik aktif")]
     LastOwner,
-    #[error("nama role tidak valid")]
+    #[error("nama peran tidak valid")]
     InvalidName,
 }
 

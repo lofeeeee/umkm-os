@@ -210,14 +210,16 @@ fn repo_err(e: WebsiteError) -> ApiError {
         WebsiteError::NotFound => not_found(),
         WebsiteError::StaleRevision { current } => ApiError(
             ErrorBody::new(ErrorCode::Conflict)
-                .with_message("Draft sudah diubah orang lain; muat ulang")
+                .with_message("Draf sudah diubah orang lain; muat ulang")
                 .with_details(serde_json::json!({ "current_revision": current })),
         ),
         WebsiteError::AlreadyExists => ApiError(
-            ErrorBody::new(ErrorCode::Conflict).with_message("Halaman dengan slug ini sudah ada"),
+            ErrorBody::new(ErrorCode::Conflict)
+                .with_message("Halaman dengan alamat URL ini sudah ada"),
         ),
         WebsiteError::CannotDeleteHome => ApiError(
-            ErrorBody::new(ErrorCode::BadRequest).with_message("Halaman home tidak dapat dihapus"),
+            ErrorBody::new(ErrorCode::BadRequest)
+                .with_message("Halaman beranda tidak dapat dihapus"),
         ),
         WebsiteError::Db(e) => internal(e),
     }
@@ -503,7 +505,7 @@ pub async fn create_page(
     params(("tenant_id" = Uuid, Path), ("slug" = String, Path)),
     responses(
         (status = 200, description = "Halaman dihapus"),
-        (status = 400, description = "Halaman home tidak dapat dihapus", body = umkm_shared::http::ErrorEnvelope),
+        (status = 400, description = "Halaman beranda tidak dapat dihapus", body = umkm_shared::http::ErrorEnvelope),
         (status = 404, description = "Halaman tidak ditemukan", body = umkm_shared::http::ErrorEnvelope)
     )
 )]
@@ -517,7 +519,8 @@ pub async fn delete_page(
     actor.require("website.edit")?;
     if p.slug == repo::HOME || p.slug == "home" {
         return Err(ApiError(
-            ErrorBody::new(ErrorCode::BadRequest).with_message("Halaman home tidak dapat dihapus"),
+            ErrorBody::new(ErrorCode::BadRequest)
+                .with_message("Halaman beranda tidak dapat dihapus"),
         ));
     }
     repo::delete_page(

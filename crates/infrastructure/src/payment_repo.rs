@@ -29,13 +29,13 @@ pub type Ctx<'a> = (Option<&'a str>, Option<&'a str>);
 
 #[derive(Debug, thiserror::Error)]
 pub enum FlowError {
-    #[error("order tidak ditemukan")]
+    #[error("pesanan tidak ditemukan")]
     NotFound,
-    #[error("status order {0} tidak mengizinkan aksi ini")]
+    #[error("status pesanan {0} tidak mengizinkan aksi ini")]
     WrongStatus(&'static str),
     #[error(transparent)]
     Payment(#[from] PaymentError),
-    #[error("penyetuju tidak boleh pemohon (separation of duties)")]
+    #[error("penyetuju tidak boleh pemohon (pemisahan tugas)")]
     SelfApproval,
     #[error(transparent)]
     Upload(#[from] UploadError),

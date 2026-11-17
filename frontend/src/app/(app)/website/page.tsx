@@ -22,6 +22,9 @@ import { SECTION_TYPES, type Business, type PageContent, type Section, type Sect
 import { t as tx } from "@/i18n";
 import { Tr } from "@/i18n/react";
 
+/** Pesan 409 server saat draf diubah di tempat lain (apps/api/src/website.rs) — teks asli, bukan terjemahan. */
+const DRAFT_CONFLICT = "Draf sudah diubah orang lain; muat ulang";
+
 interface WebsiteView { template_key: string; template_version: number; status: string; pages: { slug: string; published_version: number | null }[] }
 interface TemplateView { key: string; version: number; name: string; category: string }
 interface DraftView { content: PageContent; revision: number; published_version: number | null; assets: Record<string, string> }
@@ -133,7 +136,7 @@ function Editor({ ctx }: { ctx: TenantCtx }) {
       await fn();
       if (label) toast.ok(label);
     } catch (e) {
-      if (e instanceof ApiError && e.status === 409 && e.message.includes(tx("Draf"))) {
+      if (e instanceof ApiError && e.status === 409 && e.message === DRAFT_CONFLICT) {
         setError(tx("Draf sudah diubah di tempat lain. Muat ulang untuk melihat versi terbaru (perubahan Anda belum tersimpan)."));
       } else setError(describe(e));
     } finally {

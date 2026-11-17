@@ -93,7 +93,7 @@ pub(crate) fn check_origin(s: &AuthService, h: &HeaderMap) -> Result<(), ApiErro
     if ok {
         Ok(())
     } else {
-        Err(forbidden("Origin not allowed"))
+        Err(forbidden("Asal permintaan tidak diizinkan"))
     }
 }
 
@@ -121,7 +121,7 @@ impl FromRequestParts<AppState> for CustomerAuth {
                 .and_then(|v| v.to_str().ok())
                 .unwrap_or("");
             if !constant_time_eq(sent.as_bytes(), csrf_token(&token).as_bytes()) {
-                return Err(forbidden("CSRF token invalid"));
+                return Err(forbidden("Token CSRF tidak valid"));
             }
         }
         let session = repo::authenticate(&s.pool, t, hash_token(&token))

@@ -10,9 +10,9 @@ pub const NAME_MAX_CHARS: usize = 120;
 pub enum TenantError {
     #[error("nama bisnis wajib 1..120 karakter")]
     InvalidName,
-    #[error("slug harus 3..63 karakter a-z, 0-9, '-' dan tidak diawali/diakhiri '-'")]
+    #[error("alamat toko harus 3..63 karakter a-z, 0-9, '-' dan tidak diawali/diakhiri '-'")]
     InvalidSlug,
-    #[error("slug sudah dipakai atau dicadangkan")]
+    #[error("alamat toko sudah dipakai atau dicadangkan")]
     SlugUnavailable,
     #[error("host tidak valid")]
     InvalidHost,

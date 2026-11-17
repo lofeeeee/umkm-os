@@ -40,7 +40,7 @@ pub enum UploadError {
     UnsupportedType,
     #[error("struktur file tidak valid atau memuat data tambahan")]
     Malformed,
-    #[error("kuota penyimpanan tenant habis")]
+    #[error("kuota penyimpanan toko habis")]
     QuotaExceeded,
 }
 

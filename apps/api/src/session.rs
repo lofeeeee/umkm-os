@@ -93,7 +93,7 @@ impl FromRequestParts<AppState> for MfaPendingUser {
                 .and_then(|v| v.to_str().ok())
                 .unwrap_or("");
             if !constant_time_eq(sent.as_bytes(), csrf_token(&token).as_bytes()) {
-                return Err(forbidden("CSRF token invalid"));
+                return Err(forbidden("Token CSRF tidak valid"));
             }
         }
         let s = auth_repo::authenticate_session(&svc.pool, hash_token(&token))

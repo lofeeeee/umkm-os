@@ -290,14 +290,14 @@ fn ticket_err(e: TicketError) -> ApiError {
         TicketError::InvalidAssignee => one("assignee_user_id", "not_a_member"),
         TicketError::InvalidTransition(s) => ApiError(
             ErrorBody::new(ErrorCode::Conflict)
-                .with_message("Transisi status ticket tidak diizinkan")
+                .with_message("Perubahan status tiket tidak diizinkan")
                 .with_details(
                     serde_json::json!({ "reason": "invalid_ticket_status", "status": s }),
                 ),
         ),
         TicketError::ReopenExpired => conflict(
             "reopen_expired",
-            "Ticket sudah ditutup lebih dari 7 hari; buat ticket baru",
+            "Tiket sudah ditutup lebih dari 7 hari; buat tiket baru",
         ),
         TicketError::Upload(u) => crate::upload::upload_error(u),
         TicketError::Db(e) => internal(e),

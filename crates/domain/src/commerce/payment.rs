@@ -52,7 +52,7 @@ pub enum PaymentError {
     AlreadyDecided,
     #[error("jumlah diterima berbeda dari tagihan: catatan wajib")]
     NoteRequiredForMismatch,
-    #[error("jumlah refund melebihi sisa yang dapat dikembalikan")]
+    #[error("jumlah pengembalian dana melebihi sisa yang dapat dikembalikan")]
     RefundExceedsBalance,
     #[error("jumlah tidak valid")]
     InvalidAmount,

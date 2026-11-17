@@ -402,6 +402,7 @@ export const DASHBOARD_1: Record<string, string> = {
   "Anda tidak punya izin melihat percakapan.": "You don't have permission to view conversations.",
   "Semua percakapan": "All conversations",
   "Pengunjung": "Visitor",
+  "{0} pesan": "{0} messages",
   "{0} · {1} pesan · terakhir {2}": "{0} · {1} messages · last {2}",
   "Chat pelanggan dari website. Asisten AI menjawab otomatis; yang butuh manusia masuk ke antrean Menunggu staf.": "Customer chats from your website. The AI assistant answers automatically; anything that needs a person goes to the Waiting for staff queue.",
   "Data sensitif disamarkan untuk peran Anda.": "Sensitive data is masked for your role.",

@@ -5691,7 +5691,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
         '409':
-          description: Draft sudah diputus
+          description: Draf sudah diputus
           content:
             application/json:
               schema:
