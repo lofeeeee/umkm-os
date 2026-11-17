@@ -51,7 +51,7 @@ function Audit({ ctx }: { ctx: TenantCtx }) {
         <span className="d-muted d-small">{angka(total)} catatan</span>
       </div>
       <div className="d-table-wrap">
-        {rows === null ? <div style={{ padding: 20 }}><Skeleton lines={6} /></div> : rows.length === 0 ? (
+        {rows === null ? <div className="u-p-5"><Skeleton lines={6} /></div> : rows.length === 0 ? (
           <EmptyState icon={ClockCounterClockwise} title={t("Belum ada aktivitas")}>{t("Aktivitas tercatat otomatis saat tim mengubah data toko.")}</EmptyState>
         ) : (
           <table className="d-table d-table-stack">

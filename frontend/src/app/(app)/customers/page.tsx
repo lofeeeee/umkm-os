@@ -51,7 +51,7 @@ function Customers({ ctx }: { ctx: TenantCtx }) {
         <SearchInput label={tx("Cari pelanggan")} placeholder={tx("Cari nama, email, atau telepon…")} value={q} onChange={setQ} />
       </div>
       <div className="d-table-wrap">
-        {items === null ? <div style={{ padding: 20 }}><Skeleton lines={5} /></div> : items.length === 0 ? (
+        {items === null ? <div className="u-p-5"><Skeleton lines={5} /></div> : items.length === 0 ? (
           <EmptyState icon={Users} title={q ? tx("Tidak ada yang cocok") : tx("Belum ada pelanggan")}
             action={!q ? <Link className="d-btn" href={`/website?tenant=${ctx.tenant.id}`}>{tx("Periksa Website")}</Link> : undefined}>
             {q ? tx("Coba nama, email, atau nomor lain.") : tx("Pelanggan tercatat otomatis saat mereka memesan lewat website toko Anda.")}
@@ -138,7 +138,7 @@ function Detail({ ctx, url, onBack }: { ctx: TenantCtx; url: string; onBack: () 
       {c.deletion_requested && <Alert kind="warn">{tx("Data pelanggan ini dijadwalkan untuk dianonimkan.")}</Alert>}
       <Alert kind="error">{err}</Alert>
       <div className="d-split">
-        <div style={{ minWidth: 0 }}>
+        <div className="u-min-w-0">
           <Card title={tx("Profil")} description={tx("Catatan internal tidak pernah terlihat pelanggan.")}>
             <form onSubmit={(e) => {
               e.preventDefault();
@@ -181,7 +181,7 @@ function Detail({ ctx, url, onBack }: { ctx: TenantCtx; url: string; onBack: () 
             )}
           </Card>
         </div>
-        <div className="d-stack" style={{ alignContent: "start" }}>
+        <div className="d-stack u-content-start">
           <Card title={tx("Ringkasan")}>
             <dl className="d-dl">
               <dt>{tx("Pesanan")}</dt><dd>{c.orders.length}</dd>

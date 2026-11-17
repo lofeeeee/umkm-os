@@ -119,7 +119,7 @@ export function Sheet({
       {open && (
         <>
           <header className="d-sheet-head">
-            <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="u-grow u-min-w-0">
               <h2 id={id}>{title}</h2>
               {description && <p>{description}</p>}
             </div>

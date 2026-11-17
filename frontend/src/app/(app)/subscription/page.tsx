@@ -125,7 +125,7 @@ function View({ ctx }: { ctx: TenantCtx }) {
             );
           })}
         </div>
-        {L.byok_allowed && <p className="d-muted d-small" style={{ marginTop: 16 }}>{t("Asisten AI dapat memakai kunci API milik toko sendiri.")}</p>}
+        {L.byok_allowed && <p className="d-muted d-small u-mt-4">{t("Asisten AI dapat memakai kunci API milik toko sendiri.")}</p>}
       </section>
 
       {open ? (
@@ -150,7 +150,7 @@ function View({ ctx }: { ctx: TenantCtx }) {
               }} />
             </label>
           )}
-          <div className="d-row" style={{ marginTop: 16 }}>
+          <div className="d-row u-mt-4">
             {open.has_proof && <a className="d-btn" href={`${API_ORIGIN}${base}/invoices/${open.id}/proof`} target="_blank" rel="noreferrer">{t("Lihat bukti yang diunggah")}</a>}
             {canPay && <button type="button" className="d-btn d-btn-ghost" disabled={busy} onClick={async () => {
               if (await confirm({ title: t("Batalkan tagihan {0}?", open.code), body: t("Anda bisa memilih paket lagi setelahnya."), confirmLabel: t("Batalkan tagihan"), cancelLabel: t("Kembali"), danger: true })) void run(() => api("POST", `${base}/invoices/${open.id}/cancel`), t("Tagihan dibatalkan."));
@@ -158,8 +158,8 @@ function View({ ctx }: { ctx: TenantCtx }) {
           </div>
         </section>
       ) : canPay && (
-        <section aria-label={t("Pilih paket")} style={{ marginBottom: 16 }}>
-          <h2 className="d-section-title" style={{ marginTop: 8 }}>{t("Pilih paket")}</h2>
+        <section aria-label={t("Pilih paket")} className="u-mb-4">
+          <h2 className="d-section-title u-mt-2">{t("Pilih paket")}</h2>
           <div className="d-plans">
             {plans.map((p) => {
               const current = sub.plan.code === p.code;

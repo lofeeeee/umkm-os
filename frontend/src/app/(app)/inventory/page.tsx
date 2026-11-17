@@ -54,7 +54,7 @@ function Stock({ ctx }: { ctx: TenantCtx }) {
         <SearchInput label={tx("Cari")} placeholder={tx("Cari produk atau SKU…")} value={q} onChange={setQ} />
       </div>
       <div className="d-table-wrap">
-        {rows === null ? <div style={{ padding: 20 }}><Skeleton lines={5} /></div> : rows.length === 0 ? (
+        {rows === null ? <div className="u-p-5"><Skeleton lines={5} /></div> : rows.length === 0 ? (
           <EmptyState
             icon={Stack}
             title={low === "low" ? tx("Tidak ada stok menipis") : q ? tx("Tidak ada yang cocok") : tx("Belum ada data stok")}
@@ -111,9 +111,9 @@ function Manage({ ctx, base, row, onChange }: { ctx: TenantCtx; base: string; ro
   return (
     <>
       <dl className="d-stat-grid" style={{ margin: "0 0 20px" }}>
-        <div className="d-stat"><dt className="d-stat-label">{tx("Fisik")}</dt><dd className="d-stat-value" style={{ margin: 0 }}>{angka(row.on_hand)}</dd></div>
-        <div className="d-stat"><dt className="d-stat-label">{tx("Dipesan")}</dt><dd className="d-stat-value" style={{ margin: 0 }}>{angka(row.reserved)}</dd></div>
-        <div className={`d-stat${row.is_low ? " d-stat-warn" : ""}`}><dt className="d-stat-label">{tx("Tersedia")}</dt><dd className="d-stat-value" style={{ margin: 0 }}>{angka(row.available)}</dd></div>
+        <div className="d-stat"><dt className="d-stat-label">{tx("Fisik")}</dt><dd className="d-stat-value u-m-0">{angka(row.on_hand)}</dd></div>
+        <div className="d-stat"><dt className="d-stat-label">{tx("Dipesan")}</dt><dd className="d-stat-value u-m-0">{angka(row.reserved)}</dd></div>
+        <div className={`d-stat${row.is_low ? " d-stat-warn" : ""}`}><dt className="d-stat-label">{tx("Tersedia")}</dt><dd className="d-stat-value u-m-0">{angka(row.available)}</dd></div>
       </dl>
       <Alert kind="error">{err}</Alert>
       {can && (
@@ -121,7 +121,7 @@ function Manage({ ctx, base, row, onChange }: { ctx: TenantCtx; base: string; ro
           <section className="d-form-section">
             <h3>{tx("Catat perubahan stok")}</h3>
             <p className="d-muted">{kind.hint}</p>
-            <div className="d-seg" role="group" aria-label={tx("Jenis perubahan")} style={{ marginBottom: 16 }}>
+            <div className="d-seg u-mb-4" role="group" aria-label={tx("Jenis perubahan")}>
               {KINDS.map((k) => (
                 <button key={k.value} type="button" aria-pressed={m.kind === k.value} onClick={() => setM({ ...m, kind: k.value })}>{k.label}</button>
               ))}

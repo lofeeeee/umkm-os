@@ -150,7 +150,7 @@ export default function SecurityPage() {
 
           {setup && (
             <form onSubmit={enable} className="d-stack" style={{ maxWidth: 520 }}>
-              <ol style={{ margin: 0 }}>
+              <ol className="u-m-0">
                 <li>
                   {tx("Di aplikasi authenticator pilih “masukkan kunci”, lalu ketik kunci berikut (jenis: berbasis waktu):")}
                   <p style={{ margin: "8px 0" }}><code aria-label={tx("Kunci rahasia")} data-testid="mfa-secret" style={{ fontSize: "0.9375rem", letterSpacing: "0.05em" }}>{groups(setup.secret)}</code></p>
@@ -180,7 +180,7 @@ export default function SecurityPage() {
           )}
 
           {status.enabled && (
-            <div className="d-grid2" style={{ marginTop: 16 }}>
+            <div className="d-grid2 u-mt-4">
               <form onSubmit={regenerate}>
                 <h3>{tx("Buat ulang kode pemulihan")}</h3>
                 <p className="d-muted d-small">{tx("Kode lama langsung tidak berlaku.")}</p>

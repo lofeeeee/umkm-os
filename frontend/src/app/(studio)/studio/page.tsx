@@ -7,35 +7,32 @@
 // - Undo/Redo (Ctrl+Z / Ctrl+Shift+Z) + simpan otomatis ke draf server.
 
 import Link from "@/ui/link";
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
-  LockSimple, LockSimpleOpen, ArrowSquareOut, ClockCounterClockwise, WarningCircle, ArrowClockwise, ArrowCounterClockwise, ArrowLeft, ArrowsIn, ArrowsOut, ChatCircleDots, Check, Copy,
-  ArrowDown, ArrowRight, ArrowUp, CornersIn, CornersOut, Desktop, DeviceMobile, DeviceTablet, ImageSquare, MagnifyingGlass, Plus, SidebarSimple, SquaresFour, Trash, X,
-  Crop, CaretDown, Files,
+  LockSimple, LockSimpleOpen, ArrowSquareOut, ClockCounterClockwise, WarningCircle, ArrowClockwise, ArrowCounterClockwise, ArrowLeft, Check, Copy, Desktop, DeviceMobile, DeviceTablet, ImageSquare, MagnifyingGlass, Plus, SidebarSimple, SquaresFour, Trash, X, Crop, CaretDown, Files,
 } from "@phosphor-icons/react/ssr";
 
 import { useUploads } from "@/dashboard/assets";
-import { Assets, FieldInput } from "@/dashboard/editor/fields";
+import { Assets } from "@/dashboard/editor/fields";
 import { WithTenant, type TenantCtx } from "@/dashboard/shell";
 import { api } from "@/lib/api";
-import { EditContext, type EditApi } from "@/renderer/edit";
 import { Site, type GridProduct } from "@/renderer/Site";
 import { normalizePageV2 } from "@/renderer/normalize";
 import { ChatPreview } from "@/chat/widget";
 import { TextBlock, WhatsAppButton } from "@/renderer/StudioSite";
 import { fontStack, primaryVars, safeColor } from "@/renderer/safe";
-import { FIELDS, FONT_PRESETS, defaultData } from "@/renderer/sections";
-import type { Business, Json, PageContent, SectionType } from "@/renderer/types";
+import { FONT_PRESETS } from "@/renderer/sections";
+import type { Business,PageContent,SectionType } from "@/renderer/types";
 import { DEVICE_LABEL, DEVICE_WIDTH, type DeviceViewport } from "@/studio/DeviceFrame";
-import { COLS, DESIGN_WIDTH, GAP, ROW, insert, moveBy, place } from "@/studio/grid";
+import { COLS, insert, moveBy, place } from "@/studio/grid";
 import { commit, redo, start, undo, type History } from "@/studio/history";
-import { CELL_STYLES, EXTRA_DATA, PLUGINS, needsUpgrade, pluginDef, pluginPlan, type PluginKind, type PluginCategory } from "@/studio/plugins";
+import { PLUGINS, needsUpgrade, pluginDef, pluginPlan, type PluginKind } from "@/studio/plugins";
 import { PluginIcon } from "@/studio/PluginIcon";
 import { LiveCanvas, PLUGIN_MIME, setPaletteDrag } from "@/studio/LiveCanvas";
 import { readiness, type Issue } from "@/studio/readiness";
-import { TEMPLATES, type TplCell } from "@/studio/templates";
-import { fromDoc, isV2, toDoc, type StudioState } from "@/studio/doc";
+import { TEMPLATES } from "@/studio/templates";
+import { fromDoc, isV2, toDoc } from "@/studio/doc";
 import { IconRail, type StudioTab } from "@/studio/IconRail";
 import { PagesPanel, type PageItem } from "@/studio/PagesPanel";
 import { ThemePanel, type ThemeConfig } from "@/studio/ThemePanel";
@@ -44,99 +41,16 @@ import type { DrawingStroke } from "@/studio/DrawingLayer";
 import { ImageCropModal } from "@/ui/ImageCropModal";
 import "@/studio/studio.css";
 import { ApiError, describe } from "@/lib/api";
-import { waktu } from "@/lib/labels";
 import { confirm, Sheet } from "@/ui/dialog";
-import { Badge, Skeleton } from "@/ui/page";
-import { Alert } from "@/dashboard/shell";
 import { dismissToast, toast } from "@/ui/toast";
-import { t as tx, tmap } from "@/i18n";
+import { t as tx } from "@/i18n";
 import { Tr } from "@/i18n/react";
-
-type StudioCell = TplCell;
-/** Keadaan Studio; dokumen server = toDoc(Studio) (schema_version 2). */
-type Studio = StudioState;
-type SaveState = "idle" | "saving" | "saved" | "error" | "conflict" | "readonly";
-const CATEGORIES: PluginCategory[] = ["Konten", "Jualan", "Layanan", "Info toko"];
-const CATEGORY_LABEL: Record<PluginCategory, string> = tmap({ Konten: "Konten", Jualan: "Jualan", Layanan: "Layanan", "Info toko": "Info toko" });
-
-const EMPTY_BUSINESS: Business = {
-  profile: { get name() { return tx("Nama Toko"); }, socials: [], timezone: "Asia/Jakarta", pickup_available: false, delivery_available: false },
-  addresses: [], hours: [], exceptions: [],
-};
-const storageKey = (t: string) => `umkm-studio-${t}`;
-let seq = 0;
-const newId = (k: string) => `${k.replace(/_/g, "-")}-${Date.now().toString(36)}${(seq++).toString(36)}`;
-/** Chatbot di luar grid: gelembung bulat atau bilah bawah, keduanya mengikuti layar. */
-const isFloating = (c: StudioCell) => c.kind === "chatbot" && (c.layout === "floating" || c.layout === "bar");
-/** WhatsApp melayang: di luar grid seperti chatbot melayang (server: is_embed). */
-const isFloatingWa = (c: StudioCell) => c.kind === "whatsapp" && c.layout === "floating";
-/** Blok yang tidak menempati grid. */
-const isEmbed = (c: StudioCell) => isFloating(c) || isFloatingWa(c);
-/** Plugin di luar renderer section v1 (data & batas sama dengan validator server schema_v2.rs). */
-const EXTRA_LIMITS: Partial<Record<PluginKind, Record<string, { max: number; required?: boolean }>>> = {
-  chatbot: { title: { max: 40, required: true }, welcome: { max: 300 } },
-  text: { title: { max: 120 }, body: { max: 5000, required: true } },
-  whatsapp: { label: { max: 40, required: true }, message: { max: 300 } },
-};
-/** Satu per halaman (ADR-0019 max_per_page). */
-const SINGLE: PluginKind[] = ["chatbot", "whatsapp"];
-/** Plugin yang punya satu foto utama (diganti saat foto dijatuhkan). Galeri: foto ditambahkan. */
-const IMAGE_KEY: Partial<Record<PluginKind, string>> = { hero: "image", about: "image", promotion: "image" };
-const takesPhoto = (k: PluginKind) => k in IMAGE_KEY || k === "gallery";
-
-function cellFor(kind: PluginKind, data?: { [k: string]: Json }): StudioCell {
-  const d = pluginDef(kind);
-  return {
-    id: newId(kind), kind, x: 0, y: 0, w: d.w, h: d.h, minW: d.minW, minH: d.minH,
-    data: data ?? (EXTRA_DATA[kind] ? { ...EXTRA_DATA[kind] } : defaultData(kind as SectionType)),
-    style: kind === "promotion" ? "tint" : kind === "chatbot" ? "card" : "plain",
-    layout: d.layouts?.[0]?.value, autoH: true, chatOpen: true,
-  };
-}
-
-/** Tata letak dari draf website yang ada: section bertumpuk → baris penuh, plus chatbot di samping banner. */
-function fromDraft(content: PageContent | null): Studio {
-  let cells: StudioCell[] = [];
-  const secs = (content?.sections ?? []).filter((s) => s.enabled && PLUGINS.some((p) => p.kind === s.type));
-  for (const s of secs.length ? secs : [{ type: "hero" as const, data: defaultData("hero") }, { type: "product_grid" as const, data: defaultData("product_grid") }]) {
-    cells = insert(cells, cellFor(s.type, s.data)) as StudioCell[];
-  }
-  const hero = cells.find((c) => c.kind === "hero");
-  if (hero) {
-    cells = place(cells, { ...hero, w: 8 }) as StudioCell[];
-    cells = insert(cells, cellFor("chatbot"), { x: 8, y: hero.y }) as StudioCell[];
-  }
-  return withInstalled({ primary: content?.theme.primary ?? "#4F46E5", surface: "light", font: content?.theme.font ?? FONT_PRESETS[0]!, installed: [], cells });
-}
-const withInstalled = (s: Studio): Studio => ({ ...s, installed: [...new Set<PluginKind>([...s.installed, "hero", "product_grid", "chatbot", ...s.cells.map((c) => c.kind)])] });
-
-/** Set nilai pada path data ("title", "cta.label", "items.0.quote") dengan batas panjang dari skema field. */
-function setPath(kind: PluginKind, data: { [k: string]: Json }, path: string, value: string): { [k: string]: Json } | string {
-  const parts = path.split(".");
-  const extra = EXTRA_LIMITS[kind];
-  const fields = extra ? Object.entries(extra).map(([key, f]) => ({ key, ...f, item: undefined })) : FIELDS[kind as SectionType];
-  const top = fields.find((f) => f.key === parts[0]);
-  const leaf = parts.length === 3 ? top?.item?.find((f) => f.key === parts[2]) : parts.length === 2 && parts[0] === "cta" ? { max: 40, required: true } : top;
-  const max = leaf?.max;
-  if (leaf?.required && !value) return tx("Isian ini tidak boleh kosong.");
-  const v = max ? value.slice(0, max) : value;
-  const next = structuredClone(data);
-  let cur: Json = next;
-  for (let i = 0; i < parts.length - 1; i++) {
-    const k = parts[i]!;
-    const o = cur as { [k: string]: Json } & Json[];
-    if (o[k as never] === undefined || o[k as never] === null) (o as { [k: string]: Json })[k] = {};
-    cur = (o as { [k: string]: Json })[k]!;
-  }
-  (cur as { [k: string]: Json })[parts[parts.length - 1]!] = v;
-  return next;
-}
-
-/** Terapkan path ke data TERBARU sel (bukan salinan saat render). */
-function setPathOr(c: StudioCell, path: string, value: string): { [k: string]: Json } {
-  const r = setPath(c.kind, c.data, path, value);
-  return typeof r === "string" ? c.data : r;
-}
+import {
+  type StudioCell, type Studio, type SaveState, CATEGORIES, CATEGORY_LABEL, EMPTY_BUSINESS, storageKey, newId, isFloating, isEmbed, SINGLE, IMAGE_KEY, takesPhoto, cellFor, fromDraft, withInstalled, setPath, setPathOr,
+} from "@/studio/editor-model";
+import { FullscreenButton, SaveBadge, Versions } from "@/studio/EditorChrome";
+import { TemplateGallery } from "@/studio/TemplateGallery";
+import { Inspector } from "@/studio/Inspector";
 
 export default function StudioPage() {
   return <WithTenant>{(ctx) => <StudioEditor ctx={ctx} />}</WithTenant>;
@@ -550,7 +464,7 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
     return (
       <div className="sx">
         <header className="sx-top"><Link className="d-btn d-btn-ghost d-btn-sm" href={backHref}><ArrowLeft weight="bold" aria-hidden="true" />{tx("Website")}</Link><strong>{tx("Studio")}</strong></header>
-        <div className="sx-scroll"><div style={{ padding: 32 }}><span className="d-skel d-skel-block" style={{ height: 480 }} /></div></div>
+        <div className="sx-scroll"><div className="u-p-8"><span className="d-skel d-skel-block" style={{ height: 480 }} /></div></div>
       </div>
     );
   }
@@ -811,7 +725,7 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
             <div className="sx-empty">
               <strong>{tx("Halaman ini masih kosong")}</strong>
               <span>{tx("Tambahkan blok dari panel kiri, atau pilih templat siap pakai.")}</span>
-              <span className="d-row" style={{ justifyContent: "center" }}>
+              <span className="d-row u-justify-center">
                 <button type="button" className="d-btn d-btn-sm d-btn-primary" onClick={() => selectTab("elements")}><Plus weight="bold" aria-hidden="true" />{tx("Tambah blok")}</button>
                 <button type="button" className="d-btn d-btn-sm" onClick={() => setPicking("change")}><SquaresFour weight="bold" aria-hidden="true" />{tx("Pilih templat")}</button>
               </span>
@@ -840,9 +754,9 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
         footer={<><button type="button" className="d-btn" onClick={() => setChecks(null)}>{tx("Perbaiki dulu")}</button><button type="button" className="d-btn d-btn-primary" onClick={() => void doPublish()} disabled={publishing}>{tx("Terbitkan sekarang")}</button></>}>
         <ul className="d-list" aria-label={tx("Catatan siap terbit")}>
           {(checks ?? []).map((i) => (
-            <li key={i.key} className="d-row d-row-between" style={{ gap: 12 }}>
-              <span><WarningCircle weight="fill" aria-hidden="true" style={{ color: "var(--warn)", verticalAlign: "-3px", marginRight: 6 }} />{i.message}</span>
-              <span className="d-row" style={{ gap: 6, flex: "none" }}>
+            <li key={i.key} className="d-row d-row-between u-gap-3">
+              <span><WarningCircle weight="fill" aria-hidden="true" className="u-warn u-va-icon u-mr-2" />{i.message}</span>
+              <span className="d-row u-gap-2 u-flex-none">
                 {i.cellId && <button type="button" className="d-btn d-btn-sm" onClick={() => { setSel(i.cellId!); setPanelOpen(true); setChecks(null); }}>{tx("Tunjukkan")}</button>}
                 {i.area === "business" && <Link className="d-btn d-btn-sm" href={`/business?tenant=${ctx.tenant.id}`}>{tx("Profil bisnis")}</Link>}
                 {i.area === "products" && <Link className="d-btn d-btn-sm" href={`/products?tenant=${ctx.tenant.id}`}>{tx("Produk")}</Link>}
@@ -890,294 +804,3 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
 }
 
 /* ============================================================ Status simpan & riwayat */
-function SaveBadge({ state, saved, err, onRetry }: { state: SaveState; saved: boolean; err: string | null; onRetry: () => void }) {
-  if (state === "readonly") return <Badge plain>{tx("Hanya lihat")}</Badge>;
-  if (state === "conflict" || state === "error") {
-    return (
-      <span className="st-save st-save-bad" role="alert" title={err ?? undefined}>
-        <WarningCircle weight="fill" aria-hidden="true" />{state === "conflict" ? tx("Konflik — muat ulang") : tx("Gagal menyimpan")}
-        {state === "error" && <button type="button" className="d-link d-small" onClick={onRetry}>{tx("Coba lagi")}</button>}
-      </span>
-    );
-  }
-  return <span className="st-save" aria-live="polite">{saved ? <><Check weight="bold" aria-hidden="true" />{tx("Draf tersimpan")}</> : tx("Menyimpan…")}</span>;
-}
-
-interface Version { version: number; created_at_unix: number; is_current: boolean }
-function Versions({ base, canPublish, published, onRestored }: { base: string; canPublish: boolean; published: number | null; onRestored: (v: number) => void }) {
-  const [items, setItems] = useState<Version[] | null>(null);
-  const [busy, setBusy] = useState<number | null>(null);
-  const load = useCallback(() => api<Version[]>("GET", `${base}/website/pages/home/versions`).then(setItems, (e) => { toast.error(describe(e)); setItems([]); }), [base]);
-  useEffect(() => { void load(); }, [load, published]);
-  if (!items) return <Skeleton lines={4} />;
-  if (items.length === 0) return <p className="d-muted">{tx("Belum pernah diterbitkan.")}</p>;
-  return (
-    <ul className="d-list">
-      {items.map((v) => (
-        <li key={v.version}>
-          <div className="d-list-main">
-            <strong><Tr s="Versi {0}" a={[v.version]} />{" "}{v.is_current && <Badge tone="ok">{tx("Tampil di situs")}</Badge>}</strong>
-            <span className="d-muted">{waktu(v.created_at_unix * 1000)}</span>
-          </div>
-          {!v.is_current && (
-            <button type="button" className="d-btn d-btn-sm" disabled={!canPublish || busy !== null} onClick={async () => {
-              if (!(await confirm({ title: tx("Pulihkan versi {0}?", v.version), body: tx("Situs publik akan menampilkan versi ini lagi. Draf yang sedang Anda ubah tidak berubah."), confirmLabel: tx("Pulihkan") }))) return;
-              setBusy(v.version);
-              try {
-                await api("POST", `${base}/website/pages/home/rollback`, { json: { version: v.version } });
-                toast.ok(tx("Situs kini menampilkan versi {0}.", v.version));
-                onRestored(v.version);
-                await load();
-              } catch (e) { toast.error(describe(e)); } finally { setBusy(null); }
-            }}>{tx("Pulihkan")}</button>
-          )}
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-/* ============================================================ Layar penuh */
-function subscribeFs(cb: () => void) {
-  document.addEventListener("fullscreenchange", cb);
-  return () => document.removeEventListener("fullscreenchange", cb);
-}
-function FullscreenButton() {
-  const on = useSyncExternalStore(subscribeFs, () => !!document.fullscreenElement, () => false);
-  const toggle = () => {
-    if (document.fullscreenElement) void document.exitFullscreen();
-    else void document.documentElement.requestFullscreen?.().catch(() => toast.error(tx("Browser ini tidak mendukung layar penuh.")));
-  };
-  return (
-    <button type="button" className="d-icon-btn" onClick={toggle} aria-pressed={on} aria-label={on ? tx("Keluar dari layar penuh") : tx("Layar penuh")} title={on ? tx("Keluar dari layar penuh (Esc)") : tx("Layar penuh")}>
-      {on ? <CornersIn weight="bold" /> : <CornersOut weight="bold" />}
-    </button>
-  );
-}
-
-/* ============================================================ Galeri template */
-function TemplateGallery({ first, business, renderCell, onPick, onCurrent, surfaceOf }: {
-  first?: boolean;
-  business: Business;
-  renderCell: (c: StudioCell, editable?: boolean, th?: { primary: string; font: string }) => React.ReactNode;
-  onPick: (key: string) => void;
-  onCurrent: () => void;
-  surfaceOf: (key: string) => { primary: string; surface: string; font: string; cells: StudioCell[] };
-}) {
-  const previews = useMemo(() => Object.fromEntries(TEMPLATES.map((t) => [t.key, surfaceOf(t.key)])), [surfaceOf]);
-  return (
-    <div className={first ? "st-gallery st-gallery-first" : "st-gallery"}>
-      {first && (
-        <div className="st-gallery-head">
-          <h1>{tx("Pilih gaya awal untuk")}{" "}{business.profile.name}</h1>
-          <p>{tx("Semua templat sudah diisi nama, produk, dan jam buka toko Anda. Teks, foto, warna, dan posisi bisa diubah setelahnya.")}</p>
-        </div>
-      )}
-      <div className="st-tpls">
-        {TEMPLATES.map((t) => {
-          const p = previews[t.key]!;
-          return (
-            <div key={t.key} className="st-tpl" onClick={() => onPick(t.key)}>
-              <span className="st-tpl-thumb" data-surface={p.surface} style={{ ["--s-primary" as string]: p.primary }}>
-                <MiniLayout cells={p.cells.filter((c) => !isEmbed(c))} render={(c) => renderCell(c, false, { primary: p.primary, font: p.font })} theme={{ primary: p.primary, font: p.font }} />
-                {p.cells.some(isFloating) && <span className="st-tpl-float" style={{ background: p.primary }} aria-hidden="true"><ChatCircleDots weight="fill" /></span>}
-              </span>
-              <span className="st-tpl-meta">
-                <span className="d-row d-row-between" style={{ flexWrap: "nowrap" }}>
-                  <strong>{t.name}</strong>
-                  <button type="button" className="d-btn d-btn-sm d-btn-primary" onClick={(e) => { e.stopPropagation(); onPick(t.key); }}>{tx("Pakai")}{" "}{t.name}</button>
-                </span>
-                <span>{t.desc}</span>
-              </span>
-            </div>
-          );
-        })}
-      </div>
-      <div className="d-row" style={{ justifyContent: "center", marginTop: 16 }}>
-        <button type="button" className="d-btn d-btn-ghost" onClick={onCurrent}>{tx("Atau mulai dari susunan website saat ini")}</button>
-      </div>
-    </div>
-  );
-}
-
-/** Miniatur tata letak (tanpa interaksi) di lebar desain lalu diperkecil. */
-function MiniLayout({ cells, render, theme }: { cells: StudioCell[]; render: (c: StudioCell) => React.ReactNode; theme: { primary: string; font: string } }) {
-  const colW = (DESIGN_WIDTH - GAP * (COLS - 1)) / COLS;
-  return (
-    <span className="st-mini" aria-hidden="true" style={{ ["--s-primary" as string]: theme.primary }}>
-      {cells.map((c) => (
-        <span key={c.id} className="st-mini-cell" style={{ transform: `translate(${c.x * (colW + GAP)}px, ${c.y * (ROW + GAP)}px)`, width: c.w * colW + (c.w - 1) * GAP, height: c.h * ROW + (c.h - 1) * GAP }}>
-          {render(c)}
-        </span>
-      ))}
-    </span>
-  );
-}
-
-/* ============================================================ Inspektur */
-function Inspector({ c, onBack, onChange, onWidth, onMove, onLayout, onDuplicate, onRemove, onFull, onPhoto, onCrop, aiHref, businessHref, chatReady, upgradeHref }: {
-  c: StudioCell;
-  onBack: () => void;
-  onChange: (patch: Partial<StudioCell>, key?: string) => void;
-  onWidth: (w: number) => void;
-  onMove: (d: "up" | "down" | "left" | "right") => void;
-  onLayout: (l: string) => void;
-  onDuplicate: () => void;
-  onRemove: () => void;
-  onFull: () => void;
-  onPhoto: (f: File) => void;
-  onCrop?: () => void;
-  aiHref: string;
-  businessHref: string;
-  /** Chatbot aktif di Asisten AI? null = belum diketahui. */
-  chatReady: boolean | null;
-  /** Diisi bila plugin butuh paket lebih tinggi (ADR-0019). */
-  upgradeHref: string | null;
-}) {
-  const def = pluginDef(c.kind);
-  return (
-    <>
-      <div className="d-row d-row-between">
-        <button type="button" className="d-back" style={{ margin: 0 }} onClick={onBack}><ArrowLeft weight="bold" aria-hidden="true" />{tx("Blok")}</button>
-        <h2 style={{ margin: 0, fontSize: "0.9375rem", flex: 1 }}>{def.name}</h2>
-        <div className="d-row">
-          <button type="button" className="d-icon-btn" aria-label={tx("Duplikat")} title={tx("Duplikat")} disabled={SINGLE.includes(c.kind)} onClick={onDuplicate}><Copy weight="bold" /></button>
-          <button type="button" className="d-icon-btn" aria-label={tx("Hapus dari halaman")} title={tx("Hapus")} onClick={onRemove}><Trash weight="bold" /></button>
-        </div>
-      </div>
-      {upgradeHref && (
-        <div className="d-alert d-alert-info" role="note"><div>
-          <Tr s="Blok ini bagian paket Pro: tetap tersimpan, tetapi tidak tampil di situs sampai toko memakai Pro.{0}" a={[" "]} />
-          <Link href={upgradeHref}>{tx("Lihat paket")}</Link>
-        </div></div>
-      )}
-      {c.kind !== "chatbot" && <p className="d-hint" style={{ margin: 0 }}>{tx("Klik teks di kanvas untuk mengetik langsung.")}{takesPhoto(c.kind) && tx(" Seret foto dari komputer ke blok untuk memasangnya.")}</p>}
-      {!isEmbed(c) && <div className="st-section">
-        <label className="d-switch">
-          <input type="checkbox" checked={!!c.locked} onChange={(e) => onChange({ locked: e.target.checked }, "")} />
-          <span><strong><LockSimple weight="bold" aria-hidden="true" style={{ verticalAlign: "-2px" }} />{" "}{tx("Kunci posisi")}</strong><span className="d-muted">{tx("Blok ini tidak bisa diseret, dan blok lain tidak akan menggesernya.")}</span></span>
-        </label>
-        <h3>{tx("Posisi")}</h3>
-        {/* WCAG 2.5.7 (P9-6): semua yang bisa diseret juga bisa lewat tombol. */}
-        <div className="d-seg" role="group" aria-label={tx("Pindahkan")} style={{ width: "100%", marginBottom: 12 }}>
-          {([["up", tx("Pindah ke atas"), ArrowUp], ["down", tx("Pindah ke bawah"), ArrowDown], ["left", tx("Geser ke kiri"), ArrowLeft], ["right", tx("Geser ke kanan"), ArrowRight]] as const).map(([d, l, Icon]) => (
-            <button key={d} type="button" style={{ flex: 1, minHeight: 32 }} aria-label={l} title={l} disabled={!!c.locked} onClick={() => onMove(d)}><Icon weight="bold" aria-hidden="true" /></button>
-          ))}
-        </div>
-        <h3>{tx("Ukuran")}</h3>
-        <div className="d-seg" role="group" aria-label={tx("Lebar")} style={{ width: "100%" }}>
-          {([[3, "¼"], [4, "⅓"], [6, "½"], [8, "⅔"], [12, tx("Penuh")]] as const).map(([w, l]) => (
-            <button key={w} type="button" style={{ flex: 1 }} aria-pressed={c.w === w} disabled={w < (c.minW ?? 2) || !!c.locked} onClick={() => onWidth(w)}>{l}</button>
-          ))}
-        </div>
-        <label className="d-switch" style={{ marginTop: 10 }}>
-          <input type="checkbox" checked={c.autoH !== false} onChange={(e) => onChange({ autoH: e.target.checked }, "")} />
-          <span><strong>{tx("Tinggi otomatis")}</strong><span className="d-muted">{tx("Kotak mengikuti panjang isi sehingga tidak terpotong. Mati otomatis bila tinggi ditarik manual.")}</span></span>
-        </label>
-        <div className="d-row">
-          <button type="button" className="d-btn d-btn-sm" onClick={onFull}><ArrowsOut weight="bold" aria-hidden="true" />{tx("Lihat penuh")}</button>
-          {takesPhoto(c.kind) && (
-            <label className="d-btn d-btn-sm"><ImageSquare weight="bold" aria-hidden="true" />{c.kind === "gallery" ? tx("Tambah foto") : tx("Ganti foto")}
-              <input type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) onPhoto(f); }} />
-            </label>
-          )}
-          {takesPhoto(c.kind) && onCrop && (
-            <button type="button" className="d-btn d-btn-sm" onClick={onCrop} title={tx("Potong foto")}>
-              <Crop weight="bold" aria-hidden="true" />{" "}{tx("Potong")}
-            </button>
-          )}
-        </div>
-        {takesPhoto(c.kind) && (
-          <div style={{ marginTop: 12 }}>
-            <div className="d-field" style={{ margin: 0, marginBottom: 8 }}>
-              <span>{tx("Tampilan foto")}</span>
-              <div className="d-seg" role="group" aria-label={tx("Tampilan foto")} style={{ width: "100%" }}>
-                <button type="button" style={{ flex: 1 }} aria-pressed={((c.data.image_fit as string) ?? "cover") === "cover"} onClick={() => onChange({ data: { ...c.data, image_fit: "cover" } }, "image_fit")}>{tx("Penuhi kotak")}</button>
-                <button type="button" style={{ flex: 1 }} aria-pressed={(c.data.image_fit as string) === "contain"} onClick={() => onChange({ data: { ...c.data, image_fit: "contain" } }, "image_fit")}>{tx("Tampil utuh")}</button>
-              </div>
-            </div>
-            <div className="d-field" style={{ margin: 0 }}>
-              <span>{tx("Titik fokus (posisi)")}</span>
-              <div className="d-seg" role="group" aria-label={tx("Posisi foto")} style={{ width: "100%" }}>
-                {([["top", tx("Atas")], ["center", tx("Tengah")], ["bottom", tx("Bawah")]] as const).map(([pos, lbl]) => (
-                  <button key={pos} type="button" style={{ flex: 1 }} aria-pressed={((c.data.image_position as string) ?? "center") === pos} onClick={() => onChange({ data: { ...c.data, image_position: pos } }, "image_pos")}>{lbl}</button>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-      </div>}
-      <div className="st-section">
-        <h3>{tx("Gaya")}</h3>
-        <div className="st-styles" role="group" aria-label={tx("Gaya")}>
-          {CELL_STYLES.map((s) => (
-            <button key={s.value} type="button" className="st-style-tile" aria-pressed={c.style === s.value} onClick={() => onChange({ style: s.value }, "")}>
-              <span className={`st-style-sample st-style-${s.value}`} aria-hidden="true"><i /><b /></span>
-              {s.label}
-            </button>
-          ))}
-        </div>
-        {def.layouts && (
-          <>
-            <h3 style={{ marginTop: 12 }}>{tx("Tata letak")}</h3>
-            <div className="d-seg" role="group" aria-label={tx("Tata letak")} style={{ width: "100%" }}>
-              {def.layouts.map((l) => <button key={l.value} type="button" style={{ flex: 1 }} aria-pressed={c.layout === l.value} onClick={() => onLayout(l.value)}>{l.label}</button>)}
-            </div>
-          </>
-        )}
-        {c.kind === "chatbot" && (
-          <>
-            <h3 style={{ marginTop: 12 }}>{tx("Keadaan awal")}</h3>
-            <div className="d-seg" role="group" aria-label={tx("Keadaan chatbot")} style={{ width: "100%" }}>
-              <button type="button" style={{ flex: 1 }} aria-pressed={c.chatOpen !== false} onClick={() => onChange({ chatOpen: true }, "")}><ArrowsOut weight="bold" aria-hidden="true" />{" "}{tx("Maksimal")}</button>
-              <button type="button" style={{ flex: 1 }} aria-pressed={c.chatOpen === false} onClick={() => onChange({ chatOpen: false }, "")}><ArrowsIn weight="bold" aria-hidden="true" />{" "}{tx("Minimal")}</button>
-            </div>
-            {c.layout === "floating" && <p className="d-hint" style={{ marginTop: 6 }}>{tx("Gelembung bulat di pojok kanan bawah, ikut saat halaman digulir. Klik gelembungnya untuk membuka/menutup.")}</p>}
-            {c.layout === "bar" && <p className="d-hint" style={{ marginTop: 6 }}>{tx("Bilah horizontal selebar layar di bagian bawah, ikut saat halaman digulir. Pembeli bisa langsung mengetik pertanyaan.")}</p>}
-          </>
-        )}
-      </div>
-      <div className="st-section">
-        <h3>{tx("Isi")}</h3>
-        {c.kind === "chatbot" ? (
-          <>
-            {chatReady === false && (
-              <Alert kind="warn">
-                {tx("Chatbot belum aktif, jadi blok ini")}{" "}<strong>{tx("tidak tampil")}</strong>{" "}<Tr s="di website yang diterbitkan. Buka{0}" a={[" "]} />
-                <Link href={aiHref}>{tx("Asisten AI")}</Link>{tx(", pilih mode")}{" "}<strong>{tx("Hanya staf")}</strong>{" "}{tx("(tanpa penyedia AI) atau tambahkan penyedia, lalu simpan.")}
-              </Alert>
-            )}
-            <label className="d-field"><span>{tx("Judul")}</span><input maxLength={40} value={String(c.data.title ?? "")} onChange={(e) => onChange({ data: { ...c.data, title: e.target.value } })} /></label>
-            <label className="d-field"><span>{tx("Pesan sambutan")}</span><textarea rows={3} maxLength={300} value={String(c.data.welcome ?? "")} onChange={(e) => onChange({ data: { ...c.data, welcome: e.target.value } })} /></label>
-            <p className="d-hint">{tx("Jawaban memakai pengaturan di menu")}{" "}<Link href={aiHref}>{tx("Asisten AI")}</Link>.</p>
-          </>
-        ) : c.kind === "text" ? (
-          <>
-            <label className="d-field"><span>{tx("Judul (opsional)")}</span><input maxLength={120} value={String(c.data.title ?? "")} onChange={(e) => onChange({ data: { ...c.data, title: e.target.value } })} /></label>
-            <label className="d-field"><span>{tx("Isi")}</span><textarea rows={6} maxLength={5000} value={String(c.data.body ?? "")} onChange={(e) => onChange({ data: { ...c.data, body: e.target.value } })} /><span className="d-hint">{tx("Baris kosong memisahkan paragraf.")}</span></label>
-          </>
-        ) : c.kind === "whatsapp" ? (
-          <>
-            <label className="d-field"><span>{tx("Tulisan tombol")}</span><input maxLength={40} value={String(c.data.label ?? "")} onChange={(e) => onChange({ data: { ...c.data, label: e.target.value } })} /></label>
-            <label className="d-field"><span>{tx("Pesan awal (opsional)")}</span><textarea rows={3} maxLength={300} value={String(c.data.message ?? "")} onChange={(e) => onChange({ data: { ...c.data, message: e.target.value } })} /><span className="d-hint">{tx("Terisi otomatis saat pembeli membuka WhatsApp.")}</span></label>
-            <p className="d-hint">{tx("Nomor diambil dari WhatsApp (atau telepon) di")}{" "}<Link href={businessHref}>{tx("Profil bisnis")}</Link>.</p>
-          </>
-        ) : (
-          <>
-            {FIELDS[c.kind as SectionType].map((f) => (
-              <FieldInput key={f.key} f={f} data={c.data} disabled={false} onChange={(d) => onChange({ data: d })} />
-            ))}
-            {/* WCAG 1.1.1 (P9-6): field v2 — hanya di Studio; editor v1 tidak mengenalnya. */}
-            {c.kind in IMAGE_KEY && (
-              <label className="d-field"><span>{tx("Teks alternatif foto")}</span>
-                <input maxLength={160} placeholder={tx("mis. Segelas kopi susu gula aren di meja kayu")} value={String(c.data.image_alt ?? "")}
-                  onChange={(e) => onChange({ data: { ...c.data, image_alt: e.target.value } })} />
-                <span className="d-hint">{tx("Dibacakan untuk pembeli tunanetra dan membantu Google memahami foto. Kosongkan bila foto hanya hiasan.")}</span>
-              </label>
-            )}
-          </>
-        )}
-      </div>
-    </>
-  );
-}

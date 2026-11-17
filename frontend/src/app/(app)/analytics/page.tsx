@@ -117,15 +117,15 @@ function View({ ctx }: { ctx: TenantCtx }) {
         }
       />
       <form className="d-toolbar" onSubmit={(e) => { e.preventDefault(); setPreset(null); setRange({ from, to }); }}>
-        <label className="d-row" style={{ flexWrap: "nowrap" }}><span className="d-muted d-small">{t("Dari")}</span><input type="date" aria-label={t("Dari")} value={from} onChange={(e) => setFrom(e.target.value)} style={{ width: 160 }} /></label>
-        <label className="d-row" style={{ flexWrap: "nowrap" }}><span className="d-muted d-small">{t("Sampai")}</span><input type="date" aria-label={t("Sampai")} value={to} onChange={(e) => setTo(e.target.value)} style={{ width: 160 }} /></label>
+        <label className="d-row u-nowrap"><span className="d-muted d-small">{t("Dari")}</span><input type="date" aria-label={t("Dari")} value={from} onChange={(e) => setFrom(e.target.value)} style={{ width: 160 }} /></label>
+        <label className="d-row u-nowrap"><span className="d-muted d-small">{t("Sampai")}</span><input type="date" aria-label={t("Sampai")} value={to} onChange={(e) => setTo(e.target.value)} style={{ width: 160 }} /></label>
         <button type="submit" className="d-btn">{t("Terapkan")}</button>
       </form>
       <Alert kind="error">{err}</Alert>
       {!a && !err && <PageSkeleton />}
       {ov && (
         <>
-          <h2 className="d-section-title" style={{ marginTop: 8 }}>{t("Penjualan & toko")}</h2>
+          <h2 className="d-section-title u-mt-2">{t("Penjualan & toko")}</h2>
           <section className="an-grid" aria-label={t("Ringkasan toko")}>
             <Tile label={t("Omzet (pesanan terbayar)")} value={rp(ov.revenue)} note={t("{0} dari {1} pesanan", nf.format(ov.paid_orders), nf.format(ov.orders))} />
             <Tile label={t("Rata-rata nilai pesanan")} value={rp(ov.average_order_value)} />
@@ -139,7 +139,7 @@ function View({ ctx }: { ctx: TenantCtx }) {
           <div className="d-grid2">
             <Card flush title={t("Produk terlaris")} label={t("Produk terlaris")}>
               {ov.top_products.length === 0 ? (
-                <p className="d-muted" style={{ padding: 20, margin: 0 }}>
+                <p className="d-muted u-p-5 u-m-0">
                   {t("Belum ada pesanan terbayar.")}{" "}<Link href={`/products?tenant=${ctx.tenant.id}`}>{t("Pastikan produk aktif")}</Link>{" "}{t("dan bagikan tautan website toko.")}
                 </p>
               ) : (
@@ -158,7 +158,7 @@ function View({ ctx }: { ctx: TenantCtx }) {
               )}
             </Card>
             <Card flush title={t("Peringatan stok")} label={t("Peringatan stok")}>
-              {ov.stock_alert_items.length === 0 ? <p className="d-muted" style={{ padding: 20, margin: 0 }}>{t("Semua stok aman.")}</p> : (
+              {ov.stock_alert_items.length === 0 ? <p className="d-muted u-p-5 u-m-0">{t("Semua stok aman.")}</p> : (
                 <div className="d-table-wrap"><table className="d-table">
                   <thead><tr><th>{t("Produk")}</th><th className="d-num">{t("Tersisa")}</th><th className="d-num">{t("Minimum")}</th></tr></thead>
                   <tbody>{ov.stock_alert_items.map((s) => <tr key={`${s.product}-${s.variant}`}><td>{s.product}<span className="d-sub">{s.variant}</span></td><td className="d-num" style={{ color: "var(--warn)", fontWeight: 600 }}>{s.available}</td><td className="d-num d-muted">{s.min_stock}</td></tr>)}</tbody>

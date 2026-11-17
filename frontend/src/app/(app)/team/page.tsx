@@ -59,7 +59,7 @@ function Team({ ctx }: { ctx: TenantCtx }) {
 
       {ctx.can("members.invite") && (
         <Card title={t("Undang anggota")} description={t("Tautan undangan berlaku 7 hari dan hanya bisa dipakai sekali.")}>
-          <form className="d-row" style={{ alignItems: "flex-end" }} onSubmit={(e) => {
+          <form className="d-row u-items-end" onSubmit={(e) => {
             e.preventDefault();
             setBusy(true);
             void run(async () => { await api("POST", `${base}/invitations`, { json: inv }); setInv({ email: "", role_id: "" }); }, t("Undangan dibuat.")).finally(() => setBusy(false));
@@ -77,7 +77,7 @@ function Team({ ctx }: { ctx: TenantCtx }) {
           </form>
           {invites.length > 0 && (
             <>
-              <h3 style={{ marginTop: 20 }}>{t("Menunggu diterima")}</h3>
+              <h3 className="u-mt-5">{t("Menunggu diterima")}</h3>
               <ul className="d-list">
                 {invites.map((i) => (
                   <li key={i.id}>

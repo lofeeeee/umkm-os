@@ -132,7 +132,7 @@ export function DrawPanel({
             <input type="color" value={config.color.length === 7 ? config.color : "#000000"} onChange={(e) => onChangeConfig({ ...config, color: e.target.value.toUpperCase() })} aria-label={t("Warna lain")} />
           </label>
         </div>
-        <div className="d-seg st-seg-full" role="group" aria-label={t("Gaya coretan")} style={{ marginTop: 10 }}>
+        <div className="d-seg st-seg-full u-mt-2" role="group" aria-label={t("Gaya coretan")}>
           <button type="button" aria-pressed={config.opacity === 1} onClick={() => onChangeConfig({ ...config, opacity: 1 })}>{t("Padat")}</button>
           <button type="button" aria-pressed={config.opacity < 1} onClick={() => onChangeConfig({ ...config, opacity: 0.4 })}>{t("Transparan")}</button>
         </div>

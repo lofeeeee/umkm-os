@@ -74,21 +74,20 @@ export function ThemePanel({
       {/* 1. Navigasi Website (Navbar) */}
       <div className="st-section">
         <h3>{tx("Navigasi website")}</h3>
-        <p className="d-hint" style={{ marginTop: 0 }}>
+        <p className="d-hint u-mt-0">
           {tx("Pilih tata letak bilah menu dan tautan navigasi website toko.")}
         </p>
 
-        <div className="d-field" style={{ marginBottom: 12 }}>
+        <div className="d-field u-mb-3">
           <span>{tx("Gaya tata letak")}</span>
           <div
-            className="d-seg"
+            className="d-seg u-w-full"
             role="group"
             aria-label={tx("Gaya tata letak navigasi")}
-            style={{ width: "100%" }}
           >
             <button
               type="button"
-              style={{ flex: 1 }}
+              className="u-grow"
               aria-pressed={config.navbarStyle === "top"}
               onClick={() => onChange({ navbarStyle: "top" })}
             >
@@ -96,7 +95,7 @@ export function ThemePanel({
             </button>
             <button
               type="button"
-              style={{ flex: 1 }}
+              className="u-grow"
               aria-pressed={config.navbarStyle === "side"}
               onClick={() => onChange({ navbarStyle: "side" })}
             >
@@ -105,7 +104,7 @@ export function ThemePanel({
           </div>
         </div>
 
-        <label className="d-switch" style={{ margin: 0 }}>
+        <label className="d-switch u-m-0">
           <input
             type="checkbox"
             aria-label={tx("Navigasi menempel saat digulir")}
@@ -124,7 +123,7 @@ export function ThemePanel({
       {/* 2. Warna & Palet */}
       <div className="st-section">
         <h3>{tx("Warna & palet")}</h3>
-        <p className="d-hint" style={{ marginTop: 0 }}>
+        <p className="d-hint u-mt-0">
           {tx("Pilih kombinasi warna utama dan latar permukaan website.")}
         </p>
 
@@ -158,8 +157,8 @@ export function ThemePanel({
           ))}
         </div>
 
-        <div className="d-grid" style={{ marginTop: 10 }}>
-          <label className="d-field" style={{ margin: 0 }}>
+        <div className="d-grid u-mt-2">
+          <label className="d-field u-m-0">
             <span>{tx("Warna bebas")}</span>
             <span className="d-color">
               <input
@@ -173,7 +172,7 @@ export function ThemePanel({
               <code>{config.primary}</code>
             </span>
           </label>
-          <label className="d-field" style={{ margin: 0 }}>
+          <label className="d-field u-m-0">
             <span>{tx("Latar")}</span>
             <select
               aria-label={tx("Latar permukaan")}
@@ -195,7 +194,7 @@ export function ThemePanel({
       {/* 3. Tipografi */}
       <div className="st-section">
         <h3>{tx("Tipografi")}</h3>
-        <label className="d-field" style={{ marginTop: 6 }}>
+        <label className="d-field u-mt-2">
           <span>{tx("Font")}</span>
           <select
             aria-label={tx("Pilihan font")}
@@ -210,19 +209,18 @@ export function ThemePanel({
           </select>
         </label>
 
-        <div className="d-field" style={{ marginTop: 10, marginBottom: 0 }}>
+        <div className="d-field u-mt-2 u-mb-0">
           <span>{tx("Ukuran teks")}</span>
           <div
-            className="d-seg"
+            className="d-seg u-w-full"
             role="group"
             aria-label={tx("Ukuran teks")}
-            style={{ width: "100%" }}
           >
             {TEXT_SCALES.map((t) => (
               <button
                 key={t.v}
                 type="button"
-                style={{ flex: 1 }}
+                className="u-grow"
                 aria-pressed={(config.textScale ?? 1) === t.v}
                 onClick={() => onChange({ textScale: t.v })}
               >
@@ -236,72 +234,36 @@ export function ThemePanel({
       {/* 4. Latar Belakang Gambar & In-Through */}
       <div className="st-section">
         <h3>{tx("Gambar latar")}</h3>
-        <p className="d-hint" style={{ marginTop: 0 }}>
+        <p className="d-hint u-mt-0">
           {tx("Gunakan gambar latar website toko dan atur transparansi tembus pandang.")}
         </p>
 
         {config.backgroundImage && (
           <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 12,
-              marginBottom: 12,
-              padding: 8,
-              border: "1px solid var(--line)",
-              borderRadius: "var(--rad-sm, 6px)",
-              background: "var(--surface)",
-            }}
+            className="st-bg-row"
           >
             {bgUrl ? (
               // eslint-disable-next-line @next/next/no-img-element -- Thumbnail pratinjau latar statis / signed
               <img
                 src={bgUrl}
                 alt={tx("Pratinjau gambar latar")}
-                style={{
-                  width: 60,
-                  height: 44,
-                  objectFit: "cover",
-                  borderRadius: 4,
-                  border: "1px solid var(--line)",
-                  flex: "none",
-                }}
+                className="st-bg-thumb"
               />
             ) : (
               <span
-                style={{
-                  width: 60,
-                  height: 44,
-                  borderRadius: 4,
-                  background: "var(--line)",
-                  display: "inline-block",
-                  flex: "none",
-                }}
+                className="st-bg-thumb st-bg-thumb-empty"
               />
             )}
-            <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="u-grow u-min-w-0">
               <div
-                className="d-small"
-                style={{
-                  fontWeight: 600,
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                }}
+                className="d-small st-bg-name"
+
               >
                 {tx("Foto latar aktif")}
               </div>
               <button
                 type="button"
-                className="d-btn d-btn-sm d-btn-ghost"
-                style={{
-                  color: "var(--danger, #ef4444)",
-                  padding: "2px 6px",
-                  marginTop: 4,
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 4,
-                }}
+                className="d-btn d-btn-sm d-btn-ghost st-bg-remove"
                 onClick={() => onChange({ backgroundImage: undefined })}
               >
                 <Trash size={14} weight="bold" aria-hidden="true" />
@@ -311,15 +273,10 @@ export function ThemePanel({
           </div>
         )}
 
-        <div style={{ marginBottom: 12 }}>
+        <div className="u-mb-3">
           <label
-            className="d-btn d-btn-sm"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 6,
-              cursor: "pointer",
-            }}
+            className="d-btn d-btn-sm st-bg-upload"
+
           >
             <UploadSimple size={16} weight="bold" aria-hidden="true" />
             <span>
@@ -328,14 +285,14 @@ export function ThemePanel({
             <input
               type="file"
               accept="image/*"
-              style={{ display: "none" }}
+              className="u-hide"
               onChange={handleFileUpload}
             />
           </label>
         </div>
 
-        <div className="d-grid" style={{ marginBottom: 12 }}>
-          <label className="d-field" style={{ margin: 0 }}>
+        <div className="d-grid u-mb-3">
+          <label className="d-field u-m-0">
             <span>{tx("Pilihan ukuran")}</span>
             <select
               aria-label={tx("Ukuran gambar latar")}
@@ -357,7 +314,7 @@ export function ThemePanel({
             </select>
           </label>
 
-          <label className="d-field" style={{ margin: 0 }}>
+          <label className="d-field u-m-0">
             <span>{tx("Pilihan posisi")}</span>
             <select
               aria-label={tx("Posisi gambar latar")}
@@ -373,13 +330,9 @@ export function ThemePanel({
           </label>
         </div>
 
-        <label className="d-field" style={{ margin: 0 }}>
+        <label className="d-field u-m-0">
           <span
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
+            className="st-row-between"
           >
             <span>{tx("Kepekatan gambar latar")}</span>
             <strong>{config.backgroundOpacity ?? 0}%</strong>
@@ -395,7 +348,7 @@ export function ThemePanel({
               onChange({ backgroundOpacity: Number(e.target.value) })
             }
           />
-          <span className="d-hint" style={{ marginTop: 4 }}>
+          <span className="d-hint u-mt-1">
             {tx("Transparansi tembus pandang pada blok website")}
           </span>
         </label>

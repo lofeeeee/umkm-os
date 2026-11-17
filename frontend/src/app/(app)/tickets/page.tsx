@@ -83,7 +83,7 @@ function Tickets({ ctx }: { ctx: TenantCtx }) {
         <SearchInput label={tx("Cari")} placeholder={tx("Cari kode atau subjek…")} value={q} onChange={setQ} />
       </div>
       <div className="d-table-wrap">
-        {items === null ? <div style={{ padding: 20 }}><Skeleton lines={5} /></div> : items.length === 0 ? (
+        {items === null ? <div className="u-p-5"><Skeleton lines={5} /></div> : items.length === 0 ? (
           <EmptyState icon={Headset} title={tab || q ? tx("Tidak ada tiket yang cocok") : tx("Belum ada tiket")}
             action={tab || q ? undefined : <button type="button" className="d-btn d-btn-primary" onClick={() => document.querySelector<HTMLElement>('[aria-label="Subjek tiket baru"]')?.focus()}>{tx("Tulis subjek tiket pertama")}</button>}>
             {tab || q ? tx("Coba tab atau kata kunci lain.") : tx("Tiket dibuat saat pelanggan butuh bantuan, atau saat staf mengeskalasi percakapan.")}
@@ -149,15 +149,15 @@ function Detail({ ctx, url, members, onBack }: { ctx: TenantCtx; url: string; me
       <Alert kind="error">{err}</Alert>
       <div className="d-split">
         <Card title={tx("Percakapan")} label={tx("Percakapan tiket")}>
-          {t.description && <p style={{ whiteSpace: "pre-wrap" }}>{t.description}</p>}
+          {t.description && <p className="u-pre-wrap">{t.description}</p>}
           {t.messages.length === 0 ? <p className="d-muted">{tx("Belum ada balasan.")}</p> : (
             <ul className="d-thread">
               {t.messages.map((m) => (
                 <li key={m.id} className={m.visibility === "internal" ? "d-internal" : m.author_type === "customer" ? "" : "d-me"}>
                   <span className="d-muted">
-                    <strong style={{ color: "var(--ink)" }}>{m.author_type === "customer" ? tx("Pelanggan") : m.visibility === "internal" ? tx("Catatan internal") : tx("Staf")}</strong> · {waktu(m.created_at)}
+                    <strong className="u-ink">{m.author_type === "customer" ? tx("Pelanggan") : m.visibility === "internal" ? tx("Catatan internal") : tx("Staf")}</strong> · {waktu(m.created_at)}
                   </span>
-                  <span style={{ whiteSpace: "pre-wrap" }}>{m.body}</span>
+                  <span className="u-pre-wrap">{m.body}</span>
                 </li>
               ))}
             </ul>
@@ -180,16 +180,16 @@ function Detail({ ctx, url, members, onBack }: { ctx: TenantCtx; url: string; me
                 onChange={(e) => setBody(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && body.trim()) e.currentTarget.form?.requestSubmit(); }} />
               <div className="d-row d-row-between">
-                <label className="d-check" style={{ margin: 0 }}>
+                <label className="d-check u-m-0">
                   <input type="checkbox" checked={internal} onChange={(e) => setInternal(e.target.checked)} />
-                  <span><LockSimple weight="bold" aria-hidden="true" style={{ verticalAlign: "-2px" }} />{" "}{tx("Catatan internal (tidak terlihat pelanggan)")}</span>
+                  <span><LockSimple weight="bold" aria-hidden="true" className="u-va-icon" />{" "}{tx("Catatan internal (tidak terlihat pelanggan)")}</span>
                 </label>
                 <BusyButton busy={busy === "send"} disabled={!body.trim()}>{tx("Kirim")}</BusyButton>
               </div>
             </form>
           )}
         </Card>
-        <div className="d-stack" style={{ alignContent: "start" }}>
+        <div className="d-stack u-content-start">
           <Card title={tx("Detail")}>
             {ctx.can("tickets.assign") && (
               <label className="d-field"><span>{tx("Ditugaskan ke")}</span>
@@ -213,7 +213,7 @@ function Detail({ ctx, url, members, onBack }: { ctx: TenantCtx; url: string; me
               <dt>{tx("Target selesai")}</dt><dd>{waktu(t.resolution_due_at)}{t.sla_resolution_breached && <> <Badge tone="danger" plain>{tx("Terlewat")}</Badge></>}</dd>
             </dl>
             {(t.sla_first_response_breached || t.sla_resolution_breached) && (
-              <p className="d-small" style={{ color: "var(--danger)", marginTop: 12 }}><Warning weight="bold" aria-hidden="true" style={{ verticalAlign: "-2px" }} />{" "}{tx("Tenggat layanan terlewat — prioritaskan tiket ini.")}</p>
+              <p className="d-small u-danger u-mt-3"><Warning weight="bold" aria-hidden="true" className="u-va-icon" />{" "}{tx("Tenggat layanan terlewat — prioritaskan tiket ini.")}</p>
             )}
           </Card>
         </div>

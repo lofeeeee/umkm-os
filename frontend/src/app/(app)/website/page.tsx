@@ -223,7 +223,7 @@ function Editor({ ctx }: { ctx: TenantCtx }) {
 
       <div className="e-layout">
         <div className="e-side">
-          <div className="d-seg" role="tablist" aria-label={tx("Panel editor")} style={{ justifySelf: "start" }}>
+          <div className="d-seg u-self-start" role="tablist" aria-label={tx("Panel editor")}>
             {([["sections", tx("Bagian ({0})", content.sections.length)], ["theme", tx("Tema")], ["history", tx("Riwayat")]] as const).map(([k, l]) => (
               <button key={k} type="button" role="tab" aria-selected={panel === k} onClick={() => setPanel(k)}>{l}</button>
             ))}
@@ -271,7 +271,7 @@ function Editor({ ctx }: { ctx: TenantCtx }) {
                       {FIELDS[s.type].map((f) => (
                         <FieldInput key={f.key} f={f} data={s.data} disabled={!canEdit} onChange={(d) => updateSection(s.id, (x) => ({ ...x, data: d }))} />
                       ))}
-                      <button type="button" className="d-btn d-btn-sm d-btn-ghost" style={{ color: "var(--danger)" }} disabled={!canEdit}
+                      <button type="button" className="d-btn d-btn-sm d-btn-ghost u-danger" disabled={!canEdit}
                         onClick={async () => {
                           if (await confirm({ title: tx("Hapus bagian “{0}”?", SECTION_LABELS[s.type]), body: tx("Bagian dihapus dari draf. Situs publik tidak berubah sampai Anda menerbitkan."), confirmLabel: tx("Hapus"), danger: true })) {
                             update((c) => ({ ...c, sections: c.sections.filter((x) => x.id !== s.id) }));
@@ -298,7 +298,7 @@ function Editor({ ctx }: { ctx: TenantCtx }) {
               <ul className="e-versions">
                 {versions.map((v) => (
                   <li key={v.version}>
-                    <span style={{ flex: 1 }}>
+                    <span className="u-grow">
                       <strong>{tx("Versi")}{" "}{v.version}</strong> {v.is_current && <Badge tone="ok">{tx("Aktif")}</Badge>}
                       <span className="d-sub d-muted d-small" style={{ display: "block" }}>{waktu(v.created_at_unix * 1000)}</span>
                     </span>
@@ -316,8 +316,8 @@ function Editor({ ctx }: { ctx: TenantCtx }) {
             <span className="d-muted d-small">{viewing ? tx("Pratinjau versi {0}", viewing.version) : tx("Pratinjau draf")}</span>
             {viewing && <button type="button" className="d-btn d-btn-sm" onClick={() => setViewing(null)}>{tx("Kembali ke draf")}</button>}
             <div className="d-seg" role="group" aria-label={tx("Ukuran pratinjau")} style={{ marginLeft: "auto" }}>
-              <button type="button" aria-pressed={view === "mobile"} onClick={() => setView("mobile")}><DeviceMobile weight="bold" aria-hidden="true" style={{ verticalAlign: "-2px" }} />{" "}{tx("Ponsel")}</button>
-              <button type="button" aria-pressed={view === "desktop"} onClick={() => setView("desktop")}><DesktopTower weight="bold" aria-hidden="true" style={{ verticalAlign: "-2px" }} />{" "}{tx("Layar lebar")}</button>
+              <button type="button" aria-pressed={view === "mobile"} onClick={() => setView("mobile")}><DeviceMobile weight="bold" aria-hidden="true" className="u-va-icon" />{" "}{tx("Ponsel")}</button>
+              <button type="button" aria-pressed={view === "desktop"} onClick={() => setView("desktop")}><DesktopTower weight="bold" aria-hidden="true" className="u-va-icon" />{" "}{tx("Layar lebar")}</button>
             </div>
           </div>
           <div className="e-preview-wrap">
@@ -334,7 +334,7 @@ function Editor({ ctx }: { ctx: TenantCtx }) {
 function AddSection({ disabled, onAdd }: { disabled: boolean; onAdd: (t: SectionType) => void }) {
   const [type, setType] = useState<SectionType>("hero");
   return (
-    <div className="d-row e-add" style={{ flexWrap: "nowrap" }}>
+    <div className="d-row e-add u-nowrap">
       <select value={type} onChange={(e) => setType(e.target.value as SectionType)} disabled={disabled} aria-label={tx("Tipe bagian baru")}>
         {SECTION_TYPES.map((t) => <option key={t} value={t}>{SECTION_LABELS[t]}</option>)}
       </select>

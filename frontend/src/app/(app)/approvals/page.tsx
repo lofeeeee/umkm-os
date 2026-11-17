@@ -70,7 +70,7 @@ function Approvals({ ctx }: { ctx: TenantCtx }) {
           </EmptyState>
         </div>
       ) : (
-        <div className="d-stack" style={{ marginBottom: 24 }}>
+        <div className="d-stack u-mb-6">
           {items.map((r) => {
             const st = statusOf(APPROVAL_STATUS, r.status);
             return (
@@ -82,7 +82,7 @@ function Approvals({ ctx }: { ctx: TenantCtx }) {
                 {r.execution_error && <Alert kind="error">{t("Gagal diterapkan:")}{" "}{r.execution_error}</Alert>}
                 {r.executed_at && <Alert kind="ok">{t("Perubahan sudah diterapkan.")}</Alert>}
                 {r.decisions.length > 0 && (
-                  <ol className="d-timeline" style={{ marginBottom: 16 }}>
+                  <ol className="d-timeline u-mb-4">
                     {r.decisions.map((d, i) => (
                       <li key={i}>
                         <span>{d.actor_user_id ? email(d.actor_user_id) : t("Sistem")} {DECISION[d.decision] ?? d.decision}{d.on_behalf_user_id && t(" atas nama {0}", email(d.on_behalf_user_id))}{d.reason && t(": “{0}”", d.reason)}</span>
@@ -92,7 +92,7 @@ function Approvals({ ctx }: { ctx: TenantCtx }) {
                   </ol>
                 )}
                 {r.status === "pending" && (
-                  <div className="d-row" style={{ alignItems: "flex-end" }}>
+                  <div className="d-row u-items-end">
                     {ctx.can("approvals.decide") && (
                       <>
                         <label className="d-field" style={{ flex: "1 1 240px", margin: 0 }}><span>{t("Alasan")}{" "}<span className="d-opt">{t("(wajib bila menolak)")}</span></span>
@@ -147,7 +147,7 @@ function Policies({ ctx, base, policies, roles, run }: {
                   <td className="d-strong">{TYPE[et]}</td>
                   <td>{pick(0, (v) => void save(p?.enabled ?? false, v, step(1)))}</td>
                   <td>{pick(1, (v) => void save(p?.enabled ?? false, step(0), v))}</td>
-                  <td><label className="d-switch" style={{ margin: 0 }}><input type="checkbox" aria-label={t("Aktif {0}", TYPE[et])} disabled={!can} checked={p?.enabled ?? false} onChange={(e) => void save(e.target.checked, step(0), step(1))} /></label></td>
+                  <td><label className="d-switch u-m-0"><input type="checkbox" aria-label={t("Aktif {0}", TYPE[et])} disabled={!can} checked={p?.enabled ?? false} onChange={(e) => void save(e.target.checked, step(0), step(1))} /></label></td>
                 </tr>
               );
             })}
@@ -163,7 +163,7 @@ function Delegate({ base, members, run }: { base: string; members: MemberRow[]; 
   const [days, setDays] = useState(7);
   return (
     <Card title={t("Delegasikan wewenang saya")} description={t("Saat Anda cuti, anggota lain dapat memutuskan persetujuan atas nama Anda untuk sementara.")}>
-      <div className="d-row" style={{ alignItems: "flex-end" }}>
+      <div className="d-row u-items-end">
         <label className="d-field" style={{ flex: "2 1 220px", margin: 0 }}><span>{t("Delegasi ke")}</span>
           <select aria-label={t("Delegasi ke")} value={to} onChange={(e) => setTo(e.target.value)}>
             <option value="">{t("Pilih anggota…")}</option>

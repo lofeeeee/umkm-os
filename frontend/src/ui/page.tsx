@@ -101,7 +101,7 @@ export function PageSkeleton() {
   return (
     <div aria-busy="true" aria-label={tx("Memuat")}>
       <span className="d-skel d-skel-title" />
-      <span className="d-skel d-skel-block" style={{ marginBottom: 16 }} />
+      <span className="d-skel d-skel-block u-mb-4" />
       <span className="d-skel d-skel-block" style={{ height: 220 }} />
     </div>
   );

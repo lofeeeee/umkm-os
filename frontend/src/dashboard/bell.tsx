@@ -75,7 +75,7 @@ export function BellMenu({ tenantId }: { tenantId: string }) {
                   <a href={n.link ?? "#"} onClick={() => void api("POST", `${base}/${n.id}/read`).then(load)}>
                     <strong>{n.title}</strong>
                     <span>{n.body}</span>
-                    <span className="d-small" style={{ color: "var(--subtle)" }}>{relatif(n.created_at)}</span>
+                    <span className="d-small u-subtle">{relatif(n.created_at)}</span>
                   </a>
                 </li>
               ))}

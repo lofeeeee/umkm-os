@@ -85,7 +85,7 @@ export function ConversationView({ d, staff }: { d: ConversationDetail; staff?: 
         <div className="d-alert d-alert-info" role="note"><div>{tx("Data sensitif (kontak pelanggan, email/nomor dalam pesan) disamarkan untuk peran Anda.")}</div></div>
       )}
       <div className="d-split">
-        <div className="d-stack" style={{ alignContent: "start", minWidth: 0 }}>
+        <div className="d-stack u-content-start u-min-w-0">
           <section className="d-card" aria-label={tx("Timeline")}>
             <header className="d-card-head"><div className="d-card-head-text"><h2>{tx("Percakapan")}</h2><p>{d.timeline.length}{" "}{tx("pesan · dimulai")}{" "}{when(d.created_at)}</p></div></header>
             <ol className="cv-timeline">
@@ -102,7 +102,7 @@ export function ConversationView({ d, staff }: { d: ConversationDetail; staff?: 
               ))}
             </ol>
             {d.other_ai_runs.length > 0 && (
-              <details className="d-details" style={{ marginTop: 16 }}>
+              <details className="d-details u-mt-4">
                 <summary><Tr s="Pemanggilan AI tanpa balasan ({0})" a={[d.other_ai_runs.length]} /></summary>
                 {d.other_ai_runs.map((r) => <RunMeta key={r.run_id} r={r} />)}
               </details>
@@ -111,7 +111,7 @@ export function ConversationView({ d, staff }: { d: ConversationDetail; staff?: 
           {staff}
         </div>
 
-        <div className="d-stack" style={{ alignContent: "start", minWidth: 0 }}>
+        <div className="d-stack u-content-start u-min-w-0">
           <section className="d-card" aria-label={tx("Status percakapan")}>
             <header className="d-card-head"><div className="d-card-head-text"><h2>{tx("Status")}</h2></div><Badge tone={st.tone}>{st.label}</Badge></header>
             <dl className="d-dl">

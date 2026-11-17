@@ -344,6 +344,11 @@ main[tabindex="-1"]:focus { outline: none; }
 }
 .d-crumbs [aria-current] { color: var(--ink); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .d-crumbs svg { width: 12px; height: 12px; color: var(--subtle); flex: none; }
+/* Remah tidak pernah terlipat: nama toko menyusut lebih dulu; di ponsel hanya halaman aktif yang tampil
+   (toko sudah terlihat di pemilih toko pada menu). */
+.d-crumbs a { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 0 1 auto; }
+.d-crumbs [aria-current] { flex: 0 1 auto; min-width: 0; }
+@media (max-width: 520px) { .d-crumbs a, .d-crumbs a + svg { display: none; } }
 .d-topbar-actions { margin-left: auto; display: flex; align-items: center; gap: var(--sp-1); }
 
 .d-search-btn {
@@ -413,6 +418,18 @@ kbd, .d-kbd {
 /* Transisi halaman: halus, sekali per navigasi (bukan aksi keyboard berulang). */
 .d-page { animation: d-page-in var(--dur-slow) var(--ease-out) both; }
 @keyframes d-page-in { from { opacity: 0; transform: translateY(4px); } }
+/* Transisi antarhalaman (View Transitions): halaman lama memudar cepat, halaman baru naik halus.
+   Grup tidak dianimasikan (tinggi halaman berbeda → tanpa efek melar). */
+@supports (view-transition-name: none) {
+  .d-page { animation: none; }
+}
+::view-transition-group(.d-route) { animation: none; }
+::view-transition-old(.d-route) { animation: d-route-out var(--dur-fast) var(--ease-out) both; }
+::view-transition-new(.d-route) { animation: d-page-in var(--dur-slow) var(--ease-out) both; }
+@keyframes d-route-out { to { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
+}
 
 /* Kaki halaman Beranda: tautan legal platform. */
 .d-page-legal {
@@ -1473,3 +1490,89 @@ main.d-legal { max-width: 720px; }
 }
 .lang-switch button[aria-pressed="true"] { background: var(--card); color: var(--ink); box-shadow: var(--shadow-sm); }
 .d-auth-theme { display: flex; align-items: center; gap: 8px; }
+
+/* ============================================================
+   Utilitas (pengganti gaya inline berulang). !important = setara prioritas atribut style
+   yang digantikannya, jadi menang dari aturan komponen. Jarak memakai token --sp-*.
+   ============================================================ */
+.u-m-0 { margin: 0 !important; }
+.u-mt-0 { margin-top: 0 !important; }
+.u-mt-1 { margin-top: var(--sp-1) !important; }
+.u-mt-2 { margin-top: var(--sp-2) !important; }
+.u-mt-3 { margin-top: var(--sp-3) !important; }
+.u-mt-4 { margin-top: var(--sp-4) !important; }
+.u-mt-5 { margin-top: var(--sp-5) !important; }
+.u-mb-0 { margin-bottom: 0 !important; }
+.u-mb-2 { margin-bottom: var(--sp-2) !important; }
+.u-mb-3 { margin-bottom: var(--sp-3) !important; }
+.u-mb-4 { margin-bottom: var(--sp-4) !important; }
+.u-mb-5 { margin-bottom: var(--sp-5) !important; }
+.u-mb-6 { margin-bottom: var(--sp-6) !important; }
+.u-p-5 { padding: var(--sp-5) !important; }
+.u-grow { flex: 1 !important; }
+.u-min-w-0 { min-width: 0 !important; }
+.u-nowrap { flex-wrap: nowrap !important; }
+.u-w-full { width: 100% !important; }
+.u-items-end { align-items: flex-end !important; }
+.u-justify-end { justify-content: flex-end !important; }
+.u-content-start { align-content: start !important; }
+.u-self-start { justify-self: start !important; }
+.u-pre-wrap { white-space: pre-wrap !important; }
+.u-ink { color: var(--ink) !important; }
+.u-muted { color: var(--muted) !important; }
+.u-subtle { color: var(--subtle) !important; }
+.u-danger { color: var(--danger) !important; }
+.u-shrink-0 { flex-shrink: 0 !important; }
+.u-flex-none { flex: none !important; }
+.u-contents { display: contents !important; }
+.u-mr-2 { margin-right: var(--sp-2) !important; }
+.u-p-8 { padding: var(--sp-8) !important; }
+.u-gap-2 { gap: var(--sp-2) !important; }
+.u-gap-3 { gap: var(--sp-3) !important; }
+.u-items-center { align-items: center !important; }
+.u-items-start { align-items: flex-start !important; }
+.u-justify-center { justify-content: center !important; }
+.u-justify-between { justify-content: space-between !important; }
+.u-self-center { align-self: center !important; }
+.u-pointer { cursor: pointer !important; }
+.u-fs-md { font-size: var(--fs-md) !important; }
+.u-va-icon { vertical-align: -2px !important; }
+.u-warn { color: var(--warn) !important; }
+.u-hide { display: none !important; }
+
+/* ============================================================
+   Potong gambar (ImageCropModal)
+   ============================================================ */
+dialog.d-dialog.icm-dialog { width: min(640px, calc(100vw - 32px)); max-width: 640px; }
+.icm-head { display: flex; align-items: center; justify-content: space-between; padding: var(--sp-4) var(--sp-5); border-bottom: 1px solid var(--line); }
+.icm-title { display: flex; align-items: center; gap: var(--sp-2); }
+.icm-title-icon { font-size: var(--fs-xl); color: var(--ink); }
+.icm-h { margin: 0; font-size: var(--fs-lg); font-weight: 650; color: var(--ink); }
+.icm-sub { margin: 2px 0 0; font-size: var(--fs-sm); color: var(--muted); }
+.d-dialog-body.icm-body { display: flex; flex-direction: column; gap: var(--sp-3); padding: var(--sp-4) var(--sp-5); }
+.icm-ratios { display: flex; gap: var(--sp-2); align-items: center; flex-wrap: wrap; }
+.icm-label { font-size: var(--fs-sm); font-weight: 600; color: var(--ink-2); margin-right: var(--sp-1); }
+.icm-outline { border: 1px solid var(--line); }
+.icm-ratio-hint { opacity: 0.75; font-size: var(--fs-xs); margin-left: var(--sp-1); }
+/* Latar kanvas sengaja gelap di kedua tema: area potong harus kontras dengan gambar. */
+.icm-stage { position: relative; width: 100%; background: #111114; border-radius: var(--radius-lg); overflow: hidden; border: 1px solid var(--line); box-shadow: inset 0 1px 3px rgb(0 0 0 / 0.4); display: flex; align-items: center; justify-content: center; }
+.icm-canvas { display: block; width: 100%; height: auto; max-height: 360px; touch-action: none; }
+.icm-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: var(--fs-base); }
+.icm-overlay-error { color: var(--danger); padding: var(--sp-4); text-align: center; }
+.icm-zoom { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-1) 0; }
+.icm-zoom-track { display: flex; align-items: center; gap: var(--sp-2); flex: 1; }
+.icm-zoom-icon { color: var(--subtle); flex-shrink: 0; }
+.icm-zoom-range { flex: 1; accent-color: var(--brand-solid); }
+.icm-zoom-val { font-size: var(--fs-sm); font-variant-numeric: tabular-nums; width: 36px; text-align: right; color: var(--ink-2); }
+.d-dialog-foot.icm-foot { justify-content: space-between; align-items: center; }
+.icm-hint { font-size: var(--fs-xs); color: var(--muted); }
+.icm-actions { display: flex; gap: var(--sp-2); }
+
+/* Studio — gambar latar di panel Tema */
+.st-bg-row { display: flex; align-items: center; gap: var(--sp-3); margin-bottom: var(--sp-3); padding: var(--sp-2); border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface); }
+.st-bg-thumb { width: 60px; height: 44px; object-fit: cover; border-radius: 4px; border: 1px solid var(--line); flex: none; }
+.st-bg-thumb-empty { display: inline-block; background: var(--line); border: 0; }
+.st-bg-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.d-btn.st-bg-remove { color: var(--danger); padding: 2px 6px; margin-top: var(--sp-1); display: inline-flex; align-items: center; gap: var(--sp-1); }
+.d-btn.st-bg-upload { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.st-row-between { display: flex; justify-content: space-between; align-items: center; }

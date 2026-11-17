@@ -10,6 +10,10 @@ import {
   X,
 } from "@phosphor-icons/react/ssr";
 import { t } from "@/i18n";
+import {
+  ASPECT_RATIOS, CANVAS_H, CANVAS_W, HANDLE_RADIUS, MIN_CROP_SIZE, PADDING, drawCropOverlay, moveCrop, resizeCrop,
+  type AspectRatioPreset, type Rect,
+} from "@/ui/crop-geometry";
 
 export interface ImageCropModalProps {
   open: boolean;
@@ -18,32 +22,6 @@ export interface ImageCropModalProps {
   onCrop: (file: File) => void;
 }
 
-interface Rect {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-}
-
-type AspectRatioPreset = {
-  id: "free" | "1:1" | "16:9" | "4:3";
-  label: string;
-  desc?: string;
-  ratio: number | null;
-};
-
-const ASPECT_RATIOS: AspectRatioPreset[] = [
-  { id: "free", get label() { return t("Bebas"); }, ratio: null },
-  { id: "1:1", label: "1:1", get desc() { return t("Kotak"); }, ratio: 1 },
-  { id: "16:9", label: "16:9", get desc() { return t("Banner"); }, ratio: 16 / 9 },
-  { id: "4:3", label: "4:3", get desc() { return t("Standar"); }, ratio: 4 / 3 },
-];
-
-const CANVAS_W = 600;
-const CANVAS_H = 380;
-const PADDING = 20;
-const MIN_CROP_SIZE = 40;
-const HANDLE_RADIUS = 24;
 
 interface ImageCropContentProps {
   imageSrc: string;
@@ -214,81 +192,7 @@ function ImageCropContent({ imageSrc, onClose, onCrop }: ImageCropContentProps) 
     // Draw the source image
     ctx.drawImage(imgElement, bounds.x, bounds.y, bounds.w, bounds.h);
 
-    // Darkened overlay outside crop rect
-    ctx.fillStyle = "rgba(0, 0, 0, 0.62)";
-    // Top
-    if (crop.y > 0) ctx.fillRect(0, 0, CANVAS_W, Math.max(0, crop.y));
-    // Bottom
-    const bottomY = crop.y + crop.h;
-    if (bottomY < CANVAS_H) ctx.fillRect(0, bottomY, CANVAS_W, Math.max(0, CANVAS_H - bottomY));
-    // Left
-    if (crop.x > 0) ctx.fillRect(0, crop.y, Math.max(0, crop.x), crop.h);
-    // Right
-    const rightX = crop.x + crop.w;
-    if (rightX < CANVAS_W) ctx.fillRect(rightX, crop.y, Math.max(0, CANVAS_W - rightX), crop.h);
-
-    // Rule of thirds grid lines
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.28)";
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    const xThird1 = crop.x + crop.w / 3;
-    const xThird2 = crop.x + (crop.w * 2) / 3;
-    const yThird1 = crop.y + crop.h / 3;
-    const yThird2 = crop.y + (crop.h * 2) / 3;
-
-    ctx.moveTo(xThird1, crop.y);
-    ctx.lineTo(xThird1, crop.y + crop.h);
-    ctx.moveTo(xThird2, crop.y);
-    ctx.lineTo(xThird2, crop.y + crop.h);
-
-    ctx.moveTo(crop.x, yThird1);
-    ctx.lineTo(crop.x + crop.w, yThird1);
-    ctx.moveTo(crop.x, yThird2);
-    ctx.lineTo(crop.x + crop.w, yThird2);
-    ctx.stroke();
-
-    // Crop box outline
-    ctx.strokeStyle = "#ffffff";
-    ctx.lineWidth = 1.5;
-    ctx.strokeRect(crop.x, crop.y, crop.w, crop.h);
-
-    // Corner accent brackets & handles
-    const cornerSize = 16;
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = "#ffffff";
-    ctx.beginPath();
-    // Top-left
-    ctx.moveTo(crop.x, crop.y + cornerSize);
-    ctx.lineTo(crop.x, crop.y);
-    ctx.lineTo(crop.x + cornerSize, crop.y);
-    // Top-right
-    ctx.moveTo(crop.x + crop.w - cornerSize, crop.y);
-    ctx.lineTo(crop.x + crop.w, crop.y);
-    ctx.lineTo(crop.x + crop.w, crop.y + cornerSize);
-    // Bottom-left
-    ctx.moveTo(crop.x, crop.y + crop.h - cornerSize);
-    ctx.lineTo(crop.x, crop.y + crop.h);
-    ctx.lineTo(crop.x + cornerSize, crop.y + crop.h);
-    // Bottom-right
-    ctx.moveTo(crop.x + crop.w - cornerSize, crop.y + crop.h);
-    ctx.lineTo(crop.x + crop.w, crop.y + crop.h);
-    ctx.lineTo(crop.x + crop.w, crop.y + crop.h - cornerSize);
-    ctx.stroke();
-
-    // Corner circle grip dots
-    ctx.fillStyle = "#ffffff";
-    const dotR = 3.5;
-    const corners = [
-      { x: crop.x, y: crop.y },
-      { x: crop.x + crop.w, y: crop.y },
-      { x: crop.x, y: crop.y + crop.h },
-      { x: crop.x + crop.w, y: crop.y + crop.h },
-    ];
-    for (const c of corners) {
-      ctx.beginPath();
-      ctx.arc(c.x, c.y, dotR, 0, Math.PI * 2);
-      ctx.fill();
-    }
+    drawCropOverlay(ctx, crop);
   }, [imgElement, imageLoaded, zoom, pan, crop, getImageBounds]);
 
   // Pointer event helpers for hit-testing and dragging
@@ -369,100 +273,7 @@ function ImageCropContent({ imageSrc, onClose, onCrop }: ImageCropContentProps) 
       return;
     }
 
-    if (handle === "move") {
-      let nx = startCrop.x + dx;
-      let ny = startCrop.y + dy;
-
-      // Clamp within image bounds
-      nx = Math.max(bounds.x, Math.min(bounds.x + bounds.w - startCrop.w, nx));
-      ny = Math.max(bounds.y, Math.min(bounds.y + bounds.h - startCrop.h, ny));
-
-      setCrop({
-        x: nx,
-        y: ny,
-        w: startCrop.w,
-        h: startCrop.h,
-      });
-      return;
-    }
-
-    // Corner handle resize
-    let nx = startCrop.x;
-    let ny = startCrop.y;
-    let nw = startCrop.w;
-    let nh = startCrop.h;
-
-    if (handle === "br") {
-      nw = Math.max(MIN_CROP_SIZE, startCrop.w + dx);
-      nh = lockedRatio ? nw / lockedRatio : Math.max(MIN_CROP_SIZE, startCrop.h + dy);
-
-      if (lockedRatio && nh > bounds.y + bounds.h - ny) {
-        nh = bounds.y + bounds.h - ny;
-        nw = nh * lockedRatio;
-      }
-      if (nx + nw > bounds.x + bounds.w) {
-        nw = bounds.x + bounds.w - nx;
-        if (lockedRatio) nh = nw / lockedRatio;
-      }
-    } else if (handle === "bl") {
-      nw = Math.max(MIN_CROP_SIZE, startCrop.w - dx);
-      nh = lockedRatio ? nw / lockedRatio : Math.max(MIN_CROP_SIZE, startCrop.h + dy);
-      nx = startCrop.x + startCrop.w - nw;
-
-      if (nx < bounds.x) {
-        nx = bounds.x;
-        nw = startCrop.x + startCrop.w - nx;
-        if (lockedRatio) nh = nw / lockedRatio;
-      }
-      if (ny + nh > bounds.y + bounds.h) {
-        nh = bounds.y + bounds.h - ny;
-        if (lockedRatio) {
-          nw = nh * lockedRatio;
-          nx = startCrop.x + startCrop.w - nw;
-        }
-      }
-    } else if (handle === "tr") {
-      nw = Math.max(MIN_CROP_SIZE, startCrop.w + dx);
-      nh = lockedRatio ? nw / lockedRatio : Math.max(MIN_CROP_SIZE, startCrop.h - dy);
-      ny = startCrop.y + startCrop.h - nh;
-
-      if (ny < bounds.y) {
-        ny = bounds.y;
-        nh = startCrop.y + startCrop.h - ny;
-        if (lockedRatio) nw = nh * lockedRatio;
-      }
-      if (nx + nw > bounds.x + bounds.w) {
-        nw = bounds.x + bounds.w - nx;
-        if (lockedRatio) {
-          nh = nw / lockedRatio;
-          ny = startCrop.y + startCrop.h - nh;
-        }
-      }
-    } else if (handle === "tl") {
-      nw = Math.max(MIN_CROP_SIZE, startCrop.w - dx);
-      nh = lockedRatio ? nw / lockedRatio : Math.max(MIN_CROP_SIZE, startCrop.h - dy);
-      nx = startCrop.x + startCrop.w - nw;
-      ny = startCrop.y + startCrop.h - nh;
-
-      if (nx < bounds.x) {
-        nx = bounds.x;
-        nw = startCrop.x + startCrop.w - nx;
-        if (lockedRatio) nh = nw / lockedRatio;
-      }
-      if (ny < bounds.y) {
-        ny = bounds.y;
-        nh = startCrop.y + startCrop.h - ny;
-        if (lockedRatio) {
-          nw = nh * lockedRatio;
-          nx = startCrop.x + startCrop.w - nw;
-        }
-      }
-    }
-
-    nw = Math.max(MIN_CROP_SIZE, nw);
-    nh = Math.max(MIN_CROP_SIZE, nh);
-
-    setCrop({ x: nx, y: ny, w: nw, h: nh });
+    setCrop(handle === "move" ? moveCrop(startCrop, dx, dy, bounds) : resizeCrop(handle, startCrop, dx, dy, bounds, lockedRatio));
   };
 
   const handlePointerUp = (e: React.PointerEvent<HTMLCanvasElement>) => {
@@ -541,34 +352,27 @@ function ImageCropContent({ imageSrc, onClose, onCrop }: ImageCropContentProps) 
     <>
       {/* Modal Header */}
       <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "var(--sp-4) var(--sp-5)",
-          borderBottom: "1px solid var(--line)",
-        }}
+        className="icm-head"
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <Crop weight="bold" style={{ fontSize: "1.125rem", color: "var(--ink)" }} />
+        <div className="icm-title">
+          <Crop weight="bold" className="icm-title-icon" />
           <div>
             <h2
               id="d-crop-title"
-              style={{ margin: 0, fontSize: "1rem", fontWeight: 650, color: "var(--ink)" }}
+              className="icm-h"
             >
               {t("Potong gambar")}
             </h2>
-            <p style={{ margin: "2px 0 0", fontSize: "0.8125rem", color: "var(--muted)" }}>
+            <p className="icm-sub">
               {t("Sesuaikan area dan rasio pemotongan gambar.")}
             </p>
           </div>
         </div>
         <button
           type="button"
-          className="d-icon-btn"
+          className="d-icon-btn u-muted"
           aria-label={t("Tutup jendela")}
           onClick={onClose}
-          style={{ color: "var(--muted)" }}
         >
           <X weight="bold" />
         </button>
@@ -576,30 +380,15 @@ function ImageCropContent({ imageSrc, onClose, onCrop }: ImageCropContentProps) 
 
       {/* Modal Body */}
       <div
-        className="d-dialog-body"
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: "14px",
-          padding: "var(--sp-4) var(--sp-5)",
-        }}
+        className="d-dialog-body icm-body"
+
       >
         {/* Preset aspect ratio buttons */}
         <div
-          style={{
-            display: "flex",
-            gap: "8px",
-            alignItems: "center",
-            flexWrap: "wrap",
-          }}
+          className="icm-ratios"
         >
           <span
-            style={{
-              fontSize: "0.8125rem",
-              fontWeight: 600,
-              color: "var(--ink-2)",
-              marginRight: "4px",
-            }}
+            className="icm-label"
           >
             {t("Rasio:")}
           </span>
@@ -609,13 +398,12 @@ function ImageCropContent({ imageSrc, onClose, onCrop }: ImageCropContentProps) 
               <button
                 key={r.id}
                 type="button"
-                className={`d-btn d-btn-sm ${active ? "d-btn-primary" : "d-btn-ghost"}`}
-                style={!active ? { border: "1px solid var(--line)" } : undefined}
+                className={`d-btn d-btn-sm ${active ? "d-btn-primary" : "d-btn-ghost icm-outline"}`}
                 onClick={() => handleRatioSelect(r)}
               >
                 {r.label}
                 {r.desc && (
-                  <span style={{ opacity: 0.75, fontSize: "0.75rem", marginLeft: "4px" }}>
+                  <span className="icm-ratio-hint">
                     ({r.desc})
                   </span>
                 )}
@@ -626,31 +414,13 @@ function ImageCropContent({ imageSrc, onClose, onCrop }: ImageCropContentProps) 
 
         {/* Canvas viewport container */}
         <div
-          style={{
-            position: "relative",
-            width: "100%",
-            background: "#111114",
-            borderRadius: "var(--radius-lg)",
-            overflow: "hidden",
-            border: "1px solid var(--line)",
-            boxShadow: "inset 0 1px 3px rgba(0, 0, 0, 0.4)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
+          className="icm-stage"
         >
           <canvas
             ref={canvasRef}
             width={CANVAS_W}
             height={CANVAS_H}
-            style={{
-              display: "block",
-              width: "100%",
-              height: "auto",
-              maxHeight: "360px",
-              touchAction: "none",
-              cursor,
-            }}
+            className="icm-canvas" style={{ cursor }}
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
@@ -659,15 +429,7 @@ function ImageCropContent({ imageSrc, onClose, onCrop }: ImageCropContentProps) 
 
           {!imageLoaded && !loadError && (
             <div
-              style={{
-                position: "absolute",
-                inset: 0,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "var(--muted)",
-                fontSize: "0.875rem",
-              }}
+              className="icm-overlay"
             >
               {t("Memuat gambar…")}
             </div>
@@ -675,17 +437,7 @@ function ImageCropContent({ imageSrc, onClose, onCrop }: ImageCropContentProps) 
 
           {loadError && (
             <div
-              style={{
-                position: "absolute",
-                inset: 0,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "var(--danger)",
-                fontSize: "0.875rem",
-                padding: "var(--sp-4)",
-                textAlign: "center",
-              }}
+              className="icm-overlay icm-overlay-error"
             >
               {t("Gagal memuat gambar untuk dipotong.")}
             </div>
@@ -694,17 +446,12 @@ function ImageCropContent({ imageSrc, onClose, onCrop }: ImageCropContentProps) 
 
         {/* Zoom scale slider and reset */}
         <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "12px",
-            padding: "4px 0",
-          }}
+          className="icm-zoom"
         >
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", flex: 1 }}>
+          <div className="icm-zoom-track">
             <MagnifyingGlassMinus
               weight="bold"
-              style={{ color: "var(--subtle)", flexShrink: 0 }}
+              className="icm-zoom-icon"
               aria-hidden="true"
             />
             <input
@@ -715,22 +462,16 @@ function ImageCropContent({ imageSrc, onClose, onCrop }: ImageCropContentProps) 
               value={zoom}
               disabled={!imageLoaded}
               onChange={(e) => setZoom(parseFloat(e.target.value))}
-              style={{ flex: 1, accentColor: "var(--brand-solid)" }}
+              className="icm-zoom-range"
               aria-label={t("Perbesaran gambar")}
             />
             <MagnifyingGlassPlus
               weight="bold"
-              style={{ color: "var(--subtle)", flexShrink: 0 }}
+              className="icm-zoom-icon"
               aria-hidden="true"
             />
             <span
-              style={{
-                fontSize: "0.8125rem",
-                fontVariantNumeric: "tabular-nums",
-                width: "36px",
-                textAlign: "right",
-                color: "var(--ink-2)",
-              }}
+              className="icm-zoom-val"
             >
               {zoom.toFixed(1)}x
             </span>
@@ -738,8 +479,7 @@ function ImageCropContent({ imageSrc, onClose, onCrop }: ImageCropContentProps) 
 
           <button
             type="button"
-            className="d-btn d-btn-sm d-btn-ghost"
-            style={{ border: "1px solid var(--line)", flexShrink: 0 }}
+            className="d-btn d-btn-sm d-btn-ghost icm-outline u-shrink-0"
             onClick={handleReset}
             disabled={!imageLoaded}
             title={t("Reset zoom dan posisi")}
@@ -752,22 +492,15 @@ function ImageCropContent({ imageSrc, onClose, onCrop }: ImageCropContentProps) 
 
       {/* Modal Footer */}
       <div
-        className="d-dialog-foot"
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}
+        className="d-dialog-foot icm-foot"
+
       >
         <span
-          style={{
-            fontSize: "0.75rem",
-            color: "var(--muted)",
-          }}
+          className="icm-hint"
         >
           {t("Geser untuk memposisikan, tarik sudut untuk mengubah ukuran.")}
         </span>
-        <div style={{ display: "flex", gap: "8px" }}>
+        <div className="icm-actions">
           <button type="button" className="d-btn" onClick={onClose} disabled={exporting}>
             {t("Batal")}
           </button>
@@ -814,11 +547,8 @@ export function ImageCropModal({
   return (
     <dialog
       ref={dialogRef}
-      className="d-dialog"
-      style={{
-        width: "min(640px, calc(100vw - 32px))",
-        maxWidth: "640px",
-      }}
+      className="d-dialog icm-dialog"
+
       aria-labelledby="d-crop-title"
       onCancel={(e) => {
         e.preventDefault();

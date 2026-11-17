@@ -96,7 +96,7 @@ function Orders({ ctx }: { ctx: TenantCtx }) {
       <Alert kind="error">{err}</Alert>
       <Tabs label={t("Filter status pesanan")} value={tab} onChange={setTab} items={TABS} />
       <div className="d-table-wrap">
-        {items === null ? <div style={{ padding: 20 }}><Skeleton lines={5} /></div> : items.length === 0 ? (
+        {items === null ? <div className="u-p-5"><Skeleton lines={5} /></div> : items.length === 0 ? (
           <EmptyState
             icon={Receipt}
             title={tab ? t("Tidak ada pesanan di tab ini") : t("Belum ada pesanan")}
@@ -220,7 +220,7 @@ function Detail({ ctx, base, id, onBack }: { ctx: TenantCtx; base: string; id: s
       )}
 
       <div className="d-split">
-        <div style={{ minWidth: 0 }}>
+        <div className="u-min-w-0">
           <Card flush title={t("Rincian pesanan")}>
             <div className="d-table-wrap">
               <table className="d-table">
@@ -257,7 +257,7 @@ function Detail({ ctx, base, id, onBack }: { ctx: TenantCtx; base: string; id: s
               {p.has_proof && (proof
                 // eslint-disable-next-line @next/next/no-img-element -- object URL lokal
                 ? <img className="pf-proof" src={proof} alt={t("Bukti pembayaran")} />
-                : <button type="button" className="d-btn d-btn-sm" style={{ marginTop: 16 }} onClick={showProof}><ImageIcon weight="bold" aria-hidden="true" />{t("Lihat bukti pembayaran")}</button>)}
+                : <button type="button" className="d-btn d-btn-sm u-mt-4" onClick={showProof}><ImageIcon weight="bold" aria-hidden="true" />{t("Lihat bukti pembayaran")}</button>)}
               {payOpen && ctx.can("payments.verify") && (
                 <div className="d-verify">
                   <p className="d-muted d-small" style={{ margin: "0 0 12px" }}>{t("Cocokkan dengan mutasi di aplikasi merchant QRIS Anda sebelum mengonfirmasi.")}</p>
@@ -270,10 +270,10 @@ function Detail({ ctx, base, id, onBack }: { ctx: TenantCtx; base: string; id: s
                     </label>
                   </div>
                   <BusyButton type="button" busy={busy === "confirm"} onClick={() => act("confirm", "/payment/confirm", { amount_received: amount, note: note || null }, t("Pembayaran dikonfirmasi."))}>{t("Konfirmasi diterima")}</BusyButton>
-                  <details className="d-details" style={{ marginTop: 16 }}>
+                  <details className="d-details u-mt-4">
                     <summary>{t("Tolak pembayaran")}</summary>
-                    <div className="d-row" style={{ alignItems: "flex-end" }}>
-                      <label className="d-field" style={{ flex: 1, margin: 0 }}><span>{t("Alasan menolak")}</span>
+                    <div className="d-row u-items-end">
+                      <label className="d-field u-grow u-m-0"><span>{t("Alasan menolak")}</span>
                         <input aria-label={t("Alasan tolak")} placeholder={t("mis. Dana belum masuk")} maxLength={500} value={reason} onChange={(e) => setReason(e.target.value)} />
                       </label>
                       <BusyButton type="button" className="d-btn d-btn-danger" busy={busy === "reject"} disabled={!reason.trim()}
@@ -316,7 +316,7 @@ function Detail({ ctx, base, id, onBack }: { ctx: TenantCtx; base: string; id: s
           )}
         </div>
 
-        <div className="d-stack" style={{ alignContent: "start" }}>
+        <div className="d-stack u-content-start">
           <Card title={t("Pelanggan")}>
             <ul className="d-facts">
               <li><User weight="bold" aria-hidden="true" /><span>{o.customer_name ?? t("Tamu")}</span></li>

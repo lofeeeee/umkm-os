@@ -148,12 +148,12 @@ function Form({ ctx }: { ctx: TenantCtx }) {
                 onChange={(e) => setP({ socials: p.socials.map((x, j) => (j === i ? { ...x, platform: e.target.value } : x)) })}>
                 {SOCIAL_PLATFORMS.map((o) => <option key={o}>{o}</option>)}
               </select>
-              <input style={{ flex: 1 }} value={s.url} placeholder="https://" disabled={!canEdit} aria-label="URL"
+              <input className="u-grow" value={s.url} placeholder="https://" disabled={!canEdit} aria-label="URL"
                 onChange={(e) => setP({ socials: p.socials.map((x, j) => (j === i ? { ...x, url: e.target.value } : x)) })} />
               <button type="button" className="d-icon-btn" aria-label={t("Hapus media sosial")} disabled={!canEdit} onClick={() => setP({ socials: p.socials.filter((_, j) => j !== i) })}><Trash weight="bold" /></button>
             </div>
           ))}
-          <button type="button" className="d-btn d-btn-sm" style={{ marginTop: 8 }} disabled={!canEdit || p.socials.length >= 10}
+          <button type="button" className="d-btn d-btn-sm u-mt-2" disabled={!canEdit || p.socials.length >= 10}
             onClick={() => setP({ socials: [...p.socials, { platform: "instagram", url: "https://" }] })}><Plus weight="bold" aria-hidden="true" />{t("Tambah media sosial")}</button>
         </fieldset>
         <h3>{t("Cara pesanan diterima")}</h3>
@@ -180,7 +180,7 @@ function Form({ ctx }: { ctx: TenantCtx }) {
                 <label className="d-field"><span>{t("Latitude")}</span><input inputMode="decimal" value={a.latitude ?? ""} disabled={!canEdit} onChange={(e) => set({ latitude: num(e.target.value) })} /></label>
                 <label className="d-field"><span>{t("Longitude")}</span><input inputMode="decimal" value={a.longitude ?? ""} disabled={!canEdit} onChange={(e) => set({ longitude: num(e.target.value) })} /></label>
               </div>
-              <button type="button" className="d-btn d-btn-sm d-btn-ghost" style={{ color: "var(--danger)" }} disabled={!canEdit} onClick={() => setData({ ...data, addresses: data.addresses.filter((_, j) => j !== i) })}><Trash weight="bold" aria-hidden="true" />{t("Hapus alamat")}</button>
+              <button type="button" className="d-btn d-btn-sm d-btn-ghost u-danger" disabled={!canEdit} onClick={() => setData({ ...data, addresses: data.addresses.filter((_, j) => j !== i) })}><Trash weight="bold" aria-hidden="true" />{t("Hapus alamat")}</button>
             </div>
           );
         })}
@@ -197,11 +197,11 @@ function Form({ ctx }: { ctx: TenantCtx }) {
               return (
                 <tr key={d}>
                   <th scope="row">{t(name)}</th>
-                  <td><label className="d-switch" style={{ margin: 0 }}>
+                  <td><label className="d-switch u-m-0">
                     <input type="checkbox" checked={!!h} disabled={!canEdit} onChange={(e) => setHours(d, e.target.checked ? { day_of_week: d, open: "08:00", close: "17:00" } : null)} /> <span>{h ? t("Buka") : <span className="d-muted">{t("Tutup")}</span>}</span>
                   </label></td>
                   <td>{h ? (
-                    <span className="d-row" style={{ flexWrap: "nowrap" }}>
+                    <span className="d-row u-nowrap">
                       <input type="time" aria-label={t("Buka {0}", name)} value={h.open} disabled={!canEdit} onChange={(e) => setHours(d, { ...h, open: e.target.value })} />
                       <span className="d-muted">–</span>
                       <input type="time" aria-label={t("Tutup {0}", name)} value={h.close} disabled={!canEdit} onChange={(e) => setHours(d, { ...h, close: e.target.value })} />
@@ -224,7 +224,7 @@ function Form({ ctx }: { ctx: TenantCtx }) {
           return (
             <div className="d-row e-list-item" key={i}>
               <input type="date" aria-label={t("Tanggal")} value={x.date} disabled={!canEdit} onChange={(e) => set({ date: e.target.value })} />
-              <label className="d-check" style={{ margin: 0 }}>
+              <label className="d-check u-m-0">
                 <input type="checkbox" checked={x.is_closed} disabled={!canEdit} onChange={(e) => set({ is_closed: e.target.checked, open: e.target.checked ? null : "08:00", close: e.target.checked ? null : "12:00" })} />{" "}{t("Tutup")}
               </label>
               {!x.is_closed && <>

@@ -148,17 +148,17 @@ export default function PlatformPage() {
               {items.map((x) => {
                 const st = status(INVOICE_STATUS, x.status);
                 return (
-                  <li key={x.id} style={{ alignItems: "flex-start" }}>
+                  <li key={x.id} className="u-items-start">
                     <div className="d-list-main">
                       <div className="d-row">
                         <strong>{x.tenant_name}</strong>
                         <span className="d-muted d-small">{x.tenant_slug}</span>
                         <Badge tone={st.tone}>{st.label}</Badge>
                       </div>
-                      <p className="d-muted d-small" style={{ margin: "4px 0 0" }}>
-                        <Tr s="{0} · Paket {1} ·" a={[x.code, planName(x.plan_code)]} />{" "}<strong style={{ color: "var(--ink)" }}>{rupiah(x.amount_idr)}</strong> <Tr s="/ {0} hari · dibuat {1}" a={[x.period_days, tanggal(x.created_at)]} />
+                      <p className="d-muted d-small u-m-0 u-mt-1">
+                        <Tr s="{0} · Paket {1} ·" a={[x.code, planName(x.plan_code)]} />{" "}<strong className="u-ink">{rupiah(x.amount_idr)}</strong> <Tr s="/ {0} hari · dibuat {1}" a={[x.period_days, tanggal(x.created_at)]} />
                       </p>
-                      {x.rejection_reason && <p className="d-muted d-small" style={{ margin: "4px 0 0" }}>{tx("Alasan ditolak:")}{" "}{x.rejection_reason}</p>}
+                      {x.rejection_reason && <p className="d-muted d-small u-m-0 u-mt-1">{tx("Alasan ditolak:")}{" "}{x.rejection_reason}</p>}
                       {x.has_proof && (
                         // Gambar dari API (cookie host-only api.*); akses tercatat di audit platform.
                         // eslint-disable-next-line @next/next/no-img-element
@@ -169,7 +169,7 @@ export default function PlatformPage() {
                       <div className="d-stack" style={{ minWidth: 260 }}>
                         <input aria-label={tx("Alasan penolakan {0}", x.code)} placeholder={tx("Alasan penolakan (wajib bila menolak)")} maxLength={300}
                           value={reasons[x.id] ?? ""} onChange={(e) => setReasons({ ...reasons, [x.id]: e.target.value })} />
-                        <div className="d-row" style={{ justifyContent: "flex-end" }}>
+                        <div className="d-row u-justify-end">
                           <button type="button" className="d-btn d-btn-danger" onClick={() => void decide(x.id, false)}>{tx("Tolak")}</button>
                           <button type="button" className="d-btn d-btn-primary" onClick={() => void decide(x.id, true)}>{tx("Setujui")}</button>
                         </div>
@@ -232,10 +232,10 @@ function TenantsSection() {
   const total = data?.total ?? 0;
   const pages = Math.max(1, Math.ceil(total / LIMIT));
   return (
-    <section aria-label={tx("Toko (UMKM)")} style={{ marginTop: 8 }}>
+    <section aria-label={tx("Toko (UMKM)")} className="u-mt-2">
       <h2 className="d-section-title">{tx("Toko (UMKM)")}</h2>
       <Alert kind="error">{err}</Alert>
-      <form className="d-row" style={{ marginBottom: 12 }} onSubmit={(e) => { e.preventDefault(); setPage(0); setQuery(q.trim()); }}>
+      <form className="d-row u-mb-3" onSubmit={(e) => { e.preventDefault(); setPage(0); setQuery(q.trim()); }}>
         <input aria-label={tx("Cari toko")} placeholder={tx("Cari nama atau alamat toko…")} value={q} onChange={(e) => setQ(e.target.value)} style={{ maxWidth: 320 }} />
         <button className="d-btn" type="submit">{tx("Cari")}</button>
         {query && <button className="d-btn d-btn-ghost" type="button" onClick={() => { setQ(""); setQuery(""); setPage(0); }}>{tx("Reset")}</button>}
@@ -252,7 +252,7 @@ function TenantsSection() {
               </tr></thead>
               <tbody>
                 {data.items.map((t) => (
-                  <tr key={t.id} onClick={() => setOpen(open === t.id ? null : t.id)} style={{ cursor: "pointer" }}
+                  <tr key={t.id} onClick={() => setOpen(open === t.id ? null : t.id)} className="u-pointer"
                       tabIndex={0} aria-expanded={open === t.id}
                       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpen(open === t.id ? null : t.id); } }}>
                     <td><strong className="d-strong">{t.name}</strong><span className="d-sub">{t.slug}</span></td>
@@ -266,7 +266,7 @@ function TenantsSection() {
               </tbody>
             </table>
           </div>
-          <div className="d-row" style={{ justifyContent: "space-between", marginTop: 12 }}>
+          <div className="d-row u-justify-between u-mt-3">
             <span className="d-muted d-small">{nf.format(total)}{" "}<Tr s="toko · halaman {0}/" a={[page + 1]} />{pages}</span>
             <div className="d-row">
               <button type="button" className="d-btn d-btn-sm d-btn-ghost" disabled={page === 0} onClick={() => setPage((p) => Math.max(0, p - 1))}>{tx("Sebelumnya")}</button>

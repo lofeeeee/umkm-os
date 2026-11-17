@@ -136,7 +136,7 @@ function Conversations({ ctx }: { ctx: TenantCtx }) {
                 <button type="button" className="cv-open" onClick={() => { setErr(null); setOpenId(c.id); }}>
                   <span className="d-cell-main">
                     <span className="d-avatar d-avatar-muted" aria-hidden="true">{(c.customer?.name?.trim()[0] ?? "?").toUpperCase()}</span>
-                    <span style={{ minWidth: 0 }}>
+                    <span className="u-min-w-0">
                       <strong>{c.customer?.name ?? t("Pengunjung")}</strong>
                       <span className="cv-preview">{c.last_message ?? "—"}</span>
                     </span>
@@ -234,11 +234,11 @@ function StaffPanel({ ctx, d, url, onDone }: { ctx: TenantCtx; d: ConversationDe
         </div>
       )}
       {!closed && !byOther && (
-        <form className="d-composer" onSubmit={reply} style={{ marginTop: 0 }}>
+        <form className="d-composer u-mt-0" onSubmit={reply}>
           <label className="sr-only" htmlFor="cv-reply">{t("Balas pelanggan")}</label>
           <textarea id="cv-reply" name="body" rows={3} maxLength={4000} required placeholder={t("Tulis balasan untuk pelanggan… (Ctrl+Enter untuk kirim)")}
             onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) e.currentTarget.form?.requestSubmit(); }} />
-          <div className="d-row" style={{ justifyContent: "flex-end" }}>
+          <div className="d-row u-justify-end">
             <BusyButton busy={busy}>{t("Kirim balasan")}</BusyButton>
           </div>
         </form>
@@ -291,8 +291,8 @@ function AssignForm({ ctx, d, url, run, busy }: {
   }, [ctx, d.assignee_user_id]);
   if (!members || members.length === 0) return null;
   return (
-    <div className="d-row" style={{ marginTop: 16, alignItems: "flex-end" }}>
-      <label className="d-field" style={{ margin: 0, flex: 1 }}><span>{t("Tugaskan ke")}</span>
+    <div className="d-row u-mt-4 u-items-end">
+      <label className="d-field u-m-0 u-grow"><span>{t("Tugaskan ke")}</span>
         <select value={to} onChange={(e) => setTo(e.target.value)}>
           <option value="">{t("Pilih anggota…")}</option>
           {members.map((m) => <option key={m.user_id} value={m.user_id}>{m.email} ({m.role_name})</option>)}

@@ -142,7 +142,7 @@ function Catalog({ ctx }: { ctx: TenantCtx }) {
       </div>
 
       <div className="d-table-wrap">
-        {items === null ? <div style={{ padding: 20 }}><Skeleton lines={5} /></div> : shown.length === 0 ? (
+        {items === null ? <div className="u-p-5"><Skeleton lines={5} /></div> : shown.length === 0 ? (
           <EmptyState
             icon={Package}
             title={q || tab ? tx("Tidak ada produk yang cocok") : tx("Belum ada produk")}
@@ -164,7 +164,7 @@ function Catalog({ ctx }: { ctx: TenantCtx }) {
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         {img ? <img className="d-thumb" src={img} alt="" width={36} height={36} /> : <span className="d-thumb" aria-hidden="true"><ImageIcon weight="duotone" /></span>}
                         <div>
-                          <button type="button" className="d-link d-strong" style={{ color: "var(--ink)" }} onClick={() => setEdit(p)} disabled={!ctx.can("products.update")}>{p.name}</button>
+                          <button type="button" className="d-link d-strong u-ink" onClick={() => setEdit(p)} disabled={!ctx.can("products.update")}>{p.name}</button>
                           <span className="d-sub">
                             {p.variants.length > 1 ? tx("{0} varian", p.variants.length) : p.variants[0]?.sku}
                             {!p.available && tx(" · stok habis/tidak tersedia")}
@@ -285,7 +285,7 @@ function Editor({ ctx, base, initial, cats, onCancel, onSaved }: {
 
   const single = variants[0]!;
   return (
-    <form ref={formRef} noValidate onSubmit={(e) => { e.preventDefault(); void save(); }} style={{ display: "contents" }}>
+    <form ref={formRef} noValidate onSubmit={(e) => { e.preventDefault(); void save(); }} className="u-contents">
       <Alert kind="error">{f.general}</Alert>
       {f.count > 0 && <Alert kind="error"><Tr s="Periksa {0} isian yang ditandai di bawah." a={[f.count]} /></Alert>}
 
@@ -303,7 +303,7 @@ function Editor({ ctx, base, initial, cats, onCancel, onSaved }: {
               {cats.map((c) => <option key={c.id} value={c.id}>{c.parent_id ? tx("— {0}", c.name) : c.name}</option>)}
             </select>
           </label>
-          <label className="d-switch" style={{ alignSelf: "center" }}>
+          <label className="d-switch u-self-center">
             <input type="checkbox" checked={p.available} onChange={(e) => setP({ ...p, available: e.target.checked })} />
             <span><strong>{tx("Tersedia untuk dijual")}</strong><span className="d-muted">{tx("Matikan bila stok sedang kosong.")}</span></span>
           </label>
@@ -360,21 +360,21 @@ function Editor({ ctx, base, initial, cats, onCancel, onSaved }: {
         ) : null}
 
         {hasVariants && (
-          <div className="d-stack" style={{ marginBottom: 16 }}>
+          <div className="d-stack u-mb-4">
             {options.map((o, i) => (
               <div className="e-list-item" key={i}>
-                <div className="d-row" style={{ alignItems: "flex-end", flexWrap: "nowrap" }}>
+                <div className="d-row u-items-end u-nowrap">
                   <label className="d-field" style={{ flex: "0 0 160px", margin: 0 }}><span>{tx("Nama opsi")}</span>
                     <input value={o.name} maxLength={40} placeholder={tx("Ukuran")} onChange={(e) => setOptions(options.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))} />
                   </label>
-                  <label className="d-field" style={{ flex: 1, margin: 0 }}><span>{tx("Tambah nilai (pisahkan koma, tekan Enter)")}</span>
+                  <label className="d-field u-grow u-m-0"><span>{tx("Tambah nilai (pisahkan koma, tekan Enter)")}</span>
                     <input value={optDraft[i] ?? ""} placeholder={tx("S, M, L")} onChange={(e) => setOptDraft({ ...optDraft, [i]: e.target.value })}
                       onKeyDown={(e) => { if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addValue(i); } }} onBlur={() => addValue(i)} />
                   </label>
                   <button type="button" className="d-icon-btn" aria-label={tx("Hapus opsi {0}", o.name || i + 1)} onClick={() => setOptions(options.filter((_, j) => j !== i))}><Trash weight="bold" /></button>
                 </div>
                 {o.values.length > 0 && (
-                  <div className="d-chips" style={{ marginTop: 10 }}>
+                  <div className="d-chips u-mt-2">
                     {o.values.map((v) => (
                       <span className="d-chip" key={v}>{v}
                         <button type="button" aria-label={tx("Hapus nilai {0}", v)} onClick={() => setOptions(options.map((x, j) => (j === i ? { ...x, values: x.values.filter((y) => y !== v) } : x)))}><X weight="bold" /></button>
@@ -385,7 +385,7 @@ function Editor({ ctx, base, initial, cats, onCancel, onSaved }: {
               </div>
             ))}
             {options.length < 3 && (
-              <button type="button" className="d-btn d-btn-sm" style={{ justifySelf: "start" }} onClick={() => setOptions([...options, { name: "", values: [] }])}>
+              <button type="button" className="d-btn d-btn-sm u-self-start" onClick={() => setOptions([...options, { name: "", values: [] }])}>
                 <Plus weight="bold" aria-hidden="true" />{tx("Tambah opsi")}
               </button>
             )}
@@ -462,7 +462,7 @@ function Categories({ ctx, base, cats, reload }: { ctx: TenantCtx; base: string;
   return (
     <>
       {can && (
-        <form className="d-stack" onSubmit={(e) => { e.preventDefault(); void add(); }} style={{ marginBottom: 20 }}>
+        <form className="d-stack u-mb-5" onSubmit={(e) => { e.preventDefault(); void add(); }}>
           <div className="d-grid">
             <label className="d-field"><span>{tx("Nama kategori")}</span><input value={name} maxLength={60} placeholder={tx("mis. Minuman")} onChange={(e) => setName(e.target.value)} /></label>
             <label className="d-field"><span>{tx("Induk")}</span>

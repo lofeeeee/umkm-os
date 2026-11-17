@@ -77,7 +77,7 @@ export default function Login() {
               <input name="code" className="d-otp" autoComplete="one-time-code" inputMode="text" maxLength={16} required autoFocus placeholder="123456" />
             </label>
             <BusyButton busy={busy} className="d-btn d-btn-primary d-btn-block d-btn-lg">{t("Verifikasi")}</BusyButton>
-            <button type="button" className="d-btn d-btn-ghost d-btn-block" style={{ marginTop: 8 }} onClick={() => { setMfaToken(null); setError(null); }}>{t("Batal")}</button>
+            <button type="button" className="d-btn d-btn-ghost d-btn-block u-mt-2" onClick={() => { setMfaToken(null); setError(null); }}>{t("Batal")}</button>
           </form>
         </>
       ) : (

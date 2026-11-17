@@ -9,9 +9,7 @@
 
 import Link from "@/ui/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import {
-  createContext, Suspense, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode,
-} from "react";
+import { createContext, Suspense, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode, ViewTransition } from "react";
 
 import {
   ArrowSquareOut,
@@ -608,7 +606,11 @@ function Shell({ children }: { children: ReactNode }) {
       </header>
 
       <main id="main" className="d-main" tabIndex={-1}>
-        <div className="d-page" key={pathname}>{children}</div>
+        {/* Navigasi router berjalan di dalam startTransition → ViewTransition menyilangkan halaman lama
+            ke halaman baru (CSS ::view-transition-*(.d-route)). Tanpa dukungan browser: animasi masuk .d-page. */}
+        <ViewTransition default="d-route">
+          <div className="d-page" key={pathname}>{children}</div>
+        </ViewTransition>
       </main>
       <CommandPalette open={cmdOpen} onClose={closeCmd} />
     </>
@@ -653,9 +655,9 @@ export function TenantPicker() {
       <div className="d-bento d-stagger">
         {(memberships ?? []).map((m) => (
           <Link key={m.tenant_id} className="d-card d-pick" href={`/?tenant=${m.tenant_id}`} onClick={() => rememberTenant(m.tenant_id)}>
-            <span className="d-row" style={{ gap: 12, flexWrap: "nowrap" }}>
+            <span className="d-row u-gap-3 u-nowrap">
               <span className="d-avatar d-avatar-lg" aria-hidden="true">{initial(m.name)}</span>
-              <span style={{ minWidth: 0 }}>
+              <span className="u-min-w-0">
                 <strong style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.name}</strong>
                 <span className="d-muted d-small">{m.slug} · {roleLabel(m.role)}</span>
               </span>

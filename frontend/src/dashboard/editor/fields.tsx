@@ -45,7 +45,7 @@ export function ImagePicker({ value, onChange, label }: { value: string | undefi
   return (
     <div className="d-field">
       <span>{label}</span>
-      <div className="d-row" style={{ flexWrap: "nowrap" }}>
+      <div className="d-row u-nowrap">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         {src ? <img className="d-img-tile" src={src} alt="" width={64} height={64} /> : <span className="d-img-tile" aria-hidden="true"><ImageSquare weight="duotone" /></span>}
         <div className="d-row">
@@ -81,7 +81,7 @@ export function ImagePicker({ value, onChange, label }: { value: string | undefi
             />
           </label>
           <span className="d-hint" style={{ marginLeft: 8 }}>{t("PNG, JPEG, atau WebP · maks. 2 MB")}</span>
-          {err && <div className="d-alert d-alert-error" role="alert" style={{ marginTop: 8 }}>{err}</div>}
+          {err && <div className="d-alert d-alert-error u-mt-2" role="alert">{err}</div>}
           {a.uploads.length > 0 ? (
             <div className="e-thumbs">
               {a.uploads.map((u) => (

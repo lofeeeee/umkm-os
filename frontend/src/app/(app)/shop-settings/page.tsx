@@ -270,7 +270,7 @@ function GopayCard({ tenantId, can, refreshKey }: { tenantId: string; can: boole
             </ol>
           )}
           {can && (
-            <div className="d-row" style={{ justifyContent: "flex-end" }}>
+            <div className="d-row u-justify-end">
               <BusyButton type="button" busy={busy} onClick={connectSession} disabled={phone.trim().length < 8 || session.trim().length < 20}>{t("Hubungkan")}</BusyButton>
             </div>
           )}
@@ -278,7 +278,7 @@ function GopayCard({ tenantId, can, refreshKey }: { tenantId: string; can: boole
       ) : (
         <div className="gp-stack">
           <div className="d-field"><span>{t("Akun terhubung")}</span>
-            <div className="d-row" style={{ gap: 8, alignItems: "center" }}>
+            <div className="d-row u-gap-2 u-items-center">
               <Badge tone={st.status === "active" ? "ok" : "warn"}>{st.status === "active" ? t("Aktif") : t("Perlu login ulang")}</Badge>
               <span>{st.outlet_name ?? t("Merchant GoPay")}{st.phone_masked ? t(" · {0}", st.phone_masked) : ""}</span>
             </div>

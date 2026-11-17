@@ -153,7 +153,7 @@ function Ai({ ctx }: { ctx: TenantCtx }) {
         {providers.length === 0 ? (
           <EmptyState icon={Brain} title={tx("Belum ada penyedia AI")}>{tx("Tambahkan satu di bawah untuk mulai memakai Asisten AI.")}</EmptyState>
         ) : (
-          <ul className="d-list" style={{ marginBottom: 16 }}>
+          <ul className="d-list u-mb-4">
             {providers.map((p) => (
               <li key={p.id}>
                 <div className="d-list-main">
@@ -234,7 +234,7 @@ function Ai({ ctx }: { ctx: TenantCtx }) {
       <Card title={tx("Kemampuan")} description={tx("Data apa saja yang boleh dipakai chatbot saat menjawab.")} label={tx("Kemampuan")}>
         <div className="d-choice-grid">
           {view.tools.map((t) => (
-            <label key={t.name} className="d-switch" style={{ margin: 0 }}>
+            <label key={t.name} className="d-switch u-m-0">
               <input type="checkbox" disabled={!manage} checked={t.enabled} onChange={(e) => run(() => api("PUT", `${base}/tools`, { json: { tools: [{ name: t.name, enabled: e.target.checked }] } }), tx("Kemampuan diperbarui."))} />
               <span><strong>{TOOLS[t.name] ?? t.name}</strong></span>
             </label>
@@ -249,7 +249,7 @@ function Ai({ ctx }: { ctx: TenantCtx }) {
             {tx("Tambahkan FAQ, kebijakan retur, info pengiriman, dll.")}
           </EmptyState>
         ) : (
-          <ul className="d-list" style={{ marginBottom: 16 }}>
+          <ul className="d-list u-mb-4">
             {docs.map((d) => (
               <li key={d.id}>
                 <div className="d-list-main">
@@ -304,7 +304,7 @@ function AddProvider({ view, onAdd, first, platformBlocked, subscriptionHref }: 
     <details className="d-details d-subpanel" open={first}>
       <summary><Plus weight="bold" aria-hidden="true" />{" "}{tx("Penyedia baru")}</summary>
       <form onSubmit={submit}>
-        <div className="d-seg" role="group" aria-label={tx("Sumber")} style={{ marginBottom: 16 }}>
+        <div className="d-seg u-mb-4" role="group" aria-label={tx("Sumber")}>
           {view.platform.available && <button type="button" aria-pressed={source === "platform"} onClick={() => setSource("platform")}>{tx("AI platform (kuota bulanan)")}</button>}
           <button type="button" aria-pressed={source === "byok"} onClick={() => setSource("byok")}>{tx("Kunci API sendiri")}</button>
         </div>
@@ -366,16 +366,16 @@ function TestConsole({ url, onDone }: { url: string; onDone: () => void }) {
   }
   return (
     <Card title={tx("Uji coba")} description={tx("Coba pertanyaan pelanggan sebelum chatbot diaktifkan. Dihitung ke pemakaian token.")} label={tx("Uji coba")}>
-      <form className="d-row" style={{ flexWrap: "nowrap" }} onSubmit={(e) => { e.preventDefault(); if (q.trim()) void ask(); }}>
+      <form className="d-row u-nowrap" onSubmit={(e) => { e.preventDefault(); if (q.trim()) void ask(); }}>
         <input aria-label={tx("Pertanyaan uji")} placeholder={tx("mis. Jam berapa toko buka?")} maxLength={2000} value={q} onChange={(e) => setQ(e.target.value)} />
         <BusyButton busy={busy} disabled={!q.trim()} busyLabel={tx("Menunggu…")}>{tx("Tanya")}</BusyButton>
       </form>
       <Alert kind="error">{err}</Alert>
       {r && (
-        <div aria-label={tx("Hasil uji")} className="cv-timeline" style={{ marginTop: 16 }}>
+        <div aria-label={tx("Hasil uji")} className="cv-timeline u-mt-4">
           <div className="cv-msg cv-customer"><div className="cv-body">{q}</div></div>
           <div className="cv-msg cv-ai">
-            <div className="cv-head"><Robot weight="bold" aria-hidden="true" style={{ verticalAlign: "-2px" }} /> <strong>{DECISION[r.decision] ?? r.decision}</strong>{r.status !== "ok" && <span className="d-muted"> ({r.status}{r.error_code ? tx(": {0}", r.error_code) : ""})</span>}</div>
+            <div className="cv-head"><Robot weight="bold" aria-hidden="true" className="u-va-icon" /> <strong>{DECISION[r.decision] ?? r.decision}</strong>{r.status !== "ok" && <span className="d-muted"> ({r.status}{r.error_code ? tx(": {0}", r.error_code) : ""})</span>}</div>
             {r.reply && <div className="cv-body">{r.reply}</div>}
             <div className="cv-run d-muted">
               {r.tool_calls.length > 0 && <><Tr s="Tool: {0} ·" a={[r.tool_calls.map((c) => tx("{0} ({1})", TOOLS[c.name] ?? c.name, c.status)).join(", ")]} />{" "}</>}

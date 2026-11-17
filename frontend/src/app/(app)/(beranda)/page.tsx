@@ -159,7 +159,7 @@ function Dashboard({ ctx }: { ctx: TenantCtx }) {
       )}
 
       <div className="d-split">
-        <div style={{ minWidth: 0 }}>
+        <div className="u-min-w-0">
           {orders !== null && (
             <Card
               flush
@@ -250,7 +250,7 @@ function Dashboard({ ctx }: { ctx: TenantCtx }) {
             label={tx("Penyiapan toko")}
             className="d-split-first"
           >
-            <div className="d-progress" aria-hidden="true" style={{ marginBottom: 12 }}>
+            <div className="d-progress u-mb-3" aria-hidden="true">
               <span style={{ transform: `scaleX(${known.length ? done / known.length : 0})` }} />
             </div>
             {!setup ? (
