@@ -384,6 +384,28 @@ function SectionBody({ s, props }: { s: Section; props: SiteProps }) {
   }
 }
 
+/**
+ * Apakah bagian punya isi untuk pembeli. Bagian yang bergantung pada data toko (jam, alamat, kontak,
+ * galeri) disembunyikan di situs publik bila datanya belum diisi — pembeli tidak perlu melihat
+ * "belum diatur" (atau lencana "Tutup" palsu). Di Studio bagian tetap tampil agar bisa diisi.
+ */
+export function hasPublicContent(type: string, d: { [k: string]: Json }, b: Business, assetUrl: (r: string) => string | undefined): boolean {
+  switch (type) {
+    case "business_hours":
+      return b.hours.length > 0;
+    case "location":
+      return b.addresses.length > 0;
+    case "contact": {
+      const p = b.profile;
+      return Boolean((d.show_whatsapp === true && waLink(p.whatsapp)) || (d.show_phone === true && p.phone) || (d.show_email === true && p.email) || list(d.socials).length > 0 || p.socials.length > 0);
+    }
+    case "gallery":
+      return list(d.images).some((g) => typeof g.asset === "string" && !!assetUrl(g.asset));
+    default:
+      return true;
+  }
+}
+
 export function Site(props: SiteProps) {
   const { content, preview } = props;
   const theme = content.theme as (PageContent["theme"] & SiteTheme) | undefined;
@@ -397,7 +419,7 @@ export function Site(props: SiteProps) {
     "--s-bg-pos": theme?.background_position ?? "center",
     "--s-bg-opacity": ((theme?.background_opacity ?? 0) / 100).toString(),
   } as CSSProperties;
-  const sections = (content.sections ?? []).filter((s) => preview || s.enabled);
+  const sections = (content.sections ?? []).filter((s) => preview || (s.enabled && hasPublicContent(s.type, s.data, props.business, props.assetUrl)));
   return (
     <SlotWidth.Provider value={props.slotWidth ?? 1180}>
     <div className="site" style={style} data-template={content.template}>

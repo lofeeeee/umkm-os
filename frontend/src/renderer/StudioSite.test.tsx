@@ -70,8 +70,8 @@ describe("renderer publik Studio (v2)", () => {
   });
   it("anchor template (#kontak, #menu, …) menunjuk blok pertama jenis itu", () => {
     const d: PageV2 = { ...doc, blocks: [
-      { id: "c1", kind: "contact", x: 0, y: 0, w: 4, h: 4, style: "plain", data: { title: "Kontak" } },
-      { id: "c2", kind: "contact", x: 4, y: 0, w: 4, h: 4, style: "plain", data: { title: "Kontak 2" } },
+      { id: "c1", kind: "contact", x: 0, y: 0, w: 4, h: 4, style: "plain", data: { title: "Kontak", show_whatsapp: true } },
+      { id: "c2", kind: "contact", x: 4, y: 0, w: 4, h: 4, style: "plain", data: { title: "Kontak 2", show_whatsapp: true } },
       { id: "p1", kind: "product_grid", x: 0, y: 4, w: 12, h: 8, style: "plain", data: { title: "Menu" } },
     ] };
     const html = renderToStaticMarkup(<StudioSite doc={d} business={biz} assetUrl={() => undefined} />);
@@ -129,7 +129,7 @@ describe("renderer publik Studio (v2)", () => {
 
   it("tanpa daftar halaman, navigasi jatuh ke anchor bagian di halaman ini", () => {
     const d: PageV2 = { ...doc, blocks: [
-      { id: "k", kind: "contact", x: 0, y: 0, w: 12, h: 4, style: "plain", data: { title: "Kontak" } },
+      { id: "k", kind: "contact", x: 0, y: 0, w: 12, h: 4, style: "plain", data: { title: "Kontak", show_whatsapp: true } },
     ] };
     const html = renderToStaticMarkup(<StudioSite doc={d} business={biz} assetUrl={() => undefined} />);
     expect(html).toContain('href="#kontak"');

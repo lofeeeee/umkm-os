@@ -9,7 +9,7 @@ import { pageSlug } from "@/lib/slug";
 import { safeColor, safeHref, waLink } from "./safe";
 import { FIELDS, defaultData, newSectionId } from "./sections";
 import { Site } from "./Site";
-import { SECTION_TYPES, type Business, type PageContent, type Section } from "./types";
+import { SECTION_TYPES, type Business, type PageContent, type Section, type SectionType } from "./types";
 
 const business: Business = {
   profile: {
@@ -32,6 +32,9 @@ const urls = (r: string) => (r === ASSET ? "https://api.example/files/x?sig=1" :
 function render(sections: Section[], preview = false, theme?: PageContent["theme"]) {
   return renderToStaticMarkup(<Site content={page(sections, theme)} business={business} assetUrl={urls} preview={preview} />);
 }
+
+/** Data default editor + satu foto galeri (galeri kosong tidak dirender di situs publik). */
+const withPublicData = (t: SectionType) => (t === "gallery" ? { ...defaultData(t), images: [{ asset: ASSET, caption: "Foto" }] } : defaultData(t));
 
 describe("renderer keamanan (AC-WEB-018, ADR-0007)", () => {
   it("teks berisi HTML/skrip dirender sebagai teks literal", () => {
@@ -93,7 +96,7 @@ describe("renderer perilaku", () => {
   });
 
   it("kelas section tidak bertabrakan dengan blok di dalamnya (regresi layout desktop)", () => {
-    const html = render(SECTION_TYPES.map((t, i) => ({ id: `s-${i}`, type: t, enabled: true, data: defaultData(t) })));
+    const html = render(SECTION_TYPES.map((t, i) => ({ id: `s-${i}`, type: t, enabled: true, data: withPublicData(t) })));
     for (const t of SECTION_TYPES) expect(html).toContain(`class="s s--${t}"`);
     expect(html).not.toMatch(/class="s s-[a-z]/);
     // Tanpa gambar: hero satu kolom; dengan gambar: has-media
@@ -120,7 +123,7 @@ describe("renderer perilaku", () => {
   });
 
   it("11 tipe section dirender tanpa error dengan data default editor", () => {
-    const sections = SECTION_TYPES.map((t, i) => ({ id: `s-${i}`, type: t, enabled: true, data: defaultData(t) }));
+    const sections = SECTION_TYPES.map((t, i) => ({ id: `s-${i}`, type: t, enabled: true, data: withPublicData(t) }));
     const html = render(sections);
     for (const t of SECTION_TYPES) expect(html).toContain(`data-section-type="${t}"`);
     expect(html).toContain("Senin");
@@ -210,5 +213,16 @@ describe("helper", () => {
     expect(pageSlug("/promo")).toBe("promo");
     expect(pageSlug("/../etc")).toBeNull();
     expect(pageSlug("/A")).toBeNull();
+  });
+
+  it("situs publik menyembunyikan bagian tanpa data toko; pratinjau editor tetap menampilkannya", () => {
+    const empty: Business = { ...business, profile: { ...business.profile, phone: null, whatsapp: null, email: null, socials: [] }, addresses: [], hours: [] };
+    const sections: Section[] = (["business_hours", "location", "contact", "gallery", "about"] as const).map((t, i) => ({ id: `e-${i}`, type: t, enabled: true, data: defaultData(t) }));
+    const pub = renderToStaticMarkup(<Site content={page(sections)} business={empty} assetUrl={() => undefined} />);
+    for (const t of ["business_hours", "location", "contact", "gallery"]) expect(pub).not.toContain(`data-section-type="${t}"`);
+    expect(pub).not.toContain("Tutup sekarang");
+    expect(pub).toContain('data-section-type="about"');
+    const pv = renderToStaticMarkup(<Site content={page(sections)} business={empty} assetUrl={() => undefined} preview />);
+    expect(pv).toContain('data-section-type="business_hours"');
   });
 });

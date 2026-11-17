@@ -22,7 +22,7 @@ import { pluginDef } from "@/studio/plugins";
 import { InkLayer } from "./ink";
 import { PublicNav, type NavLink } from "./PublicNav";
 import { fontStack, primaryVars, safeColor, text, waLink } from "./safe";
-import { Site, type GridProduct } from "./Site";
+import { Site, type GridProduct, hasPublicContent } from "./Site";
 import type { Business, OpenStatus } from "./types";
 import { t as tx, tmap } from "@/i18n";
 import { LanguageSwitch } from "@/i18n/react";
@@ -123,6 +123,11 @@ export function WhatsAppButton({ b, business, floating }: { b: Pick<BlockV2, "da
   );
 }
 
+function publicBlock(b: BlockV2, props: StudioSiteProps): boolean {
+  if (b.kind === "whatsapp") return !!whatsappHref(props.business.profile.whatsapp ?? props.business.profile.phone, text(b.data.message));
+  return hasPublicContent(b.kind, b.data, props.business, props.assetUrl);
+}
+
 function Block({ b, props }: { b: BlockV2; props: StudioSiteProps }) {
   let body: ReactNode;
   if (b.kind === "text") body = <div className="site s-solo"><section className="s"><div className="s-inner"><TextBlock b={b} /></div></section></div>;
@@ -194,7 +199,8 @@ export function StudioSite(props: StudioSiteProps) {
   const editing = mode === "studio-edit";
   const navStyle = doc.theme.navbar_style === "side" ? "side" : "top";
   const isSideNav = navStyle === "side";
-  const grid = mobileSorted(doc.blocks.filter((b) => !isEmbed(b)));
+  // Situs publik: blok tanpa data toko (jam/alamat/kontak/galeri kosong, WhatsApp tanpa nomor) tidak dirender.
+  const grid = mobileSorted(doc.blocks.filter((b) => !isEmbed(b) && (editing || publicBlock(b, props))));
   const anchors = anchorsFor(grid);
   const chat = doc.blocks.find((b) => b.kind === "chatbot" && isEmbed(b));
   const wa = doc.blocks.find((b) => b.kind === "whatsapp" && isEmbed(b));
