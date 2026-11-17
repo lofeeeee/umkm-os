@@ -102,7 +102,7 @@ async fn poll_tenant(
         Err(GobizError::Unauthorized) => {
             // Token ditolak lebih awal dari perkiraan: paksa refresh sekali lalu ulang. Hanya penolakan
             // definitif saat refresh yang menandai sesi perlu login ulang (di dalam ensure_fresh).
-            match ensure_fresh(pool, k, client, t, RefreshMode::Force)
+            match ensure_fresh(pool, k, client, t, RefreshMode::AccessRejected)
                 .await
                 .map_err(|_| GobizError::Parse("sesi"))?
             {

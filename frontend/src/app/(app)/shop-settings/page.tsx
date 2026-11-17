@@ -138,6 +138,7 @@ interface GopayStatus {
 
 /** Penjelasan singkat kode kegagalan pembaruan sesi dari server. */
 function gopayErrorText(code: string): string {
+  if (code.startsWith("refresh_")) return t("GoBiz menolak perpanjangan sesi");
   if (code === "network") return t("GoBiz tidak dapat dihubungi");
   if (code === "parse") return t("respons GoBiz tidak dikenali");
   if (code === "unauthorized" || code === "status_400" || code === "status_403") return t("GoBiz menolak sesi");
@@ -197,7 +198,9 @@ function GopayCard({ tenantId, can, refreshKey }: { tenantId: string; can: boole
   const check = () => run(async () => {
     const r = await api<GopayStatus & { result: string }>("POST", `${base}/check`);
     setSt(r);
-    if (r.result === "refreshed") toast.ok(t("Sesi GoPay diperbarui dan berfungsi."));
+    if (r.result === "valid") toast.ok(t("Sesi GoPay berfungsi."));
+    else if (r.result === "refreshed") toast.ok(t("Sesi GoPay diperbarui dan berfungsi."));
+    else if (r.result === "transient" && r.last_error?.startsWith("refresh_")) toast.info(t("Sesi GoPay masih berfungsi, tetapi GoBiz menolak perpanjangannya. Hubungkan ulang sebelum sesi berakhir."));
     else if (r.result === "needs_relogin") toast.error(t("GoBiz menolak sesi ini. Hubungkan ulang akun GoPay."));
     else if (r.result === "busy") toast.info(t("Sesi sedang diperbarui otomatis. Coba lagi sebentar."));
     else toast.info(t("GoBiz sedang tidak dapat dihubungi. Sesi tetap aktif dan dicoba lagi otomatis."));
@@ -241,6 +244,12 @@ function GopayCard({ tenantId, can, refreshKey }: { tenantId: string; can: boole
         <Alert kind="warn">
           {t("GoBiz menolak sesi yang tersimpan, jadi pembayaran tidak lagi dikonfirmasi otomatis. Hubungkan ulang di bawah — konfirmasi manual tetap berjalan.")}
           {st.last_error ? " " + t("(kode: {0})", st.last_error) : ""}
+          {can && (
+            <>
+              {" "}
+              <button type="button" className="d-link" disabled={busy} onClick={check}>{t("Cek ulang sesi")}</button>
+            </>
+          )}
         </Alert>
       )}
       {!st.connected || st.status === "needs_relogin" ? (
@@ -293,7 +302,9 @@ function GopayCard({ tenantId, can, refreshKey }: { tenantId: string; can: boole
           </div>
           {st.status === "active" && st.last_error && (
             <Alert kind="warn">
-              {t("Pembaruan sesi terakhir gagal ({0}). Sesi tetap aktif dan dicoba lagi otomatis.", gopayErrorText(st.last_error))}
+              {st.last_error.startsWith("refresh_")
+                ? t("GoBiz menolak perpanjangan sesi, tetapi sesi saat ini masih berfungsi sampai {0}. Konfirmasi otomatis tetap berjalan sampai saat itu — hubungkan ulang sebelumnya agar tidak terputus.", waktu((st.expires_at_unix ?? 0) * 1000))
+                : t("Pembaruan sesi terakhir gagal ({0}). Sesi tetap aktif dan dicoba lagi otomatis.", gopayErrorText(st.last_error))}
             </Alert>
           )}
           <div className="d-field">

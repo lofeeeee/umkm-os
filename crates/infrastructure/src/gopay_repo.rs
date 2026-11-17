@@ -239,6 +239,26 @@ impl RefreshLock {
         Ok(())
     }
 
+    /// Access token terbukti masih diterima GoBiz: sesi tetap/kembali `active`.
+    /// `refresh_error` = GoBiz menolak perpanjangan (dicatat; refresh dicoba lagi ≥ 6 jam kemudian atau
+    /// saat token hampir habis — `refreshed_at` digeser agar worker tidak mencoba tiap siklus).
+    pub async fn keep_active(mut self, refresh_error: Option<&str>) -> Result<(), GopayRepoError> {
+        let code: Option<String> = refresh_error.map(|c| c.chars().take(40).collect());
+        sqlx::query(
+            "UPDATE gopay_sessions SET status = 'active', last_error = $2,
+               refresh_failures = CASE WHEN $2 IS NULL THEN refresh_failures ELSE refresh_failures + 1 END,
+               refreshed_at = CASE WHEN $2 IS NULL THEN refreshed_at ELSE now() END,
+               updated_at = now()
+             WHERE tenant_id = $1",
+        )
+        .bind(self.tenant.as_uuid())
+        .bind(code)
+        .execute(&mut *self.tx)
+        .await?;
+        self.tx.commit().await?;
+        Ok(())
+    }
+
     /// Lepas kunci tanpa perubahan (sesi masih segar).
     pub async fn release(self) -> Result<(), GopayRepoError> {
         self.tx.commit().await?;

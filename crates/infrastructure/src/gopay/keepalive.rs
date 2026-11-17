@@ -6,7 +6,9 @@
 //! - Satu jalur refresh untuk worker, poller, dan tombol "Cek sekarang" ([`ensure_fresh`]).
 //! - Baris sesi dikunci (`FOR UPDATE SKIP LOCKED`) selama refresh: refresh token GoBiz dirotasi,
 //!   jadi dua refresh bersamaan akan membuat salah satunya tidak sah.
-//! - Hanya penolakan definitif GoBiz (401/400/403) yang membuat status `needs_relogin`. Gangguan
+//! - Status `needs_relogin` hanya bila GoBiz menolak refresh DAN access token tersimpan juga ditolak.
+//!   Refresh ditolak tetapi access token masih berlaku → tetap `active` (`last_error = refresh_…`).
+//! - Penolakan definitif GoBiz = 401/400/403. Gangguan
 //!   jaringan/5xx/429 dicatat (`last_error`, `refresh_failures`) lalu dicoba lagi siklus berikutnya.
 
 use sqlx::PgPool;
@@ -25,8 +27,27 @@ use crate::{
 pub enum RefreshMode {
     /// Hanya bila token hampir kedaluwarsa atau sudah ≥ 6 jam tidak diperbarui.
     WhenDue,
-    /// Selalu (setelah 401, atau pemilik menekan "Cek sekarang").
+    /// Pemilik menekan "Cek sekarang": uji access token yang tersimpan dulu; perbarui hanya bila
+    /// token ditolak atau memang jatuh tempo. Sesi berstatus perlu login ulang juga diuji ulang.
     Force,
+    /// GoBiz baru saja menolak access token (401 saat polling): wajib perbarui.
+    AccessRejected,
+}
+
+/// Hasil uji access token tersimpan.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Access {
+    Valid,
+    Rejected,
+    Unknown,
+}
+
+async fn probe(client: &GobizClient, session: &GopaySession, now: i64) -> (Access, Option<String>) {
+    match client.probe(session, now).await {
+        Ok(()) => (Access::Valid, None),
+        Err(e) if e.is_auth_rejected() => (Access::Rejected, Some(e.code())),
+        Err(e) => (Access::Unknown, Some(e.code())),
+    }
 }
 
 #[derive(Debug)]
@@ -85,6 +106,33 @@ pub async fn ensure_fresh(
     }
 
     let old = stored.session.clone();
+    let due = is_due(&old, stored.refreshed_at_ms, now);
+
+    // "Cek sekarang": token yang masih diterima GoBiz tidak perlu (dan sebaiknya tidak) diperbarui —
+    // refresh token GoBiz dirotasi, jadi setiap refresh yang tak perlu adalah risiko.
+    let mut access = None;
+    if mode == RefreshMode::Force {
+        match probe(client, &old, now).await {
+            (Access::Valid, _) if !due => {
+                lock.keep_active(None).await?;
+                return Ok(RefreshOutcome::Fresh(old));
+            }
+            (Access::Unknown, code) => {
+                let code = code.unwrap_or_else(|| "network".into());
+                if stored.status != "active" {
+                    lock.release().await?;
+                    return Ok(RefreshOutcome::NeedsRelogin { code });
+                }
+                lock.fail(&code, false).await?;
+                return Ok(RefreshOutcome::Transient { session: old, code });
+            }
+            (a, _) => access = Some(a),
+        }
+    }
+    if mode == RefreshMode::AccessRejected {
+        access = Some(Access::Rejected);
+    }
+
     match client.refresh(&old, now).await {
         Ok(fresh) => {
             // Token lama sudah dirotasi GoBiz: kegagalan menyimpan di sini dilaporkan (bukan diabaikan).
@@ -94,9 +142,32 @@ pub async fn ensure_fresh(
         }
         Err(e) if e.is_auth_rejected() => {
             let code = e.code();
-            lock.fail(&code, true).await?;
-            tracing::warn!(tenant = %t.as_uuid(), code, "gopay: refresh ditolak GoBiz; perlu login ulang");
-            Ok(RefreshOutcome::NeedsRelogin { code })
+            // GoBiz menolak PERPANJANGAN. Itu belum berarti sesi mati: access token (±24 jam) bisa masih
+            // diterima. Hanya bila access token juga ditolak, pemilik perlu menghubungkan ulang.
+            let access = match access {
+                Some(a) => a,
+                None => probe(client, &old, now).await.0,
+            };
+            match access {
+                Access::Valid => {
+                    let soft = format!("refresh_{code}");
+                    lock.keep_active(Some(&soft)).await?;
+                    tracing::warn!(tenant = %t.as_uuid(), code, "gopay: refresh ditolak, access token masih berlaku");
+                    Ok(RefreshOutcome::Transient {
+                        session: old,
+                        code: soft,
+                    })
+                }
+                Access::Rejected => {
+                    lock.fail(&code, true).await?;
+                    tracing::warn!(tenant = %t.as_uuid(), code, "gopay: sesi ditolak GoBiz; perlu login ulang");
+                    Ok(RefreshOutcome::NeedsRelogin { code })
+                }
+                Access::Unknown => {
+                    lock.fail(&code, false).await?;
+                    Ok(RefreshOutcome::Transient { session: old, code })
+                }
+            }
         }
         Err(e) => {
             let code = e.code();

@@ -78,7 +78,7 @@ impl StatusView {
 /// Hasil "Cek sekarang": status terbaru + apa yang terjadi saat sesi diperbarui.
 #[derive(Debug, Clone, Serialize, ToSchema)]
 pub struct CheckView {
-    /// `refreshed` | `needs_relogin` | `transient` | `busy`
+    /// `valid` (token tersimpan masih diterima GoBiz) | `refreshed` | `needs_relogin` | `transient` | `busy`
     pub result: String,
     #[serde(flatten)]
     pub status: StatusView,
@@ -201,8 +201,8 @@ pub async fn get_status(
     Ok(Json(SuccessEnvelope::new(view, &id)))
 }
 
-/// Cek & perbarui sesi GoPay sekarang (refresh token). Tidak perlu login ulang selama GoBiz masih
-/// menerima refresh token; sesi yang ditandai perlu login ulang dicoba sekali lagi.
+/// Cek sesi GoPay sekarang: uji access token tersimpan, perbarui hanya bila ditolak/jatuh tempo.
+/// Sesi yang ditandai perlu login ulang diuji lagi (pulih bila token ternyata masih diterima).
 #[utoipa::path(
     post, path = "/api/v1/tenants/{tenant_id}/gopay/check", tag = "gopay",
     params(("tenant_id" = Uuid, Path)),
@@ -219,7 +219,8 @@ pub async fn check_session(
         .await
         .map_err(repo_err)?
     {
-        RefreshOutcome::Refreshed(_) | RefreshOutcome::Fresh(_) => "refreshed",
+        RefreshOutcome::Refreshed(_) => "refreshed",
+        RefreshOutcome::Fresh(_) => "valid",
         RefreshOutcome::NeedsRelogin { .. } => "needs_relogin",
         RefreshOutcome::Transient { .. } => "transient",
         RefreshOutcome::Busy => "busy",

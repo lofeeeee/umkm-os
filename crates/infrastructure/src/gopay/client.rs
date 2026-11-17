@@ -124,6 +124,29 @@ fn web_headers<'a>(uniqueid: &'a str) -> Vec<Header<'a>> {
 
 // ---- Fungsi murni: parser ----
 
+/// Kode galat singkat dari badan respons GoBiz (`errors[0].code`, `error`, atau `code`), disaring
+/// ke `[A-Za-z0-9_.-]` maks 40 karakter — aman dicatat ke log.
+fn error_code(body: &[u8]) -> Option<String> {
+    let v: Value = serde_json::from_slice(body).ok()?;
+    let raw = v
+        .get("errors")
+        .and_then(|e| e.get(0))
+        .and_then(|e| e.get("code"))
+        .or_else(|| v.get("error"))
+        .or_else(|| v.get("code"))?;
+    let s = match raw {
+        Value::String(s) => s.clone(),
+        Value::Number(n) => n.to_string(),
+        _ => return None,
+    };
+    let clean: String = s
+        .chars()
+        .filter(|c| c.is_ascii_alphanumeric() || matches!(c, '_' | '.' | '-'))
+        .take(40)
+        .collect();
+    (!clean.is_empty()).then_some(clean)
+}
+
 fn deep<'a>(v: &'a Value, key: &str) -> Option<&'a Value> {
     v.get(key)
         .or_else(|| v.get("data").and_then(|d| d.get(key)))
@@ -313,8 +336,25 @@ impl GobizClient {
         match resp_status {
             200..=299 => serde_json::from_slice(body).map_err(|_| GobizError::Parse("bukan JSON")),
             401 => Err(GobizError::Unauthorized),
-            s => Err(GobizError::Status(s)),
+            s => {
+                // Kode galat GoBiz (mis. `invalid_grant`) hanya ke log, untuk diagnosis; isi respons
+                // & token tidak pernah dicatat.
+                tracing::warn!(
+                    status = s,
+                    gobiz_code = error_code(body).as_deref().unwrap_or("-"),
+                    "gopay: GoBiz menolak permintaan"
+                );
+                Err(GobizError::Status(s))
+            }
         }
+    }
+
+    /// Uji apakah access token tersimpan masih diterima GoBiz (GET transaksi 1 menit terakhir, 1 baris).
+    /// Tidak memakai refresh token, jadi aman dipanggil kapan saja.
+    pub async fn probe(&self, session: &GopaySession, now_ms: i64) -> Result<(), GobizError> {
+        self.fetch_transactions(session, now_ms - 60_000, now_ms, 1)
+            .await
+            .map(|_| ())
     }
 
     /// Minta OTP ke nomor HP merchant (lokal tanpa kode negara).
@@ -571,6 +611,24 @@ mod tests {
         assert_eq!(txns[0].time_ms, 1_700_000_000_000);
         assert_eq!(txns[1].amount_rupiah, 15_000);
         assert_eq!(txns[1].issuer, "GoPay / Bank");
+    }
+
+    #[test]
+    fn error_code_is_short_and_sanitized() {
+        assert_eq!(
+            error_code(br#"{"errors":[{"code":"GoId-400 invalid_grant"}]}"#).as_deref(),
+            Some("GoId-400invalid_grant")
+        );
+        assert_eq!(
+            error_code(br#"{"error":"invalid_grant","error_description":"x"}"#).as_deref(),
+            Some("invalid_grant")
+        );
+        assert_eq!(error_code(br#"{"code":400}"#).as_deref(), Some("400"));
+        assert_eq!(error_code(b"<html>"), None);
+        assert_eq!(
+            error_code(br#"{"error":"<script>"}"#).as_deref(),
+            Some("script")
+        );
     }
 
     #[test]

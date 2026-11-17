@@ -334,6 +334,32 @@ async fn refresh_lock_save_and_fail_tracking(pool: PgPool) {
     assert_eq!(stored.status, "needs_relogin");
     assert_eq!(stored.last_error.as_deref(), Some("unauthorized"));
 
+    // "Cek sekarang": access token ternyata masih diterima tetapi perpanjangan ditolak → aktif lagi,
+    // kode refresh_… tercatat, refreshed_at digeser (worker tidak mencoba tiap siklus).
+    let LockResult::Locked(lock) = gopay_repo::lock_for_refresh(&pool, t, &k).await.unwrap() else {
+        panic!("harus terkunci");
+    };
+    lock.keep_active(Some("refresh_status_400")).await.unwrap();
+    let stored = gopay_repo::get_session(&pool, t, &k)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(stored.status, "active");
+    assert_eq!(stored.last_error.as_deref(), Some("refresh_status_400"));
+    assert!(stored.refreshed_at_ms.is_some());
+
+    // Token terbukti berfungsi tanpa perlu refresh → galat lama dibersihkan.
+    let LockResult::Locked(lock) = gopay_repo::lock_for_refresh(&pool, t, &k).await.unwrap() else {
+        panic!("harus terkunci");
+    };
+    lock.keep_active(None).await.unwrap();
+    let stored = gopay_repo::get_session(&pool, t, &k)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(stored.status, "active");
+    assert!(stored.last_error.is_none());
+
     // Hubungkan ulang memulihkan status dan mereset pelacakan.
     gopay_repo::put_session(&pool, t, &session(), &k)
         .await
