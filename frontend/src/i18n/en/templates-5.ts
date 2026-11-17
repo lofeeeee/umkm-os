@@ -113,4 +113,13 @@ export const TEMPLATES_5: Record<string, string> = {
   "Kurangi jumlah": "Decrease quantity",
   "Tambah jumlah": "Increase quantity",
   "Ditambahkan ke keranjang.": "Added to cart.",
+  // Studio di ponsel
+  "Aksi lain": "More actions",
+  "Riwayat versi": "Version history",
+  "Tidak tampil di situs — isi jam buka di Profil bisnis.": "Not shown on the site — set opening hours in Business profile.",
+  "Tidak tampil di situs — isi alamat di Profil bisnis.": "Not shown on the site — add an address in Business profile.",
+  "Tidak tampil di situs — isi WhatsApp, telepon, atau email di Profil bisnis.": "Not shown on the site — add WhatsApp, phone, or email in Business profile.",
+  "Tidak tampil di situs — tambahkan foto ke galeri.": "Not shown on the site — add photos to the gallery.",
+  "Tidak tampil di situs — isi nomor WhatsApp di Profil bisnis.": "Not shown on the site — add a WhatsApp number in Business profile.",
+  "Tidak tampil di situs.": "Not shown on the site.",
 };

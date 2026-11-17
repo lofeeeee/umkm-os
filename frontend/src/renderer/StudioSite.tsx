@@ -123,6 +123,18 @@ export function WhatsAppButton({ b, business, floating }: { b: Pick<BlockV2, "da
   );
 }
 
+/** Alasan blok disembunyikan dari pembeli (ditampilkan di Studio agar pemilik tahu cara mengisinya). */
+function hiddenReason(b: BlockV2): string {
+  switch (b.kind) {
+    case "business_hours": return tx("Tidak tampil di situs — isi jam buka di Profil bisnis.");
+    case "location": return tx("Tidak tampil di situs — isi alamat di Profil bisnis.");
+    case "contact": return tx("Tidak tampil di situs — isi WhatsApp, telepon, atau email di Profil bisnis.");
+    case "gallery": return tx("Tidak tampil di situs — tambahkan foto ke galeri.");
+    case "whatsapp": return tx("Tidak tampil di situs — isi nomor WhatsApp di Profil bisnis.");
+    default: return tx("Tidak tampil di situs.");
+  }
+}
+
 function publicBlock(b: BlockV2, props: StudioSiteProps): boolean {
   if (b.kind === "whatsapp") return !!whatsappHref(props.business.profile.whatsapp ?? props.business.profile.phone, text(b.data.message));
   return hasPublicContent(b.kind, b.data, props.business, props.assetUrl);
@@ -283,6 +295,7 @@ export function StudioSite(props: StudioSiteProps) {
                       locked={b.locked}
                       onSelect={() => props.onSelect?.(b.id)}
                     >
+                      {!publicBlock(b, props) && <p className="sf-hidden-note" role="note">{hiddenReason(b)}</p>}
                       <EditContext.Provider value={editApiFor(b, props.onEditBlock)}>{body}</EditContext.Provider>
                     </EditableBlockWrapper>
                   </div>

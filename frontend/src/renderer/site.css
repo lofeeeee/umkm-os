@@ -483,3 +483,10 @@
 .s-lang button { min-width: 32px; min-height: 24px; padding: 0 8px; border: 0; border-radius: 999px; background: transparent; color: var(--s-muted, #63636e); font: 700 0.75rem/1 inherit; cursor: pointer; }
 .s-lang button[aria-pressed="true"] { background: var(--s-primary, #4f46e5); color: var(--s-on-primary, #fff); }
 .shop-nav-links .s-lang { margin-left: 4px; vertical-align: middle; }
+
+/* Studio: catatan blok yang tidak tampil di situs terbit (data toko belum diisi). */
+.sf-hidden-note {
+  position: relative; z-index: 3; margin: 0 0 6px; padding: 6px 10px; border-radius: 10px;
+  background: #fef3c7; color: #92400e; font: 600 12px/1.4 var(--s-font, system-ui); letter-spacing: 0;
+}
+

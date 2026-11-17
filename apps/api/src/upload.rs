@@ -247,6 +247,10 @@ fn image_response(bytes: Vec<u8>, content_type: &str, etag: &str, max_age: u64) 
         "cross-origin-resource-policy",
         HeaderValue::from_static("same-site"),
     );
+    // Situs toko (subdomain) mengukur waktu muat/tampil gambar ini (LCP/Resource Timing). Tanpa
+    // header ini browser menyembunyikan waktunya untuk origin lain. Objek sudah publik via URL bertanda
+    // tangan dan CORP same-site membatasi penyematannya.
+    h.insert("timing-allow-origin", HeaderValue::from_static("*"));
     if let Ok(cc) = HeaderValue::from_str(&format!("private, max-age={max_age}, immutable")) {
         h.insert(header::CACHE_CONTROL, cc);
     }

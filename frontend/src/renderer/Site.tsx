@@ -216,10 +216,10 @@ function SectionBody({ s, props }: { s: Section; props: SiteProps }) {
             {items.map((p, i) => (
               <a key={p.slug} className="s-product" href={`/produk/${p.slug}`}>
                 {p.image ? (
-                  // Baris pertama sering menjadi LCP di ponsel (audit 17 Nov): jangan lazy; foto pertama prioritas tinggi.
+                  // Dua baris pertama (grid 2 kolom ponsel) sering menjadi LCP (audit 17 Nov): jangan lazy; baris pertama prioritas tinggi.
                   // eslint-disable-next-line @next/next/no-img-element -- static export, gambar bertanda tangan
                   <img src={p.image} srcSet={srcSet(p.image)} sizes={srcSet(p.image) ? sizesFor(slot * gridShare(slot), 0.5) : undefined} alt="" width={480} height={480}
-                    loading={i < 2 ? "eager" : "lazy"} fetchPriority={i === 0 ? "high" : undefined} decoding="async" />
+                    loading={i < 4 ? "eager" : "lazy"} fetchPriority={i < 2 ? "high" : undefined} decoding="async" />
                 ) : (
                   <span className="s-product-noimg" aria-hidden="true" />
                 )}

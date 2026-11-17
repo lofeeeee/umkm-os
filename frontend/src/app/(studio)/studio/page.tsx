@@ -51,6 +51,10 @@ import {
 import { FullscreenButton, SaveBadge, Versions } from "@/studio/EditorChrome";
 import { TemplateGallery } from "@/studio/TemplateGallery";
 import { Inspector } from "@/studio/Inspector";
+import { RowMenu } from "@/ui/menu";
+
+/** Layar sempit (ponsel): Studio dibuka dengan kanvas, bukan panel. */
+const narrowScreen = () => typeof window !== "undefined" && window.matchMedia("(max-width: 720px)").matches;
 
 export default function StudioPage() {
   return <WithTenant>{(ctx) => <StudioEditor ctx={ctx} />}</WithTenant>;
@@ -71,7 +75,7 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
   const [sel, setSel] = useState<string | null>(null);
   const [q, setQ] = useState("");
   /** Perangkat pratinjau: lebar BINGKAI menentukan breakpoint @container, bukan lebar jendela. */
-  const [device, setDevice] = useState<DeviceViewport>("desktop");
+  const [device, setDevice] = useState<DeviceViewport>(() => (narrowScreen() ? "mobile" : "desktop"));
   /** Perbesaran pratinjau: bingkai selalu selebar layar asli perangkat, lalu diperkecil agar muat. */
   const [zoom, setZoom] = useState(1);
   const [full, setFull] = useState<string | null>(null);
@@ -85,7 +89,8 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
   /** P9-10: catatan "siap terbit" yang sedang ditampilkan (null = tertutup). */
   const [checks, setChecks] = useState<Issue[] | null>(null);
   const [publishing, setPublishing] = useState(false);
-  const [panelOpen, setPanelOpen] = useState(true);
+  // Ponsel: kanvas lebih dulu (panel tertutup) dengan pratinjau ponsel — banyak pemilik UMKM hanya punya HP.
+  const [panelOpen, setPanelOpen] = useState(() => !narrowScreen());
   const [activeTab, setActiveTab] = useState<StudioTab>("elements");
   const [pages, setPages] = useState<PageItem[]>([]);
   const [activeSlug, setActiveSlug] = useState("home");
@@ -551,7 +556,7 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
       <div className="sx">
       <header className="sx-top">
         <Link className="d-btn d-btn-ghost d-btn-sm" href={backHref}><ArrowLeft weight="bold" aria-hidden="true" /><span className="sx-hide-sm">{tx("Website")}</span></Link>
-        <button type="button" className="d-icon-btn" onClick={() => setPanelOpen(!panelOpen)} aria-pressed={panelOpen} aria-label={panelOpen ? tx("Sembunyikan panel") : tx("Tampilkan panel")} title={panelOpen ? tx("Sembunyikan panel") : tx("Tampilkan panel")}>
+        <button type="button" className="d-icon-btn sx-hide-sm" onClick={() => setPanelOpen(!panelOpen)} aria-pressed={panelOpen} aria-label={panelOpen ? tx("Sembunyikan panel") : tx("Tampilkan panel")} title={panelOpen ? tx("Sembunyikan panel") : tx("Tampilkan panel")}>
           <SidebarSimple weight={panelOpen ? "fill" : "bold"} />
         </button>
         <span className="sx-sep" aria-hidden="true" />
@@ -565,7 +570,7 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
         <span className="sx-spacer" />
         <div className="sx-group" role="group" aria-label={tx("Riwayat ubahan")}>
           <button type="button" className="d-icon-btn" onClick={doUndo} disabled={hist.past.length === 0} aria-label={tx("Urungkan (Ctrl+Z)")} title={tx("Urungkan (Ctrl+Z)")}><ArrowCounterClockwise weight="bold" /></button>
-          <button type="button" className="d-icon-btn" onClick={doRedo} disabled={hist.future.length === 0} aria-label={tx("Ulangi (Ctrl+Shift+Z)")} title={tx("Ulangi (Ctrl+Shift+Z)")}><ArrowClockwise weight="bold" /></button>
+          <button type="button" className="d-icon-btn sx-hide-sm" onClick={doRedo} disabled={hist.future.length === 0} aria-label={tx("Ulangi (Ctrl+Shift+Z)")} title={tx("Ulangi (Ctrl+Shift+Z)")}><ArrowClockwise weight="bold" /></button>
         </div>
         <div className="sx-devices" role="group" aria-label={tx("Perangkat pratinjau")}>
           {([["desktop", Desktop], ["tablet", DeviceTablet], ["mobile", DeviceMobile]] as const).map(([d, Icon]) => (
@@ -576,14 +581,22 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
         </div>
         <span className="sx-zoom" title={tx("Pratinjau {0} selebar layar asli ({1} px), diperkecil agar muat", DEVICE_LABEL[device], DEVICE_WIDTH[device])}>{Math.round(zoom * 100)}%</span>
         <span className="sx-sep" aria-hidden="true" />
-        <button type="button" className="d-btn d-btn-sm d-btn-ghost" onClick={() => setPicking("change")}><SquaresFour weight="bold" aria-hidden="true" /><span className="sx-hide-md">{tx("Templat")}</span></button>
-        <button type="button" className="d-btn d-btn-sm d-btn-ghost" onClick={() => setVersionsOpen(true)}><ClockCounterClockwise weight="bold" aria-hidden="true" /><span className="sx-hide-md">{tx("Riwayat")}</span></button>
-        <FullscreenButton />
+        <button type="button" className="d-btn d-btn-sm d-btn-ghost sx-hide-sm" onClick={() => setPicking("change")}><SquaresFour weight="bold" aria-hidden="true" /><span className="sx-hide-md">{tx("Templat")}</span></button>
+        <button type="button" className="d-btn d-btn-sm d-btn-ghost sx-hide-sm" onClick={() => setVersionsOpen(true)}><ClockCounterClockwise weight="bold" aria-hidden="true" /><span className="sx-hide-md">{tx("Riwayat")}</span></button>
+        <span className="sx-hide-sm"><FullscreenButton /></span>
         {ctx.tenant.primary_hostname && srv?.published && (
-          <a className="d-btn d-btn-sm d-btn-ghost" href={`https://${ctx.tenant.primary_hostname}`} target="_blank" rel="noopener noreferrer"><ArrowSquareOut weight="bold" aria-hidden="true" /><span className="sx-hide-md">{tx("Lihat situs")}</span></a>
+          <a className="d-btn d-btn-sm d-btn-ghost sx-hide-sm" href={`https://${ctx.tenant.primary_hostname}`} target="_blank" rel="noopener noreferrer"><ArrowSquareOut weight="bold" aria-hidden="true" /><span className="sx-hide-md">{tx("Lihat situs")}</span></a>
         )}
+        {/* Ponsel: aksi sekunder dalam satu menu agar tombol Terbitkan selalu terlihat. */}
+        <span className="sx-show-sm">
+          <RowMenu label={tx("Aksi lain")} items={[
+            { label: tx("Ganti templat"), run: () => setPicking("change") },
+            { label: tx("Riwayat versi"), run: () => setVersionsOpen(true) },
+            ...(ctx.tenant.primary_hostname && srv?.published ? [{ label: tx("Lihat situs"), run: () => { window.open(`https://${ctx.tenant.primary_hostname}`, "_blank", "noopener,noreferrer"); } }] : []),
+          ]} />
+        </span>
         <button type="button" className="d-btn d-btn-sm d-btn-primary" onClick={publish} disabled={!canPublish || publishing || saveState === "conflict"} title={canPublish ? tx("Terbitkan ke situs publik") : tx("Butuh izin terbitkan website")}>
-          {publishing ? tx("Menerbitkan…") : srv?.published ? tx("Terbitkan perubahan") : tx("Terbitkan")}
+          {publishing ? tx("Menerbitkan…") : srv?.published ? <><span className="sx-hide-sm">{tx("Terbitkan perubahan")}</span><span className="sx-show-sm">{tx("Terbitkan")}</span></> : tx("Terbitkan")}
         </button>
       </header>
 
