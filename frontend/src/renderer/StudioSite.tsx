@@ -12,13 +12,16 @@
 import { EditContext, T, useEditing, type EditApi } from "./edit";
 import type { CSSProperties, ReactNode } from "react";
 
-import { ChatWidget } from "@/chat/widget";
+import { ChatPreview, ChatWidget } from "@/chat/widget";
+import { useBlockEditor } from "@/studio/editor-context";
 import { EditableBlockWrapper } from "@/studio/EditableBlockWrapper";
+import { DESIGN_WIDTH, spanWidth } from "@/studio/grid";
 import type { BlockV2, PageV2 } from "@/studio/doc";
 import { pluginDef } from "@/studio/plugins";
 
+import { InkLayer } from "./ink";
 import { PublicNav, type NavLink } from "./PublicNav";
-import { fontStack, onColor, primaryVars, safeColor, text, waLink } from "./safe";
+import { fontStack, primaryVars, safeColor, text, waLink } from "./safe";
 import { Site, type GridProduct } from "./Site";
 import type { Business, OpenStatus } from "./types";
 
@@ -116,7 +119,9 @@ function Block({ b, props }: { b: BlockV2; props: StudioSiteProps }) {
   if (b.kind === "text") body = <div className="site s-solo"><section className="s"><div className="s-inner"><TextBlock b={b} /></div></section></div>;
   else if (b.kind === "whatsapp") body = <div className="site s-solo"><section className="s"><div className="s-inner"><WhatsAppButton b={b} business={props.business} /></div></section></div>;
   else if (b.kind === "chatbot") {
-    body = <ChatWidget variant="inline" title={text(b.data.title)} welcome={text(b.data.welcome)} startOpen={b.chat_open !== false} primary={safeColor(props.doc.theme.primary)} />;
+    body = props.mode === "studio-edit"
+      ? <EditorChat b={b} variant="inline" open={b.chat_open !== false} primary={safeColor(props.doc.theme.primary)} />
+      : <ChatWidget variant="inline" title={text(b.data.title)} welcome={text(b.data.welcome)} startOpen={b.chat_open !== false} primary={safeColor(props.doc.theme.primary)} />;
   } else {
     body = (
       <Site
@@ -236,11 +241,13 @@ export function StudioSite(props: StudioSiteProps) {
         />
         <div className="sv2-main">
           <div className="sv2-grid">
+            <InkLayer strokes={inkFor(doc, "background")} viewWidth={DESIGN_WIDTH} className="sv2-ink-bg" />
             {grid.map((b, i) => {
               const body = (
                 <>
                   {anchors.get(b.id)?.map((a) => <span key={a} id={a} className="sv2-anchor" aria-hidden="true" />)}
                   <Block b={b} props={props} />
+                  <InkLayer strokes={inkFor(doc, `cell:${b.id}`)} viewWidth={spanWidth(b.w)} className="sv2-ink-cell" />
                 </>
               );
               const cellStyle = {
@@ -272,6 +279,7 @@ export function StudioSite(props: StudioSiteProps) {
                 </div>
               );
             })}
+            {editing && <GridOverlay />}
           </div>
           {/* P9-9: kebijakan privasi & syarat selalu bisa dijangkau dari situs (chat & akun mengumpulkan data). */}
           <footer className="sv2-foot">
@@ -292,10 +300,10 @@ export function StudioSite(props: StudioSiteProps) {
       {chat && (editing
         // Di editor widget asli tidak dipasang: jangan memulai percakapan/panggilan API hanya karena
         // pratinjau. Markup kelasnya sama supaya bentuknya identik dengan situs terbit.
-        ? <ChatPlaceholder b={chat} primary={doc.theme.primary} />
+        ? <EditorChat b={chat} variant={chat.layout === "bar" ? "bar" : "bubble"} open={chat.chat_open === true} primary={safeColor(doc.theme.primary)} floating selected={props.selectedId === chat.id} onSelect={() => props.onSelect?.(chat.id)} />
         : <ChatWidget variant={chat.layout === "bar" ? "bar" : "bubble"} title={text(chat.data.title)} welcome={text(chat.data.welcome)} startOpen={chat.chat_open === true} primary={safeColor(doc.theme.primary)} />)}
       {wa && (editing
-        ? <WaPlaceholder b={wa} business={props.business} />
+        ? <WaPlaceholder b={wa} business={props.business} selected={props.selectedId === wa.id} onSelect={() => props.onSelect?.(wa.id)} />
         : <WhatsAppButton b={wa} business={props.business} floating />)}
     </div>
   );
@@ -309,34 +317,45 @@ function editApiFor(b: BlockV2, onEditBlock?: (id: string, path: string, value: 
   };
 }
 
-/** Pratinjau chatbot di editor — markup & kelas sama dengan `ChatWidget` versi tertutup. */
-function ChatPlaceholder({ b, primary }: { b: BlockV2; primary: string }) {
-  const title = text(b.data.title) || "Chat dengan toko";
-  const welcome = text(b.data.welcome);
-  const variant = b.layout === "bar" ? "bar" : "bubble";
-  const style = { ["--chat-primary" as string]: safeColor(primary), ["--chat-on-primary" as string]: onColor(safeColor(primary)) } as CSSProperties;
+/** Coretan untuk satu target. Target lama tanpa awalan `cell:` (draf sebelum perbaikan) ikut dibaca. */
+function inkFor(doc: PageV2, target: string) {
+  const legacy = target.startsWith("cell:") ? target.slice(5) : null;
+  return (doc.drawings ?? []).filter((d) => d.target === target || (legacy !== null && d.target === legacy));
+}
+
+/** Lapisan editor di atas grid (kuas, garis sisip) — dari konteks LiveCanvas. */
+function GridOverlay() {
+  const ed = useBlockEditor();
+  return ed?.gridOverlay ? <>{ed.gridOverlay}</> : null;
+}
+
+/** Pratinjau chatbot di editor: markup & CSS sama dengan widget situs, tanpa memanggil API. */
+function EditorChat({ b, variant, open, primary, floating, selected, onSelect }: {
+  b: BlockV2; variant: "bubble" | "bar" | "inline"; open: boolean; primary: string;
+  floating?: boolean; selected?: boolean; onSelect?: () => void;
+}) {
+  const ed = useBlockEditor();
+  const preview = (
+    <ChatPreview variant={variant} title={text(b.data.title)} welcome={text(b.data.welcome)} primary={primary}
+      open={open} onOpenChange={(o) => ed?.onChatOpen?.(b.id, o)} ready={ed?.chatReady ?? null} />
+  );
+  if (!floating) return preview;
+  // Chatbot melayang: klik di mana saja memilihnya agar pengaturannya muncul di panel.
   return (
-    <div className={`chat chat-v-${variant}`} style={style} aria-hidden="true" data-editor-preview="">
-      {variant === "bar" ? (
-        <span className="chat-bar">
-          <span className="chat-bar-who"><span className="chat-dot" />{title}</span>
-          <span className="chat-bar-input">{welcome || "Tulis pertanyaan…"}</span>
-          <span className="chat-bar-go">➤</span>
-        </span>
-      ) : (
-        <span className="chat-fab">Chat</span>
-      )}
+    <div className={`sf-float${selected ? " sf-float-selected" : ""}`} data-block-id={b.id} onPointerDownCapture={onSelect}>
+      {preview}
     </div>
   );
 }
 
 /** Pratinjau tombol WhatsApp melayang di editor. */
-function WaPlaceholder({ b, business }: { b: BlockV2; business: Business }) {
+function WaPlaceholder({ b, business, selected, onSelect }: { b: BlockV2; business: Business; selected?: boolean; onSelect?: () => void }) {
   const label = text(b.data.label) || "Pesan via WhatsApp";
   const href = whatsappHref(business.profile.whatsapp ?? business.profile.phone, text(b.data.message));
-  if (!href) return null;
   return (
-    <span className="s-wa-float" aria-hidden="true" data-editor-preview="">
+    <span className={`s-wa-float${selected ? " sf-float-selected" : ""}${href ? "" : " sf-wa-nonum"}`} data-editor-preview="" data-block-id={b.id}
+      title={href ? label : "Nomor WhatsApp belum diatur di Profil bisnis — tombol ini tidak tampil di situs"}
+      onPointerDown={onSelect}>
       <svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.1 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.1 5.1 0 0 0 1.1 2.7 11.7 11.7 0 0 0 4.5 4c1.7.7 2.3.8 3.2.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.1-1.2l-.4-.3Z" /></svg>
       <span className="s-sr-only">{label}</span>
     </span>

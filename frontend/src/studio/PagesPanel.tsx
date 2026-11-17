@@ -208,283 +208,123 @@ export function PagesPanel({
   };
 
   return (
-    <div
-      className={`st-pages-panel bg-white border border-neutral-200 rounded-xl shadow-lg p-4 w-80 text-neutral-800 space-y-4 ${className}`.trim()}
-      style={{ fontFamily: "inherit" }}
-    >
-      {/* Header Panel */}
-      <div className="flex items-center justify-between border-b border-neutral-100 pb-2">
-        <div className="flex items-center gap-2">
-          <span className="p-1.5 rounded-lg bg-indigo-50 text-indigo-600">
-            <Files weight="bold" className="w-4 h-4" />
-          </span>
-          <div>
-            <h3 className="font-semibold text-sm text-neutral-900 leading-tight">
-              Halaman Website
-            </h3>
-            <p className="text-[11px] text-neutral-500 leading-tight">
-              Kelola struktur dan navigasi multi-halaman toko
-            </p>
-          </div>
+    <div className={`st-pages ${className}`.trim()}>
+      <div className="st-panel-head st-panel-head-row">
+        <div>
+          <h2>Halaman</h2>
+          <p>Setiap halaman tampil di menu navigasi situs.</p>
         </div>
         {onClose && (
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1 rounded-md text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 transition-colors"
-            title="Tutup panel"
-          >
-            <X className="w-4 h-4" />
+          <button type="button" className="d-icon-btn d-icon-btn-sm" onClick={onClose} title="Tutup panel" aria-label="Tutup panel">
+            <X weight="bold" />
           </button>
         )}
       </div>
 
-      {/* List of Pages */}
-      <div className="space-y-1.5" role="list" aria-label="Daftar Halaman">
+      <ul className="st-page-list" aria-label="Daftar halaman">
         {pages.map((page) => {
           const isActive = page.slug === activeSlug;
           const isHome = page.slug === "home";
-          const path = formatSlugPath(page.slug);
-
+          const published = page.published_version != null;
           return (
-            <div
-              key={page.slug}
-              role="listitem"
-              data-page-slug={page.slug}
-              data-active={isActive ? "true" : "false"}
-              onClick={() => onSelectPage(page.slug)}
-              className={`group flex items-center justify-between p-2 rounded-lg border text-left cursor-pointer transition-all ${
-                isActive
-                  ? "border-indigo-600 bg-indigo-50/50 text-indigo-900 shadow-xs"
-                  : "border-neutral-200 hover:bg-neutral-50 hover:border-neutral-300 text-neutral-700"
-              }`}
-              aria-current={isActive ? "page" : undefined}
-            >
-              <div className="flex items-center gap-2.5 min-w-0 flex-1 mr-2">
-                <span
-                  className={`p-1 rounded ${
-                    isActive ? "text-indigo-600 bg-white" : "text-neutral-400"
-                  }`}
-                >
-                  {isHome ? (
-                    <House weight={isActive ? "fill" : "bold"} className="w-4 h-4" />
-                  ) : (
-                    <Files weight={isActive ? "fill" : "regular"} className="w-4 h-4" />
-                  )}
+            <li key={page.slug} className="st-page" data-page-slug={page.slug} data-active={isActive ? "true" : "false"}>
+              <button type="button" className="st-page-main" onClick={() => onSelectPage(page.slug)} aria-current={isActive ? "page" : undefined}>
+                <span className="st-page-icon" aria-hidden="true">
+                  {isHome ? <House weight={isActive ? "fill" : "duotone"} /> : <Files weight={isActive ? "fill" : "duotone"} />}
                 </span>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-semibold truncate block">
-                      {page.title}
-                    </span>
-                    {isHome && (
-                      <span className="px-1.5 py-0.2 rounded text-[9px] font-semibold tracking-wider uppercase bg-neutral-200/80 text-neutral-700">
-                        Utama
-                      </span>
-                    )}
-                  </div>
-                  <span className="text-[10px] text-neutral-400 font-mono block truncate">
-                    {path}
-                  </span>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  data-delete-slug={page.slug}
-                  disabled={isHome}
-                  onClick={(e) => handleDelete(e, page)}
-                  className={`p-1.5 rounded text-neutral-400 transition-colors ${
-                    isHome
-                      ? "opacity-25 cursor-not-allowed"
-                      : "hover:text-rose-600 hover:bg-rose-50 cursor-pointer"
-                  }`}
-                  title={
-                    isHome
-                      ? "Halaman utama tidak dapat dihapus"
-                      : `Hapus halaman ${page.title}`
-                  }
-                  aria-label={
-                    isHome
-                      ? "Halaman utama tidak dapat dihapus"
-                      : `Hapus halaman ${page.title}`
-                  }
-                >
-                  <Trash className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
+                <span className="st-page-text">
+                  <strong>{page.title}</strong>
+                  <code>{formatSlugPath(page.slug)}</code>
+                </span>
+                {isHome
+                  ? <span className="st-page-badge">Utama</span>
+                  : page.published_version !== undefined && <span className={`st-page-badge${published ? " st-page-badge-ok" : ""}`}>{published ? "Terbit" : "Draf"}</span>}
+              </button>
+              <button
+                type="button"
+                className="st-page-del"
+                data-delete-slug={page.slug}
+                disabled={isHome}
+                onClick={(e) => handleDelete(e, page)}
+                title={isHome ? "Halaman utama tidak dapat dihapus" : `Hapus halaman ${page.title}`}
+                aria-label={isHome ? "Halaman utama tidak dapat dihapus" : `Hapus halaman ${page.title}`}
+              >
+                <Trash weight="bold" />
+              </button>
+            </li>
           );
         })}
-      </div>
+      </ul>
 
-      {/* Button to toggle Add Page Dialog/Section */}
       {!isAdding ? (
-        <button
-          type="button"
-          onClick={() => setIsAdding(true)}
-          className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg border border-dashed border-indigo-300 text-indigo-600 hover:bg-indigo-50/50 hover:border-indigo-400 text-xs font-semibold transition-all cursor-pointer"
-        >
-          <Plus weight="bold" className="w-3.5 h-3.5" />
-          <span>Tambah Halaman</span>
+        <button type="button" className="st-add-page" onClick={() => setIsAdding(true)}>
+          <Plus weight="bold" aria-hidden="true" />
+          Tambah halaman
         </button>
       ) : (
-        <div className="border border-neutral-200 bg-neutral-50/60 rounded-lg p-3 space-y-3.5">
-          <div className="flex items-center justify-between border-b border-neutral-200 pb-2">
-            <h4 className="text-xs font-semibold text-neutral-800">
-              Tambah Halaman Baru
-            </h4>
-            <button
-              type="button"
-              onClick={() => {
-                setIsAdding(false);
-                setErrorMsg(null);
-              }}
-              className="text-neutral-400 hover:text-neutral-600 p-0.5 rounded"
-              title="Batal"
-            >
-              <X className="w-3.5 h-3.5" />
+        <div className="st-add-card">
+          <div className="st-add-card-head">
+            <strong>Halaman baru</strong>
+            <button type="button" className="d-icon-btn d-icon-btn-sm" onClick={() => { setIsAdding(false); setErrorMsg(null); }} title="Batal" aria-label="Batal">
+              <X weight="bold" />
             </button>
           </div>
 
-          {/* Standard Presets Section */}
           {availablePresets.length > 0 && (
-            <div>
-              <label className="block text-[11px] font-medium text-neutral-500 mb-1.5">
-                Halaman Standar Cepat
-              </label>
-              <div className="grid grid-cols-1 gap-1.5">
+            <div className="st-add-sec">
+              <span className="st-add-label">Siap pakai</span>
+              <div className="st-presets">
                 {availablePresets.map((preset) => (
-                  <button
-                    key={preset.slug}
-                    type="button"
-                    data-preset-slug={preset.slug}
-                    disabled={isSubmitting}
-                    onClick={() => handleCreatePreset(preset)}
-                    className="flex items-center justify-between p-2 rounded-lg border border-neutral-200 bg-white hover:border-indigo-300 hover:bg-indigo-50/30 text-left transition-colors cursor-pointer disabled:opacity-50"
-                  >
-                    <div>
-                      <span className="text-xs font-semibold text-neutral-800 block">
-                        {preset.title}
-                      </span>
-                      <span className="text-[10px] text-neutral-400 font-mono">
-                        /{preset.slug}
-                      </span>
-                    </div>
-                    <span className="flex items-center gap-1 text-[11px] font-medium text-indigo-600">
-                      <Plus weight="bold" className="w-3 h-3" />
-                      <span>Tambah</span>
+                  <button key={preset.slug} type="button" className="st-preset" data-preset-slug={preset.slug} disabled={isSubmitting} onClick={() => handleCreatePreset(preset)}>
+                    <span className="st-preset-text">
+                      <strong>{preset.title}</strong>
+                      <span>{preset.description}</span>
                     </span>
+                    <span className="st-preset-add"><Plus weight="bold" aria-hidden="true" />Tambah</span>
                   </button>
                 ))}
               </div>
             </div>
           )}
 
-          {/* Custom Page Section */}
-          <form onSubmit={handleCreateCustom} className="space-y-2.5">
-            <div className="flex items-center justify-between">
-              <label
-                htmlFor={titleInputId}
-                className="text-[11px] font-medium text-neutral-600"
-              >
-                Halaman Kustom
-              </label>
-              {!isPro && (
-                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-100 text-amber-800 border border-amber-200">
-                  <Crown weight="fill" className="w-3 h-3 text-amber-600" />
-                  <span>Paket Pro</span>
-                </span>
-              )}
-            </div>
+          <form onSubmit={handleCreateCustom} className="st-add-sec">
+            <span className="st-add-label">
+              Halaman kustom
+              {!isPro && <span className="st-pro-chip"><Crown weight="fill" aria-hidden="true" />Paket Pro</span>}
+            </span>
 
             {!isPro && (
-              <div className="p-2.5 rounded-lg bg-amber-50/80 border border-amber-200 text-amber-900 space-y-2">
-                <p className="text-[11px] leading-relaxed">
-                  Halaman kustom memerlukan paket Pro. Starter mendapatkan Beranda,
-                  Tentang Kami, dan Kontak.
-                </p>
-                <button
-                  type="button"
-                  onClick={onUpgradeClick}
-                  className="w-full flex items-center justify-center gap-1.5 py-1.5 px-2.5 rounded-md bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
-                >
-                  <LockSimple weight="bold" className="w-3.5 h-3.5" />
-                  <span>Upgrade ke Pro</span>
+              <div className="st-pro-note">
+                <p>Halaman kustom memerlukan paket Pro. Starter mendapatkan Beranda, Tentang Kami, dan Kontak.</p>
+                <button type="button" className="d-btn d-btn-sm" onClick={onUpgradeClick}>
+                  <LockSimple weight="bold" aria-hidden="true" />
+                  Upgrade ke Pro
                 </button>
               </div>
             )}
 
-            <div>
-              <label
-                htmlFor={titleInputId}
-                className="block text-[10px] font-medium text-neutral-500 mb-1"
-              >
-                Judul Halaman
-              </label>
-              <input
-                id={titleInputId}
-                data-testid="input-custom-title"
-                type="text"
-                disabled={!isPro || isSubmitting}
-                value={customTitle}
-                onChange={(e) => handleTitleChange(e.target.value)}
-                placeholder="Contoh: Layanan Kami"
-                className="w-full px-2.5 py-1.5 text-xs rounded-md border border-neutral-200 bg-white text-neutral-800 placeholder-neutral-400 focus:outline-hidden focus:ring-1 focus:ring-indigo-500 disabled:bg-neutral-100 disabled:text-neutral-400 disabled:cursor-not-allowed"
-              />
-            </div>
+            <label className="d-field" htmlFor={titleInputId}>
+              <span>Judul halaman</span>
+              <input id={titleInputId} data-testid="input-custom-title" type="text" disabled={!isPro || isSubmitting}
+                value={customTitle} onChange={(e) => handleTitleChange(e.target.value)} placeholder="Contoh: Layanan Kami" maxLength={60} />
+            </label>
+            <label className="d-field" htmlFor={slugInputId}>
+              <span>Alamat (URL)</span>
+              <span className="st-slug">
+                <span aria-hidden="true">/</span>
+                <input id={slugInputId} data-testid="input-custom-slug" type="text" disabled={!isPro || isSubmitting}
+                  value={customSlug} onChange={(e) => handleSlugChange(e.target.value)} placeholder="layanan-kami" maxLength={40} />
+              </span>
+            </label>
 
-            <div>
-              <label
-                htmlFor={slugInputId}
-                className="block text-[10px] font-medium text-neutral-500 mb-1"
-              >
-                Slug URL
-              </label>
-              <div className="flex items-center rounded-md border border-neutral-200 bg-white focus-within:ring-1 focus-within:ring-indigo-500 overflow-hidden">
-                <span className="px-2 text-xs font-mono text-neutral-400 bg-neutral-50 border-r border-neutral-200 select-none">
-                  /
-                </span>
-                <input
-                  id={slugInputId}
-                  data-testid="input-custom-slug"
-                  type="text"
-                  disabled={!isPro || isSubmitting}
-                  value={customSlug}
-                  onChange={(e) => handleSlugChange(e.target.value)}
-                  placeholder="layanan-kami"
-                  className="w-full px-2 py-1.5 text-xs font-mono text-neutral-800 placeholder-neutral-400 focus:outline-hidden disabled:bg-neutral-100 disabled:text-neutral-400 disabled:cursor-not-allowed"
-                />
-              </div>
-            </div>
-
-            {errorMsg && (
-              <p className="text-[11px] text-rose-600 font-medium leading-tight">
-                {errorMsg}
-              </p>
-            )}
+            {errorMsg && <p className="st-add-err" role="alert">{errorMsg}</p>}
 
             {isPro && (
-              <div className="flex items-center justify-end gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsAdding(false);
-                    setErrorMsg(null);
-                  }}
-                  className="px-2.5 py-1.5 text-xs font-medium text-neutral-600 hover:text-neutral-800 hover:bg-neutral-100 rounded-md transition-colors"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting || !customTitle.trim() || !customSlug.trim()}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-md shadow-xs transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Plus weight="bold" className="w-3.5 h-3.5" />
-                  <span>Buat Halaman</span>
+              <div className="st-add-actions">
+                <button type="button" className="d-btn d-btn-sm d-btn-ghost" onClick={() => { setIsAdding(false); setErrorMsg(null); }}>Batal</button>
+                <button type="submit" className="d-btn d-btn-sm d-btn-primary" disabled={isSubmitting || !customTitle.trim() || !customSlug.trim()}>
+                  <Plus weight="bold" aria-hidden="true" />
+                  Buat halaman
                 </button>
               </div>
             )}

@@ -28,9 +28,9 @@ describe("PagesPanel component (Studio Enhancement Task 5)", () => {
       />
     );
 
-    expect(html).toContain("Halaman Website");
+    expect(html).toContain("Halaman");
     expect(html).toMatch(/multi-halaman|navigasi/i);
-    expect(html).toContain("Tambah Halaman");
+    expect(html).toContain("Tambah halaman");
   });
 
   it("merender daftar halaman dengan judul, path slug, dan badge 'Utama' untuk home", () => {
@@ -252,6 +252,6 @@ describe("PagesPanel component (Studio Enhancement Task 5)", () => {
     expect(html).not.toMatch(/data-testid="input-custom-slug"[^>]*\sdisabled(=|[\s>])/);
 
     // Tombol submit kustom aktif
-    expect(html).toContain("Buat Halaman");
+    expect(html).toContain("Buat halaman");
   });
 });

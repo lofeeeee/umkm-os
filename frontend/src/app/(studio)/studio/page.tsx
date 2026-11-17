@@ -1,19 +1,18 @@
 "use client";
 
-// Studio website — PROTOTIPE ADR-0017 (status: Proposed). Kanvas grid 12 kolom + katalog plugin resmi.
+// Studio website (ADR-0017). Satu kanvas = renderer situs asli + manipulasi langsung (LiveCanvas).
 // - Mulai dari galeri template yang langsung diisi data toko.
-// - Edit langsung: klik plugin untuk memilih, klik teksnya untuk mengetik; seret foto ke plugin.
-// - Undo/Redo (Ctrl+Z / Ctrl+Shift+Z) + simpan otomatis.
-// Belum menyentuh situs publik: tata letak disimpan di browser (localStorage) sampai ADR disetujui dan
-// schema_version 2 + validator server dibangun.
+// - Klik blok untuk memilih, klik teksnya untuk mengetik, seret blok untuk memindah, tarik pegangan
+//   kanan/bawah untuk mengubah ukuran; seret foto dari komputer ke blok.
+// - Undo/Redo (Ctrl+Z / Ctrl+Shift+Z) + simpan otomatis ke draf server.
 
 import Link from "@/ui/link";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 
 import {
-  LockSimple, LockSimpleOpen, ArrowSquareOut, ClockCounterClockwise, WarningCircle, ArrowClockwise, ArrowCounterClockwise, ArrowLeft, ArrowsIn, ArrowsOut, CaretDown, CaretUp, ChatCircleDots, Check, Copy,
-  ArrowDown, ArrowRight, ArrowUp, CornersIn, CornersOut, DesktopTower, DeviceMobile, ImageSquare, MagnifyingGlass, Plus, PuzzlePiece, SidebarSimple, Sparkle, SquaresFour, Trash, WhatsappLogo, X,
-  Crop,
+  LockSimple, LockSimpleOpen, ArrowSquareOut, ClockCounterClockwise, WarningCircle, ArrowClockwise, ArrowCounterClockwise, ArrowLeft, ArrowsIn, ArrowsOut, ChatCircleDots, Check, Copy,
+  ArrowDown, ArrowRight, ArrowUp, CornersIn, CornersOut, Desktop, DeviceMobile, DeviceTablet, ImageSquare, MagnifyingGlass, Plus, SidebarSimple, SquaresFour, Trash, X,
+  Crop, CaretDown, Files,
 } from "@phosphor-icons/react/ssr";
 
 import { useUploads } from "@/dashboard/assets";
@@ -22,17 +21,18 @@ import { WithTenant, type TenantCtx } from "@/dashboard/shell";
 import { api } from "@/lib/api";
 import { EditContext, type EditApi } from "@/renderer/edit";
 import { Site, type GridProduct } from "@/renderer/Site";
-import { StudioSite } from "@/renderer/StudioSite";
 import { normalizePageV2 } from "@/renderer/normalize";
+import { ChatPreview } from "@/chat/widget";
 import { TextBlock, WhatsAppButton } from "@/renderer/StudioSite";
-import { fontStack, primaryVars } from "@/renderer/safe";
+import { fontStack, primaryVars, safeColor } from "@/renderer/safe";
 import { FIELDS, FONT_PRESETS, defaultData } from "@/renderer/sections";
 import type { Business, Json, PageContent, SectionType } from "@/renderer/types";
-import { Canvas, DESIGN_WIDTH, GAP, ROW, rowsFor } from "@/studio/Canvas";
-import { DEVICE_LABEL, DeviceFrame, type DeviceViewport } from "@/studio/DeviceFrame";
-import { COLS, compact, insert, mobileOrder, moveBy, place } from "@/studio/grid";
-import { commit, redo, silent, start, undo, type History } from "@/studio/history";
-import { CELL_STYLES, EXTRA_DATA, PALETTES, PLUGINS, needsUpgrade, pluginDef, pluginPlan, type PluginKind, type PluginCategory } from "@/studio/plugins";
+import { DEVICE_LABEL, type DeviceViewport } from "@/studio/DeviceFrame";
+import { COLS, DESIGN_WIDTH, GAP, ROW, insert, moveBy, place } from "@/studio/grid";
+import { commit, redo, start, undo, type History } from "@/studio/history";
+import { CELL_STYLES, EXTRA_DATA, PLUGINS, needsUpgrade, pluginDef, pluginPlan, type PluginKind, type PluginCategory } from "@/studio/plugins";
+import { PluginIcon } from "@/studio/PluginIcon";
+import { LiveCanvas, PLUGIN_MIME, setPaletteDrag } from "@/studio/LiveCanvas";
 import { readiness, type Issue } from "@/studio/readiness";
 import { TEMPLATES, type TplCell } from "@/studio/templates";
 import { fromDoc, isV2, toDoc, type StudioState } from "@/studio/doc";
@@ -40,9 +40,9 @@ import { IconRail, type StudioTab } from "@/studio/IconRail";
 import { PagesPanel, type PageItem } from "@/studio/PagesPanel";
 import { ThemePanel, type ThemeConfig } from "@/studio/ThemePanel";
 import { DrawPanel, type DrawConfig, type DrawTool, type DrawTarget } from "@/studio/DrawPanel";
-import { DrawingLayer, type DrawingStroke } from "@/studio/DrawingLayer";
-import { StudioNavbar } from "@/studio/StudioNavbar";
+import type { DrawingStroke } from "@/studio/DrawingLayer";
 import { ImageCropModal } from "@/ui/ImageCropModal";
+import "@/studio/studio.css";
 import { ApiError, describe } from "@/lib/api";
 import { waktu } from "@/lib/labels";
 import { confirm, Sheet } from "@/ui/dialog";
@@ -54,14 +54,7 @@ type StudioCell = TplCell;
 /** Keadaan Studio; dokumen server = toDoc(Studio) (schema_version 2). */
 type Studio = StudioState;
 type SaveState = "idle" | "saving" | "saved" | "error" | "conflict" | "readonly";
-const TEXT_SCALES = [{ v: 0.9, l: "Kecil" }, { v: 1, l: "Sedang" }, { v: 1.1, l: "Besar" }];
-
-const CATEGORIES: { label: PluginCategory; icon: typeof PuzzlePiece }[] = [
-  { label: "Konten", icon: PuzzlePiece },
-  { label: "Jualan", icon: Sparkle },
-  { label: "Layanan", icon: ChatCircleDots },
-  { label: "Info toko", icon: SquaresFour },
-];
+const CATEGORIES: PluginCategory[] = ["Konten", "Jualan", "Layanan", "Info toko"];
 
 const EMPTY_BUSINESS: Business = {
   profile: { name: "Nama Toko", socials: [], timezone: "Asia/Jakarta", pickup_available: false, delivery_available: false },
@@ -71,9 +64,6 @@ const storageKey = (t: string) => `umkm-studio-${t}`;
 let seq = 0;
 const newId = (k: string) => `${k.replace(/_/g, "-")}-${Date.now().toString(36)}${(seq++).toString(36)}`;
 /** Chatbot di luar grid: gelembung bulat atau bilah bawah, keduanya mengikuti layar. */
-/** Lebar bilah samping Studio di kanvas Tata letak (px). */
-const SIDE_NAV_W = 220;
-
 const isFloating = (c: StudioCell) => c.kind === "chatbot" && (c.layout === "floating" || c.layout === "bar");
 /** WhatsApp melayang: di luar grid seperti chatbot melayang (server: is_embed). */
 const isFloatingWa = (c: StudioCell) => c.kind === "whatsapp" && c.layout === "floating";
@@ -162,12 +152,9 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
   const [draft, setDraft] = useState<PageContent | null>(null);
   const [picking, setPicking] = useState<"first" | "change" | null>(null);
   const [sel, setSel] = useState<string | null>(null);
-  const [panel, setPanel] = useState<"installed" | "catalog">("installed");
   const [q, setQ] = useState("");
   /** Perangkat pratinjau: lebar BINGKAI menentukan breakpoint @container, bukan lebar jendela. */
   const [device, setDevice] = useState<DeviceViewport>("desktop");
-  /** Sub-mode kanvas: "content" = renderer situs asli, "layout" = grid drag/resize. */
-  const [canvasMode, setCanvasMode] = useState<"content" | "layout">("content");
   const [full, setFull] = useState<string | null>(null);
   const canEdit = ctx.can("website.edit");
   const canPublish = ctx.can("website.publish");
@@ -179,32 +166,16 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
   /** P9-10: catatan "siap terbit" yang sedang ditampilkan (null = tertutup). */
   const [checks, setChecks] = useState<Issue[] | null>(null);
   const [publishing, setPublishing] = useState(false);
-  const [stageW, setStageW] = useState(DESIGN_WIDTH);
-  const stageRef = useRef<HTMLDivElement>(null);
-  const [clipped, setClipped] = useState<Record<string, boolean>>({});
   const [panelOpen, setPanelOpen] = useState(true);
   const [activeTab, setActiveTab] = useState<StudioTab>("elements");
   const [pages, setPages] = useState<PageItem[]>([]);
   const [activeSlug, setActiveSlug] = useState("home");
   const [drawTool, setDrawTool] = useState<DrawTool>(null);
   const [drawConfig, setDrawConfig] = useState<DrawConfig>({ color: "#EF4444", size: 4, opacity: 1 });
-  const [drawTarget, setDrawTarget] = useState<DrawTarget>("background");
+  const [drawTarget, setDrawTarget] = useState<DrawTarget>("cell");
   const [cropModal, setCropModal] = useState<{ open: boolean; cellId: string | null; imageSrc: string | null }>({ open: false, cellId: null, imageSrc: null });
   /** Status chatbot sebenarnya dari `/ai/config`: pratinjau tidak boleh menjanjikan chat yang tidak aktif. */
   const [chatReady, setChatReady] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    const el = stageRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver(([e]) => setStageW(e!.contentRect.width));
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-  // Lebar bilah samping Studio (px) — lihat `.st-navbar-side` di site.css. Di mode Tata letak dengan
-  // navbar samping, kanvas hanya mendapat sisa lebar panggung; tanpa dikurangi, kanvas 1080 px
-  // meluber keluar panggung (kartu paling kanan terpotong).
-  const stageAvail = st?.navbarStyle === "side" && canvasMode === "layout" ? Math.max(0, stageW - SIDE_NAV_W) : stageW;
-  const scale = Math.min(1, stageAvail / DESIGN_WIDTH);
 
   /* ---------------- Muat data toko & draf server ---------------- */
   useEffect(() => {
@@ -270,7 +241,6 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
   const update = useCallback((fn: (s: Studio) => Studio, key = "edit") => {
     setHist((h) => (h ? commit(h, fn(h.present), key, Date.now()) : h));
   }, []);
-  const quiet = useCallback((fn: (s: Studio) => Studio) => setHist((h) => (h ? silent(h, fn(h.present)) : h)), []);
   const doUndo = useCallback(() => setHist((h) => (h ? undo(h) : h)), []);
   const doRedo = useCallback(() => setHist((h) => (h ? redo(h) : h)), []);
 
@@ -393,12 +363,9 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
   }, [update]);
 
   const clearStrokes = useCallback(() => {
-    update((s) => ({
-      ...s,
-      drawings: (s.drawings ?? []).filter((d) => drawTarget === "background" ? d.target !== "background" : d.target === "background"),
-    }), "clear_draw");
-    toast.ok("Coretan dibersihkan.");
-  }, [drawTarget, update]);
+    update((s) => ({ ...s, drawings: [] }), "clear_draw");
+    toast.ok("Semua coretan dihapus. Tekan Ctrl+Z untuk membatalkan.");
+  }, [update]);
 
   useEffect(() => {
     if (!st || !srv || picking === "first" || !canEdit || saveState === "conflict") return;
@@ -455,26 +422,6 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
     return () => { window.removeEventListener("dragover", block); window.removeEventListener("drop", block); };
   }, []);
 
-  /* ---------------- Tinggi otomatis ---------------- */
-  const onMeasure = useCallback((id: string, px: number) => {
-    const rows = rowsFor(px);
-    let clip = false;
-    quiet((s) => {
-      const c = s.cells.find((x) => x.id === id);
-      if (!c) return s;
-      clip = rows > c.h;
-      if (c.autoH === false || rows === c.h) return s;
-      clip = false;
-      // Plugin terkunci tetap boleh menyesuaikan tinggi dengan isinya; yang lain mengalir ulang.
-      if (c.locked) return { ...s, cells: compact(s.cells.map((x) => (x.id === id ? { ...x, h: rows } : x))) as StudioCell[] };
-      return { ...s, cells: place(s.cells, { ...c, h: rows }) as StudioCell[] };
-    });
-    setClipped((m) => (m[id] === clip ? m : { ...m, [id]: clip }));
-  }, [quiet]);
-  const onResizeH = useCallback((id: string) => {
-    update((s) => ({ ...s, cells: s.cells.map((c) => (c.id === id && c.autoH !== false ? { ...c, autoH: false } : c)) }), "drag");
-  }, [update]);
-
   /* ---------------- Aksi plugin ---------------- */
   const setCell = useCallback((id: string, patch: Partial<StudioCell>, key = `cell:${id}`) => {
     update((s) => ({ ...s, cells: s.cells.map((c) => (c.id === id ? { ...c, ...patch } : c)) }), key);
@@ -522,43 +469,31 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
     toast.ok(`Template ${t.name} dipakai. Klik teks mana saja untuk mengubahnya.`);
   }
 
-  /* ---------------- Render plugin ---------------- */
+  /* ---------------- Render plugin (galeri template & pratinjau penuh) ---------------- */
   const primary = st?.primary ?? "#4F46E5";
   const font = st?.font ?? FONT_PRESETS[0]!;
   const theme = useMemo(() => ({ primary, font }), [primary, font]);
-  const editApi = useCallback((c: StudioCell): EditApi => ({
-    commit: (path, value) => {
-      const r = setPath(c.kind, c.data, path, value);
-      if (typeof r === "string") { toast.error(r); return; }
-      update((s) => ({ ...s, cells: s.cells.map((x) => (x.id === c.id ? { ...x, data: setPathOr(x, path, value) } : x)) }), "");
-    },
-  }), [update]);
 
-  const renderCell = useCallback((c: StudioCell, editable = false, th: { primary: string; font: string } = theme) => (
+  const renderCell = useCallback((c: StudioCell, _editable = false, th: { primary: string; font: string } = theme) => (
     <div className={`st-content st-style-${c.style}${c.layout ? ` st-layout-${c.layout}` : ""}`}>
       {c.kind === "chatbot" ? (
-        <ChatPreview primary={th.primary} title={String(c.data.title ?? "Tanya kami")} welcome={String(c.data.welcome ?? "")}
-          open={c.chatOpen !== false} onToggle={() => setChatOpen(c.id, c.chatOpen === false)} ready={chatReady} />
+        <ChatPreview variant="inline" primary={safeColor(th.primary)} title={String(c.data.title ?? "")} welcome={String(c.data.welcome ?? "")} open={c.chatOpen !== false} ready={chatReady} />
       ) : c.kind === "text" || c.kind === "whatsapp" ? (
-        <EditContext.Provider value={editable ? editApi(c) : null}>
-          <div className="site s-solo" style={{ ...primaryVars(th.primary), ["--s-font" as string]: fontStack(th.font) }}>
-            <section className="s"><div className="s-inner">
-              {c.kind === "text" ? <TextBlock b={c} /> : <WhatsAppButton b={c} business={business} />}
-            </div></section>
-          </div>
-        </EditContext.Provider>
+        <div className="site s-solo" style={{ ...primaryVars(th.primary), ["--s-font" as string]: fontStack(th.font) }}>
+          <section className="s"><div className="s-inner">
+            {c.kind === "text" ? <TextBlock b={c} /> : <WhatsAppButton b={c} business={business} />}
+          </div></section>
+        </div>
       ) : (
-        <EditContext.Provider value={editable ? editApi(c) : null}>
-          <Site
-            content={{ schema_version: 1, template: "studio", theme: th, sections: [{ id: c.id, type: c.kind as SectionType, enabled: true, data: c.data }] }}
-            business={business}
-            products={products.length ? products : undefined}
-            assetUrl={assets.url}
-          />
-        </EditContext.Provider>
+        <Site
+          content={{ schema_version: 1, template: "studio", theme: th, sections: [{ id: c.id, type: c.kind as SectionType, enabled: true, data: c.data }] }}
+          business={business}
+          products={products.length ? products : undefined}
+          assetUrl={assets.url}
+        />
       )}
     </div>
-  ), [theme, business, products, assets.url, setChatOpen, editApi, chatReady]);
+  ), [theme, business, products, assets.url, chatReady]);
 
   const shownPlugins = useMemo(() => {
     const t = q.trim().toLowerCase();
@@ -567,30 +502,44 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
 
   const backHref = `/website?tenant=${ctx.tenant.id}`;
   /**
-   * Dokumen yang sama dengan yang diterbitkan, dirender oleh renderer yang sama (`StudioSite`).
-   * Mode "Isi" menampilkan hasil persis seperti situs publik; hanya pelapis seleksi & teks yang bisa
-   * diketik yang berbeda (dijaga tes paritas DOM di StreamSite.test.tsx).
+   * Dokumen yang sama dengan yang diterbitkan, dirender oleh renderer yang sama (`StudioSite`) di dalam
+   * LiveCanvas: hasil di kanvas persis seperti situs publik; hanya pelapis seleksi/pegangan yang berbeda.
    */
   const previewDoc = useMemo(() => normalizePageV2(st ? toDoc(st, srv?.template ?? "studio") : null), [st, srv?.template]);
-  const contentElement = (
-    <StudioSite
-      doc={previewDoc}
-      business={business}
-      products={products}
-      assetUrl={assets.url}
-      pages={pages.map((p) => ({ slug: p.slug, title: p.title, current: p.slug === activeSlug }))}
-      mode="studio-edit"
-      selectedId={sel}
-      onSelect={setSel}
-      onEditBlock={(id, path, value) => {
-        const c = st?.cells.find((x) => x.id === id);
-        if (!c) return;
-        const r = setPath(c.kind, c.data, path, value);
-        if (typeof r === "string") { toast.error(r); return; }
-        update((s) => ({ ...s, cells: s.cells.map((x) => (x.id === id ? { ...x, data: setPathOr(x, path, value) } : x)) }), "");
-      }}
-    />
-  );
+
+  const onEditBlock = useCallback((id: string, path: string, value: string) => {
+    setHist((h) => {
+      if (!h) return h;
+      const c = h.present.cells.find((x) => x.id === id);
+      if (!c) return h;
+      const r = setPath(c.kind, c.data, path, value);
+      if (typeof r === "string") { toast.error(r); return h; }
+      return commit(h, { ...h.present, cells: h.present.cells.map((x) => (x.id === id ? { ...x, data: setPathOr(x, path, value) } : x)) }, "", Date.now());
+    });
+  }, []);
+
+  /** Mode kuas: alat dipilih di panel Coretan dan panel itu sedang terbuka. */
+  const drawActive = activeTab === "draw" && panelOpen && drawTool !== null;
+
+  /* Pintasan keyboard untuk blok terpilih: panah = geser, Delete = hapus, Esc = lepas / keluar kuas. */
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement;
+      if (t.closest("input, textarea, select, [contenteditable]")) return;
+      if (e.key === "Escape" && drawTool) { setDrawTool(null); return; }
+      if (!sel || e.metaKey || e.ctrlKey || e.altKey) return;
+      const dir = ({ ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right" } as const)[e.key as "ArrowUp"];
+      if (dir) {
+        e.preventDefault();
+        update((s) => ({ ...s, cells: [...moveBy(s.cells.filter((x) => !isEmbed(x)), sel, dir) as StudioCell[], ...s.cells.filter(isEmbed)] }), `move:${sel}`);
+      } else if (e.key === "Delete" || e.key === "Backspace") {
+        e.preventDefault();
+        remove(sel);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
 
   if (!st || !hist) {
     return (
@@ -628,133 +577,90 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
 
   const selected = st.cells.find((c) => c.id === sel) ?? null;
   const gridCells = st.cells.filter((c) => !isEmbed(c));
-  const floating = st.cells.find(isFloating);
-  const floatingWa = st.cells.find(isFloatingWa);
-  const canvasRows = Math.max(20, rowsFor(gridCells.reduce((max, c) => Math.max(max, (c.y + c.h) * (ROW + GAP)), 0)));
-  const canvasHeight = canvasRows * (ROW + GAP);
-  const colW = (DESIGN_WIDTH - GAP * (COLS - 1)) / COLS;
-  const pw = (w: number) => w * colW + (w - 1) * GAP;
-  const ph = (h: number) => h * ROW + (h - 1) * GAP;
-  const bgUrl = st.backgroundImage ? (assets.url(st.backgroundImage) ?? st.backgroundImage) : undefined;
-  const isSideNav = st.navbarStyle === "side";
+  const activePage = pages.find((p) => p.slug === activeSlug);
 
-  const canvasElement = (
-    <Canvas
-      scale={scale}
-      cells={gridCells}
-      onChange={(cells) => update((s) => ({ ...s, cells: [...cells, ...s.cells.filter(isEmbed)] }), "drag")}
-      onMeasure={onMeasure}
-      onResizeH={onResizeH}
-      onDropFile={(id, f) => void putPhoto(id, f)}
-      acceptsFile={(c) => takesPhoto(c.kind)}
-      selected={sel}
-      onSelect={setSel}
-      onRemove={remove}
-      onDropPlugin={(k, at) => add(k as PluginKind, at)}
-      render={(c) => renderCell(c, sel === c.id)}
-      label={(c) => pluginDef(c.kind).name}
-      isDrawingActive={activeTab === "draw" && drawTool !== null}
-      backgroundLayer={
-        <DrawingLayer
-          target="background"
-          strokes={st.drawings ?? []}
-          width={DESIGN_WIDTH}
-          height={canvasHeight}
-          activeTool={activeTab === "draw" && drawTarget === "background" ? drawTool : null}
-          currentConfig={drawConfig}
-          onAddStroke={addStroke}
-          onEraseStroke={eraseStroke}
-        />
-      }
-      cellOverlay={(c) => (
-        <DrawingLayer
-          target={c.id}
-          strokes={st.drawings ?? []}
-          width={pw(c.w)}
-          height={ph(c.h)}
-          activeTool={activeTab === "draw" && drawTarget === "cell" && sel === c.id ? drawTool : null}
-          currentConfig={drawConfig}
-          onAddStroke={addStroke}
-          onEraseStroke={eraseStroke}
-        />
-      )}
-      toolbar={(c) => (
-        <>
-          {needsUpgrade(pluginPlan(c.kind), planCode) && <span className="st-clip st-pro" title="Tidak tampil di situs sampai toko memakai paket Pro">Butuh paket Pro</span>}
-          {c.kind === "product_grid" && noPhoto > 0 && (
-            <Link className="st-clip st-nudge" href={`/products?tenant=${ctx.tenant.id}`}>{noPhoto} produk tanpa foto →</Link>
-          )}
-          {clipped[c.id] && c.autoH === false && <span className="st-clip" title="Isi lebih panjang dari kotak">Terpotong</span>}
-          {takesPhoto(c.kind) && (
-            <label className="st-tool" title={c.kind === "gallery" ? "Tambah foto" : "Ganti foto"} aria-label={c.kind === "gallery" ? "Tambah foto" : "Ganti foto"}>
-              <ImageSquare weight="bold" />
-              <input type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void putPhoto(c.id, f); }} />
-            </label>
-          )}
-          {takesPhoto(c.kind) && (
-            <button
-              type="button"
-              className="st-tool"
-              onClick={() => {
-                const k = IMAGE_KEY[c.kind];
-                const ref = k ? (c.data[k] as string) : null;
-                if (ref && assets.url(ref)) {
-                  setCropModal({ open: true, cellId: c.id, imageSrc: assets.url(ref)! });
-                } else {
-                  toast.error("Belum ada foto yang dipasang untuk dipotong.");
-                }
-              }}
-              aria-label="Potong foto"
-              title="Potong foto"
-            >
-              <Crop weight="bold" />
-            </button>
-          )}
-          {c.kind === "chatbot" && (
-            <button type="button" className="st-tool" onClick={() => setChatOpen(c.id, c.chatOpen === false)} aria-label={c.chatOpen === false ? "Maksimalkan chatbot" : "Minimalkan chatbot"} title={c.chatOpen === false ? "Maksimalkan" : "Minimalkan"}>
-              {c.chatOpen === false ? <CaretUp weight="bold" /> : <CaretDown weight="bold" />}
-            </button>
-          )}
-          <button type="button" className={`st-tool${c.locked ? " st-tool-on" : ""}`} onClick={() => setCell(c.id, { locked: !c.locked }, "")} aria-pressed={!!c.locked} aria-label={c.locked ? "Buka kunci posisi" : "Kunci posisi"} title={c.locked ? "Buka kunci posisi" : "Kunci posisi — plugin lain tidak akan menggeser ini"}>
-            {c.locked ? <LockSimple weight="fill" /> : <LockSimpleOpen weight="bold" />}
-          </button>
-          <button type="button" className="st-tool" onClick={() => setFull(c.id)} aria-label={`Lihat penuh ${pluginDef(c.kind).name}`} title="Lihat penuh"><ArrowsOut weight="bold" /></button>
-        </>
-      )}
-    />
-  );
+  const cropOf = (c: StudioCell) => {
+    const k = IMAGE_KEY[c.kind];
+    const ref = k ? (c.data[k] as string) : null;
+    if (ref && assets.url(ref)) setCropModal({ open: true, cellId: c.id, imageSrc: assets.url(ref)! });
+    else toast.error("Belum ada foto yang dipasang untuk dipotong.");
+  };
+  const duplicate = (c: StudioCell) => {
+    const copy = { ...c, id: newId(c.kind), locked: undefined };
+    update((s) => ({ ...s, cells: insert(s.cells, copy, { x: c.x, y: c.y + c.h }) as StudioCell[] }), "");
+    setSel(copy.id);
+  };
+
+  /** Bilah aksi di atas blok terpilih (di kanvas). */
+  const blockToolbar = (id: string) => {
+    const c = st.cells.find((x) => x.id === id);
+    if (!c) return null;
+    return (
+      <>
+        {needsUpgrade(pluginPlan(c.kind), planCode) && <span className="lc-chip lc-chip-pro" title="Tidak tampil di situs sampai toko memakai paket Pro">Pro</span>}
+        {c.kind === "product_grid" && noPhoto > 0 && (
+          <Link className="lc-chip lc-chip-warn" href={`/products?tenant=${ctx.tenant.id}`}>{noPhoto} produk tanpa foto</Link>
+        )}
+        {takesPhoto(c.kind) && (
+          <label className="lc-tool" title={c.kind === "gallery" ? "Tambah foto" : "Ganti foto"} aria-label={c.kind === "gallery" ? "Tambah foto" : "Ganti foto"}>
+            <ImageSquare weight="bold" />
+            <input type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void putPhoto(c.id, f); }} />
+          </label>
+        )}
+        {c.kind in IMAGE_KEY && (
+          <button type="button" className="lc-tool" onClick={() => cropOf(c)} aria-label="Potong foto" title="Potong foto"><Crop weight="bold" /></button>
+        )}
+        <button type="button" className={`lc-tool${c.locked ? " lc-tool-on" : ""}`} onClick={() => setCell(c.id, { locked: !c.locked }, "")} aria-pressed={!!c.locked}
+          aria-label={c.locked ? "Buka kunci posisi" : "Kunci posisi"} title={c.locked ? "Buka kunci posisi" : "Kunci posisi"}>
+          {c.locked ? <LockSimple weight="fill" /> : <LockSimpleOpen weight="bold" />}
+        </button>
+        {!SINGLE.includes(c.kind) && <button type="button" className="lc-tool" onClick={() => duplicate(c)} aria-label="Duplikat" title="Duplikat"><Copy weight="bold" /></button>}
+        <button type="button" className="lc-tool lc-tool-danger" onClick={() => remove(c.id)} aria-label={`Hapus ${pluginDef(c.kind).name}`} title="Hapus (Delete)"><Trash weight="bold" /></button>
+      </>
+    );
+  };
+
+  const selectTab = (t: StudioTab) => {
+    setSel(null);
+    // Menutup panel hanya bila tab itu memang sedang tampil (bukan tertutup inspektur blok terpilih).
+    if (activeTab === t && panelOpen && !sel) setPanelOpen(false);
+    else { setActiveTab(t); setPanelOpen(true); }
+  };
 
   return (
     <Assets.Provider value={assets}>
       <div className="sx">
       <header className="sx-top">
-        <Link className="d-btn d-btn-ghost d-btn-sm" href={backHref}><ArrowLeft weight="bold" aria-hidden="true" />Website</Link>
+        <Link className="d-btn d-btn-ghost d-btn-sm" href={backHref}><ArrowLeft weight="bold" aria-hidden="true" /><span className="sx-hide-sm">Website</span></Link>
         <button type="button" className="d-icon-btn" onClick={() => setPanelOpen(!panelOpen)} aria-pressed={panelOpen} aria-label={panelOpen ? "Sembunyikan panel" : "Tampilkan panel"} title={panelOpen ? "Sembunyikan panel" : "Tampilkan panel"}>
           <SidebarSimple weight={panelOpen ? "fill" : "bold"} />
         </button>
-        <span className="sx-brand"><span className="d-avatar" aria-hidden="true">{(ctx.tenant.name.trim()[0] ?? "T").toUpperCase()}</span>{ctx.tenant.name}<em>Studio</em></span>
-        {activeSlug !== "home" && <Badge tone="brand">{pages.find((p) => p.slug === activeSlug)?.title || activeSlug}</Badge>}
+        <span className="sx-sep" aria-hidden="true" />
+        <button type="button" className="sx-page" onClick={() => selectTab("pages")} title="Ganti atau tambah halaman">
+          <Files weight="duotone" aria-hidden="true" />
+          <span className="sx-page-name">{activePage?.title || (activeSlug === "home" ? "Beranda" : activeSlug)}</span>
+          <span className="sx-page-path">{activeSlug === "home" ? "/" : `/${activeSlug}`}</span>
+          <CaretDown weight="bold" aria-hidden="true" />
+        </button>
         <SaveBadge state={saveState} saved={saved} err={saveErr} onRetry={() => { setSaveState("idle"); void saveNow(); }} />
         <span className="sx-spacer" />
-        <div className="d-row" style={{ gap: 2 }}>
+        <div className="sx-group" role="group" aria-label="Riwayat ubahan">
           <button type="button" className="d-icon-btn" onClick={doUndo} disabled={hist.past.length === 0} aria-label="Urungkan (Ctrl+Z)" title="Urungkan (Ctrl+Z)"><ArrowCounterClockwise weight="bold" /></button>
           <button type="button" className="d-icon-btn" onClick={doRedo} disabled={hist.future.length === 0} aria-label="Ulangi (Ctrl+Shift+Z)" title="Ulangi (Ctrl+Shift+Z)"><ArrowClockwise weight="bold" /></button>
         </div>
-        <div className="d-seg" role="group" aria-label="Mode kanvas">
-          <button type="button" aria-pressed={canvasMode === "content"} onClick={() => setCanvasMode("content")} title="Klik blok untuk mengubah isi — tampilan sama dengan situs terbit">Isi</button>
-          <button type="button" aria-pressed={canvasMode === "layout"} onClick={() => setCanvasMode("layout")} title="Geser dan ubah ukuran blok di grid">Tata letak</button>
+        <div className="sx-devices" role="group" aria-label="Perangkat pratinjau">
+          {([["desktop", Desktop], ["tablet", DeviceTablet], ["mobile", DeviceMobile]] as const).map(([d, Icon]) => (
+            <button key={d} type="button" aria-pressed={device === d} onClick={() => setDevice(d)} title={DEVICE_LABEL[d]} aria-label={DEVICE_LABEL[d]}>
+              <Icon weight={device === d ? "fill" : "bold"} aria-hidden="true" />
+            </button>
+          ))}
         </div>
-        <div className="d-seg" role="group" aria-label="Perangkat">
-          <button type="button" aria-pressed={device === "desktop"} onClick={() => setDevice("desktop")} title={DEVICE_LABEL.desktop}><DesktopTower weight="bold" aria-hidden="true" /> Desktop</button>
-          <button type="button" aria-pressed={device === "tablet"} onClick={() => setDevice("tablet")} title={DEVICE_LABEL.tablet}><CornersOut weight="bold" aria-hidden="true" /> Tablet</button>
-          <button type="button" aria-pressed={device === "mobile"} onClick={() => setDevice("mobile")} title={DEVICE_LABEL.mobile}><DeviceMobile weight="bold" aria-hidden="true" /> Ponsel</button>
-        </div>
-        <span className="sx-zoom" title="Perbesaran kanvas">{Math.round(scale * 100)}%</span>
-        <button className="d-btn d-btn-sm" onClick={() => setPicking("change")}><SquaresFour weight="bold" aria-hidden="true" />Template</button>
-        <button className="d-btn d-btn-sm" onClick={() => setVersionsOpen(true)}><ClockCounterClockwise weight="bold" aria-hidden="true" />Riwayat</button>
+        <span className="sx-sep" aria-hidden="true" />
+        <button className="d-btn d-btn-sm d-btn-ghost" onClick={() => setPicking("change")}><SquaresFour weight="bold" aria-hidden="true" /><span className="sx-hide-md">Template</span></button>
+        <button className="d-btn d-btn-sm d-btn-ghost" onClick={() => setVersionsOpen(true)}><ClockCounterClockwise weight="bold" aria-hidden="true" /><span className="sx-hide-md">Riwayat</span></button>
         <FullscreenButton />
         {ctx.tenant.primary_hostname && srv?.published && (
-          <a className="d-btn d-btn-sm d-btn-ghost" href={`https://${ctx.tenant.primary_hostname}`} target="_blank" rel="noopener noreferrer"><ArrowSquareOut weight="bold" aria-hidden="true" />Lihat situs</a>
+          <a className="d-btn d-btn-sm d-btn-ghost" href={`https://${ctx.tenant.primary_hostname}`} target="_blank" rel="noopener noreferrer"><ArrowSquareOut weight="bold" aria-hidden="true" /><span className="sx-hide-md">Lihat situs</span></a>
         )}
         <button className="d-btn d-btn-sm d-btn-primary" onClick={publish} disabled={!canPublish || publishing || saveState === "conflict"} title={canPublish ? "Terbitkan ke situs publik" : "Butuh izin terbitkan website"}>
           {publishing ? "Menerbitkan…" : srv?.published ? "Terbitkan perubahan" : "Terbitkan"}
@@ -762,18 +668,7 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
       </header>
 
       <div className="sx-body" data-panel={panelOpen ? "open" : "closed"}>
-        <IconRail
-          activeTab={selected ? null : activeTab}
-          onSelectTab={(t) => {
-            setSel(null);
-            if (activeTab === t && panelOpen) {
-              setPanelOpen(false);
-            } else {
-              setActiveTab(t);
-              setPanelOpen(true);
-            }
-          }}
-        />
+        <IconRail activeTab={selected ? null : activeTab} onSelectTab={selectTab} />
         <aside className="st-panel sx-panel" aria-label={selected ? "Pengaturan plugin" : activeTab === "pages" ? "Halaman" : activeTab === "theme" ? "Desain" : activeTab === "draw" ? "Coretan" : "Plugin"} hidden={!panelOpen}>
           {selected ? (
             <Inspector
@@ -787,19 +682,11 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
                   update((s) => ({ ...s, cells: insert(s.cells.filter((c) => c.id !== selected.id), { ...selected, layout: "inline" } as StudioCell) as StudioCell[] }), "");
                 } else setCell(selected.id, { layout: l }, "");
               }}
-              onDuplicate={() => { const c = { ...selected, id: newId(selected.kind) }; update((s) => ({ ...s, cells: insert(s.cells, c, { x: selected.x, y: selected.y + selected.h }) as StudioCell[] }), ""); setSel(c.id); }}
+              onDuplicate={() => duplicate(selected)}
               onRemove={() => remove(selected.id)}
               onFull={() => setFull(selected.id)}
               onPhoto={(f) => void putPhoto(selected.id, f)}
-              onCrop={() => {
-                const k = IMAGE_KEY[selected.kind];
-                const ref = k ? (selected.data[k] as string) : null;
-                if (ref && assets.url(ref)) {
-                  setCropModal({ open: true, cellId: selected.id, imageSrc: assets.url(ref)! });
-                } else {
-                  toast.error("Belum ada foto yang dipasang untuk dipotong.");
-                }
-              }}
+              onCrop={() => cropOf(selected)}
               aiHref={`/ai?tenant=${ctx.tenant.id}`}
               businessHref={`/business?tenant=${ctx.tenant.id}`}
               chatReady={chatReady}
@@ -816,172 +703,114 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
               onUpgradeClick={() => window.open(`/subscription?tenant=${ctx.tenant.id}`, "_self")}
             />
           ) : activeTab === "theme" ? (
-            <ThemePanel
-              config={themeConfig}
-              onChange={updateTheme}
-              onUploadBackground={uploadBg}
-              assetUrl={assets.url}
-            />
+            <ThemePanel config={themeConfig} onChange={updateTheme} onUploadBackground={uploadBg} assetUrl={assets.url} />
           ) : activeTab === "draw" ? (
             <DrawPanel
               activeTool={drawTool}
-              onSelectTool={setDrawTool}
+              onSelectTool={(t) => { setDrawTool(t); if (t) setSel(null); }}
               target={drawTarget}
               onSelectTarget={setDrawTarget}
-              selectedCellId={null}
               config={drawConfig}
               onChangeConfig={setDrawConfig}
               primaryColor={st.primary}
+              strokeCount={(st.drawings ?? []).length}
               onClearStrokes={clearStrokes}
             />
           ) : (
-            <>
-              <div style={{ position: "relative", marginBottom: 12 }}>
-                <MagnifyingGlass aria-hidden="true" weight="bold" style={{ position: "absolute", left: 10, top: "50%", translate: "0 -50%", width: 14, height: 14, color: "var(--muted)" }} />
-                <input type="search" aria-label="Cari plugin" placeholder="Cari plugin (mis. promo, wa, banner)…" value={q} onChange={(e) => setQ(e.target.value)} style={{ paddingLeft: 32, width: "100%" }} />
+            <div className="st-catalog">
+              <div className="st-panel-head">
+                <h2>Tambah blok</h2>
+                <p>Klik untuk menambah di bawah halaman, atau seret ke posisi yang Anda mau.</p>
               </div>
-
+              <label className="st-search">
+                <MagnifyingGlass aria-hidden="true" weight="bold" />
+                <input type="search" aria-label="Cari plugin" placeholder="Cari: promo, wa, banner…" value={q} onChange={(e) => setQ(e.target.value)} />
+                {q && <button type="button" className="st-search-x" onClick={() => setQ("")} aria-label="Hapus pencarian"><X weight="bold" /></button>}
+              </label>
+              {shownPlugins.length === 0 && <p className="d-muted d-small">Tidak ada plugin yang cocok dengan “{q}”.</p>}
               {CATEGORIES.map((cat) => {
-                const catPlugins = shownPlugins.filter((p) => p.category === cat.label);
-                if (catPlugins.length === 0) return null;
-                const CatIcon = cat.icon;
+                const list = shownPlugins.filter((p) => p.category === cat);
+                if (list.length === 0) return null;
                 return (
-                  <div key={cat.label} className="st-category-section" style={{ marginBottom: 16 }}>
-                    <h3 style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.8125rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em", margin: "0 0 8px" }}>
-                      <CatIcon size={14} weight="bold" /> {cat.label}
-                    </h3>
-                    <div className="st-drawer-grouped">
-                      {catPlugins.map((p) => {
-                        const installed = st.installed.includes(p.kind);
+                  <section key={cat} className="st-cat">
+                    <h3>{cat}</h3>
+                    <div className="st-cards">
+                      {list.map((p) => {
+                        const onPage = st.cells.some((c) => c.kind === p.kind);
+                        const single = SINGLE.includes(p.kind) && onPage;
                         return (
-                          <div
+                          <button
                             key={p.kind}
-                            draggable={installed}
-                            className={`st-group-card${installed ? " st-draggable" : ""}`}
-                            onDragStart={(e) => { e.dataTransfer.setData("application/x-umkm-plugin", p.kind); e.dataTransfer.effectAllowed = "copy"; }}
+                            type="button"
+                            draggable={!single}
+                            className="st-card"
+                            aria-label={`Tambah ${p.name}`}
+                            aria-disabled={single || undefined}
+                            title={single ? `${p.name} sudah ada di halaman ini` : `Tambah ${p.name} — atau seret ke kanvas`}
+                            onClick={() => add(p.kind)}
+                            onDragStart={(e) => { e.dataTransfer.setData(PLUGIN_MIME, p.kind); e.dataTransfer.effectAllowed = "copy"; setPaletteDrag({ kind: p.kind, w: p.w }); }}
+                            onDragEnd={() => setPaletteDrag(null)}
                           >
-                            <div className="d-row d-row-between" style={{ alignItems: "flex-start", width: "100%" }}>
-                              <span className="st-plugin-icon" aria-hidden="true">
-                                {p.kind === "chatbot" ? <ChatCircleDots weight="duotone" /> : p.kind === "product_grid" ? <Sparkle weight="duotone" /> : <PuzzlePiece weight="duotone" />}
-                              </span>
-                              {installed ? (
-                                <button type="button" className="d-icon-btn d-icon-btn-sm" aria-label={`Tambah ${p.name}`} onClick={() => add(p.kind)} title="Tambah ke halaman">
-                                  <Plus weight="bold" size={14} />
-                                </button>
-                              ) : (
-                                <button type="button" className="d-btn d-btn-sm" style={{ padding: "2px 8px", fontSize: "0.6875rem" }} onClick={() => { update((s) => ({ ...s, installed: [...s.installed, p.kind] }), ""); toast.ok(`${p.name} terpasang.`); }}>
-                                  Pasang
-                                </button>
-                              )}
-                            </div>
-                            <strong style={{ fontSize: "0.8125rem", marginTop: 4 }}>
-                              {p.name} {pluginPlan(p.kind) === "pro" && <Badge tone="brand" plain>Pro</Badge>}
-                            </strong>
-                            <span className="d-muted d-small" style={{ fontSize: "0.6875rem", lineHeight: 1.25, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
-                              {p.desc}
+                            <span className="st-card-icon"><PluginIcon kind={p.kind} size={20} /></span>
+                            <span className="st-card-text">
+                              <strong>{p.name}{pluginPlan(p.kind) === "pro" && <em className="st-pro">Pro</em>}</strong>
+                              <span>{p.desc}</span>
                             </span>
-                          </div>
+                            <span className="st-card-add" aria-hidden="true">{single ? <Check weight="bold" /> : <Plus weight="bold" />}</span>
+                          </button>
                         );
                       })}
                     </div>
-                  </div>
+                  </section>
                 );
               })}
-            </>
+            </div>
           )}
         </aside>
 
-        <div className="sx-scroll sx-canvas" onPointerDown={(e) => { if (e.target === e.currentTarget) setSel(null); }}>
-        <div
-          className="st-stage"
-          data-surface={st.surface}
-          style={{
-            ["--s-primary" as string]: st.primary,
-            ["--s-size" as string]: st.textScale ?? 1,
-            ...(bgUrl ? { ["--s-bg-img" as string]: `url("${bgUrl}")` } : {}),
-            ["--s-bg-size" as string]: st.backgroundSize ?? "cover",
-            ["--s-bg-pos" as string]: st.backgroundPosition ?? "center",
-            ["--s-bg-opacity" as string]: ((st.backgroundOpacity ?? 0) / 100).toString(),
-            position: "relative",
-          }}
-        >
-          {bgUrl && (
-            <div
-              className="s-bg-overlay"
-              aria-hidden="true"
-              style={{
-                position: "absolute",
-                inset: 0,
-                pointerEvents: "none",
-                backgroundImage: "var(--s-bg-img)",
-                backgroundSize: "var(--s-bg-size, cover)",
-                backgroundPosition: "var(--s-bg-pos, center)",
-                backgroundRepeat: st.backgroundSize === "repeat" ? "repeat" : "no-repeat",
-                opacity: "var(--s-bg-opacity, 0)",
-                backdropFilter: "blur(12px)",
-                WebkitBackdropFilter: "blur(12px)",
-                zIndex: 0,
-              }}
-            />
-          )}
-          <div ref={stageRef} className="st-measure" />
-          {canvasMode === "content" ? (
-            // Renderer situs asli. Lebar BINGKAI yang menentukan breakpoint (@container), jadi
-            // mengubah perangkat langsung mengubah tata letak tanpa mengecilkan jendela.
-            <DeviceFrame device={device} surface={st.surface}>
-              {contentElement}
-            </DeviceFrame>
-          ) : device === "desktop" ? (
-            isSideNav ? (
-              <div className="st-stage-side-wrap">
-                <StudioNavbar
-                  style="side"
-                  business={business}
-                  pages={pages}
-                  activeSlug={activeSlug}
-                  onSelectPage={(slug) => void switchPage(slug)}
-                  logoUrl={business.profile.logo ? assets.url(business.profile.logo) : undefined}
-                  primaryColor={st.primary}
-                />
-                <div className="st-stage-canvas-flex">
-                  {canvasElement}
-                </div>
-              </div>
-            ) : (
-              <>
-                <StudioNavbar
-                  style="top"
-                  sticky={st.navbarSticky}
-                  business={business}
-                  pages={pages}
-                  activeSlug={activeSlug}
-                  onSelectPage={(slug) => void switchPage(slug)}
-                  logoUrl={business.profile.logo ? assets.url(business.profile.logo) : undefined}
-                  primaryColor={st.primary}
-                />
-                {canvasElement}
-              </>
-            )
-          ) : (
-            <div className="st-phone">
-              <StudioNavbar
-                style="top"
-                sticky={st.navbarSticky}
-                business={business}
-                pages={pages}
-                activeSlug={activeSlug}
-                onSelectPage={(slug) => void switchPage(slug)}
-                logoUrl={business.profile.logo ? assets.url(business.profile.logo) : undefined}
-                primaryColor={st.primary}
-              />
-              {mobileOrder(gridCells).map((c) => <div key={c.id} className="st-phone-cell">{renderCell(c)}</div>)}
-              <div className="st-dock"><FloatingChat cell={floating} primary={st.primary} onToggle={setChatOpen} onSelect={setSel} selected={sel} ready={chatReady} /><FloatingWa cell={floatingWa} onSelect={setSel} selected={sel} /></div>
+        <main className="sx-canvas" aria-label="Kanvas halaman">
+          {drawActive && (
+            <div className="sx-drawbar" role="status">
+              <span className="sx-drawbar-dot" style={{ background: drawTool === "eraser" ? "#71717a" : drawConfig.color }} />
+              {drawTool === "brush" ? (drawTarget === "cell" ? "Kuas: coretan menempel pada blok yang Anda gambar" : "Kuas: menggambar di latar halaman") : "Penghapus: sapukan pada coretan"}
+              <button type="button" className="d-btn d-btn-sm" onClick={() => setDrawTool(null)}>Selesai <kbd>Esc</kbd></button>
             </div>
           )}
-          {st.cells.length === 0 && <p className="st-empty">Tarik plugin dari panel kiri ke sini.</p>}
-        </div>
-        {canvasMode === "layout" && device === "desktop" && <div className="st-dock" style={{ ["--s-size" as string]: st.textScale ?? 1 }}><FloatingChat cell={floating} primary={st.primary} onToggle={setChatOpen} onSelect={setSel} selected={sel} ready={chatReady} /><FloatingWa cell={floatingWa} onSelect={setSel} selected={sel} /></div>}
-        </div>
+          <LiveCanvas
+            device={device}
+            doc={previewDoc}
+            business={business}
+            products={products}
+            assetUrl={assets.url}
+            pages={pages.map((p) => ({ slug: p.slug, title: p.title, current: p.slug === activeSlug }))}
+            cells={gridCells}
+            selectedId={sel}
+            onSelect={setSel}
+            onEditBlock={onEditBlock}
+            onCellsChange={(cells) => update((s) => ({ ...s, cells: [...cells, ...s.cells.filter(isEmbed)] }), "drag")}
+            onDropPlugin={(k, at) => add(k as PluginKind, at)}
+            acceptsFile={(id) => { const c = st.cells.find((x) => x.id === id); return !!c && takesPhoto(c.kind); }}
+            onDropFile={(id, f) => void putPhoto(id, f)}
+            chatReady={chatReady}
+            onChatOpen={setChatOpen}
+            toolbar={blockToolbar}
+            draw={{ tool: drawActive ? drawTool : null, config: drawConfig, target: drawTarget }}
+            strokes={st.drawings ?? []}
+            onAddStroke={addStroke}
+            onEraseStroke={eraseStroke}
+            onHint={(m) => toast.info(m)}
+          />
+          {st.cells.length === 0 && (
+            <div className="sx-empty">
+              <strong>Halaman ini masih kosong</strong>
+              <span>Tambahkan blok dari panel kiri, atau pilih template siap pakai.</span>
+              <span className="d-row" style={{ justifyContent: "center" }}>
+                <button type="button" className="d-btn d-btn-sm d-btn-primary" onClick={() => selectTab("elements")}><Plus weight="bold" aria-hidden="true" />Tambah blok</button>
+                <button type="button" className="d-btn d-btn-sm" onClick={() => setPicking("change")}><SquaresFour weight="bold" aria-hidden="true" />Pilih template</button>
+              </span>
+            </div>
+          )}
+        </main>
       </div>
       </div>
 
@@ -1339,93 +1168,5 @@ function Inspector({ c, onBack, onChange, onWidth, onMove, onLayout, onDuplicate
         )}
       </div>
     </>
-  );
-}
-
-/* ============================================================ WhatsApp melayang */
-/** Pratinjau tombol WhatsApp melayang (pojok kanan bawah, di atas gelembung chat seperti situs publik). */
-function FloatingWa({ cell, onSelect, selected }: { cell: StudioCell | undefined; onSelect: (id: string) => void; selected: string | null }) {
-  if (!cell) return null;
-  const label = String(cell.data.label || "Pesan via WhatsApp");
-  return (
-    <button type="button" className={`st-wa-float${selected === cell.id ? " st-selected" : ""}`} aria-label={`${label} (tombol WhatsApp melayang) — pilih untuk mengatur`} title={label} onClick={() => onSelect(cell.id)}>
-      <WhatsappLogo weight="fill" aria-hidden="true" />
-    </button>
-  );
-}
-
-/* ============================================================ Chatbot */
-/** Chatbot melayang: gelembung di pojok kanan bawah panggung; klik untuk buka/tutup. */
-function FloatingChat({ cell, primary, onToggle, onSelect, selected, ready }: {
-  cell: StudioCell | undefined; primary: string; onToggle: (id: string, open: boolean) => void; onSelect: (id: string) => void; selected: string | null; ready: boolean | null;
-}) {
-  if (!cell) return null;
-  const open = cell.chatOpen !== false;
-  const title = String(cell.data.title ?? "Tanya kami");
-  const welcome = String(cell.data.welcome ?? "");
-  const off = ready === false;
-  if (cell.layout === "bar") {
-    return (
-      <div className={`st-chatbar${selected === cell.id ? " st-selected" : ""}`} style={{ ["--c" as string]: primary }} onPointerDown={() => onSelect(cell.id)}>
-        {open && (
-          <div className="st-chatbar-panel">
-            <ChatPreview primary={primary} title={title} welcome={welcome} open onToggle={() => onToggle(cell.id, false)} ready={ready} />
-          </div>
-        )}
-        <div className="st-chatbar-bar">
-          <span className="st-chatbar-who"><span className="st-chat-dot" aria-hidden="true" />{title}<em>{off ? "Nonaktif" : "Asisten AI · online"}</em></span>
-          <button type="button" className="st-chatbar-input" style={{ border: 0, textAlign: "left", font: "inherit", cursor: "pointer" }} onClick={() => onToggle(cell.id, true)}>
-            {welcome || "Tulis pertanyaan…"}
-          </button>
-          <button type="button" className="st-chatbar-send" onClick={() => onToggle(cell.id, !open)} aria-label={open ? "Minimalkan chatbot" : "Buka chatbot"}>
-            {open ? <CaretDown weight="bold" /> : <ChatCircleDots weight="fill" />}
-          </button>
-        </div>
-      </div>
-    );
-  }
-  return (
-    <div className={`st-float${selected === cell.id ? " st-selected" : ""}`} onPointerDown={() => onSelect(cell.id)}>
-      {open && (
-        <div className="st-float-panel">
-          <ChatPreview primary={primary} title={title} welcome={welcome} open onToggle={() => onToggle(cell.id, false)} ready={ready} />
-        </div>
-      )}
-      <button type="button" className="st-float-bubble" style={{ ["--c" as string]: primary }} onClick={() => onToggle(cell.id, !open)} aria-label={open ? "Minimalkan chatbot" : "Buka chatbot"}>
-        {open ? <X weight="bold" /> : <ChatCircleDots weight="fill" />}
-      </button>
-    </div>
-  );
-}
-
-/** Pratinjau chatbot (statis di editor; di situs publik memakai widget chat sungguhan).
- *  `ready` = keadaan chatbot sebenarnya: saat nonaktif, pratinjau TIDAK boleh menampilkan
- *  "Asisten AI · online" karena pembeli tidak akan melihat apa pun setelah terbit. */
-function ChatPreview({ primary, title, welcome, open, onToggle, ready }: { primary: string; title: string; welcome: string; open: boolean; onToggle: () => void; ready: boolean | null }) {
-  const off = ready === false;
-  return (
-    <div className={`st-chat${open ? "" : " st-chat-min"}${off ? " st-chat-off" : ""}`} style={{ ["--c" as string]: primary }}>
-      <div className="st-chat-head">
-        <span className="st-chat-dot" aria-hidden="true" />{title}
-        <em>{off ? "Nonaktif — tidak tampil di publik" : "Asisten AI · online"}</em>
-        <button type="button" data-interactive className="st-chat-toggle" onClick={onToggle} aria-label={open ? "Minimalkan chatbot" : "Maksimalkan chatbot"} title={open ? "Minimalkan" : "Maksimalkan"}>
-          {open ? <CaretDown weight="bold" /> : <CaretUp weight="bold" />}
-        </button>
-      </div>
-      {open && (
-        <>
-          <div className="st-chat-log">
-            <p className="st-chat-msg">{welcome}</p>
-            {!off && (
-              <>
-                <p className="st-chat-msg st-chat-me">Kopi susu masih ada?</p>
-                <p className="st-chat-msg">Masih, kak! Kopi Susu Gula Aren tersedia ukuran Regular dan Large 😊</p>
-              </>
-            )}
-          </div>
-          <div className="st-chat-input"><span>Tulis pesan…</span><b aria-hidden="true">➤</b></div>
-        </>
-      )}
-    </div>
   );
 }

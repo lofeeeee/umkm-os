@@ -96,3 +96,15 @@ export function mobileOrder<T extends Cell>(cells: T[]): T[] {
 export function height(cells: Cell[]): number {
   return cells.reduce((m, c) => Math.max(m, c.y + c.h), 0);
 }
+
+/* ---------------------------------------------------------------- ukuran desain (px) */
+/** Lebar desain grid (sama dengan `max-width` `.sv2-grid`). Koordinat coretan memakai satuan ini. */
+export const DESIGN_WIDTH = 1080;
+export const GAP = 12;
+export const ROW = 24;
+/** Lebar satu kolom pada lebar desain. */
+export const COL_W = (DESIGN_WIDTH - GAP * (COLS - 1)) / COLS;
+/** Lebar `w` kolom (termasuk celah di antaranya) pada lebar desain. */
+export const spanWidth = (w: number) => w * COL_W + (w - 1) * GAP;
+/** px tinggi isi → jumlah baris grid. */
+export const rowsFor = (px: number) => Math.max(2, Math.ceil((px + GAP) / (ROW + GAP)));

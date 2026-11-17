@@ -1,5 +1,6 @@
 // Studio (ADR-0017, P9-3/4/5) di browser, stack nyata (Caddy + API + PostgreSQL):
-// pemilik baru → Studio → pilih template → ubah judul banner inline → simpan otomatis (schema v2) → terbitkan →
+// pemilik baru → Studio → pilih template → ubah judul banner inline → seret blok + urungkan → plugin Teks →
+// coretan kuas → simpan otomatis (schema v2) → terbitkan →
 // situs publik merender grid v2, teks tetap teks, <head> per toko (judul + Open Graph) dari API, tanpa error CSP,
 // dan tanpa scroll horizontal di ponsel. Env: APP_URL, API_URL, ROOT, E2E_HOST_MAP.
 import { expect, test, type Page } from "@playwright/test";
@@ -44,9 +45,9 @@ test("studio: template → edit inline → simpan otomatis → terbit → situs 
 
   // Edit inline judul banner; HTML diketik sebagai teks biasa.
   const title = `Kopi Senja <script>alert(1)</script> ${Date.now()}`;
-  // Klik pertama memilih blok banner; teksnya lalu bisa diketik langsung di kanvas.
-  const canvas = page.getByRole("application", { name: /Kanvas halaman/ });
-  await canvas.getByLabel(/^Banner.*kolom 1,/).focus();
+  // Kanvas = renderer situs asli: klik blok Banner untuk memilih, lalu ketik langsung di judulnya.
+  const canvas = page.getByRole("main", { name: "Kanvas halaman" });
+  await canvas.locator('[data-block-label="Banner"]').click({ position: { x: 8, y: 8 } });
   const hero = canvas.getByRole("textbox", { name: /^Ubah title/ }).first();
   await hero.click();
   await page.keyboard.press("ControlOrMeta+A");
@@ -55,14 +56,37 @@ test("studio: template → edit inline → simpan otomatis → terbit → situs 
   await expect(badge).toHaveText(/Menyimpan|Draf tersimpan/);
   await expect(badge).toHaveText(/Draf tersimpan/, { timeout: 15_000 });
 
-  // Plugin Teks dari katalog (P9-8): pasang → tambah → isi lewat inspector.
+  // Seret blok: Banner dipindah ke bawah blok Promo (susunan berubah, tersimpan otomatis).
+  const order = () => canvas.locator(".sv2-grid [data-block-label]").evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.blockLabel));
+  const before = await order();
+  const heroBox = (await canvas.locator('[data-block-label="Banner"]').boundingBox())!;
+  const promoBox = (await canvas.locator('[data-block-label="Promo"]').boundingBox())!;
+  await page.mouse.move(heroBox.x + 12, heroBox.y + heroBox.height - 12);
+  await page.mouse.down();
+  await page.mouse.move(heroBox.x + 40, promoBox.y + promoBox.height - 4, { steps: 12 });
+  await page.mouse.up();
+  await expect.poll(order).not.toEqual(before);
+  await page.keyboard.press("ControlOrMeta+Z");
+  await expect.poll(order).toEqual(before);
+
+  // Plugin Teks dari katalog (P9-8): cari → tambah → isi lewat inspector.
   const notice = `Libur Lebaran: toko tutup 1–3 April ${Date.now()}`;
-  await page.getByRole("button", { name: "Plugin", exact: true }).click(); // keluar dari pengaturan banner
-  await page.getByRole("tab", { name: "Cari plugin" }).click();
+  await page.getByRole("button", { name: "Elemen" }).click(); // keluar dari pengaturan banner, buka katalog
   await page.getByRole("searchbox", { name: "Cari plugin" }).fill("teks");
-  await page.getByRole("listitem").filter({ hasText: "Paragraf bebas" }).getByRole("button", { name: "Pasang" }).click();
-  await page.getByRole("button", { name: "Tambah Teks ke halaman" }).click();
+  await page.getByRole("button", { name: "Tambah Teks" }).click();
   await page.getByRole("complementary", { name: "Pengaturan plugin" }).getByRole("textbox", { name: /^Isi/ }).fill(notice);
+  await expect(badge).toHaveText(/Draf tersimpan/, { timeout: 15_000 });
+
+  // Kuas: satu coretan di latar halaman ikut tersimpan dan terbit.
+  await page.getByRole("button", { name: "Coretan" }).click();
+  await page.getByRole("button", { name: "Latar halaman" }).click();
+  await page.getByRole("button", { name: "Kuas" }).click();
+  const grid = (await canvas.locator(".sv2-grid").boundingBox())!;
+  await page.mouse.move(grid.x + 40, grid.y + 20);
+  await page.mouse.down();
+  await page.mouse.move(grid.x + 240, grid.y + 60, { steps: 10 });
+  await page.mouse.up();
+  await page.keyboard.press("Escape");
   await expect(badge).toHaveText(/Draf tersimpan/, { timeout: 15_000 });
 
   // P9-10: toko baru belum punya produk/alamat/jadwal/nomor WA → catatan "Sebelum terbit" (tidak memblokir).
@@ -85,6 +109,7 @@ test("studio: template → edit inline → simpan otomatis → terbit → situs 
   await expect(pub.locator(".sv2")).toBeVisible();
   await expect(pub.getByRole("heading", { level: 1 })).toHaveText(title);
   await expect(pub.getByText(notice)).toBeVisible();
+  await expect(pub.locator(".sv2-ink path")).toHaveCount(1);
   expect(await pub.locator("script").evaluateAll((s) => s.some((x) => x.textContent?.includes("alert(1)") && !x.getAttribute("type")))).toBe(false);
   // ADR-0018: <head> dari API (crawler tanpa JS melihat nama toko).
   const html = await pub.evaluate(async () => (await fetch(location.href, { cache: "no-store" })).text());

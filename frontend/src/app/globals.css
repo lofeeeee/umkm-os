@@ -1217,16 +1217,8 @@ main.d-legal { max-width: 720px; }
 @media (max-width: 1099px) { .st-panel { position: static; max-height: none; } }
 .st-section { border-top: 1px solid var(--line); padding-top: var(--sp-3); }
 .st-section h3 { margin: 0 0 8px; font-size: 0.75rem; color: var(--muted); font-weight: 600; }
-.st-plugins { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
-.st-plugins li { display: flex; align-items: center; gap: 10px; padding: 8px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); transition: border-color var(--dur-fast) ease, transform var(--dur-fast) var(--ease-out); }
-.st-plugins li.st-draggable { cursor: grab; }
-.st-plugins li.st-draggable:hover { border-color: var(--brand); }
-.st-plugins li.st-draggable:active { cursor: grabbing; transform: scale(0.98); }
 .st-plugin-icon { display: grid; place-items: center; width: 32px; height: 32px; flex: none; border-radius: var(--radius-sm); background: var(--brand-soft); color: var(--brand-ink-soft); }
 .st-plugin-icon svg { width: 18px; height: 18px; }
-.st-plugin-text { flex: 1; min-width: 0; display: grid; line-height: 1.3; }
-.st-plugin-text strong { font-size: 0.8125rem; }
-.st-plugin-text span { font-size: 0.71875rem; color: var(--muted); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 .st-palettes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
 .st-swatch { display: grid; gap: 4px; justify-items: center; padding: 4px; border: 1px solid transparent; border-radius: var(--radius-sm); background: none; cursor: pointer; font: inherit; }
 .st-swatch span { position: relative; width: 100%; height: 28px; border-radius: 6px; background: linear-gradient(135deg, var(--sw) 0 50%, var(--sf) 50%); box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.1); }
@@ -1244,36 +1236,7 @@ main.d-legal { max-width: 720px; }
 .st-stage[data-surface="cream"] .site { --s-soft: #f6eddf; --s-line: #eadfcc; }
 .st-stage[data-surface="dark"] .site { --s-ink: #f4f4f5; --s-ink-2: #d4d4d8; --s-muted: #a1a1aa; --s-soft: #17171f; --s-line: #2a2a35; --s-tint: color-mix(in srgb, var(--s-primary) 18%, #0d0d12); color-scheme: dark; }
 .st-stage[data-surface="dark"] .s-card, .st-stage[data-surface="dark"] .s-product { background: #15151c; }
-.st-empty { position: absolute; inset: 40% 0 auto; text-align: center; color: var(--muted); pointer-events: none; }
 
-.st-canvas { position: relative; background-image: linear-gradient(to right, color-mix(in srgb, var(--brand) 7%, transparent) 0 calc(var(--col) - 12px), transparent 0); background-size: var(--col) 100%; touch-action: none; }
-.st-item { position: absolute; top: 0; left: 0; display: flex; flex-direction: column; border-radius: 16px; outline: 1px dashed transparent; transition: transform var(--dur-slow) var(--ease-out), width var(--dur-slow) var(--ease-out), height var(--dur-slow) var(--ease-out), outline-color var(--dur-fast) ease, box-shadow var(--dur) ease; }
-.st-item:hover { outline-color: color-mix(in srgb, var(--brand) 50%, transparent); }
-.st-item:focus-visible, .st-selected { outline: 2px solid var(--brand) !important; outline-offset: 2px; border-radius: 16px; }
-.st-active { transition: none; z-index: 20; box-shadow: 0 24px 48px -16px rgb(0 0 0 / 0.35); }
-.st-dragging .st-item:not(.st-active) { pointer-events: none; }
-.st-dragging, .st-dragging * { cursor: grabbing !important; user-select: none; }
-.st-slot, .st-ghost { position: absolute; top: 0; left: 0; border-radius: 16px; background: color-mix(in srgb, var(--brand) 12%, transparent); border: 2px dashed color-mix(in srgb, var(--brand) 55%, transparent); transition: transform 120ms var(--ease-out), width 120ms var(--ease-out), height 120ms var(--ease-out); pointer-events: none; }
-.st-item { cursor: grab; }
-.st-bar { position: absolute; z-index: 4; top: -36px; left: 0; right: 0; display: flex; align-items: center; gap: 4px; pointer-events: none; opacity: 0; transform: translateY(-2px); transition: opacity var(--dur-fast) ease, transform var(--dur-fast) var(--ease-out); }
-.st-item:hover .st-bar, .st-selected .st-bar, .st-active .st-bar { opacity: 1; transform: none; }
-.st-grip { display: inline-flex; align-items: center; gap: 4px; height: 28px; padding: 0 10px 0 6px; border-radius: 999px; background: var(--brand-solid); color: #fff; font-size: 0.75rem; font-weight: 600; box-shadow: var(--shadow-sm); }
-.st-grip svg { width: 14px; height: 14px; }
-.st-grip em { font-style: normal; opacity: 0.75; margin-left: 2px; }
-.st-tool { pointer-events: auto; display: inline-grid; place-items: center; width: 28px; height: 28px; border: 0; border-radius: 999px; background: #fff; color: #18181b; cursor: pointer; box-shadow: 0 0 0 1px rgb(0 0 0 / 0.08), var(--shadow-sm); transition: transform var(--dur-fast) var(--ease-out); }
-.st-tools { margin-left: auto; display: flex; align-items: center; gap: 4px; }
-.st-tool:hover { background: #f4f4f5; }
-.st-tool:active { transform: scale(0.92); }
-.st-tool svg { width: 14px; height: 14px; }
-.st-clip { pointer-events: auto; height: 24px; padding: 0 8px; display: inline-flex; align-items: center; border-radius: 999px; background: #fef3c7; color: #92400e; font-size: 0.6875rem; font-weight: 700; }
-.st-clip.st-pro { background: #ede9fe; color: #5b21b6; }
-.st-resize { position: absolute; z-index: 4; right: -9px; bottom: -9px; width: 24px; height: 24px; border-radius: 6px; background: #fff; border: 2px solid var(--brand); cursor: nwse-resize; opacity: 0; transition: opacity var(--dur-fast) ease; box-shadow: var(--shadow-sm); }
-.st-item:hover .st-resize, .st-selected .st-resize, .st-active .st-resize { opacity: 1; }
-.st-body { flex: 1; min-height: 0; overflow: hidden; border-radius: 16px; position: relative; }
-/* Saat mengedit, isi plugin tidak menangkap klik (seluruh kotak bisa diseret), kecuali kontrol bertanda. */
-.st-measure-inner * { pointer-events: none; }
-.st-measure-inner [data-interactive], .st-measure-inner [data-interactive] * { pointer-events: auto; cursor: pointer; }
-@media (pointer: coarse) { .st-bar, .st-resize { opacity: 1; transform: none; } .st-resize { width: 28px; height: 28px; } }
 
 /* Gaya plugin */
 .st-content { height: auto; }
@@ -1295,61 +1258,22 @@ main.d-legal { max-width: 720px; }
 .st-layout-list .s-product img, .st-layout-list .s-product-noimg { width: 64px; margin: 0; flex: none; }
 .st-layout-list .s-product-name { flex: 1; }
 
-/* Ponsel */
-.st-phone { width: 390px; max-width: 100%; margin: 0 auto; display: grid; gap: 12px; padding: 12px; border-radius: 28px; border: 8px solid #18181b; background: var(--pg-bg); box-shadow: var(--shadow-dialog); }
-.st-phone { position: relative; min-height: 640px; align-content: start; }
 
-/* Pratinjau chatbot */
-.st-chat { font-size: calc(0.875rem * var(--s-size, 1)); height: 420px; display: flex; flex-direction: column; font-family: var(--s-font, inherit); color: #0f172a; background: #fff; border-radius: 16px; overflow: hidden; }
-.st-chat-head { display: flex; align-items: center; gap: 8px; padding: 12px 14px; background: var(--c); color: #fff; font-weight: 700; font-size: 1em; }
-.st-chat-head em { margin-left: auto; font-style: normal; font-weight: 500; font-size: 0.78em; opacity: 0.85; }
-/* Chatbot nonaktif di Asisten AI: pratinjau ditandai agar tidak menjanjikan chat yang tidak tampil. */
-.st-chat-off .st-chat-head { background: #64748b; }
-.st-chat-off .st-chat-dot { background: #cbd5e1; box-shadow: none; }
-.st-chat-off .st-chat-log { opacity: 0.6; }
-.st-chat-dot { width: 8px; height: 8px; border-radius: 999px; background: #4ade80; box-shadow: 0 0 0 3px rgb(255 255 255 / 0.25); }
-.st-chat-log { flex: 1; padding: 12px; display: grid; gap: 8px; align-content: start; overflow: hidden; background: #f8fafc; }
-.st-chat-msg { margin: 0; max-width: 85%; padding: 8px 12px; border-radius: 14px; border-bottom-left-radius: 4px; background: #fff; font-size: 0.93em; box-shadow: 0 1px 2px rgb(0 0 0 / 0.06); }
-.st-chat-me { justify-self: end; background: var(--c); color: #fff; border-radius: 14px; border-bottom-right-radius: 4px; }
-.st-chat-input { display: flex; justify-content: space-between; align-items: center; margin: 10px; padding: 8px 12px; border-radius: 999px; border: 1px solid #e2e8f0; color: #94a3b8; font-size: 0.93em; }
-.st-chat-input b { color: var(--c); }
-.st-measure { width: 100%; height: 0; }
-.st-zoom { position: relative; margin-top: 28px; }
-.st-canvas { transform-origin: top left; }
-.st-canvas { background-image: linear-gradient(to right, color-mix(in srgb, var(--brand) 4%, transparent) 0 calc(var(--col) - 12px), transparent 0); }
-.st-dragging.st-canvas, .st-canvas:has(.st-ghost) { background-image: linear-gradient(to right, color-mix(in srgb, var(--brand) 10%, transparent) 0 calc(var(--col) - 12px), transparent 0); }
 /* Heading situs mewarisi warna tema situs, bukan warna tema dasbor (penting di mode gelap dasbor). */
 .site h1, .site h2, .site h3, .site h4 { color: inherit; }
 .st-stage { border-color: var(--line); }
 
-.st-chat-min { height: auto; }
-.st-chat-toggle { margin-left: 8px; display: grid; place-items: center; width: 26px; height: 26px; border: 0; border-radius: 999px; background: rgb(255 255 255 / 0.2); color: #fff; cursor: pointer; }
-.st-chat-toggle:hover { background: rgb(255 255 255 / 0.32); }
-.st-chat-toggle svg { width: 13px; height: 13px; }
-.st-chat-head em { margin-left: auto; }
-/* Chatbot melayang */
-.st-float { position: absolute; right: 20px; bottom: 20px; z-index: 30; display: grid; justify-items: end; gap: 12px; }
-.st-phone .st-float { position: sticky; right: auto; bottom: 12px; justify-self: end; }
-.st-float-panel { width: 340px; max-width: calc(100vw - 48px); border-radius: 18px; overflow: hidden; box-shadow: 0 0 0 1px rgb(15 23 42 / 0.06), 0 24px 56px -12px rgb(15 23 42 / 0.4); transform-origin: bottom right; animation: d-pop-in 200ms var(--ease-out) both; }
-.st-float-bubble { display: grid; place-items: center; width: 56px; height: 56px; border: 0; border-radius: 999px; background: var(--c); color: #fff; cursor: pointer; box-shadow: 0 12px 28px -8px color-mix(in srgb, var(--c) 70%, #000); transition: transform var(--dur-fast) var(--ease-out); }
-.st-float-bubble:active { transform: scale(0.94); }
-.st-float-bubble svg { width: 24px; height: 24px; }
-.st-float.st-selected .st-float-bubble { outline: 3px solid var(--brand); outline-offset: 3px; }
 .st-full { min-height: 0; padding: 24px; }
 
 /* Studio — edit langsung, foto, simpan otomatis, template */
 .st-save { display: inline-flex; align-items: center; gap: 4px; font-size: 0.75rem; color: var(--muted); }
 .st-save svg { width: 12px; height: 12px; color: var(--ok); }
-.st-top .d-icon-btn:disabled { opacity: 0.35; cursor: not-allowed; }
-.s-edit { outline: 1.5px dashed color-mix(in srgb, var(--s-primary, #4f46e5) 45%, transparent); outline-offset: 3px; border-radius: 4px; cursor: text !important; transition: outline-color 120ms ease, background-color 120ms ease; }
-.s-edit:hover { outline-color: var(--s-primary, #4f46e5); }
+.s-edit { outline: 1.5px dashed transparent; outline-offset: 3px; border-radius: 4px; cursor: text !important; transition: outline-color 120ms ease, background-color 120ms ease; }
+/* Teks yang bisa diketik baru ditandai saat bloknya disorot/dipilih — kanvas diam tetap bersih. */
+.sf-block:hover .s-edit, .sf-block-selected .s-edit { outline-color: color-mix(in srgb, var(--s-primary, #4f46e5) 40%, transparent); }
+.s-edit:hover { outline-color: var(--s-primary, #4f46e5) !important; }
 .s-edit:focus { outline: 2px solid var(--s-primary, #4f46e5); background: color-mix(in srgb, var(--s-primary, #4f46e5) 6%, transparent); }
 .s-edit:empty::before { content: attr(data-placeholder); color: var(--s-muted, #94a3b8); font-weight: 400; }
-.st-selected .st-measure-inner .s-edit { pointer-events: auto; }
-.st-file-over .st-body { box-shadow: inset 0 0 0 3px var(--brand); }
-.st-drop-hint { position: absolute; inset: 0; z-index: 3; display: grid; place-items: center; background: color-mix(in srgb, var(--brand) 18%, transparent); color: #fff; font-weight: 700; font-size: 1.125rem; text-shadow: 0 1px 2px rgb(0 0 0 / 0.4); backdrop-filter: blur(1px); }
-label.st-tool { cursor: pointer; }
-.st-nudge { pointer-events: auto; text-decoration: none; background: #fef3c7; color: #92400e !important; }
 
 .st-gallery-first { max-width: 1180px; margin: 0 auto; }
 .st-gallery-head { text-align: center; margin: 8px auto 28px; max-width: 640px; }
@@ -1385,63 +1309,18 @@ label.st-tool { cursor: pointer; }
 .sx-brand em { font-style: normal; color: var(--muted); font-weight: 500; }
 .sx-brand em::before { content: "/"; margin: 0 6px; color: var(--line-strong); }
 .sx-spacer { flex: 1 1 auto; }
-.sx-zoom { font-size: 0.75rem; color: var(--muted); font-variant-numeric: tabular-nums; min-width: 40px; text-align: center; }
 .sx-top .d-seg svg { width: 13px; height: 13px; vertical-align: -2px; }
 .sx-body { display: grid; grid-template-columns: 56px 320px minmax(0, 1fr); min-height: 0; }
 .sx-body[data-panel="closed"] { grid-template-columns: 56px minmax(0, 1fr); }
 .sx-panel { position: static; max-height: none; height: 100%; overflow-y: auto; border: 0; border-right: 1px solid var(--line); border-radius: 0; align-content: start; }
 .sx-scroll { overflow: auto; min-height: 0; }
 .sx-canvas { padding: 28px 32px 80px; background: var(--bg-subtle); background-image: radial-gradient(var(--line) 1px, transparent 1px); background-size: 18px 18px; }
-.sx-canvas .st-stage { max-width: 1180px; margin: 0 auto; box-shadow: var(--shadow-pop); border: 0; border-radius: 14px; }
 @media (max-width: 900px) {
   .sx-body { grid-template-columns: 56px minmax(0, 1fr); }
   .sx-panel { position: fixed; z-index: 20; top: 52px; bottom: 0; left: 56px; width: min(320px, calc(100vw - 56px)); box-shadow: var(--shadow-dialog); }
   .sx-canvas { padding: 16px; }
 }
 .sx-panel[hidden] { display: none; }
-/* Garis kolom hanya saat menyeret/menjatuhkan — tampilan diam tetap bersih seperti situs aslinya. */
-.st-canvas { background-image: none; }
-.st-dragging.st-canvas, .st-canvas:has(.st-ghost) { background-image: linear-gradient(to right, color-mix(in srgb, var(--brand) 9%, transparent) 0 calc(var(--col) - 12px), transparent 0); }
 
-/* Chatbot: bilah horizontal yang menempel di bawah layar */
-.st-dock { position: sticky; bottom: 0; height: 0; max-width: 1180px; margin: 0 auto; z-index: 30; }
-.st-dock > .st-float { position: absolute; right: 20px; bottom: 20px; }
-.st-phone .st-dock { position: sticky; margin: 0; }
-.st-phone .st-dock > .st-float { right: 4px; bottom: 8px; }
-/* WhatsApp melayang (pratinjau): di atas gelembung chat, seperti .s-wa-float di situs publik. */
-.st-dock > .st-wa-float { position: absolute; right: 24px; bottom: 92px; display: grid; place-items: center; width: 52px; height: 52px; border: 0; border-radius: 999px; background: #25d366; color: #fff; box-shadow: 0 12px 28px -8px rgb(37 211 102 / 0.7); cursor: pointer; transition: transform 160ms var(--ease-out, ease-out); }
-.st-dock > .st-wa-float:active { transform: scale(0.96); }
-.st-dock > .st-wa-float svg { width: 26px; height: 26px; }
-.st-dock > .st-wa-float.st-selected { outline: 2px solid var(--brand, #4f46e5); outline-offset: 3px; }
-.st-phone .st-dock > .st-wa-float { right: 8px; bottom: 80px; }
-.st-chatbar { position: absolute; left: 16px; right: 16px; bottom: 16px; display: grid; gap: 8px; font-size: calc(0.875rem * var(--s-size, 1)); }
-.st-chatbar.st-selected .st-chatbar-bar { outline: 3px solid var(--brand); outline-offset: 3px; }
-.st-chatbar-bar { display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 16px; border-radius: 999px; background: #fff; color: #0f172a; box-shadow: 0 0 0 1px rgb(15 23 42 / 0.08), 0 16px 40px -12px rgb(15 23 42 / 0.35); }
-.st-chatbar-who { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; white-space: nowrap; }
-.st-chatbar-who em { font-style: normal; font-weight: 500; color: #64748b; font-size: 0.85em; }
-.st-chatbar-input { flex: 1; min-width: 0; padding: 9px 14px; border-radius: 999px; background: #f1f5f9; color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.st-chatbar-send { display: grid; place-items: center; width: 38px; height: 38px; border: 0; border-radius: 999px; background: var(--c); color: #fff; cursor: pointer; flex: none; }
-.st-chatbar-send svg { width: 16px; height: 16px; }
-.st-chatbar-panel { justify-self: end; width: min(420px, 100%); border-radius: 18px; overflow: hidden; box-shadow: 0 0 0 1px rgb(15 23 42 / 0.06), 0 24px 56px -12px rgb(15 23 42 / 0.4); transform-origin: bottom right; animation: d-pop-in 200ms var(--ease-out) both; }
-.st-chatbar-panel .st-chat { height: 360px; }
-.st-phone .st-chatbar { left: 6px; right: 6px; bottom: 8px; }
-.st-phone .st-chatbar-who em { display: none; }
-/* Plugin terkunci */
-.st-locked { cursor: default; }
-.st-locked .st-grip { background: #52525b; }
-.st-lock-badge { position: absolute; z-index: 4; right: 8px; bottom: 8px; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 999px; background: rgb(24 24 27 / 0.75); color: #fff; box-shadow: var(--shadow-sm); pointer-events: none; }
-.st-lock-badge svg { width: 12px; height: 12px; }
-.st-tool-on { background: #18181b; color: #fff; }
-.st-tool-on:hover { background: #27272a; }
-/* Plugin yang disorot/dipilih naik ke lapisan atas, supaya toolbar-nya (yang menjorok ke atas kotak)
-   tidak tertutup plugin di atasnya dan tombolnya bisa diklik. */
-.st-item:hover, .st-item:focus-within, .st-item.st-selected { z-index: 15; }
-.st-item.st-active { z-index: 20; }
-/* Toolbar = satu area utuh + "jembatan" ke tepi atas kotak: kursor yang bergerak dari badan plugin ke
-   tombol mana pun tidak pernah jatuh ke plugin di atasnya (hover tidak putus, toolbar tidak hilang). */
-.st-bar { top: -38px; height: 38px; padding-bottom: 10px; align-items: flex-end; }
-.st-item:hover > .st-bar, .st-item.st-selected > .st-bar, .st-item.st-active > .st-bar, .st-item:focus-within > .st-bar { pointer-events: auto; }
-.st-grip { cursor: grab; }
-.st-locked .st-grip { cursor: default; }
 .st-save-bad { color: var(--danger); font-weight: 600; }
 .st-save-bad svg { color: var(--danger); }

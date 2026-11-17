@@ -1,17 +1,9 @@
 "use client";
 
-import { useId, useState } from "react";
-import {
-  Eraser,
-  Highlighter,
-  PaintBrush,
-  Trash,
-  X,
-  Check,
-  Circle,
-  Selection,
-  SquaresFour,
-} from "@phosphor-icons/react/ssr";
+// Panel Coretan: kuas & penghapus untuk menggambar langsung di halaman (aksen, panah, stabilo).
+// Coretan disimpan di dokumen (`drawings`) dan dirender juga di situs terbit (src/renderer/ink.tsx).
+
+import { Check, Eraser, PaintBrush, Trash } from "@phosphor-icons/react/ssr";
 
 import { confirm } from "@/ui/dialog";
 
@@ -22,6 +14,7 @@ export interface DrawConfig {
 }
 
 export type DrawTool = "brush" | "eraser" | null;
+/** "cell" = coretan menempel pada blok tempat mulai menggambar; "background" = latar halaman. */
 export type DrawTarget = "background" | "cell";
 
 export interface DrawPanelProps {
@@ -29,321 +22,127 @@ export interface DrawPanelProps {
   onSelectTool: (tool: DrawTool) => void;
   target: DrawTarget;
   onSelectTarget: (target: DrawTarget) => void;
-  selectedCellId?: string | null;
   config: DrawConfig;
   onChangeConfig: (config: DrawConfig) => void;
   primaryColor?: string;
+  /** Jumlah coretan di halaman ini. */
+  strokeCount?: number;
   onClearStrokes: () => void | Promise<void>;
-  onClose?: () => void;
   className?: string;
 }
 
 export const SIZE_PRESETS = [
-  { label: "Halus", size: 2, desc: "2px" },
-  { label: "Standar", size: 4, desc: "4px" },
-  { label: "Tebal", size: 8, desc: "8px" },
-  { label: "Stabilo", size: 18, desc: "18px" },
+  { label: "Halus", size: 2 },
+  { label: "Sedang", size: 4 },
+  { label: "Tebal", size: 8 },
+  { label: "Stabilo", size: 18 },
 ];
 
-export const STANDARD_SWATCHES = [
-  "#000000",
-  "#EF4444",
-  "#F59E0B",
-  "#10B981",
-  "#3B82F6",
-  "#8B5CF6",
-  "#EC4899",
-  "#FFFFFF",
-];
+export const STANDARD_SWATCHES = ["#18181B", "#EF4444", "#F59E0B", "#10B981", "#3B82F6", "#8B5CF6", "#EC4899", "#FFFFFF"];
 
 export function DrawPanel({
-  activeTool,
-  onSelectTool,
-  target,
-  onSelectTarget,
-  selectedCellId,
-  config,
-  onChangeConfig,
-  primaryColor = "#4F46E5",
-  onClearStrokes,
-  onClose,
-  className = "",
+  activeTool, onSelectTool, target, onSelectTarget, config, onChangeConfig, primaryColor = "#4F46E5", strokeCount = 0, onClearStrokes, className = "",
 }: DrawPanelProps) {
-  const [isClearing, setIsClearing] = useState(false);
-  const colorId = useId();
+  const swatches = [primaryColor.toUpperCase(), ...STANDARD_SWATCHES.filter((c) => c.toLowerCase() !== primaryColor.toLowerCase())];
 
-  const handleClear = async () => {
-    try {
-      setIsClearing(true);
-      const ok = await confirm({
-        title: "Bersihkan Semua Coretan?",
-        body:
-          target === "background"
-            ? "Semua coretan pada latar belakang kanvas akan dihapus permanen."
-            : "Semua coretan pada plugin terpilih akan dihapus permanen.",
-        confirmLabel: "Hapus Coretan",
-        cancelLabel: "Batal",
-        danger: true,
-      });
-      if (ok) {
-        await onClearStrokes();
-      }
-    } catch {
-      if (typeof window !== "undefined") {
-        const msg =
-          target === "background"
-            ? "Bersihkan semua coretan pada latar belakang?"
-            : "Bersihkan semua coretan pada plugin terpilih?";
-        if (window.confirm(msg)) {
-          await onClearStrokes();
-        }
-      }
-    } finally {
-      setIsClearing(false);
-    }
+  const clear = async () => {
+    const ok = await confirm({
+      title: "Hapus semua coretan?",
+      body: `${strokeCount} coretan di halaman ini akan dihapus. Bisa dibatalkan dengan Urungkan (Ctrl+Z).`,
+      confirmLabel: "Hapus coretan",
+      danger: true,
+    });
+    if (ok) await onClearStrokes();
   };
 
-  const allSwatches = [
-    primaryColor,
-    ...STANDARD_SWATCHES.filter((c) => c.toLowerCase() !== primaryColor.toLowerCase()),
-  ];
-
   return (
-    <div className={`st-draw-panel-redesign ${className}`.trim()}>
-      {/* 1. Header & Tool Selector */}
-      <div className="st-section" style={{ paddingTop: 0 }}>
-        <div className="d-row d-row-between" style={{ marginBottom: 12 }}>
-          <h2 style={{ margin: 0, fontSize: "0.9375rem", display: "flex", alignItems: "center", gap: 8 }}>
-            <PaintBrush weight="bold" size={18} style={{ color: "var(--brand, #4f46e5)" }} />
-            <span>Coretan Bebas</span>
-          </h2>
-          {onClose && (
-            <button type="button" className="d-icon-btn d-icon-btn-sm" onClick={onClose} title="Tutup">
-              <X size={16} />
-            </button>
-          )}
-        </div>
-
-        <p className="d-hint" style={{ margin: "0 0 12px" }}>
-          Gambar aksen, stabilo, panah, atau dekorasi bebas langsung di atas kanvas toko.
-        </p>
-
-        {/* Alat: Kuas vs Penghapus */}
-        <div className="d-seg" role="group" aria-label="Pilih alat gambar" style={{ width: "100%" }}>
-          <button
-            type="button"
-            style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
-            aria-pressed={activeTool === "brush"}
-            onClick={() => onSelectTool(activeTool === "brush" ? null : "brush")}
-          >
-            <PaintBrush weight={activeTool === "brush" ? "fill" : "bold"} size={16} />
-            <span>Kuas (Brush)</span>
-          </button>
-          <button
-            type="button"
-            style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
-            aria-pressed={activeTool === "eraser"}
-            onClick={() => onSelectTool(activeTool === "eraser" ? null : "eraser")}
-          >
-            <Eraser weight={activeTool === "eraser" ? "fill" : "bold"} size={16} />
-            <span>Penghapus</span>
-          </button>
-        </div>
+    <div className={`st-draw ${className}`.trim()}>
+      <div className="st-panel-head">
+        <h2>Coretan</h2>
+        <p>Gambar panah, lingkaran, atau stabilo langsung di halaman. Coretan ikut terbit di situs.</p>
       </div>
 
-      {/* 2. Target Lapisan */}
-      <div className="st-section">
-        <h3>Lapisan Target</h3>
-        <div className="d-seg" role="group" aria-label="Target lapisan coretan" style={{ width: "100%" }}>
-          <button
-            type="button"
-            style={{ flex: 1 }}
-            aria-pressed={target === "background"}
-            onClick={() => onSelectTarget("background")}
-          >
-            Latar Belakang
-          </button>
-          <button
-            type="button"
-            style={{ flex: 1 }}
-            aria-pressed={target === "cell"}
-            onClick={() => onSelectTarget("cell")}
-          >
-            Plugin Terpilih
-          </button>
-        </div>
-        <p className="d-hint" style={{ marginTop: 8, marginBottom: 0 }}>
-          {target === "background"
-            ? "Coretan berada di lapisan latar, di bawah blok konten website."
-            : selectedCellId
-              ? "Coretan menempel di plugin terpilih dan ikut bergerak saat plugin digeser."
-              : "Pilih salah satu plugin di kanvas untuk menempelkan coretan padanya."}
-        </p>
+      <div className="st-tools2" role="group" aria-label="Pilih alat gambar">
+        <button type="button" aria-pressed={activeTool === "brush"} onClick={() => onSelectTool(activeTool === "brush" ? null : "brush")}>
+          <PaintBrush weight={activeTool === "brush" ? "fill" : "duotone"} aria-hidden="true" />
+          <span>Kuas</span>
+        </button>
+        <button type="button" aria-pressed={activeTool === "eraser"} onClick={() => onSelectTool(activeTool === "eraser" ? null : "eraser")}>
+          <Eraser weight={activeTool === "eraser" ? "fill" : "duotone"} aria-hidden="true" />
+          <span>Penghapus</span>
+        </button>
       </div>
+      <p className="d-hint st-draw-tip">
+        {activeTool === null
+          ? "Pilih Kuas untuk mulai menggambar. Tekan Esc untuk selesai."
+          : activeTool === "brush"
+            ? "Gambar di kanvas sebelah kanan. Selama kuas aktif, blok tidak bisa diseret."
+            : "Sapukan penghapus pada coretan untuk menghapusnya."}
+      </p>
 
-      {/* 3. Pratinjau Goresan & Ukuran */}
-      <div className="st-section">
-        <div className="d-row d-row-between" style={{ alignItems: "center", marginBottom: 8 }}>
-          <h3 style={{ margin: 0 }}>Ketebalan Kuas</h3>
-          <span className="d-muted" style={{ fontSize: "0.75rem", fontFamily: "monospace" }}>
-            {config.size}px
-          </span>
+      <section className="st-group">
+        <h3>Tempel coretan ke</h3>
+        <div className="d-seg st-seg-full" role="group" aria-label="Target coretan">
+          <button type="button" aria-pressed={target === "cell"} onClick={() => onSelectTarget("cell")}>Blok di bawahnya</button>
+          <button type="button" aria-pressed={target === "background"} onClick={() => onSelectTarget("background")}>Latar halaman</button>
         </div>
+        <p className="d-hint">
+          {target === "cell"
+            ? "Coretan menempel pada blok tempat Anda mulai menggambar dan ikut pindah bersama blok itu."
+            : "Coretan berada di belakang blok, pada latar halaman."}
+        </p>
+      </section>
 
-        {/* Live Stroke Preview Card */}
-        <div
-          style={{
-            height: 44,
-            borderRadius: 8,
-            border: "1px solid var(--line, #e4e4e7)",
-            background: "var(--bg-subtle, rgba(0,0,0,0.02))",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            marginBottom: 12,
-            overflow: "hidden",
-          }}
-        >
-          <svg width="240" height="40" viewBox="0 0 240 40">
-            <path
-              d="M 20 20 Q 80 8 120 20 T 220 20"
-              stroke={config.color}
-              strokeWidth={config.size}
-              strokeOpacity={config.opacity}
-              strokeLinecap="round"
-              fill="none"
-            />
+      <section className="st-group">
+        <div className="st-group-row">
+          <h3>Ketebalan</h3>
+          <span className="st-value">{config.size}px</span>
+        </div>
+        <div className="st-stroke-preview" aria-hidden="true">
+          <svg viewBox="0 0 240 40" preserveAspectRatio="none">
+            <path d="M 16 26 Q 70 6 120 20 T 224 14" stroke={config.color} strokeWidth={config.size} strokeOpacity={config.opacity} strokeLinecap="round" fill="none" />
           </svg>
         </div>
-
-        {/* Presets */}
-        <div className="d-seg" role="group" aria-label="Preset ketebalan" style={{ width: "100%" }}>
+        <div className="d-seg st-seg-full" role="group" aria-label="Ketebalan kuas">
           {SIZE_PRESETS.map((p) => (
-            <button
-              key={p.size}
-              type="button"
-              style={{ flex: 1 }}
-              aria-pressed={config.size === p.size}
-              onClick={() => onChangeConfig({ ...config, size: p.size })}
-              title={`${p.label} (${p.desc})`}
-            >
-              <span style={{ fontSize: "0.75rem" }}>{p.label}</span>
+            <button key={p.size} type="button" aria-pressed={config.size === p.size}
+              onClick={() => onChangeConfig({ ...config, size: p.size, opacity: p.size >= 18 ? 0.4 : config.opacity === 0.4 ? 1 : config.opacity })}>
+              {p.label}
             </button>
           ))}
         </div>
-      </div>
+        <input type="range" min={1} max={40} value={config.size} aria-label="Ketebalan kuas (px)" className="st-range"
+          onChange={(e) => onChangeConfig({ ...config, size: Number(e.target.value) })} />
+      </section>
 
-      {/* 4. Warna & Opasitas */}
-      <div className="st-section">
-        <h3>Warna & Opasitas</h3>
-
-        {/* Swatches Grid */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(5, 1fr)",
-            gap: 8,
-            marginBottom: 12,
-          }}
-        >
-          {allSwatches.map((swatch, idx) => {
-            const isSelected = config.color.toLowerCase() === swatch.toLowerCase();
+      <section className="st-group">
+        <h3>Warna</h3>
+        <div className="st-swatches" role="radiogroup" aria-label="Warna kuas">
+          {swatches.map((sw, i) => {
+            const on = config.color.toLowerCase() === sw.toLowerCase();
             return (
-              <button
-                key={swatch}
-                type="button"
-                onClick={() => onChangeConfig({ ...config, color: swatch })}
-                style={{
-                  width: "100%",
-                  aspectRatio: "1",
-                  borderRadius: "50%",
-                  backgroundColor: swatch,
-                  border: swatch.toUpperCase() === "#FFFFFF" ? "1px solid #d4d4d8" : "none",
-                  boxShadow: isSelected
-                    ? "0 0 0 2px var(--card, #fff), 0 0 0 4px var(--brand, #4f46e5)"
-                    : "0 1px 3px rgba(0,0,0,0.12)",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  transition: "transform 0.1s ease",
-                  outline: "none",
-                }}
-                title={idx === 0 ? "Warna Utama Tema" : swatch}
-              >
-                {isSelected && (
-                  <Check
-                    size={14}
-                    weight="bold"
-                    style={{
-                      color: ["#ffffff", "#f59e0b", "#ffff00"].includes(swatch.toLowerCase()) ? "#18181b" : "#ffffff",
-                    }}
-                  />
-                )}
+              <button key={sw} type="button" role="radio" aria-checked={on} className="st-sw" style={{ ["--sw" as string]: sw }}
+                onClick={() => onChangeConfig({ ...config, color: sw })} title={i === 0 ? "Warna utama toko" : sw} aria-label={i === 0 ? "Warna utama toko" : sw}>
+                {on && <Check weight="bold" aria-hidden="true" />}
               </button>
             );
           })}
-        </div>
-
-        {/* Kustom Warna & Mode Opasitas */}
-        <div className="d-grid" style={{ marginBottom: 12 }}>
-          <label className="d-field" style={{ margin: 0 }}>
-            <span>Warna kustom</span>
-            <span className="d-color">
-              <input
-                id={colorId}
-                type="color"
-                value={config.color}
-                onChange={(e) => onChangeConfig({ ...config, color: e.target.value })}
-              />
-              <code>{config.color}</code>
-            </span>
+          <label className="st-sw st-sw-custom" title="Warna lain">
+            <input type="color" value={config.color.length === 7 ? config.color : "#000000"} onChange={(e) => onChangeConfig({ ...config, color: e.target.value.toUpperCase() })} aria-label="Warna lain" />
           </label>
-
-          <div className="d-field" style={{ margin: 0 }}>
-            <span>Gaya coretan</span>
-            <div className="d-seg" role="group" aria-label="Gaya kuas" style={{ width: "100%" }}>
-              <button
-                type="button"
-                style={{ flex: 1 }}
-                aria-pressed={config.opacity === 1}
-                onClick={() => onChangeConfig({ ...config, opacity: 1 })}
-              >
-                Padat (100%)
-              </button>
-              <button
-                type="button"
-                style={{ flex: 1 }}
-                aria-pressed={config.opacity < 1}
-                onClick={() => onChangeConfig({ ...config, opacity: 0.4 })}
-              >
-                Stabilo (40%)
-              </button>
-            </div>
-          </div>
         </div>
-      </div>
+        <div className="d-seg st-seg-full" role="group" aria-label="Gaya coretan" style={{ marginTop: 10 }}>
+          <button type="button" aria-pressed={config.opacity === 1} onClick={() => onChangeConfig({ ...config, opacity: 1 })}>Padat</button>
+          <button type="button" aria-pressed={config.opacity < 1} onClick={() => onChangeConfig({ ...config, opacity: 0.4 })}>Transparan</button>
+        </div>
+      </section>
 
-      {/* 5. Aksi Bersihkan */}
-      <div className="st-section" style={{ borderBottom: "none" }}>
-        <button
-          type="button"
-          className="d-btn d-btn-block"
-          style={{
-            borderColor: "var(--danger, #ef4444)",
-            color: "var(--danger, #ef4444)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 6,
-          }}
-          onClick={handleClear}
-          disabled={isClearing}
-        >
-          <Trash size={16} weight="bold" />
-          <span>Bersihkan Coretan ({target === "background" ? "Latar" : "Plugin"})</span>
+      <section className="st-group">
+        <button type="button" className="d-btn d-btn-block st-danger-btn" onClick={() => void clear()} disabled={strokeCount === 0}>
+          <Trash weight="bold" aria-hidden="true" />
+          {strokeCount === 0 ? "Belum ada coretan" : `Hapus semua coretan (${strokeCount})`}
         </button>
-      </div>
+      </section>
     </div>
   );
 }
