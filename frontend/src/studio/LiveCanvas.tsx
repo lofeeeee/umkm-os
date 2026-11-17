@@ -10,7 +10,7 @@
 // - Kuas/penghapus: coretan menempel pada blok di bawah kursor (atau latar halaman), dirender oleh
 //   `InkLayer` yang sama di situs terbit.
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { InkLayer, cellTarget } from "@/renderer/ink";
 import { StudioSite, type SitePageLink } from "@/renderer/StudioSite";
@@ -22,7 +22,7 @@ import type { PageV2 } from "./doc";
 import type { DrawConfig, DrawTarget, DrawTool } from "./DrawPanel";
 import type { DrawingStroke } from "./DrawingLayer";
 import { BlockEditorContext, type BlockEditor, type GestureMode } from "./editor-context";
-import { COLS, DESIGN_WIDTH, GAP, ROW, place, spanWidth } from "./grid";
+import { COLS, DESIGN_WIDTH, GAP, ROW, compact, place, spanWidth } from "./grid";
 import type { TplCell } from "./templates";
 
 /** Plugin yang sedang diseret dari panel (dataTransfer tidak bisa dibaca saat dragover). */
@@ -37,7 +37,13 @@ interface Rect { id: string; x: number; y: number; w: number; h: number; top: nu
 interface Gesture {
   id: string; mode: GestureMode; sx: number; sy: number; started: boolean;
   base: TplCell[]; orig: TplCell; grid: HTMLElement; rects: Rect[]; pitch: number;
-  grabDx: number; relLeft: number; relTop: number; k: number; last: string;
+  grabDx: number; grabDy: number; relLeft: number; relTop: number; k: number; last: string;
+  /** Bingkai yang bisa digulir + posisi gulir awal (untuk mengimbangi gulir otomatis). */
+  frame: HTMLElement | null; scroll0: number;
+  /** Elemen `.sv2-block` yang diseret (digeser dengan transform, tanpa render ulang). */
+  outer: HTMLElement; height: number;
+  /** Susunan hasil jatuhan (null = tidak berubah). */
+  result: TplCell[] | null;
 }
 interface Insert { left: number; top: number; width: number }
 
@@ -69,17 +75,28 @@ export interface LiveCanvasProps {
   onHint: (msg: string) => void;
 }
 
-/** Posisi grid (y) tempat blok selebar [col, col+w) jatuh bila kursor di `py` (px relatif grid). */
-function targetRow(rects: Rect[], skip: string | null, col: number, w: number, py: number, stacked: boolean): { y: number; top: number } {
+/**
+ * Slot sisip untuk blok selebar [col, col+w) yang titik tengah vertikalnya di `cy` (px relatif grid).
+ * Dihitung terhadap susunan SEBELUM menyeret (susunan tidak berubah selama menyeret), jadi tidak ada
+ * umpan balik yang membuat blok melompat. Blok yang kolomnya tidak beririsan diabaikan.
+ */
+function slotFor(rects: Rect[], skip: string | null, col: number, w: number, cy: number, stacked: boolean): { y: number; line: number; before: string | null } {
   const cands = rects
     .filter((r) => r.id !== skip && (stacked || (r.x < col + w && col < r.x + r.w)))
     .sort((a, b) => a.top - b.top);
-  const hit = cands.find((r) => py < r.top + (r.bottom - r.top) / 2);
-  if (hit) return { y: hit.y, top: hit.top };
-  if (cands.length === 0) return { y: 0, top: 0 };
-  const last = cands.reduce((m, r) => (r.y + r.h > m.y + m.h ? r : m), cands[0]!);
-  return { y: last.y + last.h, top: Math.max(...cands.map((r) => r.bottom)) };
+  const idx = cands.findIndex((r) => cy < (r.top + r.bottom) / 2);
+  if (cands.length === 0) return { y: 0, line: 0, before: null };
+  if (idx === -1) {
+    const last = cands.reduce((m, r) => (r.y + r.h > m.y + m.h ? r : m), cands[0]!);
+    return { y: last.y + last.h, line: Math.max(...cands.map((r) => r.bottom)) + GAP / 2, before: null };
+  }
+  const hit = cands[idx]!;
+  const prevBottom = idx > 0 ? Math.max(...cands.slice(0, idx).map((r) => r.bottom)) : hit.top - GAP;
+  return { y: hit.y, line: (prevBottom + hit.top) / 2, before: hit.id };
 }
+
+const sameLayout = (a: TplCell[], b: TplCell[]) =>
+  a.every((c) => { const d = b.find((x) => x.id === c.id); return !!d && d.x === c.x && d.y === c.y && d.w === c.w && d.h === c.h; });
 
 function distSq(p: [number, number], a: [number, number], b: [number, number]) {
   const l2 = (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2;
@@ -91,6 +108,29 @@ function nearStroke(pt: [number, number], pts: [number, number][], r: number) {
   if (pts.length === 1) return (pt[0] - pts[0]![0]) ** 2 + (pt[1] - pts[0]![1]) ** 2 <= r * r;
   for (let i = 0; i < pts.length - 1; i++) if (distSq(pt, pts[i]!, pts[i + 1]!) <= r * r) return true;
   return false;
+}
+
+/* ---------------------------------------------------------------- FLIP (animasi pindah posisi) */
+const outerEls = (root: HTMLElement | null) => Array.from(root?.querySelectorAll<HTMLElement>(".sv2-grid > .sv2-block") ?? []);
+const recordRects = (root: HTMLElement | null) => new Map(outerEls(root).map((el) => [el.id, el.getBoundingClientRect()]));
+const reducedMotion = () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+/** Geser elemen secara visual dari (dx, dy) ke posisi aslinya. */
+function animateFrom(el: HTMLElement, dx: number, dy: number) {
+  if (reducedMotion() || (Math.abs(dx) < 1 && Math.abs(dy) < 1)) return;
+  el.style.transition = "none";
+  el.style.transform = `translate(${dx}px, ${dy}px)`;
+  void el.offsetWidth; // paksa reflow agar posisi awal terpakai
+  el.style.transition = "transform 240ms cubic-bezier(0.23, 1, 0.32, 1)";
+  el.style.transform = "";
+  const done = () => { el.style.transition = ""; el.removeEventListener("transitionend", done); };
+  el.addEventListener("transitionend", done);
+}
+/** Dilepas tanpa perubahan: blok kembali ke tempatnya dengan halus. */
+function settle(el: HTMLElement) {
+  const now = el.getBoundingClientRect();
+  el.style.transform = "";
+  const home = el.getBoundingClientRect();
+  animateFrom(el, now.left - home.left, now.top - home.top);
 }
 
 export function LiveCanvas(p: LiveCanvasProps) {
@@ -159,11 +199,26 @@ export function LiveCanvas(p: LiveCanvasProps) {
     let next: TplCell;
     let key: string;
     if (G.mode === "move") {
+      // Blok mengikuti kursor 1:1 (transform langsung di DOM — halus, tanpa render ulang React).
+      const scrolled = (G.frame?.scrollTop ?? 0) - G.scroll0;
+      G.outer.style.transform = `translate(${ev.clientX - G.sx}px, ${ev.clientY - G.sy + scrolled}px)`;
       const col = Math.max(0, Math.min(COLS - o.w, Math.round((ev.clientX - gr.left - G.grabDx) / G.pitch)));
-      const t = targetRow(G.rects, G.id, col, o.w, ev.clientY - gr.top, false);
-      setInsert({ left: col * G.pitch, top: t.top, width: o.w * G.pitch - GAP });
-      next = { ...o, x: col, y: t.y };
-      key = `m${col},${t.y}`;
+      const cy = ev.clientY - gr.top - G.grabDy + G.height / 2;
+      const t = slotFor(G.rects, G.id, col, o.w, cy, false);
+      key = `m${col},${t.before ?? "end"}`;
+      if (key === G.last) return;
+      G.last = key;
+      // Angkat blok dari susunan dulu, rapatkan sisanya, lalu sisipkan tepat SEBELUM blok sasaran
+      // (atau di bawah kolom itu). Tanpa ini, menyisip "sebelum blok berikutnya" saat menyeret ke bawah
+      // malah menukar keduanya sehingga blok melompat terlalu jauh.
+      const rest = compact(G.base.filter((c) => c.id !== G.id)) as TplCell[];
+      const hit = t.before ? rest.find((c) => c.id === t.before) : undefined;
+      const y = hit ? hit.y : rest.filter((c) => c.x < col + o.w && col < c.x + c.w).reduce((m, c) => Math.max(m, c.y + c.h), 0);
+      const moved = { ...o, x: col, y };
+      const out = place([...rest, moved], moved) as TplCell[];
+      G.result = sameLayout(out, G.base) ? null : out;
+      setInsert(G.result ? { left: col * G.pitch, top: t.line, width: o.w * G.pitch - GAP } : null);
+      return;
     } else if (G.mode === "resize-x") {
       const w = Math.max(o.minW ?? 2, Math.min(COLS - o.x, Math.round((ev.clientX - gr.left - G.relLeft + GAP) / G.pitch)));
       next = { ...o, w };
@@ -180,6 +235,22 @@ export function LiveCanvas(p: LiveCanvasProps) {
   }, []);
 
   useEffect(() => { onMoveRef.current = onMove; }, [onMove]);
+
+  /* FLIP: setelah susunan berubah karena jatuhan, blok meluncur dari posisi lama ke posisi baru. */
+  const flip = useRef<Map<string, DOMRect> | null>(null);
+  useLayoutEffect(() => {
+    const before = flip.current;
+    if (!before) return;
+    flip.current = null;
+    const els = outerEls(wrap.current);
+    for (const el of els) el.style.transform = "";
+    for (const el of els) {
+      const old = before.get(el.id);
+      if (!old) continue;
+      const r = el.getBoundingClientRect();
+      animateFrom(el, old.left - r.left, old.top - r.top);
+    }
+  }, [p.cells]);
   /** Lepas listener gerakan yang sedang berjalan (dipanggil saat pointerup atau unmount). */
   const stopGesture = useRef<() => void>(() => {});
   useEffect(() => () => stopGesture.current(), []);
@@ -205,12 +276,23 @@ export function LiveCanvas(p: LiveCanvasProps) {
     stopGesture.current();
     const gr = g.getBoundingClientRect();
     const br = el.getBoundingClientRect();
+    const frame = g.closest<HTMLElement>(".st-frame");
     gesture.current = {
       id, mode, sx: e.clientX, sy: e.clientY, started: false, base: P.cells, orig: c, grid: g,
-      rects: snapshot(g), pitch: pitchOf(g), grabDx: e.clientX - br.left, relLeft: br.left - gr.left, relTop: br.top - gr.top,
-      k: DESIGN_WIDTH / gr.width, last: "",
+      rects: snapshot(g), pitch: pitchOf(g), grabDx: e.clientX - br.left, grabDy: e.clientY - br.top, relLeft: br.left - gr.left, relTop: br.top - gr.top,
+      k: DESIGN_WIDTH / gr.width, last: "", frame, scroll0: frame?.scrollTop ?? 0,
+      outer: el.closest<HTMLElement>(".sv2-block") ?? el, height: br.height, result: null,
     };
     const up = () => {
+      const G = gesture.current;
+      if (G?.mode === "move" && G.started) {
+        if (G.result) {
+          // FLIP: catat posisi sekarang (blok yang diseret = posisi lepasnya). Transform-nya dilepas di
+          // useLayoutEffect setelah susunan baru dirender, jadi tidak ada satu frame "kembali ke asal".
+          flip.current = recordRects(wrap.current);
+          latest.current.onCellsChange(G.result);
+        } else settle(G.outer);
+      }
       gesture.current = null;
       cancelAnimationFrame(autoScroll.current.raf);
       autoScroll.current.raf = 0;
@@ -236,8 +318,8 @@ export function LiveCanvas(p: LiveCanvasProps) {
     const pitch = pitchOf(g);
     const w = stacked ? COLS : Math.min(COLS, paletteDrag.w);
     const col = stacked ? 0 : Math.max(0, Math.min(COLS - w, Math.round((clientX - gr.left) / pitch - w / 2)));
-    const t = targetRow(snapshot(g), null, col, w, clientY - gr.top, stacked);
-    return { x: col, y: t.y, ins: { left: stacked ? 0 : col * pitch, top: t.top, width: stacked ? gr.width : w * pitch - GAP } };
+    const t = slotFor(snapshot(g), null, col, w, clientY - gr.top, stacked);
+    return { x: col, y: t.y, ins: { left: stacked ? 0 : col * pitch, top: t.line, width: stacked ? gr.width : w * pitch - GAP } };
   };
 
   /* ------------------------------------------------------------ kuas & penghapus */

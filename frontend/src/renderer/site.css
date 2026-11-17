@@ -426,3 +426,6 @@
 .sf-float-selected .chat-fab, .sf-float-selected .chat-bar, .sf-float-selected .chat-panel, .s-wa-float.sf-float-selected { outline: 3px solid #4f46e5; outline-offset: 3px; }
 .sf-editing .s-wa-float { cursor: pointer; }
 .sf-wa-nonum { opacity: 0.55; filter: grayscale(0.6); }
+/* Blok yang sedang diseret melayang di atas yang lain dan mengikuti kursor tanpa jeda. */
+.sf-editing .sv2-block:has(> .sf-block-active), .sf-editing .sv2-block:has(.sf-block-active) { z-index: 30; will-change: transform; transition: none; }
+.sf-editing .sf-block-active { transform: scale(1.01); box-shadow: 0 28px 56px -18px rgb(15 23 42 / 0.5); opacity: 0.94; }
