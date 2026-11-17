@@ -48,7 +48,7 @@ import {
 } from "@phosphor-icons/react/ssr";
 
 import { BellMenu } from "./bell";
-import { API_ORIGIN, api, ApiError, isMfaRequired, loadSession, roleLabel, setCsrf, type Membership, type Session, type TenantView } from "@/lib/api";
+import { api, ApiError, apiGet, isMfaRequired, loadSession, roleLabel, setCsrf, type Membership, type Session, type TenantView } from "@/lib/api";
 import { PageSkeleton } from "@/ui/page";
 import { m, t as tx } from "@/i18n";
 import { Tr } from "@/i18n/react";
@@ -224,7 +224,7 @@ function AppProvider({ children }: { children: ReactNode }) {
       // Admin platform: probe hanya untuk staf platform bersesi MFA (selain itu pasti 403 dan
       // mengotori console di setiap halaman — UAT 15 Nov). Tautan muncul bila diizinkan.
       if (s.platform_staff && s.mfa_verified) {
-        fetch(`${API_ORIGIN}/api/v1/platform/me`, { credentials: "include" })
+        apiGet("/api/v1/platform/me")
           .then((r) => setPlatformAdmin(r.ok), () => undefined);
       }
     })().catch(() => setFatal(tx("Tidak dapat menghubungi server. Periksa koneksi lalu muat ulang halaman.")));

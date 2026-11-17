@@ -141,13 +141,17 @@ async fn audit(
 
 // ------------------------------------------------------------------ kategori
 
+/// Batas pengaman daftar kategori (bukan paginasi: UI menampilkan semuanya sebagai pohon/pilihan).
+pub const MAX_CATEGORIES_LISTED: i64 = 500;
+
 pub async fn list_categories(pool: &PgPool, t: TenantId) -> Result<Vec<Category>, sqlx::Error> {
     let mut tx = tenant_tx(pool, t).await?;
     let rows = sqlx::query(
         "SELECT id, parent_id, name, position FROM product_categories
-         WHERE tenant_id = $1 ORDER BY position, lower(name)",
+         WHERE tenant_id = $1 ORDER BY position, lower(name) LIMIT $2",
     )
     .bind(t.as_uuid())
+    .bind(MAX_CATEGORIES_LISTED)
     .fetch_all(&mut *tx)
     .await?;
     tx.commit().await?;

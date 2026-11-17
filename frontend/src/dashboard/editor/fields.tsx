@@ -88,7 +88,7 @@ export function ImagePicker({ value, onChange, label }: { value: string | undefi
                 <button type="button" key={u.id} aria-pressed={u.ref === value} aria-label={t("Pilih gambar {0}", u.id.slice(0, 8))}
                   onClick={() => { onChange(u.ref); setOpen(false); }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={sized(a.url(u.ref), 320)} alt="" loading="lazy" />
+                  <img src={sized(a.url(u.ref), 320)} alt="" width={160} height={160} loading="lazy" />
                 </button>
               ))}
             </div>

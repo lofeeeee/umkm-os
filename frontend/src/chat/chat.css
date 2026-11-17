@@ -20,20 +20,22 @@
 
 /* ---------- Peluncur: gelembung (bawaan di kanan bawah; tombol keranjang di kiri bawah) ---------- */
 .chat-fab {
-  position: fixed; right: 16px; bottom: 16px; z-index: 20;
+  position: fixed; right: 16px; bottom: 16px; z-index: var(--z-float, 20);
   display: inline-flex; align-items: center; gap: 8px; min-height: 52px; padding: 0 20px 0 16px;
   border: 0; border-radius: 999px; background: var(--chat-primary); color: var(--chat-on-primary); font-weight: 700; cursor: pointer;
   box-shadow: 0 14px 30px -10px color-mix(in srgb, var(--chat-primary) 75%, #000), 0 0 0 1px rgb(255 255 255 / 0.12) inset;
   transition: transform var(--dur, 180ms) var(--chat-ease), box-shadow var(--dur, 180ms) var(--chat-ease);
   animation: chat-pop var(--dur-slow, 240ms) var(--chat-ease) both;
 }
+@media (hover: hover) {
 .chat-fab:hover { transform: translateY(-2px); }
+}
 .chat-fab:active { transform: scale(var(--press, 0.97)); }
 .chat-fab:focus-visible, .chat-bar:focus-visible, .chat-inline-min:focus-visible { outline: 3px solid color-mix(in srgb, var(--chat-primary) 45%, transparent); outline-offset: 3px; }
 
 /* ---------- Peluncur: bilah bawah ---------- */
 .chat-bar {
-  position: fixed; z-index: 20; left: 12px; right: 12px; bottom: 12px; max-width: 720px; margin: 0 auto;
+  position: fixed; z-index: var(--z-float, 20); left: 12px; right: 12px; bottom: 12px; max-width: 720px; margin: 0 auto;
   display: flex; align-items: center; gap: 10px; padding: 7px 7px 7px 8px; border: 0; border-radius: 999px;
   background: var(--chat-bg); color: var(--chat-ink); cursor: pointer; text-align: left;
   box-shadow: 0 0 0 1px rgb(15 23 42 / 0.08), 0 18px 44px -14px rgb(15 23 42 / 0.4);
@@ -65,7 +67,7 @@
 
 /* ---------- Panel ---------- */
 .chat-panel {
-  position: fixed; z-index: 30; left: 8px; right: 8px; bottom: 8px; max-height: calc(100vh - 16px);
+  position: fixed; z-index: var(--z-float-panel, 30); left: 8px; right: 8px; bottom: 8px; max-height: calc(100vh - 16px);
   display: flex; flex-direction: column; background: var(--chat-bg); border-radius: 20px; overflow: hidden;
   box-shadow: 0 0 0 1px rgb(15 23 42 / 0.06), 0 28px 64px -16px rgb(15 23 42 / 0.45);
   transform-origin: bottom right;
@@ -87,7 +89,9 @@
   display: grid; place-items: center; width: 40px; height: 40px; flex: none; border: 0; border-radius: 999px;
   background: transparent; color: inherit; cursor: pointer; transition: background-color var(--dur-fast, 120ms) ease;
 }
+@media (hover: hover) {
 .chat-x:hover { background: rgb(255 255 255 / 0.16); }
+}
 
 /* ---------- Isi ---------- */
 .chat-log {
@@ -135,12 +139,16 @@
   background: var(--chat-primary); color: var(--chat-on-primary); border: 0; border-radius: 999px; padding: 11px 18px; min-height: 44px;
   font-weight: 650; cursor: pointer; transition: transform var(--dur-fast, 120ms) var(--chat-ease), filter var(--dur-fast, 120ms) ease;
 }
+@media (hover: hover) {
 .chat-btn:hover { filter: brightness(1.06); }
+}
 .chat-btn:active { transform: scale(var(--press-card, 0.98)); }
 .chat-btn:disabled, .chat-link:disabled, .chat-send:disabled { opacity: 0.5; cursor: not-allowed; }
 .chat-actions { display: flex; justify-content: space-between; gap: 8px; padding: 0 14px 8px; flex-wrap: wrap; background: var(--chat-bg); flex: none; }
 .chat-link { border: 0; background: none; color: var(--chat-muted); text-decoration: underline; text-underline-offset: 3px; padding: 6px 0; min-height: 36px; cursor: pointer; font-size: 0.85em; }
+@media (hover: hover) {
 .chat-link:hover { color: var(--chat-primary); }
+}
 
 /* ---------- Varian ---------- */
 .chat-v-bar .chat-panel { bottom: 12px; }

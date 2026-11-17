@@ -9,7 +9,7 @@ import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { ArrowCounterClockwise, Check, Image as ImageIcon, MapPin, Note, Phone, Receipt, Storefront, Truck, User } from "@phosphor-icons/react/ssr";
 
 import { Alert, WithTenant, type TenantCtx } from "@/dashboard/shell";
-import { API_ORIGIN, api, describe } from "@/lib/api";
+import { api, apiGet, describe } from "@/lib/api";
 import { ORDER_STATUS, PAYMENT_STATUS, relatif, rupiah, status as statusOf, waktu } from "@/lib/labels";
 import { confirm } from "@/ui/dialog";
 import { Badge, BusyButton, Card, EmptyState, PageHeader, PageSkeleton, Skeleton, Tabs, type Tone } from "@/ui/page";
@@ -172,7 +172,7 @@ function Detail({ ctx, base, id, onBack }: { ctx: TenantCtx; base: string; id: s
   async function showProof() {
     // Bukti bayar = data pelanggan: diambil dengan sesi staf, ditampilkan sebagai object URL lokal.
     try {
-      const r = await fetch(`${API_ORIGIN}${url}/payment/proof`, { credentials: "include" });
+      const r = await apiGet(`${url}/payment/proof`);
       if (!r.ok) throw new Error(String(r.status));
       setProof(URL.createObjectURL(await r.blob()));
     } catch {
@@ -256,7 +256,7 @@ function Detail({ ctx, base, id, onBack }: { ctx: TenantCtx; base: string; id: s
               </dl>
               {p.has_proof && (proof
                 // eslint-disable-next-line @next/next/no-img-element -- object URL lokal
-                ? <img src={proof} alt={t("Bukti pembayaran")} style={{ maxWidth: 320, width: "100%", borderRadius: 8, marginTop: 16, border: "1px solid var(--line)" }} />
+                ? <img className="pf-proof" src={proof} alt={t("Bukti pembayaran")} />
                 : <button type="button" className="d-btn d-btn-sm" style={{ marginTop: 16 }} onClick={showProof}><ImageIcon weight="bold" aria-hidden="true" />{t("Lihat bukti pembayaran")}</button>)}
               {payOpen && ctx.can("payments.verify") && (
                 <div className="d-verify">

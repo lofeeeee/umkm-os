@@ -106,6 +106,14 @@ export function apiUrl(path: string): string {
   return `${API_ORIGIN}${path}`;
 }
 
+/**
+ * GET mentah dengan sesi yang sama seperti api(): untuk berkas (blob) dan probe akses yang
+ * statusnya dibaca langsung (403 = memang tidak berhak, bukan error yang perlu ditampilkan).
+ */
+export function apiGet(path: string): Promise<Response> {
+  return fetch(apiUrl(path), { credentials: "include" });
+}
+
 export function tenantParam(): string | null {
   if (typeof window === "undefined") return null;
   const t = new URLSearchParams(window.location.search).get("tenant");

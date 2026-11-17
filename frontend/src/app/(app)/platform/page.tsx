@@ -13,7 +13,7 @@ import { Alert } from "@/dashboard/shell";
 import { INVOICE_STATUS, SUBSCRIPTION_STATUS, persen, rupiah, status, tanggal } from "@/lib/labels";
 import { Badge, Card, EmptyState, PageHeader, PageSkeleton, Tabs } from "@/ui/page";
 import { toast } from "@/ui/toast";
-import { API_ORIGIN, ApiError, api, describe, isMfaRequired, loadSession } from "@/lib/api";
+import { API_ORIGIN, ApiError, api, apiGet, describe, isMfaRequired, loadSession } from "@/lib/api";
 import { t as tx, intlLocale } from "@/i18n";
 import { Tr } from "@/i18n/react";
 
@@ -55,7 +55,7 @@ export default function PlatformPage() {
       }
       try {
         // Cek akses tanpa memicu error jaringan di console: user non-admin memang ditolak.
-        const probe = await fetch(`${API_ORIGIN}/api/v1/platform/me`, { credentials: "include" });
+        const probe = await apiGet("/api/v1/platform/me");
         if (probe.status === 403) {
           setState("denied");
           return;

@@ -23,7 +23,7 @@ function Brand({ brand, logoUrl }: { brand: string; logoUrl?: string }): ReactNo
     <div className="s-brand">
       {logoUrl
         // eslint-disable-next-line @next/next/no-img-element
-        ? <img src={logoUrl} alt="" className="s-logo" decoding="async" />
+        ? <img src={logoUrl} alt="" className="s-logo" width={36} height={36} decoding="async" />
         : <span className="s-logo s-logo-fallback" aria-hidden="true">{(brand[0] ?? "T").toUpperCase()}</span>}
       <span className="s-brand-name">{brand}</span>
     </div>

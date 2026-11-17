@@ -162,7 +162,7 @@ function Catalog({ ctx }: { ctx: TenantCtx }) {
                     <td>
                       <div className="d-cell-main">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        {img ? <img className="d-thumb" src={img} alt="" /> : <span className="d-thumb" aria-hidden="true"><ImageIcon weight="duotone" /></span>}
+                        {img ? <img className="d-thumb" src={img} alt="" width={36} height={36} /> : <span className="d-thumb" aria-hidden="true"><ImageIcon weight="duotone" /></span>}
                         <div>
                           <button type="button" className="d-link d-strong" style={{ color: "var(--ink)" }} onClick={() => setEdit(p)} disabled={!ctx.can("products.update")}>{p.name}</button>
                           <span className="d-sub">

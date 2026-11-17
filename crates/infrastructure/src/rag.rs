@@ -118,8 +118,9 @@ pub async fn list_documents(pool: &PgPool, t: TenantId) -> Result<Vec<DocumentRo
     let rows: Vec<(Uuid, String, String, i32, Option<String>, String)> = sqlx::query_as(
         "SELECT id, title, status, chunk_count, error_code,
                 to_char(updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS\"Z\"')
-         FROM knowledge_documents ORDER BY created_at DESC",
+         FROM knowledge_documents ORDER BY created_at DESC LIMIT 500",
     )
+    // Batas pengaman: daftar dokumen pengetahuan ditampilkan utuh di halaman AI.
     .fetch_all(&mut *tx)
     .await?;
     tx.commit().await?;

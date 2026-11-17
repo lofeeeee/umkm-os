@@ -42,13 +42,15 @@
   box-shadow: 0 6px 16px -6px color-mix(in srgb, var(--s-primary) 60%, transparent);
   transition: transform var(--dur, 180ms) var(--s-ease), box-shadow var(--dur, 180ms) var(--s-ease), filter var(--dur, 180ms) ease;
 }
+@media (hover: hover) {
 .s-btn:hover { filter: brightness(1.06); box-shadow: 0 10px 22px -8px color-mix(in srgb, var(--s-primary) 70%, transparent); }
+}
 .s-btn:active { transform: scale(var(--press, 0.97)); }
 .s-btn:focus-visible, .site a:focus-visible { outline: 3px solid var(--s-ink); outline-offset: 2px; }
 
 /* Kepala halaman */
 .s.s--header {
-  position: sticky; top: 0; z-index: 5; padding: 12px 20px;
+  position: sticky; top: 0; z-index: var(--z-sticky, 5); padding: 12px 20px;
   background: color-mix(in srgb, var(--s-bg) 88%, transparent) !important;
   backdrop-filter: saturate(1.6) blur(12px); -webkit-backdrop-filter: saturate(1.6) blur(12px);
   border-bottom: 1px solid var(--s-line);
@@ -60,11 +62,13 @@
 .s-logo-fallback { display: grid; place-items: center; background: var(--s-primary); color: var(--s-on-primary, #fff); font-size: 0.875em; font-weight: 700; }
 .s-nav { display: flex; flex-wrap: wrap; gap: 4px; }
 .s-nav a { text-decoration: none; padding: 8px 12px; border-radius: 999px; color: var(--s-ink-2); font-weight: 600; font-size: 0.9375em; transition: background-color var(--dur, 180ms) ease, color var(--dur, 180ms) ease; min-height: 24px; display: inline-flex; align-items: center; }
+@media (hover: hover) {
 .s-nav a:hover { background: var(--s-tint); color: var(--s-primary); }
+}
 
 /* Bilah atas (tema `navbar_style: top`). `s-sticky` hanya menempel bila diminta tema. */
 .s-headbar.s-sticky {
-  position: sticky; top: 0; z-index: 6; padding: 12px 20px;
+  position: sticky; top: 0; z-index: calc(var(--z-sticky, 5) + 1); padding: 12px 20px;
   background: color-mix(in srgb, var(--s-bg) 88%, transparent);
   backdrop-filter: saturate(1.6) blur(12px); -webkit-backdrop-filter: saturate(1.6) blur(12px);
   border-bottom: 1px solid var(--s-line);
@@ -133,7 +137,9 @@
 .s-contact, .s-social { display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: center; }
 .s-social { margin-top: 16px; text-transform: capitalize; }
 .s-social a { padding: 8px 14px; border-radius: 999px; border: 1px solid var(--s-line); text-decoration: none; color: var(--s-ink-2); font-weight: 600; font-size: 0.875em; }
+@media (hover: hover) {
 .s-social a:hover { border-color: var(--s-primary); color: var(--s-primary); }
+}
 
 .s.s--footer { padding: 32px 20px; background: var(--s-ink) !important; color: #e2e8f0; }
 .s-foot { display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; align-items: center; }
@@ -223,14 +229,16 @@
 .s-text p { margin: 0 0 12px; color: var(--s-ink-2); }
 .s-wa { background: #25d366 !important; box-shadow: 0 6px 16px -6px rgb(37 211 102 / 0.6); }
 .s-wa svg { flex: none; }
-.s-wa-float { position: fixed; z-index: 19; right: 16px; bottom: 84px; display: grid; place-items: center; width: 56px; height: 56px; border-radius: 999px; background: #25d366; color: #fff !important; box-shadow: 0 12px 28px -8px rgb(37 211 102 / 0.7); }
+.s-wa-float { position: fixed; z-index: calc(var(--z-float, 20) - 1); right: 16px; bottom: 84px; display: grid; place-items: center; width: 56px; height: 56px; border-radius: 999px; background: #25d366; color: #fff !important; box-shadow: 0 12px 28px -8px rgb(37 211 102 / 0.7); }
 .s-wa-float svg { width: 28px; height: 28px; }
 
 /* P9-9: footer tetap situs Studio (privasi & syarat). */
 .sv2-foot { display: flex; flex-wrap: wrap; gap: 8px 16px; justify-content: space-between; align-items: center; max-width: 1180px; margin: 24px auto 0; padding: 20px; border-top: 1px solid var(--s-line, #e4e4e7); color: var(--s-muted, #63636e); font-size: 0.875rem; font-family: var(--s-font); }
 .sv2-foot nav { display: flex; flex-wrap: wrap; gap: 4px 16px; }
 .sv2-foot a { color: inherit; text-underline-offset: 3px; min-height: 24px; display: inline-flex; align-items: center; }
+@media (hover: hover) {
 .sv2-foot a:hover { color: var(--s-ink, #18181b); }
+}
 
 /* ============================================================
    IconRail & Studio Drawer (Modular Studio Suite)
@@ -244,7 +252,7 @@
   gap: 4px;
   background: var(--bg-surface, var(--card, #ffffff));
   border-right: 1px solid var(--border, var(--line, #e4e4e7));
-  z-index: 20;
+  z-index: var(--z-float, 20);
   box-sizing: border-box;
   flex-shrink: 0;
 }
@@ -284,6 +292,8 @@
   user-select: none;
 }
 
+@media (hover: hover) {
+
 .st-rail-btn:hover {
   background: rgba(0, 0, 0, 0.05);
   color: var(--text, var(--ink, #09090b));
@@ -295,11 +305,14 @@
   background: rgba(255, 255, 255, 0.08);
   color: var(--text, var(--ink, #fafafa));
 }
+}
 
 @media (prefers-color-scheme: dark) {
+  @media (hover: hover) {
   :root:not([data-theme="light"]) .st-rail-btn:hover {
     background: rgba(255, 255, 255, 0.08);
     color: var(--text, var(--ink, #fafafa));
+  }
   }
 }
 
@@ -365,14 +378,18 @@
    Pelapis editor blok (hanya mode `studio-edit`).
    ============================================================ */
 .sf-editing .sv2-block:has(.sf-block-selected), .sf-editing .sv2-block:has(.sf-block-active) { z-index: 6; }
+@media (hover: hover) {
 .sf-editing .sv2-block:hover { z-index: 5; }
+}
 .sf-editing .sf-block {
   --sf-accent: #4f46e5;
   position: relative; height: 100%; border-radius: 14px; cursor: grab;
   outline: 1.5px dashed transparent; outline-offset: 3px;
   transition: outline-color var(--dur-fast, 120ms) ease, opacity var(--dur, 180ms) ease, box-shadow var(--dur, 180ms) ease;
 }
+@media (hover: hover) {
 .sf-editing .sf-block:hover { outline-color: color-mix(in srgb, var(--sf-accent) 55%, transparent); }
+}
 .sf-editing .sf-block-selected { outline: 2px solid var(--sf-accent); outline-offset: 3px; }
 .sf-editing .sf-block-locked { cursor: default; }
 .sf-editing .sf-block-locked.sf-block-selected { outline-style: dashed; outline-color: #71717a; }
@@ -386,9 +403,11 @@
   display: flex; align-items: flex-end; gap: 6px; pointer-events: none;
   opacity: 0; transform: translateY(3px); transition: opacity var(--dur-fast, 120ms) ease, transform var(--dur, 180ms) cubic-bezier(0.23, 1, 0.32, 1);
 }
-.sf-editing .sf-block:hover > .sf-block-bar,
 .sf-editing .sf-block-selected > .sf-block-bar,
 .sf-editing .sf-block-active > .sf-block-bar { opacity: 1; transform: none; }
+@media (hover: hover) {
+.sf-editing .sf-block:hover > .sf-block-bar { opacity: 1; transform: none; }
+}
 .sf-editing .sf-block-selected > .sf-block-bar { pointer-events: auto; }
 .sf-block-tag {
   display: inline-flex; align-items: center; gap: 4px; height: 26px; padding: 0 10px 0 6px; border-radius: 999px;
@@ -396,7 +415,10 @@
   box-shadow: 0 4px 12px -4px rgb(15 23 42 / 0.4); cursor: grab; pointer-events: none; user-select: none; touch-action: none; white-space: nowrap;
 }
 .sf-block-tag svg { width: 14px; height: 14px; }
-.sf-editing .sf-block:hover > .sf-block-bar > .sf-block-tag, .sf-editing .sf-block-selected > .sf-block-bar > .sf-block-tag { pointer-events: auto; }
+.sf-editing .sf-block-selected > .sf-block-bar > .sf-block-tag { pointer-events: auto; }
+@media (hover: hover) {
+.sf-editing .sf-block:hover > .sf-block-bar > .sf-block-tag { pointer-events: auto; }
+}
 .sf-block-locked .sf-block-tag { background: #52525b; cursor: default; }
 .sf-block-tools {
   margin-left: auto; display: inline-flex; align-items: center; gap: 2px; padding: 3px; border-radius: 999px;
@@ -413,7 +435,9 @@
 .sf-handle-x { top: 50%; right: -7px; width: 10px; height: 36px; margin-top: -18px; cursor: ew-resize; }
 .sf-handle-y { left: 50%; bottom: -7px; width: 36px; height: 10px; margin-left: -18px; cursor: ns-resize; }
 .sf-editing .sf-block-selected > .sf-handle, .sf-editing .sf-block-active > .sf-handle { opacity: 1; }
+@media (hover: hover) {
 .sf-handle:hover { transform: scale(1.12); }
+}
 @media (pointer: coarse) { .sf-handle-x { width: 14px; right: -9px; } .sf-handle-y { height: 14px; bottom: -9px; } }
 
 .sf-drop-hint {

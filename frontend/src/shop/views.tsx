@@ -129,7 +129,7 @@ export function ProductPage({ slug }: { slug: string }) {
           {p.images.map((src, i) => (
             // eslint-disable-next-line @next/next/no-img-element -- static export, gambar bertanda tangan
             <img key={i} src={sized(fileUrl(src), 960)} srcSet={srcSet(fileUrl(src))} sizes="(min-width: 720px) 50vw, 100vw"
-              alt={i === 0 ? p.name : ""} loading={i === 0 ? "eager" : "lazy"} decoding="async" />
+              alt={i === 0 ? p.name : ""} width={960} height={960} loading={i === 0 ? "eager" : "lazy"} decoding="async" />
           ))}
         </div>
         <div>
