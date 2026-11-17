@@ -265,3 +265,173 @@ async fn auto_confirm_moves_order_to_processing(pool: PgPool) {
         .is_err()
     );
 }
+
+// ---- Penjaga sesi (keep-alive, migrasi 0040) ----
+
+use gopay_repo::LockResult;
+
+#[sqlx::test(migrator = "MIGRATOR")]
+async fn refresh_lock_save_and_fail_tracking(pool: PgPool) {
+    let t = tenant(&pool).await;
+    let k = keyring();
+    assert!(matches!(
+        gopay_repo::lock_for_refresh(&pool, t, &k).await.unwrap(),
+        LockResult::NotConnected
+    ));
+    gopay_repo::put_session(&pool, t, &session(), &k)
+        .await
+        .unwrap();
+    let stored = gopay_repo::get_session(&pool, t, &k)
+        .await
+        .unwrap()
+        .unwrap();
+    assert!(
+        stored.refreshed_at_ms.is_some(),
+        "terhubung = baru diperbarui"
+    );
+    assert_eq!(stored.refresh_failures, 0);
+
+    // Gagal sementara: tetap aktif, penghitung & kode tercatat.
+    let LockResult::Locked(lock) = gopay_repo::lock_for_refresh(&pool, t, &k).await.unwrap() else {
+        panic!("harus terkunci");
+    };
+    lock.fail("status_503", false).await.unwrap();
+    let stored = gopay_repo::get_session(&pool, t, &k)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(stored.status, "active");
+    assert_eq!(stored.refresh_failures, 1);
+    assert_eq!(stored.last_error.as_deref(), Some("status_503"));
+
+    // Berhasil: token baru tersimpan, penghitung & error direset.
+    let LockResult::Locked(lock) = gopay_repo::lock_for_refresh(&pool, t, &k).await.unwrap() else {
+        panic!("harus terkunci");
+    };
+    let fresh = GopaySession {
+        access_token: "AT-baru".into(),
+        refresh_token: "RT-baru".into(),
+        ..session()
+    };
+    lock.save(&fresh, &k).await.unwrap();
+    let stored = gopay_repo::get_session(&pool, t, &k)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(stored.session.refresh_token, "RT-baru");
+    assert_eq!(stored.refresh_failures, 0);
+    assert!(stored.last_error.is_none());
+
+    // Ditolak definitif: perlu login ulang.
+    let LockResult::Locked(lock) = gopay_repo::lock_for_refresh(&pool, t, &k).await.unwrap() else {
+        panic!("harus terkunci");
+    };
+    lock.fail("unauthorized", true).await.unwrap();
+    let stored = gopay_repo::get_session(&pool, t, &k)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(stored.status, "needs_relogin");
+    assert_eq!(stored.last_error.as_deref(), Some("unauthorized"));
+
+    // Hubungkan ulang memulihkan status dan mereset pelacakan.
+    gopay_repo::put_session(&pool, t, &session(), &k)
+        .await
+        .unwrap();
+    let stored = gopay_repo::get_session(&pool, t, &k)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(stored.status, "active");
+    assert!(stored.last_error.is_none());
+}
+
+#[sqlx::test(migrator = "MIGRATOR")]
+async fn concurrent_refresh_is_skipped_while_locked(pool: PgPool) {
+    let t = tenant(&pool).await;
+    let k = keyring();
+    gopay_repo::put_session(&pool, t, &session(), &k)
+        .await
+        .unwrap();
+    let LockResult::Locked(held) = gopay_repo::lock_for_refresh(&pool, t, &k).await.unwrap() else {
+        panic!("harus terkunci");
+    };
+    // Proses kedua tidak menunggu dan tidak ikut me-refresh (mencegah rotasi token ganda).
+    assert!(matches!(
+        gopay_repo::lock_for_refresh(&pool, t, &k).await.unwrap(),
+        LockResult::Busy
+    ));
+    held.release().await.unwrap();
+    assert!(matches!(
+        gopay_repo::lock_for_refresh(&pool, t, &k).await.unwrap(),
+        LockResult::Locked(_)
+    ));
+}
+
+#[sqlx::test(migrator = "MIGRATOR")]
+async fn refresh_due_lists_expiring_and_stale_sessions_only(pool: PgPool) {
+    let k = keyring();
+    let mk = |slug: &'static str| {
+        let pool = pool.clone();
+        async move {
+            let id: Uuid = sqlx::query_scalar(
+                "INSERT INTO tenants (name, slug) VALUES ('T', $1) RETURNING id",
+            )
+            .bind(slug)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+            TenantId::from_uuid(id)
+        }
+    };
+    let (fresh, expiring, stale, dead) = (
+        mk("toko-segar").await,
+        mk("toko-habis").await,
+        mk("toko-lama").await,
+        mk("toko-mati").await,
+    );
+    let far = GopaySession {
+        expires_at_ms: 4_000_000_000_000,
+        ..session()
+    };
+    for t in [fresh, stale, dead] {
+        gopay_repo::put_session(&pool, t, &far, &k).await.unwrap();
+    }
+    // Token tinggal 10 menit.
+    let soon_ms = (std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_millis() as i64)
+        + 10 * 60_000;
+    gopay_repo::put_session(
+        &pool,
+        expiring,
+        &GopaySession {
+            expires_at_ms: soon_ms,
+            ..session()
+        },
+        &k,
+    )
+    .await
+    .unwrap();
+    // Terakhir diperbarui 7 jam lalu (refresh penjaga 6 jam).
+    sqlx::query(
+        "UPDATE gopay_sessions SET refreshed_at = now() - interval '7 hours' WHERE tenant_id = $1",
+    )
+    .bind(stale.as_uuid())
+    .execute(&pool)
+    .await
+    .unwrap();
+    // Perlu login ulang: tidak di-refresh otomatis.
+    sqlx::query("UPDATE gopay_sessions SET status = 'needs_relogin', refreshed_at = now() - interval '7 hours' WHERE tenant_id = $1")
+        .bind(dead.as_uuid())
+        .execute(&pool)
+        .await
+        .unwrap();
+
+    let due = gopay_repo::refresh_due_tenants(&pool, 100).await.unwrap();
+    assert!(due.contains(&expiring));
+    assert!(due.contains(&stale));
+    assert!(!due.contains(&fresh));
+    assert!(!due.contains(&dead));
+}

@@ -13,6 +13,7 @@ import { Badge, BusyButton, Card, PageHeader, PageSkeleton } from "@/ui/page";
 import { toast } from "@/ui/toast";
 import { api, describe } from "@/lib/api";
 import { t } from "@/i18n";
+import { relatif, waktu } from "@/lib/labels";
 
 interface Settings {
   qris: string | null; qris_receiver_name: string | null; checkout_enabled: boolean; delivery_fee: string;
@@ -128,6 +129,20 @@ function Form({ ctx }: { ctx: TenantCtx }) {
 interface GopayStatus {
   connected: boolean; status: string | null; outlet_name: string | null;
   phone_masked: string | null; has_static_qris: boolean;
+  /** Detik epoch: token terakhir diperbarui / kedaluwarsa. Diperbarui otomatis oleh server. */
+  refreshed_at_unix: number | null; expires_at_unix: number | null;
+  /** Kode kegagalan pembaruan terakhir (mis. `network`, `status_503`). */
+  last_error: string | null;
+}
+
+/** Penjelasan singkat kode kegagalan pembaruan sesi dari server. */
+function gopayErrorText(code: string): string {
+  if (code === "network") return t("GoBiz tidak dapat dihubungi");
+  if (code === "parse") return t("respons GoBiz tidak dikenali");
+  if (code === "unauthorized" || code === "status_400" || code === "status_403") return t("GoBiz menolak sesi");
+  if (code === "status_429") return t("terlalu banyak permintaan ke GoBiz");
+  if (code.startsWith("status_5")) return t("server GoBiz sedang gangguan");
+  return code;
 }
 
 // Ambil cookie sesi yang dioper ekstensi via fragment URL (#gopay_connect=<base64 cookie>).
@@ -178,6 +193,14 @@ function GopayCard({ tenantId, can, refreshKey }: { tenantId: string; can: boole
     setSt(await api<GopayStatus>("POST", `${base}/connect/session`, { json: { phone, session } }));
     setSession(""); toast.ok(t("Akun GoPay terhubung."));
   });
+  const check = () => run(async () => {
+    const r = await api<GopayStatus & { result: string }>("POST", `${base}/check`);
+    setSt(r);
+    if (r.result === "refreshed") toast.ok(t("Sesi GoPay diperbarui dan berfungsi."));
+    else if (r.result === "needs_relogin") toast.error(t("GoBiz menolak sesi ini. Hubungkan ulang akun GoPay."));
+    else if (r.result === "busy") toast.info(t("Sesi sedang diperbarui otomatis. Coba lagi sebentar."));
+    else toast.info(t("GoBiz sedang tidak dapat dihubungi. Sesi tetap aktif dan dicoba lagi otomatis."));
+  });
   const disconnect = () => run(async () => {
     if (!confirm(t("Putuskan akun GoPay? Pesanan tidak lagi dikonfirmasi otomatis."))) return;
     setSt(await api<GopayStatus>("DELETE", base)); toast.ok(t("Akun GoPay diputus."));
@@ -207,7 +230,13 @@ function GopayCard({ tenantId, can, refreshKey }: { tenantId: string; can: boole
       description={t("Opsional. Hubungkan akun GoPay/GoBiz Merchant toko agar pembayaran QRIS dikonfirmasi otomatis — pesanan langsung berstatus Diproses tanpa Anda cek manual. Gratis untuk usaha mikro. Konfirmasi manual tetap tersedia sebagai cadangan.")}
     >
       <Alert kind="error">{err}</Alert>
-      {!st.connected ? (
+      {st.connected && st.status === "needs_relogin" && (
+        <Alert kind="warn">
+          {t("GoBiz menolak sesi yang tersimpan, jadi pembayaran tidak lagi dikonfirmasi otomatis. Hubungkan ulang di bawah — konfirmasi manual tetap berjalan.")}
+          {st.last_error ? " " + t("(kode: {0})", st.last_error) : ""}
+        </Alert>
+      )}
+      {!st.connected || st.status === "needs_relogin" ? (
         <div className="gp-stack">
           <Alert kind="info">
             <strong>{t("Cara termudah (tanpa menyalin token):")}</strong>{" "}{t("pasang ekstensi")}{" "}<em>{t("\"UMKM OS — Penghubung GoPay\"")}</em>{t(", login GoBiz di browser, lalu klik")}{" "}<em>{t("Hubungkan")}</em>{" "}{t("di ekstensi — kolom di bawah terisi sendiri. Login GoPay dilindungi reCAPTCHA sehingga harus di browser; ekstensi hanya menangkap sesinya. Tak punya ekstensi? Isi manual di bawah.")}
@@ -229,7 +258,8 @@ function GopayCard({ tenantId, can, refreshKey }: { tenantId: string; can: boole
               <li>{t("Buka")}{" "}<strong>portal.gofoodmerchant.co.id</strong>{" "}{t("di browser (komputer), login dengan nomor & OTP seperti biasa (selesaikan reCAPTCHA bila ada).")}</li>
               <li>{t("Tekan")}{" "}<strong>F12</strong>{" "}{t("→ tab")}{" "}<strong>{t("Application")}</strong>{" "}{t("(Chrome) /")}{" "}<strong>{t("Storage")}</strong>{" "}{t("(Firefox) →")}{" "}<strong>{t("Cookies")}</strong>{" "}{t("→ pilih")}{" "}<strong>https://portal.gofoodmerchant.co.id</strong>.</li>
               <li>{t("Salin nilai")}{" "}<strong>access_token</strong> dan <strong>refresh_token</strong>{t(", lalu tempel ke kotak di atas (boleh format")}{" "}<code>{t("access_token=...; refresh_token=...")}</code>).</li>
-              <li>{t("Token diperbarui otomatis; ulangi hanya bila status berubah jadi \"Perlu login ulang\".")}</li>
+              <li>{t("Setelah token tersalin, tutup tab GoBiz tanpa keluar (logout). Tab yang dibiarkan terbuka memperbarui sesinya sendiri, sehingga token yang tersimpan di sini menjadi tidak berlaku.")}</li>
+              <li>{t("Selanjutnya sesi diperbarui otomatis oleh server sebelum kedaluwarsa dan minimal tiap 6 jam — tidak perlu login ulang.")}</li>
             </ol>
           )}
           {can && (
@@ -247,6 +277,19 @@ function GopayCard({ tenantId, can, refreshKey }: { tenantId: string; can: boole
             </div>
           </div>
           <div className="d-field">
+            <span>{t("Sesi")}</span>
+            <span className="d-hint">
+              {st.refreshed_at_unix
+                ? t("Diperbarui otomatis {0} · berlaku sampai {1}", relatif(st.refreshed_at_unix * 1000), waktu((st.expires_at_unix ?? 0) * 1000))
+                : t("Diperbarui otomatis sebelum kedaluwarsa dan minimal tiap 6 jam.")}
+            </span>
+          </div>
+          {st.status === "active" && st.last_error && (
+            <Alert kind="warn">
+              {t("Pembaruan sesi terakhir gagal ({0}). Sesi tetap aktif dan dicoba lagi otomatis.", gopayErrorText(st.last_error))}
+            </Alert>
+          )}
+          <div className="d-field">
             <span>{t("QRIS statis toko")}</span>
             <span className="d-hint">
               {st.has_static_qris
@@ -262,6 +305,7 @@ function GopayCard({ tenantId, can, refreshKey }: { tenantId: string; can: boole
           {can && (
             <div className="d-row" style={{ justifyContent: "flex-end", gap: "var(--sp-3)" }}>
               <button type="button" className="d-btn d-btn-ghost" onClick={disconnect}>{t("Putuskan akun")}</button>
+              <BusyButton type="button" busy={busy} className="d-btn" onClick={check}>{t("Cek sekarang")}</BusyButton>
             </div>
           )}
         </div>

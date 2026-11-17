@@ -77,8 +77,8 @@ pub async fn put_session(
     sqlx::query(
         "INSERT INTO gopay_sessions
            (tenant_id, phone_e164, merchant_id, outlet_name, kek_version, wrapped_dek, ciphertext,
-            status, expires_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, 'active', to_timestamp($8::double precision / 1000.0))
+            status, expires_at, refreshed_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, 'active', to_timestamp($8::double precision / 1000.0), now())
          ON CONFLICT (tenant_id) DO UPDATE SET
            phone_e164 = EXCLUDED.phone_e164, merchant_id = EXCLUDED.merchant_id,
            outlet_name = EXCLUDED.outlet_name, kek_version = EXCLUDED.kek_version,
