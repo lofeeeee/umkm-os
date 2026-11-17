@@ -42,16 +42,18 @@ Versi dipin **exact** (`.npmrc save-exact`), dipilih sebagai rilis stabil tertin
 
 | Paket | Versi | Lisensi | Peran | Alasan / catatan |
 |---|---|---|---|---|
-| next | 16.4.3 | MIT | build | Static export `PRD.md §9.2`; tidak dijalankan sebagai server |
+| next | 16.4.5 | MIT | build | Static export `PRD.md §9.2`; tidak dijalankan sebagai server. 16.4.3 → 16.4.5 (2026-11-17): GHSA-mfr8-8qww-v76h |
 | react, react-dom | 19.3.1 | MIT | runtime browser | UI |
 | typescript | 6.0.3 | Apache-2.0 | dev | 7.x (port native) dihindari: build Next memakai API JS TypeScript |
 | eslint | 9.39.5 | MIT | dev | `eslint-config-next` 16.4.3 belum mendukung ESLint 10. npm menandai 9.x deprecated → naikkan saat config Next mendukung 10 |
-| eslint-config-next | 16.4.3 | MIT | dev | Aturan Next/React hooks; + `react/no-danger` & larangan `dangerouslySetInnerHTML` |
+| eslint-config-next | 16.4.5 | MIT | dev | Aturan Next/React hooks; + `react/no-danger` & larangan `dangerouslySetInnerHTML` |
 | vitest | 4.1.12 | MIT | dev | Unit test renderer (`renderToStaticMarkup`, tanpa DOM). 5.x memicu crash resolver npm 10 |
 | @vitejs/plugin-react | 6.1.2 | MIT | dev | JSX untuk vitest |
 | @playwright/test | 1.64.1 | Apache-2.0 | dev | Uji browser responsif + alur editor terhadap stack nyata |
 | @types/react, @types/react-dom | 19.3.0 | MIT | dev | Tipe |
 | @types/node | 26.6.6 | MIT | dev | Tipe |
+| @fontsource-variable/plus-jakarta-sans | 5.3.0 | OFL-1.1 | runtime (font) | Font dashboard & bawaan situs toko; self-hosted (CSP `font-src 'self'`) |
+| @fontsource-variable/inter, /nunito, /merriweather, /fraunces; @fontsource/poppins | 5.3.0 | OFL-1.1 | runtime (font) | Font preset situs toko (2026-11-17). Sebelumnya preset hanya nama di font-family → selalu jatuh ke font sistem. `@font-face` malas: browser hanya mengunduh font yang dipakai halaman; Poppins dibatasi bobot 400/600/700/800 |
 
 Catatan:
 - `.npmrc legacy-peer-deps=true`: npm 10.9.8 crash (`edgesOut` null) saat menelusuri optional peer `vitest@*` → `@vitest/browser-playwright`. Konflik peer tetap diperiksa: CI menjalankan `npm ls` (gagal bila ada peer invalid/missing).

@@ -20,6 +20,9 @@
 		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
 		-Server
 	}
+	# Kompresi (audit performa 17 Nov): JS/CSS/HTML/JSON ±70% lebih kecil di jaringan seluler.
+	# Gambar sudah terkompresi (Caddy hanya mengompres tipe teks bawaan).
+	encode zstd gzip
 	# Upload gambar maks 2 MiB (ADR-0009) + overhead; API menegakkan batas persisnya.
 	request_body {
 		max_size 3MB

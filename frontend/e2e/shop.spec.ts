@@ -121,7 +121,7 @@ test("toko: checkout guest + pembayaran QRIS statis + konfirmasi pemilik", async
   await noHorizontalScroll(buyer);
   await card.click();
   await expect(buyer.getByRole("heading", { name: "Kopi Susu E2E" })).toBeVisible();
-  await buyer.getByLabel("Jumlah").fill("2");
+  await buyer.getByLabel("Jumlah", { exact: true }).fill("2");
   await buyer.getByRole("button", { name: "Tambah ke keranjang" }).click();
   await buyer.getByRole("link", { name: "Lihat keranjang" }).click();
   await expect(buyer.getByText("Perkiraan total:")).toContainText("Rp30.000");

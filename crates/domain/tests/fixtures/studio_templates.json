@@ -154,7 +154,7 @@
     "template": "modern_store",
     "theme": {
       "primary": "#BE185D",
-      "font": "merriweather",
+      "font": "fraunces",
       "surface": "light",
       "text_scale": 1
     },
@@ -270,7 +270,7 @@
     "template": "modern_store",
     "theme": {
       "primary": "#0369A1",
-      "font": "inter",
+      "font": "jakarta",
       "surface": "light",
       "text_scale": 1
     },

@@ -1,7 +1,7 @@
 import type { ChangeEvent } from "react";
 import { Trash, UploadSimple } from "@phosphor-icons/react/ssr";
 
-import { FONT_PRESETS } from "@/renderer/sections";
+import { FONT_LABELS, FONT_PRESETS } from "@/renderer/sections";
 import { PALETTES } from "@/studio/plugins";
 import { t as tx } from "@/i18n";
 
@@ -203,7 +203,7 @@ export function ThemePanel({
           >
             {FONT_PRESETS.map((f) => (
               <option key={f} value={f}>
-                {f}
+                {FONT_LABELS[f] ?? f}
               </option>
             ))}
           </select>

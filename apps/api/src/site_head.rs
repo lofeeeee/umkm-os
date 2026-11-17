@@ -332,12 +332,108 @@ pub async fn document(
     match build_meta(&state, t, &host, &path).await {
         Ok(Some(mut meta)) => {
             stable_image(&mut meta, &site_origin(&state, &host), &path);
-            html_document(inject(&shell, &render_head(&meta)), &headers)
+            let mut head = render_head(&meta);
+            // Gambar toko dilayani origin API: buka koneksinya sejak awal (bukan setelah JS & data).
+            if !state.site.api_origin.is_empty() {
+                head.push_str(&format!(
+                    "<link rel=\"preconnect\" href=\"{}\">",
+                    esc(&state.site.api_origin)
+                ));
+            }
+            if let Some(data) = site_data(&state, t, &path).await {
+                head.push_str(&data);
+            }
+            html_document(inject(&shell, &head), &headers)
         }
         // Langganan habis / toko tanpa versi terbit: shell apa adanya.
         Ok(None) => html_document(shell, &headers),
         Err(_) => StatusCode::NOT_FOUND.into_response(),
     }
+}
+
+/// Slug halaman website untuk `path` (sama dengan frontend `pageSlug`), atau `None` untuk rute toko
+/// (/produk/…, /keranjang, /akun, …) yang memuat datanya sendiri.
+fn page_slug_of(path: &str) -> Option<String> {
+    let s = path.trim_matches('/');
+    if s.is_empty() || s == "site" || s == "site.html" {
+        return Some(website_repo::HOME.into());
+    }
+    let shop = matches!(
+        s,
+        "keranjang" | "pesanan" | "akun" | "kebijakan-privasi" | "syarat-transaksi"
+    );
+    (!shop && umkm_domain::website::is_valid_page_slug(s)).then(|| s.to_owned())
+}
+
+/// Batas produk yang ditampilkan halaman: limit terbesar dari blok/section `product_grid`
+/// (bawaan 8, 1–24 — sama dengan frontend). `None` = halaman tanpa galeri produk.
+fn grid_limit(content: &Value) -> Option<i64> {
+    let blocks = content.get("blocks").and_then(Value::as_array);
+    let sections = content.get("sections").and_then(Value::as_array);
+    blocks
+        .into_iter()
+        .flatten()
+        .filter(|b| b.get("kind").and_then(Value::as_str) == Some("product_grid"))
+        .chain(
+            sections
+                .into_iter()
+                .flatten()
+                .filter(|s| s.get("type").and_then(Value::as_str) == Some("product_grid")),
+        )
+        .map(|b| {
+            b.pointer("/data/limit")
+                .and_then(Value::as_i64)
+                .unwrap_or(8)
+                .clamp(1, 24)
+        })
+        .max()
+}
+
+/// Data situs (isi `GET /public/site` + produk galeri) ditanam di dokumen sebagai
+/// `<script type="application/json" id="__site">` — browser tidak perlu dua permintaan berantai
+/// setelah JS termuat. Blok data JSON tidak dieksekusi, jadi CSP (hash skrip) tidak terpengaruh.
+/// Gagal di sini tidak fatal: frontend jatuh balik ke fetch biasa.
+///
+/// Rute toko (produk, keranjang, akun, …) menanam situs beranda (nama, logo, warna & font toko untuk
+/// tampilan halaman toko) dan — untuk `/produk/{slug}` — produknya sendiri.
+async fn site_data(state: &AppState, t: TenantId, path: &str) -> Option<String> {
+    let page = page_slug_of(path);
+    let site = crate::website::load_public_site(
+        state,
+        t,
+        page.clone().unwrap_or_else(|| website_repo::HOME.into()),
+    )
+    .await
+    .ok()?;
+    let site = serde_json::to_value(site).ok()?;
+    let products = match page
+        .as_ref()
+        .and_then(|_| site.pointer("/page/content"))
+        .and_then(grid_limit)
+    {
+        Some(limit) => Some(
+            crate::catalog::load_public_products(state, t, None, limit, 0)
+                .await
+                .ok()?,
+        ),
+        None => None,
+    };
+    let product = match path
+        .strip_prefix("/produk/")
+        .filter(|s| umkm_domain::catalog::is_valid_slug(s))
+    {
+        Some(slug) => crate::catalog::load_public_product(state, t, slug)
+            .await
+            .ok()
+            .flatten()
+            .and_then(|p| serde_json::to_value(p).ok()),
+        None => None,
+    };
+    let data = json!({ "site": site, "products": products, "product": product });
+    Some(format!(
+        "<script type=\"application/json\" id=\"__site\">{}</script>",
+        json_for_script(&data)
+    ))
 }
 
 fn site_origin(state: &AppState, host: &str) -> String {
@@ -647,5 +743,22 @@ mod tests {
         assert_eq!(clip("a  b\nc", 10), "a b c");
         assert_eq!(clip(&"x".repeat(200), 160).chars().count(), 160);
         assert_eq!(esc("a\u{0}b'"), "ab&#39;");
+    }
+
+    #[test]
+    fn page_slug_and_grid_limit() {
+        assert_eq!(page_slug_of("/").as_deref(), Some("home"));
+        assert_eq!(page_slug_of("/menu").as_deref(), Some("menu"));
+        assert_eq!(page_slug_of("/keranjang"), None);
+        assert_eq!(page_slug_of("/produk/kopi"), None);
+        assert_eq!(page_slug_of("/Bad!"), None);
+        let v2 = json!({ "blocks": [
+            { "kind": "product_grid", "data": { "limit": 6 } },
+            { "kind": "product_grid", "data": {} },
+            { "kind": "hero", "data": { "limit": 99 } }
+        ] });
+        assert_eq!(grid_limit(&v2), Some(8));
+        assert_eq!(grid_limit(&json!({ "sections": [{ "type": "product_grid", "data": { "limit": 99 } }] })), Some(24));
+        assert_eq!(grid_limit(&json!({ "blocks": [{ "kind": "hero", "data": {} }] })), None);
     }
 }

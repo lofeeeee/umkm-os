@@ -1359,7 +1359,7 @@ main.d-legal { max-width: 720px; }
 .st-stage[data-surface="dark"] .st-style-card, .sv2[data-surface="dark"] .st-style-card { background: #15151c; box-shadow: 0 0 0 1px #2a2a35; }
 .st-style-tint { background: color-mix(in srgb, var(--s-primary) 10%, var(--pg-bg)); border-radius: 16px; }
 .st-style-dark { background: #0f172a; border-radius: 16px; }
-.st-style-dark .site { --s-ink: #f8fafc; --s-ink-2: #cbd5e1; --s-muted: #94a3b8; --s-line: #1e293b; --s-soft: #1e293b; }
+.st-style-dark .site { --s-ink: #f8fafc; --s-ink-2: #cbd5e1; --s-muted: #94a3b8; --s-line: #1e293b; --s-soft: #1e293b; --s-tint: color-mix(in srgb, var(--s-primary) 28%, #0f172a); }
 .st-style-dark .s-product, .st-style-dark .s-card { background: #1e293b; }
 
 /* 3D lembut (neumorphism): warna sama dengan latar halaman, timbul lewat bayangan terang + gelap.

@@ -15,6 +15,7 @@ import { fileUrl, shopApi, type PublicProduct } from "@/shop/api";
 import { route } from "@/shop/route";
 import { AccountPage, CartFab, CartPage, LegalPage, OrderPage, ProductPage, VerifyPage } from "@/shop/views";
 import { ChatWidget } from "@/chat/widget";
+import { inlinePage } from "@/renderer/inline";
 import "@/shop/shop.css";
 import { t } from "@/i18n";
 
@@ -31,10 +32,15 @@ function toGrid(p: PublicProduct): GridProduct {
 }
 
 function WebsitePage({ slug }: { slug: string }) {
-  const [site, setSite] = useState<PublicSite | null>(null);
-  const [products, setProducts] = useState<GridProduct[] | undefined>(undefined);
+  const [site, setSite] = useState<PublicSite | null>(() => inlinePage(slug)?.site ?? null);
+  const [products, setProducts] = useState<GridProduct[] | undefined>(() => inlinePage(slug)?.products?.items.map(toGrid));
   const [state, setState] = useState<"loading" | "missing" | "inactive" | "error">("loading");
   useEffect(() => {
+    const inline = inlinePage(slug);
+    if (inline) {
+      document.title = inline.site.business.profile.name;
+      return;
+    }
     fetch(`/_api/public/site?page=${encodeURIComponent(slug)}`, { credentials: "omit" })
       .then(async (r) => {
         if (r.status === 404) return setState("missing");
@@ -95,10 +101,22 @@ function WebsitePage({ slug }: { slug: string }) {
   return <Fallback state={state} />;
 }
 
-function Fallback({ state }: { state: "loading" | "missing" | "inactive" | "error" }) {
+/** Kerangka halaman toko selama JS & data dimuat: bentuk situs (bilah atas, banner, kartu produk),
+ *  bukan teks "Memuat…" — terasa lebih cepat dan tidak melompat saat isi tampil. */
+function SiteSkeleton() {
   return (
-    <main className="d-narrow" aria-busy={state === "loading"}>
-      {state === "loading" && <p className="d-muted">{t("Memuat…")}</p>}
+    <main className="s-skel" aria-busy="true" aria-label={t("Memuat…")}>
+      <div className="s-skel-bar"><span className="s-skel-logo" /><span className="s-skel-line" /></div>
+      <div className="s-skel-hero"><span className="s-skel-line s-skel-h1" /><span className="s-skel-line" /><span className="s-skel-line s-skel-short" /><span className="s-skel-btn" /></div>
+      <div className="s-skel-grid">{[0, 1, 2, 3].map((i) => <span key={i} className="s-skel-card" />)}</div>
+    </main>
+  );
+}
+
+function Fallback({ state }: { state: "loading" | "missing" | "inactive" | "error" }) {
+  if (state === "loading") return <SiteSkeleton />;
+  return (
+    <main className="d-narrow">
       {state === "missing" && <><h1>{t("Halaman tidak ditemukan")}</h1><p className="d-muted">{t("Situs ini belum tersedia.")}</p></>}
       {state === "inactive" && <><h1>{t("Toko sedang tidak aktif")}</h1><p className="d-muted">{t("Silakan kembali lagi nanti.")}</p></>}
       {state === "error" && <><h1>{t("Terjadi gangguan")}</h1><p className="d-muted">{t("Coba muat ulang beberapa saat lagi.")}</p></>}

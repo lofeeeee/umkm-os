@@ -16,7 +16,7 @@ import { Badge, BusyButton, Card, PageHeader, PageSkeleton } from "@/ui/page";
 import { toast } from "@/ui/toast";
 import { isV2 } from "@/studio/doc";
 import { api, ApiError, apiUrl, describe } from "@/lib/api";
-import { FIELDS, FONT_PRESETS, SECTION_LABELS, defaultData, newSectionId } from "@/renderer/sections";
+import { FIELDS, FONT_LABELS, FONT_PRESETS, SECTION_LABELS, defaultData, newSectionId } from "@/renderer/sections";
 import { Site } from "@/renderer/Site";
 import { SECTION_TYPES, type Business, type PageContent, type Section, type SectionType } from "@/renderer/types";
 import { t as tx } from "@/i18n";
@@ -241,7 +241,7 @@ function Editor({ ctx }: { ctx: TenantCtx }) {
                 </label>
                 <label className="d-field"><span>{tx("Font")}</span>
                   <select value={content.theme.font} disabled={!canEdit} onChange={(e) => update((c) => ({ ...c, theme: { ...c.theme, font: e.target.value } }))}>
-                    {FONT_PRESETS.map((f) => <option key={f} value={f}>{f}</option>)}
+                    {FONT_PRESETS.map((f) => <option key={f} value={f}>{FONT_LABELS[f] ?? f}</option>)}
                   </select>
                 </label>
               </div>

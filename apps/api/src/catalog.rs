@@ -697,11 +697,23 @@ pub async fn public_products(
         offset: q.offset,
     }
     .bounds();
-    let (list, total) = repo::public_products(pool(&state)?, t, q.category_id, limit, offset)
+    let body = load_public_products(&state, t, q.category_id, limit, offset).await?;
+    Ok(public_json(body, &id))
+}
+
+/// Isi `GET /public/products` (juga ditanam di dokumen HTML toko, lihat `site_head::document`).
+pub async fn load_public_products(
+    state: &AppState,
+    t: umkm_shared::ids::TenantId,
+    category_id: Option<Uuid>,
+    limit: i64,
+    offset: i64,
+) -> Result<PublicProductList, ApiError> {
+    let (list, total) = repo::public_products(pool(state)?, t, category_id, limit, offset)
         .await
         .map_err(internal)?;
-    let items = public_view(&state, t, list).await?;
-    Ok(public_json(PublicProductList { items, total }, &id))
+    let items = public_view(state, t, list).await?;
+    Ok(PublicProductList { items, total })
 }
 
 /// Satu produk publik berdasarkan slug.
@@ -724,12 +736,25 @@ pub async fn public_product(
     if !catalog::is_valid_slug(&slug) {
         return Err(not_found());
     }
-    let p = repo::public_product(pool(&state)?, t, &slug)
+    let p = load_public_product(&state, t, &slug)
+        .await?
+        .ok_or_else(not_found)?;
+    Ok(public_json(p, &id))
+}
+
+/// Satu produk aktif untuk publik (juga ditanam di dokumen HTML `/produk/{slug}`).
+pub async fn load_public_product(
+    state: &AppState,
+    t: umkm_shared::ids::TenantId,
+    slug: &str,
+) -> Result<Option<PublicProduct>, ApiError> {
+    let Some(p) = repo::public_product(pool(state)?, t, slug)
         .await
         .map_err(internal)?
-        .ok_or_else(not_found)?;
-    let mut v = public_view(&state, t, vec![p]).await?;
-    Ok(public_json(v.remove(0), &id))
+    else {
+        return Ok(None);
+    };
+    Ok(public_view(state, t, vec![p]).await?.pop())
 }
 
 /// Kategori publik toko.

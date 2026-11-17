@@ -791,11 +791,27 @@ pub async fn public_site(
     HostTenant(t): HostTenant,
     Query(q): Query<SiteQuery>,
 ) -> Result<Response, ApiError> {
+    let body = load_public_site(&state, t, q.page.unwrap_or_else(|| repo::HOME.into())).await?;
+    let mut res = Json(SuccessEnvelope::new(body, &id)).into_response();
+    res.headers_mut().insert(
+        header::CACHE_CONTROL,
+        HeaderValue::from_static("public, max-age=60"),
+    );
+    res.headers_mut()
+        .insert(header::VARY, HeaderValue::from_static("Host"));
+    Ok(res)
+}
+
+/// Isi `GET /public/site` (juga ditanam di dokumen HTML toko, lihat `site_head::document`).
+pub async fn load_public_site(
+    state: &AppState,
+    t: TenantId,
+    slug: String,
+) -> Result<PublicSite, ApiError> {
     // ADR-0016: langganan habis → website/katalog/checkout publik nonaktif.
-    crate::billing::require_operational(&state, t).await?;
-    let slug = q.page.unwrap_or_else(|| repo::HOME.into());
+    crate::billing::require_operational(state, t).await?;
     slug_ok(&slug)?;
-    let p = pool(&state)?;
+    let p = pool(state)?;
     let (version, content) = repo::published_content(p, t, &slug)
         .await
         .map_err(internal)?
@@ -823,7 +839,7 @@ pub async fn public_site(
     asset_ids(&content, &mut ids);
     ids.extend(info.profile.logo_object_id);
     ids.extend(info.profile.cover_object_id);
-    let assets = signed_assets(&state, t, ids).await?;
+    let assets = signed_assets(state, t, ids).await?;
     // Navigasi situs: halaman terbit. Kegagalan di sini tidak boleh menjatuhkan situs — nav tanpa
     // tautan masih berguna (nama toko), jadi galat dianggap daftar kosong.
     let pages = repo::published_pages(p, t)
@@ -832,7 +848,7 @@ pub async fn public_site(
         .into_iter()
         .map(|(slug, title)| PublicPageLink { slug, title })
         .collect();
-    let body = PublicSite {
+    Ok(PublicSite {
         page: PublicPage {
             slug,
             version,
@@ -842,15 +858,7 @@ pub async fn public_site(
         status: status_view(status),
         assets,
         pages,
-    };
-    let mut res = Json(SuccessEnvelope::new(body, &id)).into_response();
-    res.headers_mut().insert(
-        header::CACHE_CONTROL,
-        HeaderValue::from_static("public, max-age=60"),
-    );
-    res.headers_mut()
-        .insert(header::VARY, HeaderValue::from_static("Host"));
-    Ok(res)
+    })
 }
 
 pub fn routes() -> Router<AppState> {

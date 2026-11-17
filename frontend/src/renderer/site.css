@@ -1,3 +1,13 @@
+/* Font preset situs toko (self-hosted, OFL). @font-face malas: hanya font yang dipakai yang diunduh. */
+@import "@fontsource-variable/inter/wght.css";
+@import "@fontsource-variable/nunito/wght.css";
+@import "@fontsource-variable/merriweather/wght.css";
+@import "@fontsource-variable/fraunces/wght.css";
+@import "@fontsource/poppins/400.css";
+@import "@fontsource/poppins/600.css";
+@import "@fontsource/poppins/700.css";
+@import "@fontsource/poppins/800.css";
+
 /* Renderer situs tenant. Container query (bukan media query) agar preview mobile di
    dashboard (lebar 375) berperilaku persis seperti layar ponsel.
    Warna utama & font berasal dari tema toko (--s-primary, --s-font). */

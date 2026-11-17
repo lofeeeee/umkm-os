@@ -27,7 +27,17 @@ const cta: Field = { key: "cta", get label() { return t("Tombol"); }, kind: "cta
 const image = (key = "image", label: string = m("Gambar")): Field => ({ key, get label() { return t(label); }, kind: "image" });
 
 export const SOCIAL_PLATFORMS = ["instagram", "facebook", "tiktok", "youtube", "x", "website"];
-export const FONT_PRESETS = ["inter", "poppins", "nunito", "merriweather", "system"];
+export const FONT_PRESETS = ["jakarta", "inter", "poppins", "nunito", "merriweather", "fraunces", "system"];
+/** Nama tampilan preset font (pemilih font di Studio/editor). */
+export const FONT_LABELS: Record<string, string> = tmap({
+  jakarta: "Plus Jakarta Sans — modern, buatan Indonesia",
+  inter: "Inter — netral & rapi",
+  poppins: "Poppins — geometris & ramah",
+  nunito: "Nunito — bulat & santai",
+  merriweather: "Merriweather — klasik (serif)",
+  fraunces: "Fraunces — elegan (serif)",
+  system: "Font perangkat — paling ringan",
+});
 
 export const SECTION_LABELS: Record<SectionType, string> = tmap({
   header: "Kepala halaman & navigasi",

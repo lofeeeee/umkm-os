@@ -98,4 +98,19 @@ export const TEMPLATES_5: Record<string, string> = {
   "Pesan cepat": "Quick order",
   "Tanya stok": "Ask about stock",
   "Halo! Mau cek stok barang apa?": "Hi! Which item would you like to check?",
+  // Pemilih font (renderer/sections.ts FONT_LABELS)
+  "Plus Jakarta Sans — modern, buatan Indonesia": "Plus Jakarta Sans — modern, made in Indonesia",
+  "Inter — netral & rapi": "Inter — neutral & tidy",
+  "Poppins — geometris & ramah": "Poppins — geometric & friendly",
+  "Nunito — bulat & santai": "Nunito — rounded & casual",
+  "Merriweather — klasik (serif)": "Merriweather — classic (serif)",
+  "Fraunces — elegan (serif)": "Fraunces — elegant (serif)",
+  "Font perangkat — paling ringan": "Device font — lightest",
+  // Halaman toko (shop/views.tsx)
+  "Beranda toko": "Store home",
+  "Keranjang, {0} barang": "Cart, {0} items",
+  "Hemat {0}": "Save {0}",
+  "Kurangi jumlah": "Decrease quantity",
+  "Tambah jumlah": "Increase quantity",
+  "Ditambahkan ke keranjang.": "Added to cart.",
 };

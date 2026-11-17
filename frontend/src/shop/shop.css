@@ -23,7 +23,7 @@
 .shop .s-muted { color: var(--shop-muted); }
 .shop .s-btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  background: var(--shop-primary); color: #fff; border: 0; cursor: pointer;
+  background: var(--shop-primary); color: var(--shop-on-primary, #fff); border: 0; cursor: pointer;
   padding: 12px 22px; border-radius: 999px; font: inherit; font-weight: 700; min-height: 48px; text-decoration: none;
   transition: transform var(--dur, 180ms) var(--shop-ease), opacity var(--dur, 180ms) ease;
 }
@@ -44,6 +44,12 @@
 .shop-nav a:hover { background: var(--shop-soft); color: var(--shop-ink); }
 }
 .shop-nav > a:first-child { padding-left: 4px; }
+/* Identitas toko di bilah atas: logo/inisial + nama (warna utama toko). */
+.shop-nav .shop-brand { display: inline-flex; align-items: center; gap: 10px; min-width: 0; color: var(--shop-ink); font-weight: 800; letter-spacing: -0.01em; }
+.shop-brand img, .shop-brand-mark { width: 32px; height: 32px; border-radius: 9px; flex: none; object-fit: cover; }
+.shop-brand-mark { display: grid; place-items: center; background: var(--shop-primary); color: var(--shop-on-primary, #fff); font-size: 0.875rem; }
+.shop-brand-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 46vw; }
+.shop-badge { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px; margin-left: 6px; border-radius: 999px; background: var(--shop-primary); color: var(--shop-on-primary, #fff); font-size: 0.75rem; font-weight: 800; line-height: 1; }
 .shop-main { max-width: 760px; margin: 0 auto; padding: 20px 16px 96px; animation: shop-in var(--dur-slow, 240ms) var(--shop-ease) both; }
 @keyframes shop-in { from { opacity: 0; transform: translateY(6px); } }
 .shop-main h1 { font-size: 1.625rem; line-height: 1.2; margin: 8px 0 20px; letter-spacing: -0.02em; font-weight: 800; }
@@ -84,7 +90,7 @@
 .shop-product { display: grid; gap: 24px; background: #fff; border: 1px solid var(--shop-line); border-radius: 20px; padding: 16px; }
 .shop-gallery { display: grid; gap: 8px; }
 .shop-gallery img { width: 100%; height: auto; border-radius: 14px; aspect-ratio: 1; object-fit: cover; }
-.shop-price { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.01em; }
+.shop-price { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.01em; margin: 0 0 4px; color: var(--shop-primary); font-variant-numeric: tabular-nums; }
 .shop-price s { color: var(--shop-muted); font-size: 1rem; font-weight: 400; margin-right: 8px; }
 
 .shop-status { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 999px; background: #e2e8f0; color: var(--shop-ink); font-weight: 700; }
@@ -115,3 +121,69 @@
 @media (prefers-reduced-motion: reduce) {
   .shop *, .shop-fab { animation: none !important; transition: none !important; }
 }
+
+/* Kerangka situs toko (sebelum JS/data siap). Netral: warna toko belum diketahui. */
+.s-skel { max-width: 1180px; margin: 0 auto; padding: 16px; box-sizing: border-box; }
+.s-skel span { display: block; background: linear-gradient(90deg, #eef0f3 0%, #f7f8fa 50%, #eef0f3 100%); background-size: 200% 100%; border-radius: 10px; animation: s-skel 1.2s ease-in-out infinite; }
+.s-skel-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; }
+.s-skel-logo { width: 36px; height: 36px; flex: none; }
+.s-skel-line { height: 14px; width: 60%; margin-bottom: 12px; }
+.s-skel-bar .s-skel-line { width: 120px; margin: 0; }
+.s-skel-hero { padding: 28px 8px 36px; }
+.s-skel-h1 { height: 34px; width: 55%; margin-bottom: 18px; }
+.s-skel-short { width: 35%; }
+.s-skel-btn { width: 132px; height: 44px; border-radius: 999px !important; margin-top: 12px; }
+.s-skel-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+.s-skel-card { aspect-ratio: 3 / 4; border-radius: 14px !important; }
+@keyframes s-skel { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .s-skel span { animation: none; } }
+
+/* ---------- Halaman produk (audit tampilan 17 Nov): judul dekat harga, varian berupa chip,
+   jumlah dengan tombol −/+, dan bilah beli yang menempel di bawah layar ponsel. ---------- */
+.shop-info h1 { font-size: 1.5rem; line-height: 1.2; margin: 0 0 8px; letter-spacing: -0.02em; font-weight: 800; text-wrap: balance; }
+.shop-save { display: inline-block; margin: 0 0 12px; padding: 2px 10px; border-radius: 999px; font-size: 0.8125rem; font-weight: 700; color: #166534; background: #dcfce7; }
+.shop-desc { color: var(--shop-ink-2); margin: 8px 0 16px; }
+.shop-desc p { margin: 0 0 8px; }
+.shop-options { border: 0; padding: 0; margin: 0 0 16px; display: flex; flex-wrap: wrap; gap: 8px; }
+.shop-options legend { font-weight: 700; font-size: 0.875rem; color: var(--shop-ink-2); margin-bottom: 8px; padding: 0; }
+.shop-chip { min-height: 44px; padding: 8px 16px; border-radius: 999px; border: 1.5px solid var(--shop-line); background: #fff; color: var(--shop-ink); font: inherit; font-weight: 600; cursor: pointer; transition: border-color var(--dur-fast, 120ms) ease, background-color var(--dur-fast, 120ms) ease; }
+.shop-chip[aria-pressed="true"] { border-color: var(--shop-primary); background: color-mix(in srgb, var(--shop-primary) 10%, #fff); color: var(--shop-ink); }
+.shop-chip:active { transform: scale(var(--press, 0.97)); }
+.shop-buy { display: flex; gap: 10px; align-items: center; margin-top: 8px; }
+.shop-qty { display: inline-flex; align-items: center; border: 1.5px solid var(--shop-line); border-radius: 999px; background: #fff; flex: none; }
+.shop-qty button { width: 44px; height: 46px; border: 0; background: none; font: inherit; font-size: 1.25rem; font-weight: 700; color: var(--shop-ink); cursor: pointer; border-radius: 999px; touch-action: manipulation; }
+.shop-qty button:disabled { color: var(--shop-line); cursor: not-allowed; }
+.shop-qty input { width: 40px; border: 0; text-align: center; font: inherit; font-weight: 700; font-variant-numeric: tabular-nums; background: none; -moz-appearance: textfield; appearance: textfield; }
+.shop-qty input::-webkit-outer-spin-button, .shop-qty input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.shop-buy-btn { flex: 1; }
+.shop-noimg { display: block; aspect-ratio: 1; border-radius: 14px; background: color-mix(in srgb, var(--shop-primary) 12%, #fff); }
+.shop-product-skel span { display: block; border-radius: 14px; background: #eef0f3; }
+.shop-product-skel span:first-child { aspect-ratio: 1; }
+.shop-product-skel span:last-child { height: 160px; }
+/* Ponsel: tombol beli selalu terjangkau ibu jari. */
+@media (max-width: 719px) {
+  .shop-buy {
+    position: sticky; bottom: 0; z-index: var(--z-sticky, 5);
+    margin: 12px -16px -16px; padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+    background: rgb(255 255 255 / 0.94); border-top: 1px solid var(--shop-line);
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    border-radius: 0 0 20px 20px;
+  }
+}
+/* Ponsel sempit: bilah atas toko satu baris — nama toko disembunyikan (logo/inisial tetap), tautan rapat. */
+@media (max-width: 479px) {
+  .shop-nav { flex-wrap: nowrap; gap: 4px; padding: 8px 12px; }
+  .shop-nav .shop-brand-name { display: none; }
+  .shop-nav-links { gap: 0; align-items: center; }
+  .shop-nav-links a { padding: 8px 8px; font-size: 0.875rem; }
+  .shop-qty button { width: 40px; }
+  .shop-qty input { width: 32px; }
+  .shop-buy-btn { padding: 12px 12px; white-space: nowrap; font-size: 0.9375rem; }
+  .shop-product { padding: 12px; }
+  .shop-buy { margin: 12px -12px -12px; padding-left: 12px; padding-right: 12px; }
+}
+/* Kolom grid produk boleh menyempit (isi tanpa-bungkus seperti bilah beli tidak boleh melebarkan kartu). */
+@media (max-width: 719px) { .shop-product { grid-template-columns: minmax(0, 1fr); } }
+.shop-product > * { min-width: 0; }
+.shop-buy-btn { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+

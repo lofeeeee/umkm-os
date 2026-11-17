@@ -55,11 +55,14 @@ export function safeHref(s: unknown): string | undefined {
   return s.startsWith("/") && !s.startsWith("//") && !s.includes("\\") ? s : undefined;
 }
 
+/** Font self-hosted (@fontsource, renderer/site.css); browser hanya mengunduh font yang dipakai halaman. */
 export const FONT_STACKS: Record<string, string> = {
-  inter: "Inter, ui-sans-serif, system-ui, sans-serif",
+  jakarta: "'Plus Jakarta Sans Variable', ui-sans-serif, system-ui, sans-serif",
+  inter: "'Inter Variable', Inter, ui-sans-serif, system-ui, sans-serif",
   poppins: "Poppins, ui-sans-serif, system-ui, sans-serif",
-  nunito: "Nunito, ui-rounded, ui-sans-serif, system-ui, sans-serif",
-  merriweather: "Merriweather, Georgia, ui-serif, serif",
+  nunito: "'Nunito Variable', Nunito, ui-rounded, ui-sans-serif, system-ui, sans-serif",
+  merriweather: "'Merriweather Variable', Merriweather, Georgia, ui-serif, serif",
+  fraunces: "'Fraunces Variable', Fraunces, Georgia, ui-serif, serif",
   system: "ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif",
 };
 

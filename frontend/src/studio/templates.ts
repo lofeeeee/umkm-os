@@ -60,7 +60,7 @@ export const TEMPLATES: Template[] = [
   {
     key: "butik", get name() { return tx("Butik"); }, get desc() { return tx("Fashion & aksesori. Banner gelap elegan, katalog carousel, chatbot melayang."); }, tags: "fashion baju aksesori butik",
     build: (t) => ({
-      primary: "#BE185D", surface: "light", font: "merriweather",
+      primary: "#BE185D", surface: "light", font: "fraunces",
       cells: compact([
         b("hero", 0, 0, 12, 10, "dark", { title: t.name, subtitle: lead(t, tx("Koleksi terbaru yang nyaman dipakai setiap hari.")), cta: cta(tx("Lihat koleksi"), "#koleksi") }),
         b("product_grid", 0, 10, 12, 12, "plain", { title: tx("Koleksi terbaru"), limit: 12 }, { layout: "carousel" }),
@@ -74,7 +74,7 @@ export const TEMPLATES: Template[] = [
   {
     key: "profesional", get name() { return tx("Profesional"); }, get desc() { return tx("Jasa & servis. Kontak menonjol di samping banner, kepercayaan lewat testimoni."); }, tags: "jasa servis laundry bengkel salon",
     build: (t) => ({
-      primary: "#0369A1", surface: "light", font: "inter",
+      primary: "#0369A1", surface: "light", font: "jakarta",
       cells: compact([
         b("hero", 0, 0, 7, 10, "plain", { title: t.name, subtitle: lead(t, tx("Layanan cepat, harga jelas, hasil bergaransi.")), cta: cta(tx("Konsultasi gratis"), "#kontak") }),
         b("contact", 7, 0, 5, 10, "card", { title: tx("Hubungi kami"), show_whatsapp: true, show_phone: true, show_email: true, socials: [] }),

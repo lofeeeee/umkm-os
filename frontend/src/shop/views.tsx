@@ -12,6 +12,7 @@ import { prepareImage } from "@/lib/image";
 import { ApiError } from "@/lib/api";
 import { PRIVACY, TERMS } from "@/legal/content";
 import { LegalDoc } from "@/legal/LegalDoc";
+import { inlineProduct, storeBrand } from "@/renderer/inline";
 import { sized, srcSet } from "@/renderer/safe";
 
 import {
@@ -56,20 +57,48 @@ function explain(e: unknown): string {
   return tx("Tidak dapat menghubungi toko. Periksa koneksi Anda.");
 }
 
-function Shell({ title, children }: { title: string; children: ReactNode }) {
+/** Jumlah barang di keranjang, ikut berubah saat keranjang diperbarui (tab ini atau tab lain). */
+function useCartCount(): number {
+  return useSyncExternalStore(
+    (f) => {
+      window.addEventListener("umkm-cart", f);
+      window.addEventListener("storage", f);
+      return () => { window.removeEventListener("umkm-cart", f); window.removeEventListener("storage", f); };
+    },
+    cartCount,
+    () => 0,
+  );
+}
+
+/**
+ * Kerangka halaman toko (produk, keranjang, pesanan, akun). Memakai identitas toko — nama, logo,
+ * warna utama & font tema beranda (data tertanam di dokumen) — supaya pembeli tetap merasa di toko
+ * yang sama, bukan di halaman generik platform.
+ */
+function Shell({ title, children, heading = true }: { title: string; children: ReactNode; heading?: boolean }) {
+  const brand = useMemo(() => storeBrand(), []);
+  const n = useCartCount();
   return (
-    <div className="shop">
+    <div className="shop" style={brand?.style}>
       <nav className="shop-nav" aria-label={tx("Navigasi toko")}>
-        <a href="/">{tx("← Kembali ke toko")}</a>
+        <a href="/" className="shop-brand" aria-label={brand?.name ?? tx("Beranda toko")}>
+          {brand?.logoUrl
+            // eslint-disable-next-line @next/next/no-img-element -- static export, logo bertanda tangan
+            ? <img src={brand.logoUrl} alt="" width={32} height={32} />
+            : <span className="shop-brand-mark" aria-hidden="true">{(brand?.name ?? "T").charAt(0).toUpperCase()}</span>}
+          <span className="shop-brand-name">{brand?.name ?? tx("Beranda toko")}</span>
+        </a>
         <span className="shop-nav-links">
-          <a href="/keranjang">{tx("Keranjang")}</a>
+          <a href="/keranjang" aria-label={n > 0 ? tx("Keranjang, {0} barang", n) : undefined}>
+            {tx("Keranjang")}{n > 0 && <span className="shop-badge" aria-hidden="true">{n}</span>}
+          </a>
           <a href="/pesanan">{tx("Pesanan")}</a>
           <a href="/akun">{tx("Akun")}</a>
           <LanguageSwitch className="s-lang" />
         </span>
       </nav>
       <main className="shop-main">
-        <h1>{title}</h1>
+        {heading && <h1>{title}</h1>}
         {children}
       </main>
     </div>
@@ -101,12 +130,15 @@ export function CartFab() {
 // ------------------------------------------------------------------ produk
 
 export function ProductPage({ slug }: { slug: string }) {
-  const [p, setP] = useState<PublicProduct | null>(null);
+  // Dokumen /produk/{slug} sudah memuat produknya (render pertama tanpa menunggu API).
+  const [p, setP] = useState<PublicProduct | null>(() => inlineProduct(slug));
   const [err, setErr] = useState<string | null>(null);
-  const [pick, setPick] = useState<string[]>([]);
+  const [pick, setPick] = useState<string[]>(() => inlineProduct(slug)?.variants[0]?.option_values ?? []);
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
   useEffect(() => {
+    const inline = inlineProduct(slug);
+    if (inline) { document.title = inline.name; return; }
     shopApi<PublicProduct>("GET", `/products/${encodeURIComponent(slug)}`)
       .then((x) => {
         setP(x);
@@ -120,51 +152,58 @@ export function ProductPage({ slug }: { slug: string }) {
     [p, pick],
   );
   if (err) return <Shell title={tx("Produk")}><Msg kind="error">{err}</Msg></Shell>;
-  if (!p) return <Shell title={tx("Produk")}><p className="s-muted" aria-busy="true">{tx("Memuat…")}</p></Shell>;
+  if (!p) return <Shell title={tx("Produk")}><div className="shop-product shop-product-skel" aria-busy="true" aria-label={tx("Memuat…")}><span /><span /></div></Shell>;
   const sellable = p.available && !!variant;
+  const clampQty = (n: number) => Math.max(1, Math.min(999, n));
+  const add = () => {
+    if (!variant) return;
+    addToCart({ variant_id: variant.id, slug: p.slug, name: p.name, variant_name: variant.name, price: variant.promo_price ?? variant.price }, qty);
+    setAdded(true);
+  };
+  const price = variant && (
+    <p className="shop-price">
+      {variant.promo_price ? <><s>{rupiah(variant.price)}</s> <strong>{rupiah(variant.promo_price)}</strong></> : <strong>{rupiah(variant.price)}</strong>}
+    </p>
+  );
   return (
-    <Shell title={p.name}>
+    <Shell title={p.name} heading={false}>
       <div className="shop-product">
         <div className="shop-gallery">
+          {p.images.length === 0 && <span className="shop-noimg" aria-hidden="true" />}
           {p.images.map((src, i) => (
             // eslint-disable-next-line @next/next/no-img-element -- static export, gambar bertanda tangan
             <img key={i} src={sized(fileUrl(src), 960)} srcSet={srcSet(fileUrl(src))} sizes="(min-width: 720px) 50vw, 100vw"
-              alt={i === 0 ? p.name : ""} width={960} height={960} loading={i === 0 ? "eager" : "lazy"} decoding="async" />
+              alt={i === 0 ? p.name : ""} width={960} height={960} loading={i === 0 ? "eager" : "lazy"} fetchPriority={i === 0 ? "high" : undefined} decoding="async" />
           ))}
         </div>
-        <div>
-          {variant && (
-            <p className="shop-price">
-              {variant.promo_price ? <><s>{rupiah(variant.price)}</s> <strong>{rupiah(variant.promo_price)}</strong></> : <strong>{rupiah(variant.price)}</strong>}
-            </p>
-          )}
-          {p.description && p.description.split("\n").map((l, i) => <p key={i}>{l}</p>)}
+        <div className="shop-info">
+          <h1>{p.name}</h1>
+          {price}
+          {variant?.promo_price && <p className="shop-save">{tx("Hemat {0}", rupiah(String(Number(variant.price) - Number(variant.promo_price))))}</p>}
+          {p.description && <div className="shop-desc">{p.description.split("\n").map((l, i) => <p key={i}>{l}</p>)}</div>}
           {p.options.map((o, i) => (
-            <label key={o.name} className="shop-field">
-              {o.name}
-              <select value={pick[i] ?? ""} onChange={(e) => setPick((x) => x.map((v, j) => (j === i ? e.target.value : v)))}>
-                {o.values.map((v) => <option key={v} value={v}>{v}</option>)}
-              </select>
-            </label>
+            <fieldset key={o.name} className="shop-options">
+              <legend>{o.name}</legend>
+              {o.values.map((v) => (
+                <button key={v} type="button" className="shop-chip" aria-pressed={pick[i] === v}
+                  onClick={() => setPick((x) => x.map((cur, j) => (j === i ? v : cur)))}>{v}</button>
+              ))}
+            </fieldset>
           ))}
           {!variant && p.options.length > 0 && <Msg kind="error">{tx("Kombinasi ini tidak tersedia.")}</Msg>}
           {!p.available && <Msg kind="error">{tx("Produk sedang tidak tersedia.")}</Msg>}
-          <label className="shop-field">
-            {tx("Jumlah")}
-            <input type="number" min={1} max={999} value={qty} onChange={(e) => setQty(Math.max(1, Math.min(999, Number(e.target.value) || 1)))} />
-          </label>
-          <button type="button"
-            className="s-btn"
-            disabled={!sellable}
-            onClick={() => {
-              if (!variant) return;
-              addToCart({ variant_id: variant.id, slug: p.slug, name: p.name, variant_name: variant.name, price: variant.promo_price ?? variant.price }, qty);
-              setAdded(true);
-            }}
-          >
-            {tx("Tambah ke keranjang")}
-          </button>
-          <Msg kind="ok">{added ? <>{tx("Ditambahkan.")}{" "}<a href="/keranjang">{tx("Lihat keranjang")}</a></> : null}</Msg>
+          <div className="shop-buy">
+            <div className="shop-qty">
+              <button type="button" onClick={() => setQty((q) => clampQty(q - 1))} disabled={qty <= 1} aria-label={tx("Kurangi jumlah")}>−</button>
+              <input type="number" inputMode="numeric" min={1} max={999} value={qty} aria-label={tx("Jumlah")}
+                onChange={(e) => setQty(clampQty(Number(e.target.value) || 1))} />
+              <button type="button" onClick={() => setQty((q) => clampQty(q + 1))} disabled={qty >= 999} aria-label={tx("Tambah jumlah")}>+</button>
+            </div>
+            <button type="button" className="s-btn shop-buy-btn" disabled={!sellable} onClick={add}>
+              {tx("Tambah ke keranjang")}
+            </button>
+          </div>
+          <Msg kind="ok">{added ? <>{tx("Ditambahkan ke keranjang.")}{" "}<a href="/keranjang">{tx("Lihat keranjang")}</a></> : null}</Msg>
         </div>
       </div>
     </Shell>

@@ -15,7 +15,15 @@ pub const MAX_DOCUMENT_BYTES: usize = 256 * 1024;
 pub const MAX_URL_LEN: usize = 500;
 
 /// Preset typography (whitelist; bukan nama font bebas).
-pub const FONT_PRESETS: [&str; 5] = ["inter", "poppins", "nunito", "merriweather", "system"];
+pub const FONT_PRESETS: [&str; 7] = [
+    "jakarta",
+    "inter",
+    "poppins",
+    "nunito",
+    "merriweather",
+    "fraunces",
+    "system",
+];
 
 /// 11 komponen awal `PRD.md §4.3`.
 pub const SECTION_TYPES: [&str; 11] = [
