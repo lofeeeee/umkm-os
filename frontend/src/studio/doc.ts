@@ -148,7 +148,7 @@ export function fromDoc(doc: PageV2, minSize: (k: PluginKind) => { minW: number;
   const cells: TplCell[] = doc.blocks.map((b) => ({
     id: b.id, kind: b.kind, x: b.x, y: b.y, w: b.w, h: b.h, ...minSize(b.kind),
     style: b.style, data: b.data, layout: b.layout, autoH: b.auto_height !== false, chatOpen: b.chat_open !== false,
-    locked: b.locked || undefined, hideOn: b.hide_on, ...(b.kind === "background" ? { layer: true, autoH: false } : {}),
+    locked: b.locked || undefined, hideOn: b.hide_on, ...(b.kind === "background" || (b.kind === "image" && b.layout !== "popup") ? { layer: true, autoH: false } : {}),
   }));
   return {
     primary: doc.theme.primary,

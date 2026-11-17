@@ -617,6 +617,8 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
               onWidth={(w) => update((s) => ({ ...s, cells: place(s.cells, { ...selected, w }) as StudioCell[] }), "")}
               onMove={(d) => update((s) => ({ ...s, cells: [...moveBy(s.cells.filter((x) => !isEmbed(x)), selected.id, d) as StudioCell[], ...s.cells.filter(isEmbed)] }), `move:${selected.id}`)}
               onLayout={(l) => {
+                // Gambar: popup ada di luar grid, mode lain adalah lapisan bebas di grid (posisi x/y tetap).
+                if (selected.kind === "image") { setCell(selected.id, { layout: l, layer: l !== "popup", autoH: false }, ""); return; }
                 if (l === "inline" && isEmbed(selected)) {
                   update((s) => ({ ...s, cells: insert(s.cells.filter((c) => c.id !== selected.id), { ...selected, layout: "inline" } as StudioCell) as StudioCell[] }), "");
                 } else setCell(selected.id, { layout: l }, "");

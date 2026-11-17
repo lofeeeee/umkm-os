@@ -17,6 +17,7 @@ import { t as tx } from "@/i18n";
 import { Tr } from "@/i18n/react";
 import { type StudioCell, isEmbed, SINGLE, IMAGE_KEY, takesPhoto } from "@/studio/editor-model";
 import { BackgroundFields } from "@/studio/BackgroundFields";
+import { ImageFields } from "@/studio/ImageFields";
 
 export function Inspector({ c, onBack, onChange, onWidth, onMove, onLayout, onDuplicate, onRemove, onFull, onPhoto, onCrop, onCoverPage, aiHref, businessHref, chatReady, upgradeHref }: {
   c: StudioCell;
@@ -57,7 +58,7 @@ export function Inspector({ c, onBack, onChange, onWidth, onMove, onLayout, onDu
           <Link href={upgradeHref}>{tx("Lihat paket")}</Link>
         </div></div>
       )}
-      {layer && <p className="d-hint u-m-0">{tx("Latar selalu berada di belakang blok lain dan tidak pernah menutupinya. Saat latar dipilih, blok lain dibuat tembus pandang supaya latar mudah diseret dan diubah ukurannya — tekan Esc bila selesai.")}</p>}
+      {c.kind === "background" && <p className="d-hint u-m-0">{tx("Latar selalu berada di belakang blok lain dan tidak pernah menutupinya. Saat latar dipilih, blok lain dibuat tembus pandang supaya latar mudah diseret dan diubah ukurannya — tekan Esc bila selesai.")}</p>}
       {c.kind !== "chatbot" && !layer && <p className="d-hint u-m-0">{tx("Klik teks di kanvas untuk mengetik langsung.")}{takesPhoto(c.kind) && tx(" Seret foto dari komputer ke blok untuk memasangnya.")}</p>}
       {!isEmbed(c) && <div className="st-section">
         <label className="d-switch">
@@ -82,7 +83,7 @@ export function Inspector({ c, onBack, onChange, onWidth, onMove, onLayout, onDu
           <span><strong>{tx("Tinggi otomatis")}</strong><span className="d-muted">{tx("Kotak mengikuti panjang isi sehingga tidak terpotong. Mati otomatis bila tinggi ditarik manual.")}</span></span>
         </label>}
         <div className="d-row">
-          {layer
+          {c.kind === "background"
             ? onCoverPage && <button type="button" className="d-btn d-btn-sm" disabled={!!c.locked} onClick={onCoverPage}><ArrowsOut weight="bold" aria-hidden="true" />{tx("Tutupi seluruh halaman")}</button>
             : <button type="button" className="d-btn d-btn-sm" onClick={onFull}><ArrowsOut weight="bold" aria-hidden="true" />{tx("Lihat penuh")}</button>}
           {takesPhoto(c.kind) && (
@@ -116,7 +117,8 @@ export function Inspector({ c, onBack, onChange, onWidth, onMove, onLayout, onDu
           </div>
         )}
       </div>}
-      {layer ? <BackgroundFields c={c} onChange={onChange} /> : <>
+      {c.kind === "image" ? <ImageFields c={c} onChange={onChange} onLayout={onLayout} onPhoto={onPhoto} />
+        : layer ? <BackgroundFields c={c} onChange={onChange} /> : <>
       <div className="st-section">
         <h3>{tx("Gaya")}</h3>
         <div className="st-styles" role="group" aria-label={tx("Gaya")}>

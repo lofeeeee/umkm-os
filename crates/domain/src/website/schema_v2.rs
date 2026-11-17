@@ -44,7 +44,7 @@ pub const MAX_DRAWING_STROKES: usize = 200;
 pub const MAX_STROKE_POINTS: usize = 1000;
 
 /// Plugin resmi (ADR-0019). Data 9 jenis pertama memakai aturan section v1.
-pub const PLUGIN_KINDS: [&str; 13] = [
+pub const PLUGIN_KINDS: [&str; 14] = [
     "hero",
     "about",
     "product_grid",
@@ -58,6 +58,7 @@ pub const PLUGIN_KINDS: [&str; 13] = [
     "chatbot",
     "whatsapp",
     "background",
+    "image",
 ];
 /// Gaya kotak blok. `soft` = 3D lembut (neumorphism), `flat` = 2D datar tanpa bayangan.
 pub const STYLES: [&str; 6] = ["plain", "card", "tint", "dark", "soft", "flat"];
@@ -72,9 +73,15 @@ pub const IMAGE_POSITIONS: [&str; 5] = ["center", "top", "bottom", "left", "righ
 /// Foto plugin (Banner/Tentang/Promo/Galeri): penuhi kotak vs tampil utuh.
 pub const IMAGE_FITS: [&str; 2] = ["cover", "contain"];
 
-/// Lapisan "tembus": berada di belakang blok lain sehingga boleh tumpang tindih (tidak ikut cek tabrakan).
+/// Plugin Gambar: `contain` = utuh (cocok untuk PNG transparan/stiker), `crop` = penuhi kotak, `stretch` = melar.
+pub const FREE_IMAGE_FITS: [&str; 3] = ["contain", "crop", "stretch"];
+/// Pojok layar untuk Gambar mode `popup`.
+pub const CORNERS: [&str; 4] = ["bottom-right", "bottom-left", "top-right", "top-left"];
+
+/// Lapisan bebas: boleh menumpuk blok lain (tidak ikut cek tumpang tindih). Latar selalu di belakang;
+/// Gambar di depan (`above`), di belakang (`below`), atau menggantung mengikuti gulir (`sticky`).
 pub fn is_layer(kind: &str) -> bool {
-    kind == "background"
+    matches!(kind, "background" | "image")
 }
 
 /// Varian tata letak per plugin; plugin tanpa varian tidak boleh mengirim `layout`.
@@ -83,6 +90,7 @@ pub fn layouts(kind: &str) -> &'static [&'static str] {
         "product_grid" => &["grid", "carousel", "list"],
         "chatbot" => &["inline", "floating", "bar"],
         "whatsapp" => &["floating", "inline"],
+        "image" => &["above", "below", "sticky", "popup"],
         _ => &[],
     }
 }
@@ -143,7 +151,9 @@ pub fn enforce_badge(content: &mut Value, has_pro: bool) -> bool {
 pub fn is_embed(kind: &str, layout: Option<&str>) -> bool {
     matches!(
         (kind, layout),
-        ("chatbot", Some("floating" | "bar")) | ("whatsapp", Some("floating"))
+        ("chatbot", Some("floating" | "bar"))
+            | ("whatsapp", Some("floating"))
+            | ("image", Some("popup"))
     )
 }
 
@@ -508,6 +518,25 @@ fn data(v: &mut V, kind: &str, d: &Value, p: &str) {
             if let Some(m) = v.object(d, p, &["label", "message"]) {
                 v.text(m, p, "label", 40, true);
                 v.text(m, p, "message", 300, false);
+            }
+        }
+        "image" => {
+            if let Some(m) = v.object(
+                d,
+                p,
+                &[
+                    "image", "alt", "fit", "position", "opacity", "href", "corner",
+                ],
+            ) {
+                v.asset(m, p, "image", false);
+                v.text(m, p, "alt", IMAGE_ALT_MAX, false);
+                enum_opt(v, m, p, "fit", &FREE_IMAGE_FITS);
+                enum_opt(v, m, p, "position", &IMAGE_POSITIONS);
+                enum_opt(v, m, p, "corner", &CORNERS);
+                v.href(m, p, "href", false);
+                if m.contains_key("opacity") {
+                    v.int(m, p, "opacity", 0, 100);
+                }
             }
         }
         "background" => {
@@ -887,6 +916,56 @@ mod tests {
         assert!(c.contains(&("blocks[0].data.opacity".into(), "out_of_range")));
         assert!(c.contains(&("blocks[0].data.x".into(), "unknown_field")));
         assert!(c.contains(&("blocks[1].data.image_fit".into(), "invalid_value")));
+    }
+
+    #[test]
+    fn free_image_layers_overlap_and_popup_is_outside_the_grid() {
+        let img = Uuid::new_v4();
+        let mut above = block(
+            "gambar-1",
+            "image",
+            2,
+            1,
+            4,
+            4,
+            json!({"image": format!("asset:{img}"), "alt": "Stiker promo", "fit": "contain", "href": "/produk", "opacity": 90}),
+        );
+        above["layout"] = json!("above");
+        let mut sticky = block("gambar-2", "image", 0, 0, 3, 12, json!({"fit": "crop"}));
+        sticky["layout"] = json!("sticky");
+        let mut popup = block(
+            "gambar-3",
+            "image",
+            0,
+            0,
+            3,
+            3,
+            json!({"corner": "bottom-left"}),
+        );
+        popup["layout"] = json!("popup");
+        let d = doc(vec![
+            block("a", "text", 0, 0, 12, 6, json!({"body": "x"})),
+            above,
+            sticky,
+            popup,
+        ]);
+        validate_page(&d).expect("gambar bebas boleh menumpuk blok");
+
+        let mut bad = block(
+            "gambar-1",
+            "image",
+            0,
+            0,
+            4,
+            4,
+            json!({"fit": "cover", "corner": "middle", "href": "javascript:alert(1)"}),
+        );
+        bad["layout"] = json!("floating");
+        let c = codes(&doc(vec![bad]));
+        assert!(c.contains(&("blocks[0].layout".into(), "invalid_layout")));
+        assert!(c.contains(&("blocks[0].data.fit".into(), "invalid_value")));
+        assert!(c.contains(&("blocks[0].data.corner".into(), "invalid_value")));
+        assert!(c.iter().any(|(p, _)| p == "blocks[0].data.href"));
     }
 
     #[test]

@@ -519,6 +519,46 @@
 /* Studio: saat latar dipilih, blok lain menjadi tembus pandang & tembus klik supaya latar bisa diseret
    dan diubah ukurannya — gambar latar tetap di belakang, tidak pernah menutupi plugin. */
 .sf-layer-sel .sv2-grid > .sv2-block:not([data-layer]) { opacity: 0.4; pointer-events: none; transition: opacity 0.15s ease-out; }
+/* Plugin Gambar. Di depan blok: z-index di atas blok mana pun; situs publik tembus klik (kecuali bertautan)
+   supaya tombol di bawahnya tetap bisa ditekan. "Menggantung": gambar menempel di atas layar selama
+   area bloknya masih terlihat saat digulir. */
+.sv2 .sv2-grid > .sv2-block[data-layer="front"] { z-index: 7 !important; pointer-events: none; }
+.sv2.sf-editing .sv2-grid > .sv2-block[data-layer="front"], .sv2-img-link { pointer-events: auto; }
+.sv2-img { flex: 1 1 auto; min-height: 0; display: flex; }
+.sv2-img > img, .sv2-img > a > img { display: block; width: 100%; height: 100%; }
+.sv2-img > a { display: flex; flex: 1 1 auto; min-height: 0; }
+.sv2-img img[data-round] { border-radius: 20px; }
+.sv2-img[data-mode="sticky"] { display: block; }
+.sv2-img[data-mode="sticky"] > img, .sv2-img[data-mode="sticky"] > a { position: sticky; top: 88px; height: auto; max-height: calc(100vh - 120px); }
+.sv2-popup { position: fixed; z-index: calc(var(--z-float, 20) - 2); width: min(var(--pop-w, 168px), 42vw); }
+.sv2-popup[data-corner="bottom-right"] { right: 16px; bottom: 152px; }
+.sv2-popup[data-corner="bottom-left"] { left: 16px; bottom: 96px; }
+.sv2-popup[data-corner="top-right"] { right: 16px; top: 88px; }
+.sv2-popup[data-corner="top-left"] { left: 16px; top: 88px; }
+.sv2-popup .sv2-img, .sv2-popup .sv2-img > a { display: block; }
+.sv2-popup img { display: block; width: 100%; height: auto; filter: drop-shadow(0 12px 24px rgb(0 0 0 / 0.18)); }
+.sv2-popup .sv2-bg-empty { min-height: 96px; }
+.sv2-popup-close {
+  position: absolute; top: -10px; right: -10px; width: 28px; height: 28px; border-radius: 999px; border: 0; cursor: pointer;
+  display: grid; place-items: center; background: var(--s-ink, #18181b); color: var(--s-bg, #fff); font-size: 18px; line-height: 1;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.2);
+}
+.sv2-popup.sf-float-selected { outline: 3px solid #4f46e5; outline-offset: 3px; border-radius: 8px; }
+.sf-editing .sv2-popup { cursor: pointer; }
+@media (prefers-reduced-motion: no-preference) {
+  .sv2:not(.sf-editing) .sv2-popup { animation: sv2-pop-in 0.24s cubic-bezier(0.22, 1, 0.36, 1) both; animation-delay: 0.6s; }
+}
+/* Ponsel: gambar depan/menggantung menempati barisnya sendiri dengan ukuran sebanding lebarnya di desktop
+   (dua kali proporsi kolom, maks. selebar layar) dan rata sesuai posisinya — tanpa ruang kosong setinggi kotak. */
+@container (max-width: 719px) {
+  .sv2 .sv2-grid > .sv2-block[data-layer="front"] { min-height: 0 !important; }
+  .sv2-block[data-layer="front"] > * { flex: 0 0 auto; width: min(100%, calc(var(--w, 12) * 100% / 6)); }
+  .sv2-block[data-layer="front"][data-align="center"] > * { margin-inline: auto; }
+  .sv2-block[data-layer="front"][data-align="end"] > * { margin-left: auto; }
+  .sv2-block[data-layer="front"] .sv2-img, .sv2-block[data-layer="front"] .sv2-img > a { display: block; }
+  .sv2-block[data-layer="front"] .sv2-img img { height: auto; position: static; max-height: none; }
+}
+@keyframes sv2-pop-in { from { opacity: 0; transform: translateY(8px) scale(0.96); } }
 .sv2-ink-cell { z-index: 4; }
 
 /* ============================================================

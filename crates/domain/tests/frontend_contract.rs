@@ -84,6 +84,9 @@ fn studio_document_from_defaults_validates() {
             "chatbot" => json!({"title": "Tanya kami", "welcome": "Halo!"}),
             "whatsapp" => json!({"label": "Pesan via WhatsApp"}),
             "background" => json!({"fit": "crop", "position": "center", "opacity": 100}),
+            "image" => {
+                json!({"fit": "contain", "position": "center", "opacity": 100, "corner": "bottom-right"})
+            }
             k => map[k].clone(),
         };
         blocks.push(json!({"id": format!("{}-1", kind.replace('_', "-")), "kind": kind, "x": 0, "y": y, "w": 12, "h": 4, "style": "plain", "data": data}));

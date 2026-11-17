@@ -13,7 +13,8 @@
     "business_hours": { "version": 1, "plan": "starter", "max_per_page": 40, "layouts": [] },
     "location":       { "version": 1, "plan": "starter", "max_per_page": 40, "layouts": [] },
     "contact":        { "version": 1, "plan": "starter", "max_per_page": 40, "layouts": [] },
-    "background":     { "version": 1, "plan": "starter", "max_per_page": 40, "layouts": [] }
+    "background":     { "version": 1, "plan": "starter", "max_per_page": 40, "layouts": [] },
+    "image":          { "version": 1, "plan": "starter", "max_per_page": 40, "layouts": ["above", "below", "sticky", "popup"] }
   },
-  "embed_layouts": { "chatbot": ["floating", "bar"], "whatsapp": ["floating"] }
+  "embed_layouts": { "chatbot": ["floating", "bar"], "whatsapp": ["floating"], "image": ["popup"] }
 }

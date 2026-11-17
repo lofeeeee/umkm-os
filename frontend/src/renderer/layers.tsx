@@ -13,14 +13,18 @@ import { t as tx } from "@/i18n";
 import { safeHref } from "./safe";
 
 export interface LayerBlock {
-  id: string; kind: string; x: number; y: number; w: number; h: number;
+  id: string; kind: string; x: number; y: number; w: number; h: number; layout?: string;
   hide_on?: "mobile" | "desktop";
   /** Gaya blok: `plain`/`flat` = sudut tegas, lainnya = sudut membulat. */
   style?: string;
   data: { [k: string]: unknown };
 }
 
-export const isLayer = (b: { kind: string }) => b.kind === "background";
+/** Lapisan bebas di grid (boleh menumpuk blok). Gambar popup bukan lapisan grid — ia menempel di layar. */
+export const isLayer = (b: { kind: string; layout?: string }) => b.kind === "background" || (b.kind === "image" && b.layout !== "popup");
+/** Lapisan yang dirender DI BELAKANG blok (Latar, Gambar "di belakang blok"). Sisanya di depan. */
+export const isBehind = (b: { kind: string; layout?: string }) => b.kind === "background" || (b.kind === "image" && b.layout === "below");
+export const isPopupImage = (b: { kind: string; layout?: string }) => b.kind === "image" && b.layout === "popup";
 
 const POSITIONS = ["center", "top", "bottom", "left", "right"];
 
@@ -53,6 +57,30 @@ export function BackgroundLayer({ b, assetUrl, editing }: { b: LayerBlock; asset
   return <div className="sv2-bg" data-fit={fit} data-round={round || undefined} role="presentation" style={style} />;
 }
 
+/** Gambar bebas. `<img>` (bukan latar CSS) supaya PNG/WebP transparan, teks alternatif, dan tautan berfungsi.
+ *  `contain` = utuh (stiker/PNG transparan), `crop` = penuhi kotak, `stretch` = ikut melar. */
+export function FreeImage({ b, assetUrl, editing }: { b: LayerBlock; assetUrl: (ref: string) => string | undefined; editing?: boolean }) {
+  const url = layerImage(b, assetUrl);
+  if (!url) {
+    return editing
+      ? <div className="sv2-img sv2-bg-empty" data-mode={b.layout ?? "above"}><span>{tx("Seret foto (PNG transparan juga bisa) ke sini")}</span></div>
+      : null;
+  }
+  const fit = b.data.fit === "crop" ? "cover" : b.data.fit === "stretch" ? "fill" : "contain";
+  const pos = typeof b.data.position === "string" && POSITIONS.includes(b.data.position) ? b.data.position : "center";
+  const op = typeof b.data.opacity === "number" && Number.isFinite(b.data.opacity) ? Math.min(100, Math.max(0, b.data.opacity)) : 100;
+  const alt = typeof b.data.alt === "string" ? b.data.alt : "";
+  const round = b.style !== undefined && b.style !== "plain" && b.style !== "flat";
+  // eslint-disable-next-line @next/next/no-img-element -- aset tenant bertanda tangan; ukuran bebas
+  const img = <img src={url} alt={alt} loading="lazy" decoding="async" draggable={false} style={{ objectFit: fit, objectPosition: pos, opacity: op / 100 }} data-round={round || undefined} />;
+  const href = editing ? undefined : safeHref(b.data.href);
+  return (
+    <div className="sv2-img" data-mode={b.layout ?? "above"}>
+      {href ? <a href={href} className="sv2-img-link" aria-label={alt || tx("Buka tautan gambar")}>{img}</a> : img}
+    </div>
+  );
+}
+
 /** `grid-row` tiap blok di tampilan ponsel (satu kolom). Kunci = id blok. */
 export function mobileRows(blocks: LayerBlock[]): Map<string, string> {
   const visible = blocks.filter((b) => b.hide_on !== "mobile");
@@ -61,7 +89,9 @@ export function mobileRows(blocks: LayerBlock[]): Map<string, string> {
   const covering = new Map<string, LayerBlock[]>();
   const seq: LayerBlock[] = [...items];
   for (const l of visible.filter(isLayer)) {
-    const under = items.filter((b) => overlaps(l, b));
+    // Hanya lapisan di BELAKANG yang membentang di belakang blok di ponsel. Gambar di depan/menggantung
+    // mendapat barisnya sendiri supaya tidak menutupi isi di layar sempit.
+    const under = isBehind(l) ? items.filter((b) => overlaps(l, b)) : [];
     if (under.length) covering.set(l.id, under);
     else seq.push(l);
   }

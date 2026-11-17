@@ -373,3 +373,30 @@ describe("plugin Latar (lapisan tembus)", () => {
     expect(html).toMatch(/id="c"[^>]*style="[^"]*--mrow:3/);
   });
 });
+
+describe("plugin Gambar (bebas, PNG transparan)", () => {
+  const img = "asset:22222222-2222-2222-2222-222222222222";
+  const page: PageV2 = { schema_version: 2, template: "t", theme: { primary: "#C2410C", font: "inter" }, blocks: [
+    { id: "a", kind: "text", x: 0, y: 0, w: 12, h: 6, style: "plain", data: { body: "A" } },
+    { id: "depan", kind: "image", layout: "above", x: 8, y: 1, w: 3, h: 4, style: "plain", data: { image: img, alt: "Stiker", href: "/produk", fit: "contain" } },
+    { id: "belakang", kind: "image", layout: "below", x: 0, y: 0, w: 4, h: 4, style: "plain", data: { image: img } },
+    { id: "gantung", kind: "image", layout: "sticky", x: 0, y: 6, w: 3, h: 12, style: "card", data: { image: img, fit: "crop" } },
+    { id: "pop", kind: "image", layout: "popup", x: 0, y: 0, w: 3, h: 3, style: "plain", data: { image: img, corner: "top-left" } },
+  ] };
+  const html = renderToStaticMarkup(<StudioSite doc={page} business={biz} assetUrl={() => "/files/x.png"} />);
+  const grid = html.slice(html.indexOf('class="sv2-grid"'), html.indexOf("sv2-foot"));
+  it("di belakang sebelum blok, di depan sesudahnya; menggantung & tautan & alt dirender", () => {
+    expect(grid.indexOf('id="belakang"')).toBeLessThan(grid.indexOf('id="a"'));
+    expect(grid.indexOf('id="depan"')).toBeGreaterThan(grid.indexOf('id="a"'));
+    expect(html).toMatch(/id="depan"[^>]*data-layer="front"/);
+    expect(html).toMatch(/id="belakang"[^>]*data-layer="cover"/);
+    expect(html).toContain('<a href="/produk" class="sv2-img-link" aria-label="Stiker"><img src="/files/x.png" alt="Stiker"');
+    expect(html).toContain('data-mode="sticky"');
+    expect(html).toContain("object-fit:cover");
+  });
+  it("popup menempel di pojok layar di luar grid, dengan tombol tutup", () => {
+    expect(grid).not.toContain('id="pop"');
+    expect(html).toContain('class="sv2-popup" data-corner="top-left"');
+    expect(html).toContain('class="sv2-popup-close"');
+  });
+});
