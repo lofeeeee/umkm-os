@@ -1,3 +1,4 @@
+import { t } from "@/i18n";
 // Siapkan foto sebelum diunggah: API menolak body > ±2 MB (server.body_limit_bytes) dan memutus koneksi
 // (browser hanya melihat ERR_CONNECTION_ABORTED). Foto HP biasanya 3–8 MB, jadi dikecilkan di sini:
 // sisi terpanjang ≤ 1920 px, WebP (fallback JPEG), kualitas diturunkan bertahap sampai < 1,8 MB.
@@ -14,7 +15,7 @@ function load(file: File): Promise<HTMLImageElement> {
     const url = URL.createObjectURL(file);
     const img = new Image();
     img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
-    img.onerror = () => { URL.revokeObjectURL(url); reject(new ImagePrepError("Format foto tidak bisa dibaca browser. Pakai JPEG, PNG, atau WebP.")); };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new ImagePrepError(t("Format foto tidak bisa dibaca browser. Pakai JPEG, PNG, atau WebP."))); };
     img.src = url;
   });
 }
@@ -23,7 +24,7 @@ const toBlob = (c: HTMLCanvasElement, type: string, q: number) =>
   new Promise<Blob | null>((resolve) => c.toBlob(resolve, type, q));
 
 export async function prepareImage(file: File): Promise<File> {
-  if (!file.type.startsWith("image/")) throw new ImagePrepError("Pilih file gambar (JPEG, PNG, atau WebP).");
+  if (!file.type.startsWith("image/")) throw new ImagePrepError(t("Pilih file gambar (JPEG, PNG, atau WebP)."));
   if (ACCEPTED.includes(file.type) && file.size <= MAX_UPLOAD_BYTES) return file;
 
   const img = await load(file);
@@ -48,5 +49,5 @@ export async function prepareImage(file: File): Promise<File> {
     w = Math.round(w * 0.75);
     h = Math.round(h * 0.75);
   }
-  throw new ImagePrepError("Foto terlalu besar meski sudah dikompres. Coba foto lain.");
+  throw new ImagePrepError(t("Foto terlalu besar meski sudah dikompres. Coba foto lain."));
 }

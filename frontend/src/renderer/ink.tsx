@@ -7,6 +7,7 @@
 // - "cell:<id>"    → relatif ke pojok kiri atas blok itu, di atas isinya; ikut bergerak bersama blok.
 
 import type { DrawingStroke } from "@/studio/DrawingLayer";
+import { t } from "@/i18n";
 
 /** Titik → path SVG halus (quadratic bezier di titik tengah). */
 export function pointsToPath(points: [number, number][]): string {
@@ -35,7 +36,7 @@ export function InkLayer({ strokes, viewWidth, className = "", live }: { strokes
   if (strokes.length === 0 && !live) return null;
   const all = live ? [...strokes, live] : strokes;
   return (
-    <svg className={`sv2-ink ${className}`.trim()} viewBox={`0 0 ${viewWidth} ${viewWidth}`} preserveAspectRatio="xMinYMin meet" aria-hidden="true" focusable="false">
+    <svg className={`sv2-ink ${className}`.trim()} viewBox={t("0 0 {0} {1}", viewWidth, viewWidth)} preserveAspectRatio="xMinYMin meet" aria-hidden="true" focusable="false">
       {all.map((s) => (
         <path key={s.id} data-stroke-id={s.id} d={pointsToPath(s.points)} stroke={s.color} strokeWidth={s.size} strokeOpacity={s.opacity}
           strokeLinecap="round" strokeLinejoin="round" fill="none" />

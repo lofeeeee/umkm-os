@@ -7,6 +7,7 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 
 import { CheckCircle, Info, WarningCircle, X } from "@phosphor-icons/react/ssr";
+import { t as tx } from "@/i18n";
 
 type Kind = "ok" | "error" | "info";
 interface Item { id: number; kind: Kind; text: string; leaving?: boolean }
@@ -71,7 +72,7 @@ function ToastItem({ t }: { t: Item }) {
     >
       <Icon weight="fill" aria-hidden="true" />
       <span>{t.text}</span>
-      <button type="button" className="d-icon-btn" aria-label="Tutup notifikasi" onClick={() => dismissToast(t.id)}>
+      <button type="button" className="d-icon-btn" aria-label={tx("Tutup notifikasi")} onClick={() => dismissToast(t.id)}>
         <X weight="bold" />
       </button>
     </div>
@@ -88,7 +89,7 @@ export function Toaster() {
     () => EMPTY,
   );
   return (
-    <div className="d-toaster" aria-label="Notifikasi singkat">
+    <div className="d-toaster" aria-label={tx("Notifikasi singkat")}>
       {list.map((t) => <ToastItem key={t.id} t={t} />)}
     </div>
   );

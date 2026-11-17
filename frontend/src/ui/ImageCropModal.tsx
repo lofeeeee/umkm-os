@@ -9,6 +9,7 @@ import {
   MagnifyingGlassPlus,
   X,
 } from "@phosphor-icons/react/ssr";
+import { t } from "@/i18n";
 
 export interface ImageCropModalProps {
   open: boolean;
@@ -32,10 +33,10 @@ type AspectRatioPreset = {
 };
 
 const ASPECT_RATIOS: AspectRatioPreset[] = [
-  { id: "free", label: "Bebas", ratio: null },
-  { id: "1:1", label: "1:1", desc: "Kotak", ratio: 1 },
-  { id: "16:9", label: "16:9", desc: "Banner", ratio: 16 / 9 },
-  { id: "4:3", label: "4:3", desc: "Standar", ratio: 4 / 3 },
+  { id: "free", get label() { return t("Bebas"); }, ratio: null },
+  { id: "1:1", label: "1:1", get desc() { return t("Kotak"); }, ratio: 1 },
+  { id: "16:9", label: "16:9", get desc() { return t("Banner"); }, ratio: 16 / 9 },
+  { id: "4:3", label: "4:3", get desc() { return t("Standar"); }, ratio: 4 / 3 },
 ];
 
 const CANVAS_W = 600;
@@ -555,17 +556,17 @@ function ImageCropContent({ imageSrc, onClose, onCrop }: ImageCropContentProps) 
               id="d-crop-title"
               style={{ margin: 0, fontSize: "1rem", fontWeight: 650, color: "var(--ink)" }}
             >
-              Potong Gambar
+              {t("Potong gambar")}
             </h2>
             <p style={{ margin: "2px 0 0", fontSize: "0.8125rem", color: "var(--muted)" }}>
-              Sesuaikan area dan rasio pemotongan gambar.
+              {t("Sesuaikan area dan rasio pemotongan gambar.")}
             </p>
           </div>
         </div>
         <button
           type="button"
           className="d-icon-btn"
-          aria-label="Tutup"
+          aria-label={t("Tutup jendela")}
           onClick={onClose}
           style={{ color: "var(--muted)" }}
         >
@@ -600,7 +601,7 @@ function ImageCropContent({ imageSrc, onClose, onCrop }: ImageCropContentProps) 
               marginRight: "4px",
             }}
           >
-            Rasio:
+            {t("Rasio:")}
           </span>
           {ASPECT_RATIOS.map((r) => {
             const active = selectedRatioId === r.id;
@@ -668,7 +669,7 @@ function ImageCropContent({ imageSrc, onClose, onCrop }: ImageCropContentProps) 
                 fontSize: "0.875rem",
               }}
             >
-              Memuat gambar…
+              {t("Memuat gambar…")}
             </div>
           )}
 
@@ -686,7 +687,7 @@ function ImageCropContent({ imageSrc, onClose, onCrop }: ImageCropContentProps) 
                 textAlign: "center",
               }}
             >
-              Gagal memuat gambar untuk dipotong.
+              {t("Gagal memuat gambar untuk dipotong.")}
             </div>
           )}
         </div>
@@ -715,7 +716,7 @@ function ImageCropContent({ imageSrc, onClose, onCrop }: ImageCropContentProps) 
               disabled={!imageLoaded}
               onChange={(e) => setZoom(parseFloat(e.target.value))}
               style={{ flex: 1, accentColor: "var(--brand-solid)" }}
-              aria-label="Perbesaran gambar"
+              aria-label={t("Perbesaran gambar")}
             />
             <MagnifyingGlassPlus
               weight="bold"
@@ -741,10 +742,10 @@ function ImageCropContent({ imageSrc, onClose, onCrop }: ImageCropContentProps) 
             style={{ border: "1px solid var(--line)", flexShrink: 0 }}
             onClick={handleReset}
             disabled={!imageLoaded}
-            title="Reset zoom dan posisi"
+            title={t("Reset zoom dan posisi")}
           >
             <ArrowCounterClockwise weight="bold" aria-hidden="true" />
-            Reset
+            {t("Reset")}
           </button>
         </div>
       </div>
@@ -764,11 +765,11 @@ function ImageCropContent({ imageSrc, onClose, onCrop }: ImageCropContentProps) 
             color: "var(--muted)",
           }}
         >
-          Geser untuk memposisikan, tarik sudut untuk mengubah ukuran.
+          {t("Geser untuk memposisikan, tarik sudut untuk mengubah ukuran.")}
         </span>
         <div style={{ display: "flex", gap: "8px" }}>
           <button type="button" className="d-btn" onClick={onClose} disabled={exporting}>
-            Batal
+            {t("Batal")}
           </button>
           <button
             type="button"
@@ -777,7 +778,7 @@ function ImageCropContent({ imageSrc, onClose, onCrop }: ImageCropContentProps) 
             disabled={exporting || !imageLoaded}
           >
             <Check weight="bold" aria-hidden="true" />
-            {exporting ? "Memproses…" : "Selesai"}
+            {exporting ? t("Memproses…") : t("Terapkan potongan")}
           </button>
         </div>
       </div>

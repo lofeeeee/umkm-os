@@ -218,7 +218,7 @@ describe("PagesPanel component (Studio Enhancement Task 5)", () => {
     expect(html).toContain(
       "Halaman kustom memerlukan paket Pro. Starter mendapatkan Beranda, Tentang Kami, dan Kontak."
     );
-    expect(html).toContain("Upgrade ke Pro");
+    expect(html).toContain("Tingkatkan ke Pro");
 
     // Input custom page dinonaktifkan (disabled) pada paket Starter
     expect(html).toMatch(/data-testid="input-custom-title"[^>]*\sdisabled(=|[\s>])/);
@@ -240,7 +240,7 @@ describe("PagesPanel component (Studio Enhancement Task 5)", () => {
     );
 
     // Pada Pro, tidak ada pemblokiran upgrade CTA
-    expect(html).not.toContain("Upgrade ke Pro");
+    expect(html).not.toContain("Tingkatkan ke Pro");
     expect(html).not.toContain(
       "Halaman kustom memerlukan paket Pro. Starter mendapatkan Beranda, Tentang Kami, dan Kontak."
     );

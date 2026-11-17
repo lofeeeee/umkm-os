@@ -3,6 +3,7 @@
 // sehingga navigasi yang terlihat di Studio hilang setelah diterbitkan.
 
 import type { ReactNode } from "react";
+import { t } from "@/i18n";
 
 export interface NavLink { href: string; label: string }
 
@@ -32,7 +33,7 @@ function Brand({ brand, logoUrl }: { brand: string; logoUrl?: string }): ReactNo
 function Links({ links }: { links: NavLink[] }) {
   if (links.length === 0) return null;
   return (
-    <nav className="s-nav" aria-label="Halaman">
+    <nav className="s-nav" aria-label={t("Halaman")}>
       {links.map((l) => <a key={l.href} href={l.href}>{l.label}</a>)}
     </nav>
   );
@@ -42,14 +43,14 @@ function Links({ links }: { links: NavLink[] }) {
 export function PublicNav({ style, sticky = false, brand, logoUrl, links, ariaLabel }: PublicNavProps) {
   if (style === "side") {
     return (
-      <aside className="s-nav-side" aria-label={ariaLabel ?? "Navigasi samping"}>
+      <aside className="s-nav-side" aria-label={ariaLabel ?? t("Navigasi samping")}>
         <Brand brand={brand} logoUrl={logoUrl} />
         <Links links={links} />
       </aside>
     );
   }
   return (
-    <header className={`s-headbar${sticky ? " s-sticky" : ""}`} aria-label={ariaLabel ?? "Navigasi atas"}>
+    <header className={`s-headbar${sticky ? " s-sticky" : ""}`} aria-label={ariaLabel ?? t("Navigasi atas")}>
       <Brand brand={brand} logoUrl={logoUrl} />
       <Links links={links} />
     </header>

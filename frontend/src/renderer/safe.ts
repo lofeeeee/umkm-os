@@ -1,3 +1,4 @@
+import { t } from "@/i18n";
 // Pertahanan berlapis di klien. Server (Rust) adalah penjaga utama (ADR-0007); fungsi ini
 // memastikan renderer tetap aman bila suatu saat menerima data yang tidak tervalidasi.
 

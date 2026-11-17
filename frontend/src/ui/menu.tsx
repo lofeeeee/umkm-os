@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { DotsThree } from "@phosphor-icons/react/ssr";
+import { t as tx } from "@/i18n";
 
 export interface MenuItem { label: string; run: () => void; danger?: boolean }
 

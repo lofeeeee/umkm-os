@@ -49,15 +49,18 @@ import { confirm, Sheet } from "@/ui/dialog";
 import { Badge, Skeleton } from "@/ui/page";
 import { Alert } from "@/dashboard/shell";
 import { dismissToast, toast } from "@/ui/toast";
+import { t as tx, tmap } from "@/i18n";
+import { Tr } from "@/i18n/react";
 
 type StudioCell = TplCell;
 /** Keadaan Studio; dokumen server = toDoc(Studio) (schema_version 2). */
 type Studio = StudioState;
 type SaveState = "idle" | "saving" | "saved" | "error" | "conflict" | "readonly";
 const CATEGORIES: PluginCategory[] = ["Konten", "Jualan", "Layanan", "Info toko"];
+const CATEGORY_LABEL: Record<PluginCategory, string> = tmap({ Konten: "Konten", Jualan: "Jualan", Layanan: "Layanan", "Info toko": "Info toko" });
 
 const EMPTY_BUSINESS: Business = {
-  profile: { name: "Nama Toko", socials: [], timezone: "Asia/Jakarta", pickup_available: false, delivery_available: false },
+  profile: { get name() { return tx("Nama Toko"); }, socials: [], timezone: "Asia/Jakarta", pickup_available: false, delivery_available: false },
   addresses: [], hours: [], exceptions: [],
 };
 const storageKey = (t: string) => `umkm-studio-${t}`;
@@ -115,7 +118,7 @@ function setPath(kind: PluginKind, data: { [k: string]: Json }, path: string, va
   const top = fields.find((f) => f.key === parts[0]);
   const leaf = parts.length === 3 ? top?.item?.find((f) => f.key === parts[2]) : parts.length === 2 && parts[0] === "cta" ? { max: 40, required: true } : top;
   const max = leaf?.max;
-  if (leaf?.required && !value) return "Isian ini tidak boleh kosong.";
+  if (leaf?.required && !value) return tx("Isian ini tidak boleh kosong.");
   const v = max ? value.slice(0, max) : value;
   const next = structuredClone(data);
   let cur: Json = next;
@@ -193,7 +196,7 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
       }
       const tpls = await api<{ key: string }[]>("GET", `${base}/website/templates`);
       const key = tpls[0]?.key;
-      if (!key) throw new Error("Tidak ada template website.");
+      if (!key) throw new Error(tx("Tidak ada templat website."));
       const res = await api<{ template_key: string; pages?: PageItem[] }>("PUT", `${base}/website`, { json: { template_key: key } });
       if (res.pages) setPages(res.pages);
       return key;
@@ -227,7 +230,7 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
         setSrv({ template, revision: d.revision, published: d.published_version, savedDoc: "" });
         if (local) {
           setHist(start(withInstalled({ ...local, cells: local.cells.map((c) => ({ ...c, ...minSize(c.kind) })) })));
-          toast.info("Susunan dari prototipe Studio dipakai dan sedang disimpan ke server.");
+          toast.info(tx("Susunan dari prototipe Studio dipakai dan sedang disimpan ke server."));
         } else {
           setHist(start(fromDraft(v1)));
           setPicking("first");
@@ -265,7 +268,7 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
     } catch (e) {
       if (e instanceof ApiError && e.status === 409) {
         setSaveState("conflict");
-        setSaveErr("Draf diubah di tempat lain (tab atau perangkat lain). Muat ulang halaman untuk melihat versi terbaru.");
+        setSaveErr(tx("Draf diubah di tempat lain (tab atau perangkat lain). Muat ulang halaman untuk melihat versi terbaru."));
       } else {
         // 4xx (mis. 422 validasi): kirim ulang dokumen yang sama pasti gagal lagi.
         if (e instanceof ApiError && e.status >= 400 && e.status < 500) rejected.current = json;
@@ -305,7 +308,7 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
     try {
       const r = await api<PageItem>("POST", `${base}/website/pages`, { json: { slug, title } });
       setPages((p) => [...p, r]);
-      toast.ok(`Halaman ${title} dibuat.`);
+      toast.ok(tx("Halaman {0} dibuat.", title));
       await switchPage(slug);
       return true;
     } catch (e) {
@@ -318,7 +321,7 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
     try {
       await api("DELETE", `${base}/website/pages/${slug}`);
       setPages((p) => p.filter((x) => x.slug !== slug));
-      toast.ok("Halaman dihapus.");
+      toast.ok(tx("Halaman dihapus."));
       if (activeSlug === slug) await switchPage("home");
       return true;
     } catch (e) {
@@ -346,12 +349,12 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
   }, [update]);
 
   const uploadBg = useCallback(async (file: File): Promise<string | null> => {
-    const id0 = toast.info("Mengunggah foto latar…");
+    const id0 = toast.info(tx("Mengunggah foto latar…"));
     const u = await assets.upload(file);
     dismissToast(id0);
     if (!u) return null;
     update((s) => ({ ...s, backgroundImage: u.ref }), "bg");
-    toast.ok("Foto latar dipasang.");
+    toast.ok(tx("Foto latar dipasang."));
     return u.ref;
   }, [assets, update]);
 
@@ -366,7 +369,7 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
 
   const clearStrokes = useCallback(() => {
     update((s) => ({ ...s, drawings: [] }), "clear_draw");
-    toast.ok("Semua coretan dihapus. Tekan Ctrl+Z untuk membatalkan.");
+    toast.ok(tx("Semua coretan dihapus. Tekan Ctrl+Z untuk membatalkan."));
   }, [update]);
 
   useEffect(() => {
@@ -392,10 +395,10 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
     setPublishing(true);
     try {
       const rev = await saveNow();
-      if (rev === null) { toast.error("Draf belum tersimpan, jadi belum bisa diterbitkan."); return; }
+      if (rev === null) { toast.error(tx("Draf belum tersimpan, jadi belum bisa diterbitkan.")); return; }
       const r = await api<{ version: number }>("POST", `${base}/website/pages/${activeSlug}/publish`, { json: { revision: rev } });
       setSrv((x) => (x ? { ...x, published: r.version ?? x.published } : x));
-      toast.ok("Website diterbitkan. Pengunjung melihat versi baru dalam ±1 menit.");
+      toast.ok(tx("Website diterbitkan. Pengunjung melihat versi baru dalam ±1 menit."));
     } catch (e) {
       toast.error(describe(e));
     } finally {
@@ -431,7 +434,7 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
   const setChatOpen = useCallback((id: string, open: boolean) => setCell(id, { chatOpen: open }, ""), [setCell]);
 
   function add(kind: PluginKind, at?: { x: number; y: number }) {
-    if (SINGLE.includes(kind) && st?.cells.some((c) => c.kind === kind)) { toast.info(`${pluginDef(kind).name} sudah ada di halaman.`); return; }
+    if (SINGLE.includes(kind) && st?.cells.some((c) => c.kind === kind)) { toast.info(tx("{0} sudah ada di halaman.", pluginDef(kind).name)); return; }
     const c = cellFor(kind);
     update((s) => ({ ...s, installed: s.installed.includes(kind) ? s.installed : [...s.installed, kind], cells: insert(s.cells, c, at) as StudioCell[] }), "");
     setSel(c.id);
@@ -439,10 +442,10 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
   function remove(id: string) {
     update((s) => ({ ...s, cells: s.cells.filter((c) => c.id !== id) }), "");
     setSel(null);
-    toast.info("Plugin dihapus. Tekan Ctrl+Z untuk membatalkan.");
+    toast.info(tx("Blok dihapus. Tekan Ctrl+Z untuk membatalkan."));
   }
   async function putPhoto(id: string, file: File) {
-    const id0 = toast.info("Mengunggah foto…");
+    const id0 = toast.info(tx("Mengunggah foto…"));
     const u = await assets.upload(file); // kompresi & pesan galat ditangani useUploads
     dismissToast(id0);
     if (!u) return;
@@ -458,7 +461,7 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
         return k ? { ...c, data: { ...c.data, [k]: u.ref } } : c;
       }),
     }), "");
-    toast.ok("Foto dipasang.");
+    toast.ok(tx("Foto dipasang."));
   }
   function applyTemplate(key: string) {
     const t = TEMPLATES.find((x) => x.key === key)!;
@@ -468,7 +471,7 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
     else update(() => next, "");
     setPicking(null);
     setSel(null);
-    toast.ok(`Template ${t.name} dipakai. Klik teks mana saja untuk mengubahnya.`);
+    toast.ok(tx("Templat {0} dipakai. Klik teks mana saja untuk mengubahnya.", t.name));
   }
 
   /* ---------------- Render plugin (galeri template & pratinjau penuh) ---------------- */
@@ -499,7 +502,7 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
 
   const shownPlugins = useMemo(() => {
     const t = q.trim().toLowerCase();
-    return PLUGINS.filter((p) => !t || `${p.name} ${p.desc} ${p.keywords} ${p.category}`.toLowerCase().includes(t));
+    return PLUGINS.filter((p) => !t || `${p.name} ${p.desc} ${p.keywords} ${tx(p.keywords)} ${p.category} ${CATEGORY_LABEL[p.category]}`.toLowerCase().includes(t));
   }, [q]);
 
   const backHref = `/website?tenant=${ctx.tenant.id}`;
@@ -546,7 +549,7 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
   if (!st || !hist) {
     return (
       <div className="sx">
-        <header className="sx-top"><Link className="d-btn d-btn-ghost d-btn-sm" href={backHref}><ArrowLeft weight="bold" aria-hidden="true" />Website</Link><strong>Studio</strong></header>
+        <header className="sx-top"><Link className="d-btn d-btn-ghost d-btn-sm" href={backHref}><ArrowLeft weight="bold" aria-hidden="true" />{tx("Website")}</Link><strong>{tx("Studio")}</strong></header>
         <div className="sx-scroll"><div style={{ padding: 32 }}><span className="d-skel d-skel-block" style={{ height: 480 }} /></div></div>
       </div>
     );
@@ -557,8 +560,8 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
       <Assets.Provider value={assets}>
         <div className="sx">
         <header className="sx-top">
-          <Link className="d-btn d-btn-ghost d-btn-sm" href={backHref}><ArrowLeft weight="bold" aria-hidden="true" />Website</Link>
-          <span className="sx-brand"><span className="d-avatar" aria-hidden="true">{(ctx.tenant.name.trim()[0] ?? "T").toUpperCase()}</span>Studio</span>
+          <Link className="d-btn d-btn-ghost d-btn-sm" href={backHref}><ArrowLeft weight="bold" aria-hidden="true" />{tx("Website")}</Link>
+          <span className="sx-brand"><span className="d-avatar" aria-hidden="true">{(ctx.tenant.name.trim()[0] ?? "T").toUpperCase()}</span>{tx("Studio")}</span>
           <span className="sx-spacer" />
           <FullscreenButton />
         </header>
@@ -568,7 +571,7 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
           business={business}
           renderCell={renderCell}
           onPick={applyTemplate}
-          onCurrent={() => { setPicking(null); toast.ok("Memakai susunan website Anda saat ini."); }}
+          onCurrent={() => { setPicking(null); toast.ok(tx("Memakai susunan website Anda saat ini.")); }}
           surfaceOf={(k) => TEMPLATES.find((t) => t.key === k)!.build({ name: business.profile.name, description: business.profile.description ?? null })}
         />
         </div>
@@ -585,7 +588,7 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
     const k = IMAGE_KEY[c.kind];
     const ref = k ? (c.data[k] as string) : null;
     if (ref && assets.url(ref)) setCropModal({ open: true, cellId: c.id, imageSrc: assets.url(ref)! });
-    else toast.error("Belum ada foto yang dipasang untuk dipotong.");
+    else toast.error(tx("Belum ada foto yang dipasang untuk dipotong."));
   };
   const duplicate = (c: StudioCell) => {
     const copy = { ...c, id: newId(c.kind), locked: undefined };
@@ -599,25 +602,25 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
     if (!c) return null;
     return (
       <>
-        {needsUpgrade(pluginPlan(c.kind), planCode) && <span className="lc-chip lc-chip-pro" title="Tidak tampil di situs sampai toko memakai paket Pro">Pro</span>}
+        {needsUpgrade(pluginPlan(c.kind), planCode) && <span className="lc-chip lc-chip-pro" title={tx("Tidak tampil di situs sampai toko memakai paket Pro")}>{tx("Pro")}</span>}
         {c.kind === "product_grid" && noPhoto > 0 && (
-          <Link className="lc-chip lc-chip-warn" href={`/products?tenant=${ctx.tenant.id}`}>{noPhoto} produk tanpa foto</Link>
+          <Link className="lc-chip lc-chip-warn" href={`/products?tenant=${ctx.tenant.id}`}>{noPhoto}{" "}{tx("produk tanpa foto")}</Link>
         )}
         {takesPhoto(c.kind) && (
-          <label className="lc-tool" title={c.kind === "gallery" ? "Tambah foto" : "Ganti foto"} aria-label={c.kind === "gallery" ? "Tambah foto" : "Ganti foto"}>
+          <label className="lc-tool" title={c.kind === "gallery" ? tx("Tambah foto") : tx("Ganti foto")} aria-label={c.kind === "gallery" ? tx("Tambah foto") : tx("Ganti foto")}>
             <ImageSquare weight="bold" />
             <input type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void putPhoto(c.id, f); }} />
           </label>
         )}
         {c.kind in IMAGE_KEY && (
-          <button type="button" className="lc-tool" onClick={() => cropOf(c)} aria-label="Potong foto" title="Potong foto"><Crop weight="bold" /></button>
+          <button type="button" className="lc-tool" onClick={() => cropOf(c)} aria-label={tx("Potong foto")} title={tx("Potong foto")}><Crop weight="bold" /></button>
         )}
         <button type="button" className={`lc-tool${c.locked ? " lc-tool-on" : ""}`} onClick={() => setCell(c.id, { locked: !c.locked }, "")} aria-pressed={!!c.locked}
-          aria-label={c.locked ? "Buka kunci posisi" : "Kunci posisi"} title={c.locked ? "Buka kunci posisi" : "Kunci posisi"}>
+          aria-label={c.locked ? tx("Buka kunci posisi") : tx("Kunci posisi")} title={c.locked ? tx("Buka kunci posisi") : tx("Kunci posisi")}>
           {c.locked ? <LockSimple weight="fill" /> : <LockSimpleOpen weight="bold" />}
         </button>
-        {!SINGLE.includes(c.kind) && <button type="button" className="lc-tool" onClick={() => duplicate(c)} aria-label="Duplikat" title="Duplikat"><Copy weight="bold" /></button>}
-        <button type="button" className="lc-tool lc-tool-danger" onClick={() => remove(c.id)} aria-label={`Hapus ${pluginDef(c.kind).name}`} title="Hapus (Delete)"><Trash weight="bold" /></button>
+        {!SINGLE.includes(c.kind) && <button type="button" className="lc-tool" onClick={() => duplicate(c)} aria-label={tx("Duplikat")} title={tx("Duplikat")}><Copy weight="bold" /></button>}
+        <button type="button" className="lc-tool lc-tool-danger" onClick={() => remove(c.id)} aria-label={tx("Hapus {0}", pluginDef(c.kind).name)} title={tx("Hapus (Delete)")}><Trash weight="bold" /></button>
       </>
     );
   };
@@ -633,46 +636,46 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
     <Assets.Provider value={assets}>
       <div className="sx">
       <header className="sx-top">
-        <Link className="d-btn d-btn-ghost d-btn-sm" href={backHref}><ArrowLeft weight="bold" aria-hidden="true" /><span className="sx-hide-sm">Website</span></Link>
-        <button type="button" className="d-icon-btn" onClick={() => setPanelOpen(!panelOpen)} aria-pressed={panelOpen} aria-label={panelOpen ? "Sembunyikan panel" : "Tampilkan panel"} title={panelOpen ? "Sembunyikan panel" : "Tampilkan panel"}>
+        <Link className="d-btn d-btn-ghost d-btn-sm" href={backHref}><ArrowLeft weight="bold" aria-hidden="true" /><span className="sx-hide-sm">{tx("Website")}</span></Link>
+        <button type="button" className="d-icon-btn" onClick={() => setPanelOpen(!panelOpen)} aria-pressed={panelOpen} aria-label={panelOpen ? tx("Sembunyikan panel") : tx("Tampilkan panel")} title={panelOpen ? tx("Sembunyikan panel") : tx("Tampilkan panel")}>
           <SidebarSimple weight={panelOpen ? "fill" : "bold"} />
         </button>
         <span className="sx-sep" aria-hidden="true" />
-        <button type="button" className="sx-page" onClick={() => selectTab("pages")} title="Ganti atau tambah halaman">
+        <button type="button" className="sx-page" onClick={() => selectTab("pages")} title={tx("Ganti atau tambah halaman")}>
           <Files weight="duotone" aria-hidden="true" />
-          <span className="sx-page-name">{activePage?.title || (activeSlug === "home" ? "Beranda" : activeSlug)}</span>
+          <span className="sx-page-name">{activePage?.title || (activeSlug === "home" ? tx("Beranda") : activeSlug)}</span>
           <span className="sx-page-path">{activeSlug === "home" ? "/" : `/${activeSlug}`}</span>
           <CaretDown weight="bold" aria-hidden="true" />
         </button>
         <SaveBadge state={saveState} saved={saved} err={saveErr} onRetry={() => { setSaveState("idle"); void saveNow(); }} />
         <span className="sx-spacer" />
-        <div className="sx-group" role="group" aria-label="Riwayat ubahan">
-          <button type="button" className="d-icon-btn" onClick={doUndo} disabled={hist.past.length === 0} aria-label="Urungkan (Ctrl+Z)" title="Urungkan (Ctrl+Z)"><ArrowCounterClockwise weight="bold" /></button>
-          <button type="button" className="d-icon-btn" onClick={doRedo} disabled={hist.future.length === 0} aria-label="Ulangi (Ctrl+Shift+Z)" title="Ulangi (Ctrl+Shift+Z)"><ArrowClockwise weight="bold" /></button>
+        <div className="sx-group" role="group" aria-label={tx("Riwayat ubahan")}>
+          <button type="button" className="d-icon-btn" onClick={doUndo} disabled={hist.past.length === 0} aria-label={tx("Urungkan (Ctrl+Z)")} title={tx("Urungkan (Ctrl+Z)")}><ArrowCounterClockwise weight="bold" /></button>
+          <button type="button" className="d-icon-btn" onClick={doRedo} disabled={hist.future.length === 0} aria-label={tx("Ulangi (Ctrl+Shift+Z)")} title={tx("Ulangi (Ctrl+Shift+Z)")}><ArrowClockwise weight="bold" /></button>
         </div>
-        <div className="sx-devices" role="group" aria-label="Perangkat pratinjau">
+        <div className="sx-devices" role="group" aria-label={tx("Perangkat pratinjau")}>
           {([["desktop", Desktop], ["tablet", DeviceTablet], ["mobile", DeviceMobile]] as const).map(([d, Icon]) => (
             <button key={d} type="button" aria-pressed={device === d} onClick={() => setDevice(d)} title={DEVICE_LABEL[d]} aria-label={DEVICE_LABEL[d]}>
               <Icon weight={device === d ? "fill" : "bold"} aria-hidden="true" />
             </button>
           ))}
         </div>
-        <span className="sx-zoom" title={`Pratinjau ${DEVICE_LABEL[device]} selebar layar asli (${DEVICE_WIDTH[device]} px), diperkecil agar muat`}>{Math.round(zoom * 100)}%</span>
+        <span className="sx-zoom" title={tx("Pratinjau {0} selebar layar asli ({1} px), diperkecil agar muat", DEVICE_LABEL[device], DEVICE_WIDTH[device])}>{Math.round(zoom * 100)}%</span>
         <span className="sx-sep" aria-hidden="true" />
-        <button className="d-btn d-btn-sm d-btn-ghost" onClick={() => setPicking("change")}><SquaresFour weight="bold" aria-hidden="true" /><span className="sx-hide-md">Template</span></button>
-        <button className="d-btn d-btn-sm d-btn-ghost" onClick={() => setVersionsOpen(true)}><ClockCounterClockwise weight="bold" aria-hidden="true" /><span className="sx-hide-md">Riwayat</span></button>
+        <button className="d-btn d-btn-sm d-btn-ghost" onClick={() => setPicking("change")}><SquaresFour weight="bold" aria-hidden="true" /><span className="sx-hide-md">{tx("Templat")}</span></button>
+        <button className="d-btn d-btn-sm d-btn-ghost" onClick={() => setVersionsOpen(true)}><ClockCounterClockwise weight="bold" aria-hidden="true" /><span className="sx-hide-md">{tx("Riwayat")}</span></button>
         <FullscreenButton />
         {ctx.tenant.primary_hostname && srv?.published && (
-          <a className="d-btn d-btn-sm d-btn-ghost" href={`https://${ctx.tenant.primary_hostname}`} target="_blank" rel="noopener noreferrer"><ArrowSquareOut weight="bold" aria-hidden="true" /><span className="sx-hide-md">Lihat situs</span></a>
+          <a className="d-btn d-btn-sm d-btn-ghost" href={`https://${ctx.tenant.primary_hostname}`} target="_blank" rel="noopener noreferrer"><ArrowSquareOut weight="bold" aria-hidden="true" /><span className="sx-hide-md">{tx("Lihat situs")}</span></a>
         )}
-        <button className="d-btn d-btn-sm d-btn-primary" onClick={publish} disabled={!canPublish || publishing || saveState === "conflict"} title={canPublish ? "Terbitkan ke situs publik" : "Butuh izin terbitkan website"}>
-          {publishing ? "Menerbitkan…" : srv?.published ? "Terbitkan perubahan" : "Terbitkan"}
+        <button className="d-btn d-btn-sm d-btn-primary" onClick={publish} disabled={!canPublish || publishing || saveState === "conflict"} title={canPublish ? tx("Terbitkan ke situs publik") : tx("Butuh izin terbitkan website")}>
+          {publishing ? tx("Menerbitkan…") : srv?.published ? tx("Terbitkan perubahan") : tx("Terbitkan")}
         </button>
       </header>
 
       <div className="sx-body" data-panel={panelOpen ? "open" : "closed"}>
         <IconRail activeTab={selected ? null : activeTab} onSelectTab={selectTab} />
-        <aside className="st-panel sx-panel" aria-label={selected ? "Pengaturan plugin" : activeTab === "pages" ? "Halaman" : activeTab === "theme" ? "Desain" : activeTab === "draw" ? "Coretan" : "Plugin"} hidden={!panelOpen}>
+        <aside className="st-panel sx-panel" aria-label={selected ? tx("Pengaturan blok") : activeTab === "pages" ? tx("Halaman") : activeTab === "theme" ? tx("Desain") : activeTab === "draw" ? tx("Coretan") : tx("Blok")} hidden={!panelOpen}>
           {selected ? (
             <Inspector
               c={selected}
@@ -722,21 +725,21 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
           ) : (
             <div className="st-catalog">
               <div className="st-panel-head">
-                <h2>Tambah blok</h2>
-                <p>Klik untuk menambah di bawah halaman, atau seret ke posisi yang Anda mau.</p>
+                <h2>{tx("Tambah blok")}</h2>
+                <p>{tx("Klik untuk menambah di bawah halaman, atau seret ke posisi yang Anda mau.")}</p>
               </div>
               <label className="st-search">
                 <MagnifyingGlass aria-hidden="true" weight="bold" />
-                <input type="search" aria-label="Cari plugin" placeholder="Cari: promo, wa, banner…" value={q} onChange={(e) => setQ(e.target.value)} />
-                {q && <button type="button" className="st-search-x" onClick={() => setQ("")} aria-label="Hapus pencarian"><X weight="bold" /></button>}
+                <input type="search" aria-label={tx("Cari blok")} placeholder={tx("Cari: promo, wa, banner…")} value={q} onChange={(e) => setQ(e.target.value)} />
+                {q && <button type="button" className="st-search-x" onClick={() => setQ("")} aria-label={tx("Hapus pencarian")}><X weight="bold" /></button>}
               </label>
-              {shownPlugins.length === 0 && <p className="d-muted d-small">Tidak ada plugin yang cocok dengan “{q}”.</p>}
+              {shownPlugins.length === 0 && <p className="d-muted d-small"><Tr s="Tidak ada blok yang cocok dengan “{0}”." a={[q]} /></p>}
               {CATEGORIES.map((cat) => {
                 const list = shownPlugins.filter((p) => p.category === cat);
                 if (list.length === 0) return null;
                 return (
                   <section key={cat} className="st-cat">
-                    <h3>{cat}</h3>
+                    <h3>{CATEGORY_LABEL[cat]}</h3>
                     <div className="st-cards">
                       {list.map((p) => {
                         const onPage = st.cells.some((c) => c.kind === p.kind);
@@ -747,16 +750,16 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
                             type="button"
                             draggable={!single}
                             className="st-card"
-                            aria-label={`Tambah ${p.name}`}
+                            aria-label={tx("Tambah {0}", p.name)}
                             aria-disabled={single || undefined}
-                            title={single ? `${p.name} sudah ada di halaman ini` : `Tambah ${p.name} — atau seret ke kanvas`}
+                            title={single ? tx("{0} sudah ada di halaman ini", p.name) : tx("Tambah {0} — atau seret ke kanvas", p.name)}
                             onClick={() => add(p.kind)}
                             onDragStart={(e) => { e.dataTransfer.setData(PLUGIN_MIME, p.kind); e.dataTransfer.effectAllowed = "copy"; setPaletteDrag({ kind: p.kind, w: p.w }); }}
                             onDragEnd={() => setPaletteDrag(null)}
                           >
                             <span className="st-card-icon"><PluginIcon kind={p.kind} size={20} /></span>
                             <span className="st-card-text">
-                              <strong>{p.name}{pluginPlan(p.kind) === "pro" && <em className="st-pro">Pro</em>}</strong>
+                              <strong>{p.name}{pluginPlan(p.kind) === "pro" && <em className="st-pro">{tx("Pro")}</em>}</strong>
                               <span>{p.desc}</span>
                             </span>
                             <span className="st-card-add" aria-hidden="true">{single ? <Check weight="bold" /> : <Plus weight="bold" />}</span>
@@ -771,12 +774,12 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
           )}
         </aside>
 
-        <main className="sx-canvas" aria-label="Kanvas halaman">
+        <main className="sx-canvas" aria-label={tx("Kanvas halaman")}>
           {drawActive && (
             <div className="sx-drawbar" role="status">
               <span className="sx-drawbar-dot" style={{ background: drawTool === "eraser" ? "#71717a" : drawConfig.color }} />
-              {drawTool === "brush" ? (drawTarget === "cell" ? "Kuas: coretan menempel pada blok yang Anda gambar" : "Kuas: menggambar di latar halaman") : "Penghapus: sapukan pada coretan"}
-              <button type="button" className="d-btn d-btn-sm" onClick={() => setDrawTool(null)}>Selesai <kbd>Esc</kbd></button>
+              {drawTool === "brush" ? (drawTarget === "cell" ? tx("Kuas: coretan menempel pada blok yang Anda gambar") : tx("Kuas: menggambar di latar halaman")) : tx("Penghapus: sapukan pada coretan")}
+              <button type="button" className="d-btn d-btn-sm" onClick={() => setDrawTool(null)}>{tx("Selesai")}{" "}<kbd>{tx("Esc")}</kbd></button>
             </div>
           )}
           <LiveCanvas
@@ -806,11 +809,11 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
           />
           {st.cells.length === 0 && (
             <div className="sx-empty">
-              <strong>Halaman ini masih kosong</strong>
-              <span>Tambahkan blok dari panel kiri, atau pilih template siap pakai.</span>
+              <strong>{tx("Halaman ini masih kosong")}</strong>
+              <span>{tx("Tambahkan blok dari panel kiri, atau pilih templat siap pakai.")}</span>
               <span className="d-row" style={{ justifyContent: "center" }}>
-                <button type="button" className="d-btn d-btn-sm d-btn-primary" onClick={() => selectTab("elements")}><Plus weight="bold" aria-hidden="true" />Tambah blok</button>
-                <button type="button" className="d-btn d-btn-sm" onClick={() => setPicking("change")}><SquaresFour weight="bold" aria-hidden="true" />Pilih template</button>
+                <button type="button" className="d-btn d-btn-sm d-btn-primary" onClick={() => selectTab("elements")}><Plus weight="bold" aria-hidden="true" />{tx("Tambah blok")}</button>
+                <button type="button" className="d-btn d-btn-sm" onClick={() => setPicking("change")}><SquaresFour weight="bold" aria-hidden="true" />{tx("Pilih templat")}</button>
               </span>
             </div>
           )}
@@ -819,8 +822,8 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
       </div>
 
       <Sheet open={!!full} onClose={() => setFull(null)} wide
-        title={full ? `Pratinjau penuh — ${pluginDef(st.cells.find((c) => c.id === full)?.kind ?? "hero").name}` : ""}
-        description="Seluruh isi plugin tanpa terpotong, pada lebar yang sama dengan di kanvas.">
+        title={full ? tx("Pratinjau penuh — {0}", pluginDef(st.cells.find((c) => c.id === full)?.kind ?? "hero").name) : ""}
+        description={tx("Seluruh isi blok tanpa terpotong, pada lebar yang sama dengan di kanvas.")}>
         {full && (() => {
           const c = st.cells.find((x) => x.id === full);
           if (!c) return null;
@@ -832,37 +835,37 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
         })()}
       </Sheet>
 
-      <Sheet open={checks !== null} onClose={() => setChecks(null)} title="Sebelum terbit"
-        description="Website tetap bisa diterbitkan. Butir di bawah membuat toko lebih meyakinkan bagi pembeli."
-        footer={<><button className="d-btn" onClick={() => setChecks(null)}>Perbaiki dulu</button><button className="d-btn d-btn-primary" onClick={() => void doPublish()} disabled={publishing}>Terbitkan sekarang</button></>}>
-        <ul className="d-list" aria-label="Catatan siap terbit">
+      <Sheet open={checks !== null} onClose={() => setChecks(null)} title={tx("Sebelum terbit")}
+        description={tx("Website tetap bisa diterbitkan. Butir di bawah membuat toko lebih meyakinkan bagi pembeli.")}
+        footer={<><button className="d-btn" onClick={() => setChecks(null)}>{tx("Perbaiki dulu")}</button><button className="d-btn d-btn-primary" onClick={() => void doPublish()} disabled={publishing}>{tx("Terbitkan sekarang")}</button></>}>
+        <ul className="d-list" aria-label={tx("Catatan siap terbit")}>
           {(checks ?? []).map((i) => (
             <li key={i.key} className="d-row d-row-between" style={{ gap: 12 }}>
               <span><WarningCircle weight="fill" aria-hidden="true" style={{ color: "var(--warn)", verticalAlign: "-3px", marginRight: 6 }} />{i.message}</span>
               <span className="d-row" style={{ gap: 6, flex: "none" }}>
-                {i.cellId && <button type="button" className="d-btn d-btn-sm" onClick={() => { setSel(i.cellId!); setPanelOpen(true); setChecks(null); }}>Tunjukkan</button>}
-                {i.area === "business" && <Link className="d-btn d-btn-sm" href={`/business?tenant=${ctx.tenant.id}`}>Profil bisnis</Link>}
-                {i.area === "products" && <Link className="d-btn d-btn-sm" href={`/products?tenant=${ctx.tenant.id}`}>Produk</Link>}
-                {i.area === "seo" && <button type="button" className="d-btn d-btn-sm" onClick={() => { setSel(null); setPanelOpen(true); setChecks(null); setTimeout(() => document.getElementById("seo-description")?.focus(), 50); }}>Isi deskripsi</button>}
-                {i.area === "ai" && <Link className="d-btn d-btn-sm" href={`/ai?tenant=${ctx.tenant.id}`}>Asisten AI</Link>}
+                {i.cellId && <button type="button" className="d-btn d-btn-sm" onClick={() => { setSel(i.cellId!); setPanelOpen(true); setChecks(null); }}>{tx("Tunjukkan")}</button>}
+                {i.area === "business" && <Link className="d-btn d-btn-sm" href={`/business?tenant=${ctx.tenant.id}`}>{tx("Profil bisnis")}</Link>}
+                {i.area === "products" && <Link className="d-btn d-btn-sm" href={`/products?tenant=${ctx.tenant.id}`}>{tx("Produk")}</Link>}
+                {i.area === "seo" && <button type="button" className="d-btn d-btn-sm" onClick={() => { setSel(null); setPanelOpen(true); setChecks(null); setTimeout(() => document.getElementById("seo-description")?.focus(), 50); }}>{tx("Isi deskripsi")}</button>}
+                {i.area === "ai" && <Link className="d-btn d-btn-sm" href={`/ai?tenant=${ctx.tenant.id}`}>{tx("Asisten AI")}</Link>}
               </span>
             </li>
           ))}
         </ul>
       </Sheet>
 
-      <Sheet open={versionsOpen} onClose={() => setVersionsOpen(false)} title="Riwayat terbit"
-        description="Setiap kali menerbitkan, versi lama disimpan. Pulihkan menampilkan versi itu lagi di situs; draf Anda tidak berubah.">
+      <Sheet open={versionsOpen} onClose={() => setVersionsOpen(false)} title={tx("Riwayat terbit")}
+        description={tx("Setiap kali menerbitkan, versi lama disimpan. Pulihkan menampilkan versi itu lagi di situs; draf Anda tidak berubah.")}>
         {versionsOpen && <Versions base={base} canPublish={canPublish} published={srv?.published ?? null} onRestored={(v) => setSrv((x) => (x ? { ...x, published: v } : x))} />}
       </Sheet>
 
-      <Sheet open={picking === "change"} onClose={() => setPicking(null)} wide title="Ganti template" description="Susunan dan warna diganti; Anda bisa membatalkan dengan Ctrl+Z.">
+      <Sheet open={picking === "change"} onClose={() => setPicking(null)} wide title={tx("Ganti templat")} description={tx("Susunan dan warna diganti; Anda bisa membatalkan dengan Ctrl+Z.")}>
         {picking === "change" && (
           <TemplateGallery
             business={business}
             renderCell={renderCell}
             onPick={async (k) => {
-              if (st.cells.length > 0 && !(await confirm({ title: "Ganti template?", body: "Susunan halaman saat ini diganti. Bisa dibatalkan dengan Urungkan (Ctrl+Z).", confirmLabel: "Ganti template" }))) return;
+              if (st.cells.length > 0 && !(await confirm({ title: tx("Ganti templat?"), body: tx("Susunan halaman saat ini diganti. Bisa dibatalkan dengan Urungkan (Ctrl+Z)."), confirmLabel: tx("Ganti templat") }))) return;
               applyTemplate(k);
             }}
             onCurrent={() => { update(() => fromDraft(draft), ""); setPicking(null); }}
@@ -888,16 +891,16 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
 
 /* ============================================================ Status simpan & riwayat */
 function SaveBadge({ state, saved, err, onRetry }: { state: SaveState; saved: boolean; err: string | null; onRetry: () => void }) {
-  if (state === "readonly") return <Badge plain>Hanya lihat</Badge>;
+  if (state === "readonly") return <Badge plain>{tx("Hanya lihat")}</Badge>;
   if (state === "conflict" || state === "error") {
     return (
       <span className="st-save st-save-bad" role="alert" title={err ?? undefined}>
-        <WarningCircle weight="fill" aria-hidden="true" />{state === "conflict" ? "Konflik — muat ulang" : "Gagal menyimpan"}
-        {state === "error" && <button type="button" className="d-link d-small" onClick={onRetry}>Coba lagi</button>}
+        <WarningCircle weight="fill" aria-hidden="true" />{state === "conflict" ? tx("Konflik — muat ulang") : tx("Gagal menyimpan")}
+        {state === "error" && <button type="button" className="d-link d-small" onClick={onRetry}>{tx("Coba lagi")}</button>}
       </span>
     );
   }
-  return <span className="st-save" aria-live="polite">{saved ? <><Check weight="bold" aria-hidden="true" />Draf tersimpan</> : "Menyimpan…"}</span>;
+  return <span className="st-save" aria-live="polite">{saved ? <><Check weight="bold" aria-hidden="true" />{tx("Draf tersimpan")}</> : tx("Menyimpan…")}</span>;
 }
 
 interface Version { version: number; created_at_unix: number; is_current: boolean }
@@ -907,26 +910,26 @@ function Versions({ base, canPublish, published, onRestored }: { base: string; c
   const load = useCallback(() => api<Version[]>("GET", `${base}/website/pages/home/versions`).then(setItems, (e) => { toast.error(describe(e)); setItems([]); }), [base]);
   useEffect(() => { void load(); }, [load, published]);
   if (!items) return <Skeleton lines={4} />;
-  if (items.length === 0) return <p className="d-muted">Belum pernah diterbitkan.</p>;
+  if (items.length === 0) return <p className="d-muted">{tx("Belum pernah diterbitkan.")}</p>;
   return (
     <ul className="d-list">
       {items.map((v) => (
         <li key={v.version}>
           <div className="d-list-main">
-            <strong>Versi {v.version} {v.is_current && <Badge tone="ok">Tampil di situs</Badge>}</strong>
+            <strong><Tr s="Versi {0}" a={[v.version]} />{" "}{v.is_current && <Badge tone="ok">{tx("Tampil di situs")}</Badge>}</strong>
             <span className="d-muted">{waktu(v.created_at_unix * 1000)}</span>
           </div>
           {!v.is_current && (
             <button type="button" className="d-btn d-btn-sm" disabled={!canPublish || busy !== null} onClick={async () => {
-              if (!(await confirm({ title: `Pulihkan versi ${v.version}?`, body: "Situs publik akan menampilkan versi ini lagi. Draf yang sedang Anda ubah tidak berubah.", confirmLabel: "Pulihkan" }))) return;
+              if (!(await confirm({ title: tx("Pulihkan versi {0}?", v.version), body: tx("Situs publik akan menampilkan versi ini lagi. Draf yang sedang Anda ubah tidak berubah."), confirmLabel: tx("Pulihkan") }))) return;
               setBusy(v.version);
               try {
                 await api("POST", `${base}/website/pages/home/rollback`, { json: { version: v.version } });
-                toast.ok(`Situs kini menampilkan versi ${v.version}.`);
+                toast.ok(tx("Situs kini menampilkan versi {0}.", v.version));
                 onRestored(v.version);
                 await load();
               } catch (e) { toast.error(describe(e)); } finally { setBusy(null); }
-            }}>Pulihkan</button>
+            }}>{tx("Pulihkan")}</button>
           )}
         </li>
       ))}
@@ -943,10 +946,10 @@ function FullscreenButton() {
   const on = useSyncExternalStore(subscribeFs, () => !!document.fullscreenElement, () => false);
   const toggle = () => {
     if (document.fullscreenElement) void document.exitFullscreen();
-    else void document.documentElement.requestFullscreen?.().catch(() => toast.error("Browser ini tidak mendukung layar penuh."));
+    else void document.documentElement.requestFullscreen?.().catch(() => toast.error(tx("Browser ini tidak mendukung layar penuh.")));
   };
   return (
-    <button type="button" className="d-icon-btn" onClick={toggle} aria-pressed={on} aria-label={on ? "Keluar dari layar penuh" : "Layar penuh"} title={on ? "Keluar dari layar penuh (Esc)" : "Layar penuh"}>
+    <button type="button" className="d-icon-btn" onClick={toggle} aria-pressed={on} aria-label={on ? tx("Keluar dari layar penuh") : tx("Layar penuh")} title={on ? tx("Keluar dari layar penuh (Esc)") : tx("Layar penuh")}>
       {on ? <CornersIn weight="bold" /> : <CornersOut weight="bold" />}
     </button>
   );
@@ -966,8 +969,8 @@ function TemplateGallery({ first, business, renderCell, onPick, onCurrent, surfa
     <div className={first ? "st-gallery st-gallery-first" : "st-gallery"}>
       {first && (
         <div className="st-gallery-head">
-          <h1>Pilih gaya awal untuk {business.profile.name}</h1>
-          <p>Semua template sudah diisi nama, produk, dan jam buka toko Anda. Teks, foto, warna, dan posisi bisa diubah setelahnya.</p>
+          <h1>{tx("Pilih gaya awal untuk")}{" "}{business.profile.name}</h1>
+          <p>{tx("Semua templat sudah diisi nama, produk, dan jam buka toko Anda. Teks, foto, warna, dan posisi bisa diubah setelahnya.")}</p>
         </div>
       )}
       <div className="st-tpls">
@@ -982,7 +985,7 @@ function TemplateGallery({ first, business, renderCell, onPick, onCurrent, surfa
               <span className="st-tpl-meta">
                 <span className="d-row d-row-between" style={{ flexWrap: "nowrap" }}>
                   <strong>{t.name}</strong>
-                  <button type="button" className="d-btn d-btn-sm d-btn-primary" onClick={(e) => { e.stopPropagation(); onPick(t.key); }}>Pakai {t.name}</button>
+                  <button type="button" className="d-btn d-btn-sm d-btn-primary" onClick={(e) => { e.stopPropagation(); onPick(t.key); }}>{tx("Pakai")}{" "}{t.name}</button>
                 </span>
                 <span>{t.desc}</span>
               </span>
@@ -991,7 +994,7 @@ function TemplateGallery({ first, business, renderCell, onPick, onCurrent, surfa
         })}
       </div>
       <div className="d-row" style={{ justifyContent: "center", marginTop: 16 }}>
-        <button type="button" className="d-btn d-btn-ghost" onClick={onCurrent}>Atau mulai dari susunan website saat ini</button>
+        <button type="button" className="d-btn d-btn-ghost" onClick={onCurrent}>{tx("Atau mulai dari susunan website saat ini")}</button>
       </div>
     </div>
   );
@@ -1035,68 +1038,68 @@ function Inspector({ c, onBack, onChange, onWidth, onMove, onLayout, onDuplicate
   return (
     <>
       <div className="d-row d-row-between">
-        <button type="button" className="d-back" style={{ margin: 0 }} onClick={onBack}><ArrowLeft weight="bold" aria-hidden="true" />Plugin</button>
+        <button type="button" className="d-back" style={{ margin: 0 }} onClick={onBack}><ArrowLeft weight="bold" aria-hidden="true" />{tx("Blok")}</button>
         <h2 style={{ margin: 0, fontSize: "0.9375rem", flex: 1 }}>{def.name}</h2>
         <div className="d-row">
-          <button type="button" className="d-icon-btn" aria-label="Duplikat" title="Duplikat" disabled={SINGLE.includes(c.kind)} onClick={onDuplicate}><Copy weight="bold" /></button>
-          <button type="button" className="d-icon-btn" aria-label="Hapus dari halaman" title="Hapus" onClick={onRemove}><Trash weight="bold" /></button>
+          <button type="button" className="d-icon-btn" aria-label={tx("Duplikat")} title={tx("Duplikat")} disabled={SINGLE.includes(c.kind)} onClick={onDuplicate}><Copy weight="bold" /></button>
+          <button type="button" className="d-icon-btn" aria-label={tx("Hapus dari halaman")} title={tx("Hapus")} onClick={onRemove}><Trash weight="bold" /></button>
         </div>
       </div>
       {upgradeHref && (
         <div className="d-alert d-alert-info" role="note"><div>
-          Plugin ini bagian paket Pro: tetap tersimpan, tetapi tidak tampil di situs sampai toko memakai Pro.{" "}
-          <Link href={upgradeHref}>Lihat paket</Link>
+          <Tr s="Blok ini bagian paket Pro: tetap tersimpan, tetapi tidak tampil di situs sampai toko memakai Pro.{0}" a={[" "]} />
+          <Link href={upgradeHref}>{tx("Lihat paket")}</Link>
         </div></div>
       )}
-      {c.kind !== "chatbot" && <p className="d-hint" style={{ margin: 0 }}>Klik teks di kanvas untuk mengetik langsung.{takesPhoto(c.kind) && " Seret foto dari komputer ke plugin untuk memasangnya."}</p>}
+      {c.kind !== "chatbot" && <p className="d-hint" style={{ margin: 0 }}>{tx("Klik teks di kanvas untuk mengetik langsung.")}{takesPhoto(c.kind) && tx(" Seret foto dari komputer ke blok untuk memasangnya.")}</p>}
       {!isEmbed(c) && <div className="st-section">
         <label className="d-switch">
           <input type="checkbox" checked={!!c.locked} onChange={(e) => onChange({ locked: e.target.checked }, "")} />
-          <span><strong><LockSimple weight="bold" aria-hidden="true" style={{ verticalAlign: "-2px" }} /> Kunci posisi</strong><span className="d-muted">Plugin ini tidak bisa diseret, dan plugin lain tidak akan menggesernya.</span></span>
+          <span><strong><LockSimple weight="bold" aria-hidden="true" style={{ verticalAlign: "-2px" }} />{" "}{tx("Kunci posisi")}</strong><span className="d-muted">{tx("Blok ini tidak bisa diseret, dan blok lain tidak akan menggesernya.")}</span></span>
         </label>
-        <h3>Posisi</h3>
+        <h3>{tx("Posisi")}</h3>
         {/* WCAG 2.5.7 (P9-6): semua yang bisa diseret juga bisa lewat tombol. */}
-        <div className="d-seg" role="group" aria-label="Pindahkan" style={{ width: "100%", marginBottom: 12 }}>
-          {([["up", "Pindah ke atas", ArrowUp], ["down", "Pindah ke bawah", ArrowDown], ["left", "Geser ke kiri", ArrowLeft], ["right", "Geser ke kanan", ArrowRight]] as const).map(([d, l, Icon]) => (
+        <div className="d-seg" role="group" aria-label={tx("Pindahkan")} style={{ width: "100%", marginBottom: 12 }}>
+          {([["up", tx("Pindah ke atas"), ArrowUp], ["down", tx("Pindah ke bawah"), ArrowDown], ["left", tx("Geser ke kiri"), ArrowLeft], ["right", tx("Geser ke kanan"), ArrowRight]] as const).map(([d, l, Icon]) => (
             <button key={d} type="button" style={{ flex: 1, minHeight: 32 }} aria-label={l} title={l} disabled={!!c.locked} onClick={() => onMove(d)}><Icon weight="bold" aria-hidden="true" /></button>
           ))}
         </div>
-        <h3>Ukuran</h3>
-        <div className="d-seg" role="group" aria-label="Lebar" style={{ width: "100%" }}>
-          {([[3, "¼"], [4, "⅓"], [6, "½"], [8, "⅔"], [12, "Penuh"]] as const).map(([w, l]) => (
+        <h3>{tx("Ukuran")}</h3>
+        <div className="d-seg" role="group" aria-label={tx("Lebar")} style={{ width: "100%" }}>
+          {([[3, "¼"], [4, "⅓"], [6, "½"], [8, "⅔"], [12, tx("Penuh")]] as const).map(([w, l]) => (
             <button key={w} type="button" style={{ flex: 1 }} aria-pressed={c.w === w} disabled={w < (c.minW ?? 2) || !!c.locked} onClick={() => onWidth(w)}>{l}</button>
           ))}
         </div>
         <label className="d-switch" style={{ marginTop: 10 }}>
           <input type="checkbox" checked={c.autoH !== false} onChange={(e) => onChange({ autoH: e.target.checked }, "")} />
-          <span><strong>Tinggi otomatis</strong><span className="d-muted">Kotak mengikuti panjang isi sehingga tidak terpotong. Mati otomatis bila tinggi ditarik manual.</span></span>
+          <span><strong>{tx("Tinggi otomatis")}</strong><span className="d-muted">{tx("Kotak mengikuti panjang isi sehingga tidak terpotong. Mati otomatis bila tinggi ditarik manual.")}</span></span>
         </label>
         <div className="d-row">
-          <button type="button" className="d-btn d-btn-sm" onClick={onFull}><ArrowsOut weight="bold" aria-hidden="true" />Lihat penuh</button>
+          <button type="button" className="d-btn d-btn-sm" onClick={onFull}><ArrowsOut weight="bold" aria-hidden="true" />{tx("Lihat penuh")}</button>
           {takesPhoto(c.kind) && (
-            <label className="d-btn d-btn-sm"><ImageSquare weight="bold" aria-hidden="true" />{c.kind === "gallery" ? "Tambah foto" : "Ganti foto"}
+            <label className="d-btn d-btn-sm"><ImageSquare weight="bold" aria-hidden="true" />{c.kind === "gallery" ? tx("Tambah foto") : tx("Ganti foto")}
               <input type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) onPhoto(f); }} />
             </label>
           )}
           {takesPhoto(c.kind) && onCrop && (
-            <button type="button" className="d-btn d-btn-sm" onClick={onCrop} title="Potong foto">
-              <Crop weight="bold" aria-hidden="true" /> Potong
+            <button type="button" className="d-btn d-btn-sm" onClick={onCrop} title={tx("Potong foto")}>
+              <Crop weight="bold" aria-hidden="true" />{" "}{tx("Potong")}
             </button>
           )}
         </div>
         {takesPhoto(c.kind) && (
           <div style={{ marginTop: 12 }}>
             <div className="d-field" style={{ margin: 0, marginBottom: 8 }}>
-              <span>Tampilan foto</span>
-              <div className="d-seg" role="group" aria-label="Tampilan foto" style={{ width: "100%" }}>
-                <button type="button" style={{ flex: 1 }} aria-pressed={((c.data.image_fit as string) ?? "cover") === "cover"} onClick={() => onChange({ data: { ...c.data, image_fit: "cover" } }, "image_fit")}>Cover</button>
-                <button type="button" style={{ flex: 1 }} aria-pressed={(c.data.image_fit as string) === "contain"} onClick={() => onChange({ data: { ...c.data, image_fit: "contain" } }, "image_fit")}>Contain (Utuh)</button>
+              <span>{tx("Tampilan foto")}</span>
+              <div className="d-seg" role="group" aria-label={tx("Tampilan foto")} style={{ width: "100%" }}>
+                <button type="button" style={{ flex: 1 }} aria-pressed={((c.data.image_fit as string) ?? "cover") === "cover"} onClick={() => onChange({ data: { ...c.data, image_fit: "cover" } }, "image_fit")}>{tx("Penuhi kotak")}</button>
+                <button type="button" style={{ flex: 1 }} aria-pressed={(c.data.image_fit as string) === "contain"} onClick={() => onChange({ data: { ...c.data, image_fit: "contain" } }, "image_fit")}>{tx("Tampil utuh")}</button>
               </div>
             </div>
             <div className="d-field" style={{ margin: 0 }}>
-              <span>Titik fokus (posisi)</span>
-              <div className="d-seg" role="group" aria-label="Posisi foto" style={{ width: "100%" }}>
-                {([["top", "Atas"], ["center", "Tengah"], ["bottom", "Bawah"]] as const).map(([pos, lbl]) => (
+              <span>{tx("Titik fokus (posisi)")}</span>
+              <div className="d-seg" role="group" aria-label={tx("Posisi foto")} style={{ width: "100%" }}>
+                {([["top", tx("Atas")], ["center", tx("Tengah")], ["bottom", tx("Bawah")]] as const).map(([pos, lbl]) => (
                   <button key={pos} type="button" style={{ flex: 1 }} aria-pressed={((c.data.image_position as string) ?? "center") === pos} onClick={() => onChange({ data: { ...c.data, image_position: pos } }, "image_pos")}>{lbl}</button>
                 ))}
               </div>
@@ -1105,8 +1108,8 @@ function Inspector({ c, onBack, onChange, onWidth, onMove, onLayout, onDuplicate
         )}
       </div>}
       <div className="st-section">
-        <h3>Gaya</h3>
-        <div className="st-styles" role="group" aria-label="Gaya">
+        <h3>{tx("Gaya")}</h3>
+        <div className="st-styles" role="group" aria-label={tx("Gaya")}>
           {CELL_STYLES.map((s) => (
             <button key={s.value} type="button" className="st-style-tile" aria-pressed={c.style === s.value} onClick={() => onChange({ style: s.value }, "")}>
               <span className={`st-style-sample st-style-${s.value}`} aria-hidden="true"><i /><b /></span>
@@ -1116,49 +1119,48 @@ function Inspector({ c, onBack, onChange, onWidth, onMove, onLayout, onDuplicate
         </div>
         {def.layouts && (
           <>
-            <h3 style={{ marginTop: 12 }}>Tata letak</h3>
-            <div className="d-seg" role="group" aria-label="Tata letak" style={{ width: "100%" }}>
+            <h3 style={{ marginTop: 12 }}>{tx("Tata letak")}</h3>
+            <div className="d-seg" role="group" aria-label={tx("Tata letak")} style={{ width: "100%" }}>
               {def.layouts.map((l) => <button key={l.value} type="button" style={{ flex: 1 }} aria-pressed={c.layout === l.value} onClick={() => onLayout(l.value)}>{l.label}</button>)}
             </div>
           </>
         )}
         {c.kind === "chatbot" && (
           <>
-            <h3 style={{ marginTop: 12 }}>Keadaan awal</h3>
-            <div className="d-seg" role="group" aria-label="Keadaan chatbot" style={{ width: "100%" }}>
-              <button type="button" style={{ flex: 1 }} aria-pressed={c.chatOpen !== false} onClick={() => onChange({ chatOpen: true }, "")}><ArrowsOut weight="bold" aria-hidden="true" /> Maksimal</button>
-              <button type="button" style={{ flex: 1 }} aria-pressed={c.chatOpen === false} onClick={() => onChange({ chatOpen: false }, "")}><ArrowsIn weight="bold" aria-hidden="true" /> Minimal</button>
+            <h3 style={{ marginTop: 12 }}>{tx("Keadaan awal")}</h3>
+            <div className="d-seg" role="group" aria-label={tx("Keadaan chatbot")} style={{ width: "100%" }}>
+              <button type="button" style={{ flex: 1 }} aria-pressed={c.chatOpen !== false} onClick={() => onChange({ chatOpen: true }, "")}><ArrowsOut weight="bold" aria-hidden="true" />{" "}{tx("Maksimal")}</button>
+              <button type="button" style={{ flex: 1 }} aria-pressed={c.chatOpen === false} onClick={() => onChange({ chatOpen: false }, "")}><ArrowsIn weight="bold" aria-hidden="true" />{" "}{tx("Minimal")}</button>
             </div>
-            {c.layout === "floating" && <p className="d-hint" style={{ marginTop: 6 }}>Gelembung bulat di pojok kanan bawah, ikut saat halaman digulir. Klik gelembungnya untuk membuka/menutup.</p>}
-            {c.layout === "bar" && <p className="d-hint" style={{ marginTop: 6 }}>Bilah horizontal selebar layar di bagian bawah, ikut saat halaman digulir. Pembeli bisa langsung mengetik pertanyaan.</p>}
+            {c.layout === "floating" && <p className="d-hint" style={{ marginTop: 6 }}>{tx("Gelembung bulat di pojok kanan bawah, ikut saat halaman digulir. Klik gelembungnya untuk membuka/menutup.")}</p>}
+            {c.layout === "bar" && <p className="d-hint" style={{ marginTop: 6 }}>{tx("Bilah horizontal selebar layar di bagian bawah, ikut saat halaman digulir. Pembeli bisa langsung mengetik pertanyaan.")}</p>}
           </>
         )}
       </div>
       <div className="st-section">
-        <h3>Isi</h3>
+        <h3>{tx("Isi")}</h3>
         {c.kind === "chatbot" ? (
           <>
             {chatReady === false && (
               <Alert kind="warn">
-                Chatbot belum aktif, jadi plugin ini <strong>tidak tampil</strong> di website yang diterbitkan. Buka{" "}
-                <Link href={aiHref}>Asisten AI</Link>, pilih mode <strong>Hanya staf</strong> (tanpa penyedia AI) atau
-                tambahkan penyedia, lalu simpan.
+                {tx("Chatbot belum aktif, jadi blok ini")}{" "}<strong>{tx("tidak tampil")}</strong>{" "}<Tr s="di website yang diterbitkan. Buka{0}" a={[" "]} />
+                <Link href={aiHref}>{tx("Asisten AI")}</Link>{tx(", pilih mode")}{" "}<strong>{tx("Hanya staf")}</strong>{" "}{tx("(tanpa penyedia AI) atau tambahkan penyedia, lalu simpan.")}
               </Alert>
             )}
-            <label className="d-field"><span>Judul</span><input maxLength={40} value={String(c.data.title ?? "")} onChange={(e) => onChange({ data: { ...c.data, title: e.target.value } })} /></label>
-            <label className="d-field"><span>Pesan sambutan</span><textarea rows={3} maxLength={300} value={String(c.data.welcome ?? "")} onChange={(e) => onChange({ data: { ...c.data, welcome: e.target.value } })} /></label>
-            <p className="d-hint">Jawaban memakai pengaturan di menu <Link href={aiHref}>Asisten AI</Link>.</p>
+            <label className="d-field"><span>{tx("Judul")}</span><input maxLength={40} value={String(c.data.title ?? "")} onChange={(e) => onChange({ data: { ...c.data, title: e.target.value } })} /></label>
+            <label className="d-field"><span>{tx("Pesan sambutan")}</span><textarea rows={3} maxLength={300} value={String(c.data.welcome ?? "")} onChange={(e) => onChange({ data: { ...c.data, welcome: e.target.value } })} /></label>
+            <p className="d-hint">{tx("Jawaban memakai pengaturan di menu")}{" "}<Link href={aiHref}>{tx("Asisten AI")}</Link>.</p>
           </>
         ) : c.kind === "text" ? (
           <>
-            <label className="d-field"><span>Judul (opsional)</span><input maxLength={120} value={String(c.data.title ?? "")} onChange={(e) => onChange({ data: { ...c.data, title: e.target.value } })} /></label>
-            <label className="d-field"><span>Isi</span><textarea rows={6} maxLength={5000} value={String(c.data.body ?? "")} onChange={(e) => onChange({ data: { ...c.data, body: e.target.value } })} /><span className="d-hint">Baris kosong memisahkan paragraf.</span></label>
+            <label className="d-field"><span>{tx("Judul (opsional)")}</span><input maxLength={120} value={String(c.data.title ?? "")} onChange={(e) => onChange({ data: { ...c.data, title: e.target.value } })} /></label>
+            <label className="d-field"><span>{tx("Isi")}</span><textarea rows={6} maxLength={5000} value={String(c.data.body ?? "")} onChange={(e) => onChange({ data: { ...c.data, body: e.target.value } })} /><span className="d-hint">{tx("Baris kosong memisahkan paragraf.")}</span></label>
           </>
         ) : c.kind === "whatsapp" ? (
           <>
-            <label className="d-field"><span>Tulisan tombol</span><input maxLength={40} value={String(c.data.label ?? "")} onChange={(e) => onChange({ data: { ...c.data, label: e.target.value } })} /></label>
-            <label className="d-field"><span>Pesan awal (opsional)</span><textarea rows={3} maxLength={300} value={String(c.data.message ?? "")} onChange={(e) => onChange({ data: { ...c.data, message: e.target.value } })} /><span className="d-hint">Terisi otomatis saat pembeli membuka WhatsApp.</span></label>
-            <p className="d-hint">Nomor diambil dari WhatsApp (atau telepon) di <Link href={businessHref}>Profil bisnis</Link>.</p>
+            <label className="d-field"><span>{tx("Tulisan tombol")}</span><input maxLength={40} value={String(c.data.label ?? "")} onChange={(e) => onChange({ data: { ...c.data, label: e.target.value } })} /></label>
+            <label className="d-field"><span>{tx("Pesan awal (opsional)")}</span><textarea rows={3} maxLength={300} value={String(c.data.message ?? "")} onChange={(e) => onChange({ data: { ...c.data, message: e.target.value } })} /><span className="d-hint">{tx("Terisi otomatis saat pembeli membuka WhatsApp.")}</span></label>
+            <p className="d-hint">{tx("Nomor diambil dari WhatsApp (atau telepon) di")}{" "}<Link href={businessHref}>{tx("Profil bisnis")}</Link>.</p>
           </>
         ) : (
           <>
@@ -1167,10 +1169,10 @@ function Inspector({ c, onBack, onChange, onWidth, onMove, onLayout, onDuplicate
             ))}
             {/* WCAG 1.1.1 (P9-6): field v2 — hanya di Studio; editor v1 tidak mengenalnya. */}
             {c.kind in IMAGE_KEY && (
-              <label className="d-field"><span>Teks alternatif foto</span>
-                <input maxLength={160} placeholder="mis. Segelas kopi susu gula aren di meja kayu" value={String(c.data.image_alt ?? "")}
+              <label className="d-field"><span>{tx("Teks alternatif foto")}</span>
+                <input maxLength={160} placeholder={tx("mis. Segelas kopi susu gula aren di meja kayu")} value={String(c.data.image_alt ?? "")}
                   onChange={(e) => onChange({ data: { ...c.data, image_alt: e.target.value } })} />
-                <span className="d-hint">Dibacakan untuk pembeli tunanetra dan membantu Google memahami foto. Kosongkan bila foto hanya hiasan.</span>
+                <span className="d-hint">{tx("Dibacakan untuk pembeli tunanetra dan membantu Google memahami foto. Kosongkan bila foto hanya hiasan.")}</span>
               </label>
             )}
           </>

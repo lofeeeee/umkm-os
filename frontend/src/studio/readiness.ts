@@ -5,6 +5,7 @@
 import type { Business, Json } from "@/renderer/types";
 
 import type { PluginKind } from "./plugins";
+import { t } from "@/i18n";
 
 export interface ReadyCell { id: string; kind: PluginKind; data: { [k: string]: Json } }
 export interface ReadyInput {
@@ -35,38 +36,38 @@ export function readiness({ cells, business, productCount, seo, chatReady }: Rea
 
   const hero = first("hero");
   if (!hero || !str(hero.data.title)) {
-    out.push({ key: "title", message: "Belum ada judul utama. Tambahkan Banner berisi nama atau slogan toko.", cellId: hero?.id });
+    out.push({ key: "title", message: t("Belum ada judul utama. Tambahkan Banner berisi nama atau slogan toko."), cellId: hero?.id });
   }
   for (const c of cells) {
     if (PHOTO_KINDS.includes(c.kind) && str(c.data.image) && !str(c.data.image_alt)) {
-      out.push({ key: `alt:${c.id}`, message: "Foto belum diberi teks alternatif (dibacakan untuk pembeli tunanetra & dibaca Google).", cellId: c.id });
+      out.push({ key: `alt:${c.id}`, message: t("Foto belum diberi teks alternatif (dibacakan untuk pembeli tunanetra & dibaca Google)."), cellId: c.id });
     }
   }
   const wa = cells.find((c) => c.kind === "whatsapp" || (c.kind === "contact" && c.data.show_whatsapp === true));
   if (wa && !str(p.whatsapp ?? "") && !str(p.phone ?? "")) {
-    out.push({ key: "whatsapp", message: "Tombol WhatsApp belum berfungsi: nomor WhatsApp/telepon di Profil bisnis kosong.", cellId: wa.id, area: "business" });
+    out.push({ key: "whatsapp", message: t("Tombol WhatsApp belum berfungsi: nomor WhatsApp/telepon di Profil bisnis kosong."), cellId: wa.id, area: "business" });
   }
   const grid = first("product_grid");
   if (grid && productCount === 0) {
-    out.push({ key: "products", message: "Galeri produk masih kosong: belum ada produk aktif.", cellId: grid.id, area: "products" });
+    out.push({ key: "products", message: t("Galeri produk masih kosong: belum ada produk aktif."), cellId: grid.id, area: "products" });
   }
   const loc = first("location");
   if (loc && business.addresses.length === 0) {
-    out.push({ key: "address", message: "Blok Lokasi belum menampilkan apa pun: alamat toko belum diisi.", cellId: loc.id, area: "business" });
+    out.push({ key: "address", message: t("Blok Lokasi belum menampilkan apa pun: alamat toko belum diisi."), cellId: loc.id, area: "business" });
   }
   const hours = first("business_hours");
   if (hours && business.hours.length === 0) {
-    out.push({ key: "hours", message: "Blok Jam buka kosong: jadwal buka belum diatur.", cellId: hours.id, area: "business" });
+    out.push({ key: "hours", message: t("Blok Jam buka kosong: jadwal buka belum diatur."), cellId: hours.id, area: "business" });
   }
   if (!str(seo?.description) && !str(p.description ?? "")) {
-    out.push({ key: "description", message: "Belum ada deskripsi toko untuk Google & pratinjau tautan WhatsApp.", area: "seo" });
+    out.push({ key: "description", message: t("Belum ada deskripsi toko untuk Google & pratinjau tautan WhatsApp."), area: "seo" });
   }
   // Plugin Chatbot yang dipasang tidak tampil di publik bila chatbot belum diaktifkan di Asisten AI.
   const chat = first("chatbot");
   if (chat && chatReady === false) {
     out.push({
       key: "chatbot",
-      message: "Plugin Chatbot terpasang, tetapi chatbot belum aktif — plugin ini tidak akan tampil di website. Aktifkan di Asisten AI (mode “Hanya staf” tidak butuh penyedia AI).",
+      message: t("Blok Chatbot ada di halaman, tetapi chatbot belum aktif — blok ini tidak akan tampil di website. Aktifkan di Asisten AI (mode “Hanya staf” tidak butuh penyedia AI)."),
       cellId: chat.id,
       area: "ai",
     });

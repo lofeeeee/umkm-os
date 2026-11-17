@@ -7,6 +7,7 @@ import "./globals.css";
 import { ConfirmHost } from "@/ui/dialog";
 import { Toaster } from "@/ui/toast";
 import { ValidityLocalizer } from "@/ui/validity";
+import { I18nRoot } from "@/i18n/react";
 
 export const metadata: Metadata = {
   // R3: %s diisi tiap halaman supaya tab & riwayat browser bisa dibedakan.
@@ -33,10 +34,13 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <script src="/theme-boot.js" async={false} />
       </head>
       <body>
-        {children}
-        <Toaster />
-        <ConfirmHost />
-        <ValidityLocalizer />
+        {/* Bahasa antarmuka (ID/EN): mengganti bahasa memasang ulang seluruh pohon di bawah ini. */}
+        <I18nRoot>
+          {children}
+          <Toaster />
+          <ConfirmHost />
+          <ValidityLocalizer />
+        </I18nRoot>
       </body>
     </html>
   );

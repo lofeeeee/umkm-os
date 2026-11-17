@@ -8,6 +8,7 @@ import type { AssetsCtx, Upload } from "@/dashboard/editor/fields";
 import { api, apiUrl, describe } from "@/lib/api";
 import { ImagePrepError, prepareImage } from "@/lib/image";
 import { toast } from "@/ui/toast";
+import { t } from "@/i18n";
 
 export function useUploads(tenantId: string, canEdit: boolean, extra: Record<string, string> = {}): AssetsCtx {
   const [uploads, setUploads] = useState<Upload[]>([]);
@@ -30,7 +31,7 @@ export function useUploads(tenantId: string, canEdit: boolean, extra: Record<str
           setUploads((x) => [u, ...x]);
           return u;
         } catch (e) {
-          toast.error(e instanceof ImagePrepError ? e.message : `Unggahan gagal: ${describe(e)}`);
+          toast.error(e instanceof ImagePrepError ? e.message : t("Unggahan gagal: {0}", describe(e)));
           return null;
         }
       },

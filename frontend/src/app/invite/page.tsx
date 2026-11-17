@@ -10,6 +10,7 @@ import { Alert } from "@/dashboard/shell";
 import { api, describe, loadSession, setCsrf } from "@/lib/api";
 import { AuthShell, PasswordInput } from "@/ui/auth";
 import { BusyButton, PageSkeleton } from "@/ui/page";
+import { t as tx } from "@/i18n";
 
 function token(): string | null {
   const m = /(?:^|&)token=([^&]+)/.exec(window.location.hash.replace(/^#/, ""));
@@ -40,25 +41,25 @@ export default function InvitePage() {
       setBusy(false);
     }
   }
-  if (t === undefined) return <AuthShell pitch="Bergabung dengan tim toko"><PageSkeleton /></AuthShell>;
+  if (t === undefined) return <AuthShell pitch={tx("Bergabung dengan tim toko")}><PageSkeleton /></AuthShell>;
   return (
-    <AuthShell pitch="Bergabung dengan tim toko">
-      <h1>Terima undangan</h1>
+    <AuthShell pitch={tx("Bergabung dengan tim toko")}>
+      <h1>{tx("Terima undangan")}</h1>
       {!t && (
         <>
           <Alert kind="error">
-            Tautan undangan tidak valid atau sudah kedaluwarsa. Undangan hanya berlaku 7 hari dan sekali pakai.
+            {tx("Tautan undangan tidak valid atau sudah kedaluwarsa. Undangan hanya berlaku 7 hari dan sekali pakai.")}
           </Alert>
-          <p className="d-muted">Minta pemilik toko mengirim ulang undangan, lalu buka tautan terbaru dari email.</p>
-          <Link className="d-btn" href="/login">Ke halaman masuk</Link>
+          <p className="d-muted">{tx("Minta pemilik toko mengirim ulang undangan, lalu buka tautan terbaru dari email.")}</p>
+          <Link className="d-btn" href="/login">{tx("Ke halaman masuk")}</Link>
         </>
       )}
       {t && (
         <form className="d-card" onSubmit={accept}>
-          <p className="d-muted">Sudah punya akun? <Link href="/login">Masuk dulu</Link>, lalu buka tautan ini lagi. Belum punya akun? Buat password di bawah.</p>
-          <PasswordInput name="password" label="Password baru (bila belum punya akun)" autoComplete="new-password" minLength={8} value={password} onChange={setPassword} />
+          <p className="d-muted">{tx("Sudah punya akun?")}{" "}<Link href="/login">{tx("Masuk dulu")}</Link>{tx(", lalu buka tautan ini lagi. Belum punya akun? Buat password di bawah.")}</p>
+          <PasswordInput name="password" label={tx("Password baru (bila belum punya akun)")} autoComplete="new-password" minLength={8} value={password} onChange={setPassword} />
           <Alert kind="error">{err}</Alert>
-          <BusyButton busy={busy} className="d-btn d-btn-primary d-btn-block d-btn-lg">Terima undangan</BusyButton>
+          <BusyButton busy={busy} className="d-btn d-btn-primary d-btn-block d-btn-lg">{tx("Terima undangan")}</BusyButton>
         </form>
       )}
     </AuthShell>

@@ -8,6 +8,7 @@ import { Alert } from "@/dashboard/shell";
 import { api, describe, setCsrf } from "@/lib/api";
 import { AuthShell, PasswordInput } from "@/ui/auth";
 import { BusyButton } from "@/ui/page";
+import { t } from "@/i18n";
 
 /** "Kopi Senja Bandung" → "kopi-senja-bandung" (3–63 karakter a-z0-9-). */
 function slugify(s: string): string {
@@ -53,31 +54,31 @@ export default function Register() {
       setBusy(false);
     }
   }
-  const strength = password.length === 0 ? null : password.length < 8 ? "Minimal 8 karakter" : password.length < 12 ? "Cukup — lebih panjang lebih aman" : "Kuat";
+  const strength = password.length === 0 ? null : password.length < 8 ? t("Minimal 8 karakter") : password.length < 12 ? t("Cukup — lebih panjang lebih aman") : t("Kuat");
   return (
-    <AuthShell pitch="Mulai digitalisasi usaha Anda hari ini">
-      <h1>Daftarkan usaha</h1>
-      <p className="d-muted">Gratis 14 hari, tanpa kartu kredit. Website toko langsung jadi.</p>
+    <AuthShell pitch={t("Mulai digitalisasi usaha Anda hari ini")}>
+      <h1>{t("Daftarkan usaha")}</h1>
+      <p className="d-muted">{t("Gratis 14 hari, tanpa kartu kredit. Website toko langsung jadi.")}</p>
       <form className="d-card" onSubmit={submit}>
         <Alert kind="error">{error}</Alert>
-        <label className="d-field"><span>Nama bisnis</span>
-          <input name="business_name" required maxLength={120} autoFocus placeholder="mis. Kopi Senja" value={name} onChange={(e) => setName(e.target.value)} />
+        <label className="d-field"><span>{t("Nama bisnis")}</span>
+          <input name="business_name" required maxLength={120} autoFocus placeholder={t("mis. Kopi Senja")} value={name} onChange={(e) => setName(e.target.value)} />
         </label>
-        <label className="d-field"><span>Alamat toko</span>
+        <label className="d-field"><span>{t("Alamat toko")}</span>
           <span className="d-input-suffix">
             <input name="slug" pattern="[a-z0-9\-]{3,63}" placeholder="tokosaya" value={effectiveSlug}
               onChange={(e) => { setSlugTouched(true); setSlug(e.target.value.toLowerCase()); }} style={{ paddingRight: domain ? `${domain.length * 7.5 + 24}px` : undefined }} />
             {domain && <em aria-hidden="true">.{domain}</em>}
           </span>
-          <span className="d-hint">Huruf kecil, angka, dan tanda hubung. Boleh dikosongkan agar dibuat otomatis.</span>
+          <span className="d-hint">{t("Huruf kecil, angka, dan tanda hubung. Boleh dikosongkan agar dibuat otomatis.")}</span>
         </label>
-        <label className="d-field"><span>Email</span><input name="email" type="email" autoComplete="email" required placeholder="nama@contoh.id" /></label>
-        <PasswordInput name="password" autoComplete="new-password" minLength={8} value={password} onChange={setPassword} hint={strength ?? "Minimal 8 karakter."} />
-        <label className="d-check"><input name="terms" type="checkbox" required /> <span>Saya menyetujui <a href="/legal/syarat" target="_blank" rel="noopener">syarat & ketentuan</a></span></label>
-        <label className="d-check"><input name="privacy" type="checkbox" required /> <span>Saya menyetujui <a href="/legal/privasi" target="_blank" rel="noopener">kebijakan privasi</a></span></label>
-        <BusyButton busy={busy} className="d-btn d-btn-primary d-btn-block d-btn-lg">Daftar</BusyButton>
+        <label className="d-field"><span>{t("Email")}</span><input name="email" type="email" autoComplete="email" required placeholder={t("nama@contoh.id")} /></label>
+        <PasswordInput name="password" autoComplete="new-password" minLength={8} value={password} onChange={setPassword} hint={strength ?? t("Minimal 8 karakter.")} />
+        <label className="d-check"><input name="terms" type="checkbox" required /> <span>{t("Saya menyetujui")}{" "}<a href="/legal/syarat" target="_blank" rel="noopener">{t("syarat & ketentuan")}</a></span></label>
+        <label className="d-check"><input name="privacy" type="checkbox" required /> <span>{t("Saya menyetujui")}{" "}<a href="/legal/privasi" target="_blank" rel="noopener">{t("kebijakan privasi")}</a></span></label>
+        <BusyButton busy={busy} className="d-btn d-btn-primary d-btn-block d-btn-lg">{t("Daftar")}</BusyButton>
       </form>
-      <p>Sudah punya akun? <Link href="/login">Masuk</Link></p>
+      <p>{t("Sudah punya akun?")}{" "}<Link href="/login">{t("Masuk")}</Link></p>
     </AuthShell>
   );
 }

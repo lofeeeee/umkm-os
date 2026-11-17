@@ -7,6 +7,7 @@ import { ImageSquare, UploadSimple } from "@phosphor-icons/react/ssr";
 import { sized } from "@/renderer/safe";
 import type { Field } from "@/renderer/sections";
 import type { Json } from "@/renderer/types";
+import { t } from "@/i18n";
 
 export interface Upload { id: string; ref: string; url: string; content_type: string; byte_size: number }
 
@@ -49,16 +50,16 @@ export function ImagePicker({ value, onChange, label }: { value: string | undefi
         {src ? <img className="d-img-tile" src={src} alt="" width={64} height={64} /> : <span className="d-img-tile" aria-hidden="true"><ImageSquare weight="duotone" /></span>}
         <div className="d-row">
           <button type="button" className="d-btn d-btn-sm" onClick={() => setOpen(!open)} disabled={!a.canEdit} aria-expanded={open}>
-            {open ? "Tutup" : "Pilih gambar"}
+            {open ? t("Tutup") : t("Pilih gambar")}
           </button>
-          {value && <button type="button" className="d-btn d-btn-sm d-btn-ghost" onClick={() => onChange(undefined)} disabled={!a.canEdit}>Hapus</button>}
+          {value && <button type="button" className="d-btn d-btn-sm d-btn-ghost" onClick={() => onChange(undefined)} disabled={!a.canEdit}>{t("Hapus")}</button>}
         </div>
       </div>
       {open && (
         <div className="e-list-item">
           <label className="d-btn d-btn-sm">
             <UploadSimple weight="bold" aria-hidden="true" />
-            {busy ? "Mengunggah…" : "Unggah dari perangkat"}
+            {busy ? t("Mengunggah…") : t("Unggah dari perangkat")}
             <input
               type="file"
               accept="image/png,image/jpeg,image/webp"
@@ -75,23 +76,23 @@ export function ImagePicker({ value, onChange, label }: { value: string | undefi
                 if (u) {
                   onChange(u.ref);
                   setOpen(false);
-                } else setErr("Unggahan ditolak. Pastikan file gambar PNG/JPEG/WebP ≤ 2 MB.");
+                } else setErr(t("Unggahan ditolak. Pastikan file gambar PNG/JPEG/WebP ≤ 2 MB."));
               }}
             />
           </label>
-          <span className="d-hint" style={{ marginLeft: 8 }}>PNG, JPEG, atau WebP · maks. 2 MB</span>
+          <span className="d-hint" style={{ marginLeft: 8 }}>{t("PNG, JPEG, atau WebP · maks. 2 MB")}</span>
           {err && <div className="d-alert d-alert-error" role="alert" style={{ marginTop: 8 }}>{err}</div>}
           {a.uploads.length > 0 ? (
             <div className="e-thumbs">
               {a.uploads.map((u) => (
-                <button type="button" key={u.id} aria-pressed={u.ref === value} aria-label={`Pilih gambar ${u.id.slice(0, 8)}`}
+                <button type="button" key={u.id} aria-pressed={u.ref === value} aria-label={t("Pilih gambar {0}", u.id.slice(0, 8))}
                   onClick={() => { onChange(u.ref); setOpen(false); }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={sized(a.url(u.ref), 320)} alt="" loading="lazy" />
                 </button>
               ))}
             </div>
-          ) : <p className="d-hint" style={{ margin: "8px 0 0" }}>Belum ada gambar di galeri toko.</p>}
+          ) : <p className="d-hint" style={{ margin: "8px 0 0" }}>{t("Belum ada gambar di galeri toko.")}</p>}
         </div>
       )}
     </div>
@@ -154,14 +155,14 @@ export function FieldInput({ f, data, onChange, disabled }: { f: Field; data: Ob
           <legend>{f.label}</legend>
           <label className="d-check">
             <input type="checkbox" checked={!!c} disabled={disabled}
-              onChange={(e) => onChange(setKey(data, f, e.target.checked ? { label: "Lihat", href: "#" + "products-1" } : undefined))} />
-            Tampilkan tombol
+              onChange={(e) => onChange(setKey(data, f, e.target.checked ? { label: t("Lihat"), href: "#" + "products-1" } : undefined))} />
+            {t("Tampilkan tombol")}
           </label>
           {c && (
             <>
-              <FieldInput f={{ key: "label", label: "Teks tombol", kind: "text", max: 40, required: true }} data={c} disabled={disabled}
+              <FieldInput f={{ key: "label", label: t("Teks tombol"), kind: "text", max: 40, required: true }} data={c} disabled={disabled}
                 onChange={(n) => onChange(setKey(data, f, n))} />
-              <FieldInput f={{ key: "href", label: "Tautan", kind: "href", required: true }} data={c} disabled={disabled}
+              <FieldInput f={{ key: "href", label: t("Tautan"), kind: "href", required: true }} data={c} disabled={disabled}
                 onChange={(n) => onChange(setKey(data, f, n))} />
             </>
           )}
@@ -182,9 +183,9 @@ export function FieldInput({ f, data, onChange, disabled }: { f: Field; data: Ob
               ))}
               <div className="d-row">
                 <button type="button" className="d-btn d-btn-sm" disabled={disabled || i === 0}
-                  onClick={() => { const n = [...items]; [n[i - 1], n[i]] = [n[i]!, n[i - 1]!]; set(n); }}>Naik</button>
+                  onClick={() => { const n = [...items]; [n[i - 1], n[i]] = [n[i]!, n[i - 1]!]; set(n); }}>{t("Naik")}</button>
                 <button type="button" className="d-btn d-btn-sm d-btn-danger" disabled={disabled || items.length <= (f.minItems ?? 0)}
-                  onClick={() => set(items.filter((_, j) => j !== i))}>Hapus</button>
+                  onClick={() => set(items.filter((_, j) => j !== i))}>{t("Hapus")}</button>
               </div>
             </div>
           ))}
@@ -193,10 +194,10 @@ export function FieldInput({ f, data, onChange, disabled }: { f: Field; data: Ob
               const o: Obj = {};
               for (const s of f.item ?? []) {
                 if (s.kind === "select") o[s.key] = s.options?.[0] ?? "";
-                else if (s.required && s.kind !== "image") o[s.key] = s.kind === "href" ? "https://" : "Isi";
+                else if (s.required && s.kind !== "image") o[s.key] = s.kind === "href" ? "https://" : t("Isi");
               }
               set([...items, o]);
-            }}>Tambah</button>
+            }}>{t("Tambah")}</button>
         </fieldset>
       );
     }

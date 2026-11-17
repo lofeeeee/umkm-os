@@ -11,6 +11,7 @@
 // publik pembungkus ini tidak dipasang, jadi perilaku `fixed` di sana tidak berubah.
 
 import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { t, tmap } from "@/i18n";
 
 export type DeviceViewport = "mobile" | "tablet" | "desktop";
 
@@ -26,11 +27,11 @@ export const DEVICE_WIDTH: Record<DeviceViewport, number> = {
   desktop: 1280,
 };
 
-export const DEVICE_LABEL: Record<DeviceViewport, string> = {
+export const DEVICE_LABEL: Record<DeviceViewport, string> = tmap({
   mobile: "Ponsel",
   tablet: "Tablet",
   desktop: "Desktop",
-};
+});
 
 export interface DeviceFrameProps {
   device: DeviceViewport;

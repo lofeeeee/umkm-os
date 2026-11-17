@@ -10,6 +10,7 @@ import { Bell, BellSimpleSlash } from "@phosphor-icons/react/ssr";
 
 import { API_ORIGIN, api } from "@/lib/api";
 import { relatif } from "@/lib/labels";
+import { t } from "@/i18n";
 
 interface Item { id: string; title: string; body: string; link: string | null; read: boolean; created_at: string }
 
@@ -47,7 +48,7 @@ export function BellMenu({ tenantId }: { tenantId: string }) {
     };
   }, [open]);
 
-  const name = `Notifikasi${unread > 0 ? ` (${unread})` : ""}`;
+  const name = t("Notifikasi{0}", unread > 0 ? ` (${unread})` : "");
   return (
     <div className="d-bell" ref={ref}>
       <button type="button" className="d-bell-btn" aria-expanded={open} aria-haspopup="dialog" aria-label={name} title={name} onClick={() => setOpen(!open)}>
@@ -55,17 +56,17 @@ export function BellMenu({ tenantId }: { tenantId: string }) {
         {unread > 0 && <span className="d-bell-dot" aria-hidden="true">{unread > 9 ? "9+" : unread}</span>}
       </button>
       {open && (
-        <div className="d-pop d-bell-panel" role="dialog" aria-label="Notifikasi">
+        <div className="d-pop d-bell-panel" role="dialog" aria-label={t("Notifikasi")}>
           <div className="d-bell-head">
-            <strong>Notifikasi</strong>
+            <strong>{t("Notifikasi")}</strong>
             {unread > 0 && (
-              <button type="button" className="d-link d-small" onClick={() => void api("POST", `${base}/read-all`).then(load)}>Tandai semua dibaca</button>
+              <button type="button" className="d-link d-small" onClick={() => void api("POST", `${base}/read-all`).then(load)}>{t("Tandai semua dibaca")}</button>
             )}
           </div>
           {items.length === 0 ? (
             <div className="d-empty">
               <span className="d-empty-icon" aria-hidden="true"><BellSimpleSlash weight="duotone" /></span>
-              <p>Belum ada notifikasi.</p>
+              <p>{t("Belum ada notifikasi.")}</p>
             </div>
           ) : (
             <ul>

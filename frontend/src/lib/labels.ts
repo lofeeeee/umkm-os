@@ -6,9 +6,11 @@
 //  - Angka uang selalu `rupiah()`, tanggal selalu `tanggal()`/`waktu()`.
 
 import type { Tone } from "@/ui/page";
+import { intlLocale, t, tmap } from "@/i18n";
 
 export interface StatusDef { label: string; tone: Tone }
-const S = (label: string, tone: Tone): StatusDef => ({ label, tone });
+/** Label status diterjemahkan saat dibaca (getter), jadi ikut bahasa aktif. */
+const S = (label: string, tone: Tone): StatusDef => ({ get label() { return t(label); }, tone });
 
 /** Ambil label + tone; status yang tak dikenal ditampilkan apa adanya dengan tone netral. */
 export function status(map: Record<string, StatusDef>, key: string | null | undefined): StatusDef {
@@ -71,14 +73,14 @@ export const APPROVAL_STATUS: Record<string, StatusDef> = {
   cancelled: S("Dibatalkan", "neutral"),
 };
 
-export const APPROVAL_TYPE: Record<string, string> = {
+export const APPROVAL_TYPE: Record<string, string> = tmap({
   order: "Keputusan pesanan",
   refund: "Pengembalian dana",
   stock_adjustment: "Penyesuaian stok",
   price_change: "Perubahan harga",
   ai_response: "Jawaban AI",
   business_config: "Pengaturan toko",
-};
+});
 
 export const CONVERSATION_STATUS: Record<string, StatusDef> = {
   AI: S("Dijawab AI", "brand"),
@@ -108,15 +110,17 @@ export const MEMBER_STATUS: Record<string, StatusDef> = {
   removed: S("Dikeluarkan", "neutral"),
 };
 
-export const STOCK_MOVEMENT: Record<string, string> = {
+export const STOCK_MOVEMENT: Record<string, string> = tmap({
   stock_in: "Masuk",
   stock_out: "Keluar",
   adjustment: "Opname",
   sale: "Penjualan",
-};
+});
 
 /* ---------------- Format ---------------- */
-const nf = new Intl.NumberFormat("id-ID");
+const nf = () => new Intl.NumberFormat(intlLocale());
+/** Pemisah ribuan & desimal bahasa aktif (ID: 15.000,50 · EN: 15,000.50). */
+const seps = () => (intlLocale() === "id-ID" ? [".", ","] : [",", "."]);
 
 /** `"15000.00"` / `15000` → `"Rp15.000"` (desimal hanya bila bukan ,00). */
 export function rupiah(v: string | number | null | undefined): string {
@@ -124,23 +128,25 @@ export function rupiah(v: string | number | null | undefined): string {
   const s = typeof v === "number" ? v.toFixed(2) : v;
   const [i, f = "00"] = s.split(".");
   const neg = (i ?? "").startsWith("-");
-  const int = (i ?? "0").replace("-", "").replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-  return `${neg ? "−" : ""}Rp${int}${f === "00" || f === "" ? "" : `,${f.padEnd(2, "0")}`}`;
+  const [th, dec] = seps();
+  const int = (i ?? "0").replace("-", "").replace(/\B(?=(\d{3})+(?!\d))/g, th!);
+  return `${neg ? "−" : ""}Rp${int}${f === "00" || f === "" ? "" : `${dec}${f.padEnd(2, "0")}`}`;
 }
 
 /** Ringkas untuk kartu statistik: Rp2,1 jt / Rp350 rb. */
 export function rupiahShort(v: string | number | null | undefined): string {
   const n = Number(v ?? 0);
   if (!Number.isFinite(n)) return "—";
-  if (Math.abs(n) >= 1e9) return `Rp${(n / 1e9).toLocaleString("id-ID", { maximumFractionDigits: 1 })} M`;
-  if (Math.abs(n) >= 1e6) return `Rp${(n / 1e6).toLocaleString("id-ID", { maximumFractionDigits: 1 })} jt`;
-  if (Math.abs(n) >= 1e4) return `Rp${(n / 1e3).toLocaleString("id-ID", { maximumFractionDigits: 0 })} rb`;
-  return `Rp${nf.format(n)}`;
+  const loc = intlLocale();
+  if (Math.abs(n) >= 1e9) return t("Rp{0} M", (n / 1e9).toLocaleString(loc, { maximumFractionDigits: 1 }));
+  if (Math.abs(n) >= 1e6) return t("Rp{0} jt", (n / 1e6).toLocaleString(loc, { maximumFractionDigits: 1 }));
+  if (Math.abs(n) >= 1e4) return t("Rp{0} rb", (n / 1e3).toLocaleString(loc, { maximumFractionDigits: 0 }));
+  return `Rp${nf().format(n)}`;
 }
 
-export const angka = (n: number | null | undefined) => (n === null || n === undefined ? "—" : nf.format(n));
+export const angka = (n: number | null | undefined) => (n === null || n === undefined ? "—" : nf().format(n));
 export const persen = (v: number | null | undefined) =>
-  v === null || v === undefined ? "—" : `${(v * 100).toLocaleString("id-ID", { maximumFractionDigits: 1 })}%`;
+  v === null || v === undefined ? "—" : `${(v * 100).toLocaleString(intlLocale(), { maximumFractionDigits: 1 })}%`;
 
 function d(iso: string | number | null | undefined): Date | null {
   if (iso === null || iso === undefined || iso === "") return null;
@@ -149,10 +155,10 @@ function d(iso: string | number | null | undefined): Date | null {
 }
 /** 13 Nov 2026 */
 export const tanggal = (iso: string | number | null | undefined) =>
-  d(iso)?.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) ?? "—";
+  d(iso)?.toLocaleDateString(intlLocale(), { day: "numeric", month: "short", year: "numeric" }) ?? "—";
 /** 13 Nov 2026, 14.05 */
 export const waktu = (iso: string | number | null | undefined) =>
-  d(iso)?.toLocaleString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) ?? "—";
+  d(iso)?.toLocaleString(intlLocale(), { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) ?? "—";
 
 /** "5 menit lalu", "kemarin", lalu tanggal. */
 export function relatif(iso: string | number | null | undefined, now = Date.now()): string {
@@ -160,25 +166,25 @@ export function relatif(iso: string | number | null | undefined, now = Date.now(
   if (!x) return "—";
   const s = Math.round((now - x.getTime()) / 1000);
   if (s < 0) return waktu(iso);
-  if (s < 60) return "baru saja";
-  if (s < 3600) return `${Math.floor(s / 60)} menit lalu`;
-  if (s < 86400) return `${Math.floor(s / 3600)} jam lalu`;
-  if (s < 172800) return "kemarin";
-  if (s < 604800) return `${Math.floor(s / 86400)} hari lalu`;
+  if (s < 60) return t("baru saja");
+  if (s < 3600) return t("{0} menit lalu", Math.floor(s / 60));
+  if (s < 86400) return t("{0} jam lalu", Math.floor(s / 3600));
+  if (s < 172800) return t("kemarin");
+  if (s < 604800) return t("{0} hari lalu", Math.floor(s / 86400));
   return tanggal(iso);
 }
 
 /* ---------------- Izin (RBAC) ---------------- */
 export const PERMISSION_GROUPS: { label: string; prefix: string[] }[] = [
-  { label: "Toko & tim", prefix: ["tenant", "members"] },
-  { label: "Website", prefix: ["website"] },
-  { label: "Produk & stok", prefix: ["products", "inventory"] },
-  { label: "Pesanan & pembayaran", prefix: ["orders", "payments"] },
-  { label: "Pelanggan & layanan", prefix: ["customers", "conversations", "tickets"] },
-  { label: "Asisten AI", prefix: ["ai_config", "ai_provider"] },
-  { label: "Kontrol", prefix: ["approvals", "analytics", "audit"] },
+  { get label() { return t("Toko & tim"); }, prefix: ["tenant", "members"] },
+  { get label() { return t("Website"); }, prefix: ["website"] },
+  { get label() { return t("Produk & stok"); }, prefix: ["products", "inventory"] },
+  { get label() { return t("Pesanan & pembayaran"); }, prefix: ["orders", "payments"] },
+  { get label() { return t("Pelanggan & layanan"); }, prefix: ["customers", "conversations", "tickets"] },
+  { get label() { return t("Asisten AI"); }, prefix: ["ai_config", "ai_provider"] },
+  { get label() { return t("Kontrol"); }, prefix: ["approvals", "analytics", "audit"] },
 ];
-export const PERMISSION_TEXT: Record<string, string> = {
+export const PERMISSION_TEXT: Record<string, string> = tmap({
   "tenant.read": "Lihat pengaturan toko", "tenant.update": "Ubah pengaturan toko",
   "members.read": "Lihat anggota tim", "members.invite": "Undang anggota", "members.manage": "Kelola anggota & peran",
   "website.read": "Lihat website", "website.edit": "Ubah draf website", "website.publish": "Terbitkan website",
@@ -193,20 +199,20 @@ export const PERMISSION_TEXT: Record<string, string> = {
   "ai_config.read": "Lihat pengaturan AI", "ai_config.manage": "Ubah pengaturan AI", "ai_provider.manage": "Kelola penyedia AI",
   "approvals.read": "Lihat persetujuan", "approvals.decide": "Putuskan persetujuan",
   "analytics.read": "Lihat analitik", "audit.read": "Lihat log aktivitas",
-};
+});
 
 /** Label ramah untuk kode aksi audit (`ticket.created` → "Tiket dibuat"). */
-const AUDIT_OBJ: Record<string, string> = {
-  auth: "Login", member: "Anggota", role: "Peran", business: "Profil bisnis", website: "Website", commerce: "Pengaturan toko",
+const AUDIT_OBJ: Record<string, string> = tmap({
+  auth: "Masuk", member: "Anggota", role: "Peran", business: "Profil bisnis", website: "Website", commerce: "Pengaturan toko",
   product: "Produk", inventory: "Stok", order: "Pesanan", payment: "Pembayaran", ticket: "Tiket", approval: "Persetujuan",
   customer: "Pelanggan", invitation: "Undangan", ai: "Asisten AI", conversation: "Percakapan", subscription: "Langganan", security: "Keamanan",
-};
-const AUDIT_VERB: Record<string, string> = {
+});
+const AUDIT_VERB: Record<string, string> = tmap({
   created: "dibuat", updated: "diubah", deleted: "dihapus", changed: "diubah", published: "diterbitkan", archived: "diarsipkan",
   confirmed: "dikonfirmasi", rejected: "ditolak", approved: "disetujui", cancelled: "dibatalkan", assigned: "ditugaskan",
   login: "berhasil", logout: "keluar", failed: "gagal", invited: "diundang", removed: "dikeluarkan", refunded: "dikembalikan",
   closed: "ditutup", resolved: "diselesaikan", status_changed: "status diubah", adjusted: "disesuaikan", accepted: "diterima",
-};
+});
 export function auditLabel(action: string): string {
   const [obj = "", ...rest] = action.split(".");
   const verb = rest.join("_");
@@ -217,11 +223,11 @@ export function auditLabel(action: string): string {
 
 /** "Chrome di Windows" dari User-Agent — cukup untuk mengenali perangkat, bukan sidik jari. */
 export function deviceName(ua: string | null): string {
-  if (!ua) return "Perangkat tidak dikenal";
+  if (!ua) return t("Perangkat tidak dikenal");
   const browser = /Edg\//.test(ua) ? "Edge" : /OPR\/|Opera/.test(ua) ? "Opera" : /Firefox\//.test(ua) ? "Firefox"
     : /SamsungBrowser/.test(ua) ? "Samsung Internet" : /Chrome\//.test(ua) ? "Chrome" : /Safari\//.test(ua) ? "Safari" : null;
   const os = /Android/.test(ua) ? "Android" : /iPhone|iPad|iPod/.test(ua) ? "iOS" : /Windows/.test(ua) ? "Windows"
     : /Mac OS X|Macintosh/.test(ua) ? "macOS" : /Linux/.test(ua) ? "Linux" : null;
-  if (browser && os) return `${browser} di ${os}`;
+  if (browser && os) return t("{0} di {1}", browser, os);
   return browser ?? os ?? (ua.length > 40 ? `${ua.slice(0, 40)}…` : ua);
 }

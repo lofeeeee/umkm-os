@@ -12,6 +12,7 @@ import { Alert, WithTenant, type TenantCtx } from "@/dashboard/shell";
 import { Badge, BusyButton, Card, PageHeader, PageSkeleton } from "@/ui/page";
 import { toast } from "@/ui/toast";
 import { api, describe } from "@/lib/api";
+import { t } from "@/i18n";
 
 interface Settings {
   qris: string | null; qris_receiver_name: string | null; checkout_enabled: boolean; delivery_fee: string;
@@ -56,7 +57,7 @@ function Form({ ctx }: { ctx: TenantCtx }) {
       };
       setS(await api<Settings>("PUT", url, { json: input }));
       setRefreshKey((k) => k + 1);
-      toast.ok("Tersimpan.");
+      toast.ok(t("Tersimpan."));
     } catch (e) { setErr(describe(e)); } finally { setBusy(false); }
   }
   const noFulfil = !!fulfil && !fulfil.pickup && !fulfil.delivery;
@@ -64,58 +65,58 @@ function Form({ ctx }: { ctx: TenantCtx }) {
   return (
     <Assets.Provider value={assets}>
       <PageHeader
-        title="Pembayaran & pengiriman"
-        description="Cara pembeli membayar dan menerima pesanan dari website toko."
-        actions={<Badge tone={ready ? "ok" : "warn"}>{ready ? "Pesanan online aktif" : "Pesanan online belum aktif"}</Badge>}
+        title={t("Pembayaran & pengiriman")}
+        description={t("Cara pembeli membayar dan menerima pesanan dari website toko.")}
+        actions={<Badge tone={ready ? "ok" : "warn"}>{ready ? t("Pesanan online aktif") : t("Pesanan online belum aktif")}</Badge>}
       />
-      {!can && <Alert kind="info">Anda hanya dapat melihat. Hanya pemilik toko yang dapat mengubah pengaturan ini.</Alert>}
+      {!can && <Alert kind="info">{t("Anda hanya dapat melihat. Hanya pemilik toko yang dapat mengubah pengaturan ini.")}</Alert>}
       <Alert kind="error">{err}</Alert>
       {noFulfil && (
         <Alert kind="warn">
-          Belum ada cara pengambilan yang aktif. Aktifkan &quot;Bisa ambil di tempat&quot; atau &quot;Bisa diantar&quot; di <Link href="/business">Profil bisnis</Link> agar pembeli bisa membuat pesanan.
+          {t("Belum ada cara pengambilan yang aktif. Aktifkan \"Bisa ambil di tempat\" atau \"Bisa diantar\" di")}{" "}<Link href="/business">{t("Profil bisnis")}</Link>{" "}{t("agar pembeli bisa membuat pesanan.")}
         </Alert>
       )}
       <form onSubmit={(e) => { e.preventDefault(); void save(); }}>
-        <Card title="Pembayaran QRIS" description="Unggah gambar QRIS merchant milik toko — sistem membaca QR-nya secara otomatis. Pembeli membayar langsung ke rekening toko; Anda mengonfirmasi setiap pembayaran di menu Pesanan. Platform tidak memegang dana.">
+        <Card title={t("Pembayaran QRIS")} description={t("Unggah gambar QRIS merchant milik toko — sistem membaca QR-nya secara otomatis. Pembeli membayar langsung ke rekening toko; Anda mengonfirmasi setiap pembayaran di menu Pesanan. Platform tidak memegang dana.")}>
           <div className="d-grid">
-            <ImagePicker label="Gambar QRIS" value={s.qris ?? undefined} onChange={(v) => setS({ ...s, qris: v ?? null })} />
-            <label className="d-field"><span>Nama penerima (tampil di halaman bayar)</span>
-              <input disabled={!can} maxLength={80} placeholder="mis. Kopi Senja" value={s.qris_receiver_name ?? ""} onChange={(e) => setS({ ...s, qris_receiver_name: e.target.value || null })} />
+            <ImagePicker label={t("Gambar QRIS")} value={s.qris ?? undefined} onChange={(v) => setS({ ...s, qris: v ?? null })} />
+            <label className="d-field"><span>{t("Nama penerima (tampil di halaman bayar)")}</span>
+              <input disabled={!can} maxLength={80} placeholder={t("mis. Kopi Senja")} value={s.qris_receiver_name ?? ""} onChange={(e) => setS({ ...s, qris_receiver_name: e.target.value || null })} />
             </label>
           </div>
           {s.qris && !s.qris_static_ready && (
             <Alert kind="warn">
-              QRIS belum terbaca dari gambar. Unggah ulang gambar QRIS yang jelas; konfirmasi manual tetap tersedia.
+              {t("QRIS belum terbaca dari gambar. Unggah ulang gambar QRIS yang jelas; konfirmasi manual tetap tersedia.")}
             </Alert>
           )}
           {s.qris && s.qris_static_ready && (
-            <Alert kind="ok">QRIS terbaca — konfirmasi otomatis siap.</Alert>
+            <Alert kind="ok">{t("QRIS terbaca — konfirmasi otomatis siap.")}</Alert>
           )}
           <label className="d-switch">
             <input type="checkbox" disabled={!can} checked={s.checkout_enabled} onChange={(e) => setS({ ...s, checkout_enabled: e.target.checked })} />
-            <span><strong>Terima pesanan online</strong><span className="d-muted">Tombol beli dan keranjang muncul di website.</span></span>
+            <span><strong>{t("Terima pesanan online")}</strong><span className="d-muted">{t("Tombol beli dan keranjang muncul di website.")}</span></span>
           </label>
         </Card>
         <GopayCard tenantId={ctx.tenant.id} can={can} refreshKey={refreshKey} />
-        <Card title="Pengiriman & pesanan" description="Pilihan ambil di toko / diantar diatur di Profil bisnis.">
+        <Card title={t("Pengiriman & pesanan")} description={t("Pilihan ambil di toko / diantar diatur di Profil bisnis.")}>
           <div className="d-grid">
-            <label className="d-field"><span>Ongkir datar untuk pengiriman</span>
-              <div className="d-input-prefix"><span aria-hidden="true">Rp</span><input aria-label="Ongkir datar untuk pengiriman (Rp)" disabled={!can} inputMode="decimal" value={s.delivery_fee} onChange={(e) => setS({ ...s, delivery_fee: e.target.value })} /></div>
+            <label className="d-field"><span>{t("Ongkir datar untuk pengiriman")}</span>
+              <div className="d-input-prefix"><span aria-hidden="true">{t("Rp")}</span><input aria-label={t("Ongkir datar untuk pengiriman (Rp)")} disabled={!can} inputMode="decimal" value={s.delivery_fee} onChange={(e) => setS({ ...s, delivery_fee: e.target.value })} /></div>
             </label>
-            <label className="d-field"><span>Batas waktu pembayaran</span>
-              <div className="d-input-suffix"><input aria-label="Batas waktu pembayaran (menit, 15–1440)" disabled={!can} type="number" min={15} max={1440} value={s.reservation_ttl_minutes} onChange={(e) => setS({ ...s, reservation_ttl_minutes: Number(e.target.value) })} /><em aria-hidden="true">menit</em></div>
-              <span className="d-hint">15–1440 menit. Stok ditahan selama waktu ini.</span>
+            <label className="d-field"><span>{t("Batas waktu pembayaran")}</span>
+              <div className="d-input-suffix"><input aria-label={t("Batas waktu pembayaran (menit, 15–1440)")} disabled={!can} type="number" min={15} max={1440} value={s.reservation_ttl_minutes} onChange={(e) => setS({ ...s, reservation_ttl_minutes: Number(e.target.value) })} /><em aria-hidden="true">menit</em></div>
+              <span className="d-hint">{t("15–1440 menit. Stok ditahan selama waktu ini.")}</span>
             </label>
           </div>
           <label className="d-switch"><input type="checkbox" disabled={!can} checked={s.order_approval_required} onChange={(e) => setS({ ...s, order_approval_required: e.target.checked })} />
-            <span><strong>Pesanan yang sudah dibayar perlu disetujui sebelum diproses</strong><span className="d-muted">Cocok bila stok/produksi perlu dicek manual.</span></span></label>
+            <span><strong>{t("Pesanan yang sudah dibayar perlu disetujui sebelum diproses")}</strong><span className="d-muted">{t("Cocok bila stok/produksi perlu dicek manual.")}</span></span></label>
           <label className="d-switch"><input type="checkbox" disabled={!can} checked={s.separation_of_duties} onChange={(e) => setS({ ...s, separation_of_duties: e.target.checked })} />
-            <span><strong>Penyetuju harus berbeda dari staf yang mengonfirmasi pembayaran</strong><span className="d-muted">Mencegah satu orang mengonfirmasi dan menyetujui sendiri.</span></span></label>
+            <span><strong>{t("Penyetuju harus berbeda dari staf yang mengonfirmasi pembayaran")}</strong><span className="d-muted">{t("Mencegah satu orang mengonfirmasi dan menyetujui sendiri.")}</span></span></label>
         </Card>
         {can && (
           <div className="d-savebar">
-            <span className="d-muted d-small">Perubahan QRIS tercatat di log aktivitas.</span>
-            <BusyButton busy={busy}>Simpan</BusyButton>
+            <span className="d-muted d-small">{t("Perubahan QRIS tercatat di log aktivitas.")}</span>
+            <BusyButton busy={busy}>{t("Simpan")}</BusyButton>
           </div>
         )}
       </form>
@@ -175,11 +176,11 @@ function GopayCard({ tenantId, can, refreshKey }: { tenantId: string; can: boole
   }
   const connectSession = () => run(async () => {
     setSt(await api<GopayStatus>("POST", `${base}/connect/session`, { json: { phone, session } }));
-    setSession(""); toast.ok("Akun GoPay terhubung.");
+    setSession(""); toast.ok(t("Akun GoPay terhubung."));
   });
   const disconnect = () => run(async () => {
-    if (!confirm("Putuskan akun GoPay? Pesanan tidak lagi dikonfirmasi otomatis.")) return;
-    setSt(await api<GopayStatus>("DELETE", base)); toast.ok("Akun GoPay diputus.");
+    if (!confirm(t("Putuskan akun GoPay? Pesanan tidak lagi dikonfirmasi otomatis."))) return;
+    setSt(await api<GopayStatus>("DELETE", base)); toast.ok(t("Akun GoPay diputus."));
   });
 
   // Bersihkan fragment token dari URL setelah ditangkap (tanpa setState).
@@ -202,65 +203,65 @@ function GopayCard({ tenantId, can, refreshKey }: { tenantId: string; can: boole
   return (
     <div id="gopay">
     <Card
-      title="Konfirmasi otomatis (GoPay Merchant)"
-      description="Opsional. Hubungkan akun GoPay/GoBiz Merchant toko agar pembayaran QRIS dikonfirmasi otomatis — pesanan langsung berstatus Diproses tanpa Anda cek manual. Gratis untuk usaha mikro. Konfirmasi manual tetap tersedia sebagai cadangan."
+      title={t("Konfirmasi otomatis (GoPay Merchant)")}
+      description={t("Opsional. Hubungkan akun GoPay/GoBiz Merchant toko agar pembayaran QRIS dikonfirmasi otomatis — pesanan langsung berstatus Diproses tanpa Anda cek manual. Gratis untuk usaha mikro. Konfirmasi manual tetap tersedia sebagai cadangan.")}
     >
       <Alert kind="error">{err}</Alert>
       {!st.connected ? (
         <div className="gp-stack">
           <Alert kind="info">
-            <strong>Cara termudah (tanpa menyalin token):</strong> pasang ekstensi <em>&quot;UMKM OS — Penghubung GoPay&quot;</em>, login GoBiz di browser, lalu klik <em>Hubungkan</em> di ekstensi — kolom di bawah terisi sendiri. Login GoPay dilindungi reCAPTCHA sehingga harus di browser; ekstensi hanya menangkap sesinya. Tak punya ekstensi? Isi manual di bawah.
+            <strong>{t("Cara termudah (tanpa menyalin token):")}</strong>{" "}{t("pasang ekstensi")}{" "}<em>{t("\"UMKM OS — Penghubung GoPay\"")}</em>{t(", login GoBiz di browser, lalu klik")}{" "}<em>{t("Hubungkan")}</em>{" "}{t("di ekstensi — kolom di bawah terisi sendiri. Login GoPay dilindungi reCAPTCHA sehingga harus di browser; ekstensi hanya menangkap sesinya. Tak punya ekstensi? Isi manual di bawah.")}
           </Alert>
-          <label className="d-field"><span>Nomor HP GoBiz/GoPay Merchant</span>
-            <input disabled={!can} inputMode="tel" placeholder="mis. 0812xxxxxxx" value={phone} onChange={(e) => setPhone(e.target.value)} />
-            <span className="d-hint">Nomor akun merchant (dipakai untuk memperbarui sesi).</span>
+          <label className="d-field"><span>{t("Nomor HP GoBiz/GoPay Merchant")}</span>
+            <input disabled={!can} inputMode="tel" placeholder={t("mis. 0812xxxxxxx")} value={phone} onChange={(e) => setPhone(e.target.value)} />
+            <span className="d-hint">{t("Nomor akun merchant (dipakai untuk memperbarui sesi).")}</span>
           </label>
-          <label className="d-field"><span>Token sesi GoBiz</span>
-            <textarea disabled={!can} rows={4} placeholder="Tempel cookie sesi (memuat access_token dan refresh_token)" value={session} onChange={(e) => setSession(e.target.value)} />
+          <label className="d-field"><span>{t("Token sesi GoBiz")}</span>
+            <textarea disabled={!can} rows={4} placeholder={t("Tempel cookie sesi (memuat access_token dan refresh_token)")} value={session} onChange={(e) => setSession(e.target.value)} />
             <span className="d-hint">
               <button type="button" className="d-link" onClick={() => setHelp((v) => !v)} aria-expanded={help}>
-                {help ? "Sembunyikan cara mendapatkan token" : "Cara mendapatkan token sesi"}
+                {help ? t("Sembunyikan cara mendapatkan token") : t("Cara mendapatkan token sesi")}
               </button>
             </span>
           </label>
           {help && (
             <ol className="d-muted d-small gp-steps">
-              <li>Buka <strong>portal.gofoodmerchant.co.id</strong> di browser (komputer), login dengan nomor &amp; OTP seperti biasa (selesaikan reCAPTCHA bila ada).</li>
-              <li>Tekan <strong>F12</strong> → tab <strong>Application</strong> (Chrome) / <strong>Storage</strong> (Firefox) → <strong>Cookies</strong> → pilih <strong>https://portal.gofoodmerchant.co.id</strong>.</li>
-              <li>Salin nilai <strong>access_token</strong> dan <strong>refresh_token</strong>, lalu tempel ke kotak di atas (boleh format <code>access_token=...; refresh_token=...</code>).</li>
-              <li>Token diperbarui otomatis; ulangi hanya bila status berubah jadi &quot;Perlu login ulang&quot;.</li>
+              <li>{t("Buka")}{" "}<strong>portal.gofoodmerchant.co.id</strong>{" "}{t("di browser (komputer), login dengan nomor & OTP seperti biasa (selesaikan reCAPTCHA bila ada).")}</li>
+              <li>{t("Tekan")}{" "}<strong>F12</strong>{" "}{t("→ tab")}{" "}<strong>{t("Application")}</strong>{" "}{t("(Chrome) /")}{" "}<strong>{t("Storage")}</strong>{" "}{t("(Firefox) →")}{" "}<strong>{t("Cookies")}</strong>{" "}{t("→ pilih")}{" "}<strong>https://portal.gofoodmerchant.co.id</strong>.</li>
+              <li>{t("Salin nilai")}{" "}<strong>access_token</strong> dan <strong>refresh_token</strong>{t(", lalu tempel ke kotak di atas (boleh format")}{" "}<code>{t("access_token=...; refresh_token=...")}</code>).</li>
+              <li>{t("Token diperbarui otomatis; ulangi hanya bila status berubah jadi \"Perlu login ulang\".")}</li>
             </ol>
           )}
           {can && (
             <div className="d-row" style={{ justifyContent: "flex-end" }}>
-              <BusyButton type="button" busy={busy} onClick={connectSession} disabled={phone.trim().length < 8 || session.trim().length < 20}>Hubungkan</BusyButton>
+              <BusyButton type="button" busy={busy} onClick={connectSession} disabled={phone.trim().length < 8 || session.trim().length < 20}>{t("Hubungkan")}</BusyButton>
             </div>
           )}
         </div>
       ) : (
         <div className="gp-stack">
-          <div className="d-field"><span>Akun terhubung</span>
+          <div className="d-field"><span>{t("Akun terhubung")}</span>
             <div className="d-row" style={{ gap: 8, alignItems: "center" }}>
-              <Badge tone={st.status === "active" ? "ok" : "warn"}>{st.status === "active" ? "Aktif" : "Perlu login ulang"}</Badge>
-              <span>{st.outlet_name ?? "Merchant GoPay"}{st.phone_masked ? ` · ${st.phone_masked}` : ""}</span>
+              <Badge tone={st.status === "active" ? "ok" : "warn"}>{st.status === "active" ? t("Aktif") : t("Perlu login ulang")}</Badge>
+              <span>{st.outlet_name ?? t("Merchant GoPay")}{st.phone_masked ? t(" · {0}", st.phone_masked) : ""}</span>
             </div>
           </div>
           <div className="d-field">
-            <span>QRIS statis toko</span>
+            <span>{t("QRIS statis toko")}</span>
             <span className="d-hint">
               {st.has_static_qris
-                ? "QRIS terbaca — konfirmasi otomatis siap."
-                : "QRIS diambil otomatis dari gambar di kartu Pembayaran QRIS."}
+                ? t("QRIS terbaca — konfirmasi otomatis siap.")
+                : t("QRIS diambil otomatis dari gambar di kartu Pembayaran QRIS.")}
             </span>
           </div>
           {!st.has_static_qris && (
             <Alert kind="warn">
-              QRIS belum terbaca dari gambar. Unggah ulang/unggah QRIS yang jelas di kartu Pembayaran QRIS; konfirmasi manual tetap tersedia.
+              {t("QRIS belum terbaca dari gambar. Unggah ulang/unggah QRIS yang jelas di kartu Pembayaran QRIS; konfirmasi manual tetap tersedia.")}
             </Alert>
           )}
           {can && (
             <div className="d-row" style={{ justifyContent: "flex-end", gap: "var(--sp-3)" }}>
-              <button type="button" className="d-btn d-btn-ghost" onClick={disconnect}>Putuskan akun</button>
+              <button type="button" className="d-btn d-btn-ghost" onClick={disconnect}>{t("Putuskan akun")}</button>
             </div>
           )}
         </div>

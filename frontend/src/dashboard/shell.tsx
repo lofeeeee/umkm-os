@@ -50,6 +50,9 @@ import {
 import { BellMenu } from "./bell";
 import { API_ORIGIN, api, ApiError, isMfaRequired, loadSession, roleLabel, setCsrf, type Membership, type Session, type TenantView } from "@/lib/api";
 import { PageSkeleton } from "@/ui/page";
+import { m, t as tx } from "@/i18n";
+import { Tr } from "@/i18n/react";
+import { LanguageSwitch } from "@/i18n/react";
 
 /* ============================================================
    Tema
@@ -90,7 +93,7 @@ const useHydrated = () => useSyncExternalStore(() => () => undefined, () => true
 export function ThemeToggle() {
   const theme = useSyncExternalStore(subscribeTheme, getThemeSnapshot, () => "light" as const);
   const hydrated = useHydrated();
-  const label = theme === "dark" ? "Gunakan tema terang" : "Gunakan tema gelap";
+  const label = theme === "dark" ? tx("Gunakan tema terang") : tx("Gunakan tema gelap");
   return (
     <button type="button" className="d-theme-toggle" onClick={() => setStoredTheme(theme === "dark" ? "light" : "dark")} aria-label={label} title={label}>
       {hydrated ? (theme === "dark" ? <Sun weight="bold" /> : <Moon weight="bold" />) : <span className="d-theme-dot" aria-hidden="true" />}
@@ -105,51 +108,51 @@ export interface NavItem { label: string; href: string; icon: typeof Globe; perm
 export const NAV: { label: string; items: NavItem[] }[] = [
   {
     label: "",
-    items: [{ label: "Beranda", href: "/", icon: House, keywords: "ringkasan dashboard home" }],
+    items: [{ get label() { return tx("Beranda"); }, href: "/", icon: House, keywords: m("ringkasan dashboard home") }],
   },
   {
-    label: "Penjualan",
+    get label() { return tx("Penjualan"); },
     items: [
-      { label: "Pesanan", href: "/orders", icon: Receipt, perm: "orders.read", tenant: true, keywords: "order transaksi bayar qris" },
-      { label: "Produk", href: "/products", icon: Package, perm: "products.read", tenant: true, keywords: "katalog barang harga varian" },
-      { label: "Stok", href: "/inventory", icon: Stack, perm: "inventory.read", tenant: true, keywords: "inventori persediaan" },
-      { label: "Pelanggan", href: "/customers", icon: Users, perm: "customers.read", tenant: true, keywords: "customer pembeli" },
+      { get label() { return tx("Pesanan"); }, href: "/orders", icon: Receipt, perm: "orders.read", tenant: true, keywords: m("order transaksi bayar qris") },
+      { get label() { return tx("Produk"); }, href: "/products", icon: Package, perm: "products.read", tenant: true, keywords: m("katalog barang harga varian") },
+      { get label() { return tx("Stok"); }, href: "/inventory", icon: Stack, perm: "inventory.read", tenant: true, keywords: m("inventori persediaan") },
+      { get label() { return tx("Pelanggan"); }, href: "/customers", icon: Users, perm: "customers.read", tenant: true, keywords: m("customer pembeli") },
     ],
   },
   {
-    label: "Layanan pelanggan",
+    get label() { return tx("Layanan pelanggan"); },
     items: [
-      { label: "Percakapan", href: "/conversations", icon: ChatCircleDots, perm: "conversations.read", tenant: true, keywords: "chat inbox pesan" },
-      { label: "Tiket", href: "/tickets", icon: Headset, perm: "tickets.read", tenant: true, keywords: "keluhan masalah support" },
-      { label: "Asisten AI", href: "/ai", icon: Sparkle, perm: "ai_config.read", tenant: true, keywords: "bot otomatis llm" },
+      { get label() { return tx("Percakapan"); }, href: "/conversations", icon: ChatCircleDots, perm: "conversations.read", tenant: true, keywords: m("chat inbox pesan") },
+      { get label() { return tx("Tiket"); }, href: "/tickets", icon: Headset, perm: "tickets.read", tenant: true, keywords: m("keluhan masalah support") },
+      { get label() { return tx("Asisten AI"); }, href: "/ai", icon: Sparkle, perm: "ai_config.read", tenant: true, keywords: m("bot otomatis llm") },
     ],
   },
   {
-    label: "Toko online",
+    get label() { return tx("Toko online"); },
     items: [
-      { label: "Website", href: "/website", icon: Globe, tenant: true, keywords: "situs tampilan template terbitkan" },
-      { label: "Pembayaran & pengiriman", href: "/shop-settings", icon: GearSix, perm: "tenant.read", tenant: true, keywords: "qris ongkir pengaturan toko checkout" },
-      { label: "Profil bisnis", href: "/business", icon: Buildings, tenant: true, keywords: "alamat jam buka kontak" },
+      { get label() { return tx("Website"); }, href: "/website", icon: Globe, tenant: true, keywords: m("situs tampilan template terbitkan") },
+      { get label() { return tx("Pembayaran & pengiriman"); }, href: "/shop-settings", icon: GearSix, perm: "tenant.read", tenant: true, keywords: m("qris ongkir pengaturan toko checkout") },
+      { get label() { return tx("Profil bisnis"); }, href: "/business", icon: Buildings, tenant: true, keywords: m("alamat jam buka kontak") },
     ],
   },
   {
-    label: "Laporan",
+    get label() { return tx("Laporan"); },
     items: [
-      { label: "Analitik", href: "/analytics", icon: ChartLineUp, perm: "analytics.read", tenant: true, keywords: "omzet statistik laporan" },
-      { label: "Log aktivitas", href: "/audit", icon: ClockCounterClockwise, perm: "audit.read", tenant: true, keywords: "audit riwayat jejak" },
+      { get label() { return tx("Analitik"); }, href: "/analytics", icon: ChartLineUp, perm: "analytics.read", tenant: true, keywords: m("omzet statistik laporan") },
+      { get label() { return tx("Log aktivitas"); }, href: "/audit", icon: ClockCounterClockwise, perm: "audit.read", tenant: true, keywords: m("audit riwayat jejak") },
     ],
   },
   {
-    label: "Pengaturan",
+    get label() { return tx("Pengaturan"); },
     items: [
-      { label: "Tim", href: "/team", icon: UsersThree, perm: "members.read", tenant: true, keywords: "anggota peran role undang staf" },
-      { label: "Persetujuan", href: "/approvals", icon: CheckSquare, perm: "approvals.read", tenant: true, keywords: "approval izin" },
-      { label: "Langganan", href: "/subscription", icon: CreditCard, perm: "tenant.read", tenant: true, keywords: "paket tagihan billing" },
-      { label: "Keamanan", href: "/security", icon: LockKey, keywords: "mfa password dua langkah" },
+      { get label() { return tx("Tim"); }, href: "/team", icon: UsersThree, perm: "members.read", tenant: true, keywords: m("anggota peran role undang staf") },
+      { get label() { return tx("Persetujuan"); }, href: "/approvals", icon: CheckSquare, perm: "approvals.read", tenant: true, keywords: m("approval izin") },
+      { get label() { return tx("Langganan"); }, href: "/subscription", icon: CreditCard, perm: "tenant.read", tenant: true, keywords: m("paket tagihan billing") },
+      { get label() { return tx("Keamanan"); }, href: "/security", icon: LockKey, keywords: m("mfa password dua langkah") },
     ],
   },
 ];
-const PLATFORM_ITEM: NavItem = { label: "Admin platform", href: "/platform", icon: ShieldCheck, keywords: "super admin verifikasi" };
+const PLATFORM_ITEM: NavItem = { get label() { return tx("Admin platform"); }, href: "/platform", icon: ShieldCheck, keywords: m("super admin verifikasi") };
 
 export function findNav(pathname: string): { group: string; item: NavItem } | null {
   for (const g of NAV) for (const it of g.items) if (it.href === pathname) return { group: g.label, item: it };
@@ -224,7 +227,7 @@ function AppProvider({ children }: { children: ReactNode }) {
         fetch(`${API_ORIGIN}/api/v1/platform/me`, { credentials: "include" })
           .then((r) => setPlatformAdmin(r.ok), () => undefined);
       }
-    })().catch(() => setFatal("Tidak dapat menghubungi server. Periksa koneksi lalu muat ulang halaman."));
+    })().catch(() => setFatal(tx("Tidak dapat menghubungi server. Periksa koneksi lalu muat ulang halaman.")));
     // eslint-disable-next-line react-hooks/exhaustive-deps -- sekali per shell
   }, []);
 
@@ -262,7 +265,7 @@ function AppProvider({ children }: { children: ReactNode }) {
         setLoaded({
           id: wanted,
           tenant: null,
-          error: e instanceof ApiError && (e.status === 404 || e.status === 403) ? "Toko tidak ditemukan atau Anda bukan anggotanya." : "Gagal memuat toko.",
+          error: e instanceof ApiError && (e.status === 404 || e.status === 403) ? tx("Toko tidak ditemukan atau Anda bukan anggotanya.") : tx("Gagal memuat toko."),
         });
       });
     return () => { live = false; };
@@ -331,7 +334,7 @@ function TenantSwitcher({ onNavigate }: { onNavigate: () => void }) {
   const { tenant, memberships } = useApp();
   const router = useRouter();
   const { open, setOpen, ref } = usePopover();
-  const name = tenant?.name ?? "Pilih toko";
+  const name = tenant?.name ?? tx("Pilih toko");
   const go = (id: string) => {
     setOpen(false);
     onNavigate();
@@ -344,13 +347,13 @@ function TenantSwitcher({ onNavigate }: { onNavigate: () => void }) {
         <span className={`d-avatar${tenant ? "" : " d-avatar-muted"}`} aria-hidden="true">{tenant ? initial(tenant.name) : <Storefront weight="bold" />}</span>
         <span className="d-switcher-meta">
           <span className="d-switcher-name">{name}</span>
-          <span className="d-switcher-sub">{tenant ? roleLabel(tenant.my_role) : "UMKM OS"}</span>
+          <span className="d-switcher-sub">{tenant ? roleLabel(tenant.my_role) : tx("UMKM OS")}</span>
         </span>
         <CaretUpDown weight="bold" aria-hidden="true" />
       </button>
       {open && (
         <div className="d-pop" role="menu" style={{ left: 0, right: 0, top: "calc(100% + 4px)" }}>
-          <div className="d-menu-label">Toko Anda</div>
+          <div className="d-menu-label">{tx("Toko Anda")}</div>
           {(memberships ?? []).map((m) => (
             <button key={m.tenant_id} type="button" role="menuitem" className="d-menu-item" aria-current={m.tenant_id === tenant?.id} onClick={() => go(m.tenant_id)}>
               <span className="d-avatar" style={{ width: 20, height: 20, fontSize: "0.6875rem", borderRadius: 4 }} aria-hidden="true">{initial(m.name)}</span>
@@ -362,7 +365,7 @@ function TenantSwitcher({ onNavigate }: { onNavigate: () => void }) {
             <>
               <div className="d-menu-sep" />
               <a className="d-menu-item" role="menuitem" href={`https://${tenant.primary_hostname}`} target="_blank" rel="noreferrer">
-                <ArrowSquareOut weight="bold" aria-hidden="true" /> Lihat situs toko
+                <ArrowSquareOut weight="bold" aria-hidden="true" />{" "}{tx("Lihat situs toko")}
               </a>
             </>
           )}
@@ -375,15 +378,15 @@ function TenantSwitcher({ onNavigate }: { onNavigate: () => void }) {
 function SidebarNav({ onNavigate }: { onNavigate: () => void }) {
   const pathname = usePathname();
   const { tenant, can, q, platformAdmin } = useApp();
-  const groups = platformAdmin ? [...NAV, { label: "Platform", items: [PLATFORM_ITEM] }] : NAV;
+  const groups = platformAdmin ? [...NAV, { label: tx("Platform"), items: [PLATFORM_ITEM] }] : NAV;
   return (
-    <nav aria-label="Navigasi utama" className="d-sidebar-nav">
+    <nav aria-label={tx("Navigasi utama")} className="d-sidebar-nav">
       {groups.map((group) => {
         const items = group.items.filter((it) => (!it.tenant || !!tenant) && (!it.perm || can(it.perm)));
         if (items.length === 0) return null;
         const labelId = `nav-${group.label.replace(/\W+/g, "-").toLowerCase() || "utama"}`;
         return (
-          <div className="d-nav-group" key={group.label || "utama"} role="group" aria-labelledby={group.label ? labelId : undefined} aria-label={group.label ? undefined : "Utama"}>
+          <div className="d-nav-group" key={group.label || "utama"} role="group" aria-labelledby={group.label ? labelId : undefined} aria-label={group.label ? undefined : tx("Utama")}>
             {group.label && <p className="d-nav-label" id={labelId}>{group.label}</p>}
             {items.map((it) => (
               <Link
@@ -418,7 +421,7 @@ function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void 
     if (!open && d.open) d.close();
   }, [open]);
   return (
-    <dialog ref={ref} className="d-dialog d-cmdk" aria-label="Cari halaman dan aksi" onCancel={(e) => { e.preventDefault(); onClose(); }} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+    <dialog ref={ref} className="d-dialog d-cmdk" aria-label={tx("Cari halaman dan aksi")} onCancel={(e) => { e.preventDefault(); onClose(); }} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       {open && <CommandBody onClose={onClose} />}
     </dialog>
   );
@@ -433,21 +436,21 @@ function CommandBody({ onClose }: { onClose: () => void }) {
   const cmds = useMemo<Cmd[]>(() => {
     const go = (href: string) => () => { onClose(); router.push(href); };
     const out: Cmd[] = [];
-    const groups = platformAdmin ? [...NAV, { label: "Platform", items: [PLATFORM_ITEM] }] : NAV;
+    const groups = platformAdmin ? [...NAV, { label: tx("Platform"), items: [PLATFORM_ITEM] }] : NAV;
     for (const g of groups) for (const it of g.items) {
       if ((it.tenant && !tenant) || (it.perm && !can(it.perm))) continue;
-      out.push({ id: `nav:${it.href}`, group: "Buka halaman", label: it.label, icon: it.icon, keywords: `${g.label} ${it.keywords ?? ""}`, run: go(`${it.href}${q}`) });
+      out.push({ id: `nav:${it.href}`, group: tx("Buka halaman"), label: it.label, icon: it.icon, keywords: `${g.label} ${it.keywords ?? ""} ${it.keywords ? tx(it.keywords) : ""}`, run: go(`${it.href}${q}`) });
     }
     if (tenant) {
-      if (can("products.create")) out.push({ id: "new-product", group: "Aksi cepat", label: "Tambah produk", icon: Package, keywords: "baru buat", run: go(`/products${q}&new=1`) });
-      if (can("members.invite") || can("members.manage")) out.push({ id: "invite", group: "Aksi cepat", label: "Undang anggota tim", icon: UsersThree, keywords: "staf karyawan", run: go(`/team${q}`) });
-      out.push({ id: "publish", group: "Aksi cepat", label: "Ubah & terbitkan website", icon: Globe, keywords: "edit situs", run: go(`/website${q}`) });
+      if (can("products.create")) out.push({ id: "new-product", group: tx("Aksi cepat"), label: tx("Tambah produk"), icon: Package, keywords: tx("baru buat"), run: go(`/products${q}&new=1`) });
+      if (can("members.invite") || can("members.manage")) out.push({ id: "invite", group: tx("Aksi cepat"), label: tx("Undang anggota tim"), icon: UsersThree, keywords: tx("staf karyawan"), run: go(`/team${q}`) });
+      out.push({ id: "publish", group: tx("Aksi cepat"), label: tx("Ubah & terbitkan website"), icon: Globe, keywords: tx("edit situs"), run: go(`/website${q}`) });
     }
     for (const m of memberships ?? []) {
       if (m.tenant_id === tenant?.id) continue;
-      out.push({ id: `t:${m.tenant_id}`, group: "Pindah toko", label: m.name, icon: Storefront, keywords: m.slug, run: () => { onClose(); rememberTenant(m.tenant_id); router.push(`/?tenant=${m.tenant_id}`); } });
+      out.push({ id: `t:${m.tenant_id}`, group: tx("Pindah toko"), label: m.name, icon: Storefront, keywords: m.slug, run: () => { onClose(); rememberTenant(m.tenant_id); router.push(`/?tenant=${m.tenant_id}`); } });
     }
-    out.push({ id: "theme", group: "Preferensi", label: "Ganti tema terang/gelap", icon: Moon, keywords: "dark light mode", run: () => { setStoredTheme(getThemeSnapshot() === "dark" ? "light" : "dark"); onClose(); } });
+    out.push({ id: "theme", group: tx("Preferensi"), label: tx("Ganti tema terang/gelap"), icon: Moon, keywords: tx("dark light mode"), run: () => { setStoredTheme(getThemeSnapshot() === "dark" ? "light" : "dark"); onClose(); } });
     return out;
   }, [tenant, can, q, memberships, platformAdmin, router, onClose]);
 
@@ -476,15 +479,15 @@ function CommandBody({ onClose }: { onClose: () => void }) {
               aria-expanded="true"
               aria-controls="d-cmdk-list"
               aria-activedescendant={shown[cur] ? `cmd-${shown[cur]!.id}` : undefined}
-              aria-label="Cari halaman atau aksi"
-              placeholder="Cari halaman atau aksi…"
+              aria-label={tx("Cari halaman atau aksi")}
+              placeholder={tx("Cari halaman atau aksi…")}
               value={text}
               onChange={(e) => { setText(e.target.value); setSel(0); }}
               onKeyDown={onKey}
             />
           </div>
           <ul className="d-cmdk-list" id="d-cmdk-list" role="listbox">
-            {shown.length === 0 && <li className="d-empty" style={{ padding: 24 }}><p className="d-muted">Tidak ada hasil untuk “{text}”.</p></li>}
+            {shown.length === 0 && <li className="d-empty" style={{ padding: 24 }}><p className="d-muted"><Tr s="Tidak ada hasil untuk “{0}”." a={[text]} /></p></li>}
             {shown.map((c, i) => {
               const head = c.group !== lastGroup ? c.group : null;
               lastGroup = c.group;
@@ -501,8 +504,8 @@ function CommandBody({ onClose }: { onClose: () => void }) {
           </ul>
           <div className="d-cmdk-foot" aria-hidden="true">
             <span><kbd>↑</kbd> <kbd>↓</kbd> pilih</span>
-            <span><kbd>Enter</kbd> buka</span>
-            <span><kbd>Esc</kbd> tutup</span>
+            <span><kbd>{tx("Enter")}</kbd> buka</span>
+            <span><kbd>{tx("Esc")}</kbd> tutup</span>
           </div>
         </>
   );
@@ -516,14 +519,14 @@ function Breadcrumbs() {
   const { tenant, q } = useApp();
   const nav = findNav(pathname);
   return (
-    <nav className="d-crumbs" aria-label="Lokasi">
+    <nav className="d-crumbs" aria-label={tx("Lokasi")}>
       {tenant && pathname !== "/" && (
         <>
           <Link href={`/${q}`}>{tenant.name.length > 24 ? `${tenant.name.slice(0, 22)}…` : tenant.name}</Link>
           <CaretRight weight="bold" aria-hidden="true" />
         </>
       )}
-      <span aria-current="page">{nav?.item.label ?? (tenant?.name ?? "UMKM OS")}</span>
+      <span aria-current="page">{nav?.item.label ?? (tenant?.name ?? tx("UMKM OS"))}</span>
     </nav>
   );
 }
@@ -562,10 +565,10 @@ function Shell({ children }: { children: ReactNode }) {
           m.scrollIntoView();
         }}
       >
-        Lompat ke konten utama
+        {tx("Lompat ke konten utama")}
       </a>
       <div className="d-frame" data-nav-open={navOpen ? "true" : undefined}>
-        <aside className="d-sidebar" id="sidebar-nav" aria-label="Panel navigasi">
+        <aside className="d-sidebar" id="sidebar-nav" aria-label={tx("Panel navigasi")}>
           <div className="d-sidebar-head">
             <TenantSwitcher onNavigate={closeNav} />
           </div>
@@ -573,7 +576,7 @@ function Shell({ children }: { children: ReactNode }) {
           <div className="d-sidebar-foot">
             <button type="button" className="d-btn d-btn-ghost d-btn-sm d-logout" onClick={() => void app.logout()}>
               <SignOut aria-hidden="true" weight="bold" />
-              Keluar
+              {tx("Keluar")}
             </button>
           </div>
         </aside>
@@ -586,19 +589,20 @@ function Shell({ children }: { children: ReactNode }) {
           className="d-burger"
           aria-expanded={navOpen}
           aria-controls="sidebar-nav"
-          aria-label={navOpen ? "Tutup menu navigasi" : "Buka menu navigasi"}
+          aria-label={navOpen ? tx("Tutup menu navigasi") : tx("Buka menu navigasi")}
           onClick={() => setNavOpen(!navOpen)}
         >
           {navOpen ? <X weight="bold" /> : <List weight="bold" />}
         </button>
         <Breadcrumbs />
         <div className="d-topbar-actions">
-          <button type="button" className="d-search-btn" onClick={() => setCmdOpen(true)} aria-label="Cari halaman atau aksi" aria-keyshortcuts="Control+K Meta+K">
+          <button type="button" className="d-search-btn" onClick={() => setCmdOpen(true)} aria-label={tx("Cari halaman atau aksi")} aria-keyshortcuts="Control+K Meta+K">
             <MagnifyingGlass weight="bold" aria-hidden="true" />
-            <span>Cari…</span>
-            <kbd>{isMac ? "⌘" : "Ctrl"} K</kbd>
+            <span>{tx("Cari…")}</span>
+            <kbd>{isMac ? "⌘" : tx("Ctrl")} K</kbd>
           </button>
           {app.tenant && <BellMenu tenantId={app.tenant.id} />}
+          <LanguageSwitch />
           <ThemeToggle />
         </div>
       </header>
@@ -642,8 +646,8 @@ export function TenantPicker() {
     <>
       <div className="d-page-head">
         <div className="d-page-head-text">
-          <h1>Toko saya</h1>
-          <p>Pilih toko yang ingin Anda kelola.</p>
+          <h1>{tx("Toko saya")}</h1>
+          <p>{tx("Pilih toko yang ingin Anda kelola.")}</p>
         </div>
       </div>
       <div className="d-bento d-stagger">
@@ -674,17 +678,17 @@ export function WithTenant({ children }: { children: (ctx: TenantCtx) => ReactNo
   if (app.tenantState === "none") {
     return (
       <div className="d-card d-empty">
-        <p className="d-empty-title">Anda belum menjadi anggota toko mana pun</p>
-        <p>Minta undangan dari pemilik toko, atau daftarkan usaha Anda sendiri.</p>
-        <Link className="d-btn d-btn-primary" href="/register">Daftarkan usaha</Link>
+        <p className="d-empty-title">{tx("Anda belum menjadi anggota toko mana pun")}</p>
+        <p>{tx("Minta undangan dari pemilik toko, atau daftarkan usaha Anda sendiri.")}</p>
+        <Link className="d-btn d-btn-primary" href="/register">{tx("Daftarkan usaha")}</Link>
       </div>
     );
   }
   if (app.tenantState === "error") {
     return (
       <>
-        <Alert kind="error">{app.tenantError ?? "Gagal memuat toko."}</Alert>
-        <Link className="d-btn" href="/">Kembali ke beranda</Link>
+        <Alert kind="error">{app.tenantError ?? tx("Gagal memuat toko.")}</Alert>
+        <Link className="d-btn" href="/">{tx("Kembali ke beranda")}</Link>
       </>
     );
   }

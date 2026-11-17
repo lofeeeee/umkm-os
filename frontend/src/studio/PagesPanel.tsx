@@ -12,6 +12,7 @@ import {
 } from "@phosphor-icons/react/ssr";
 
 import { confirm } from "@/ui/dialog";
+import { t } from "@/i18n";
 
 export interface PageItem {
   slug: string;
@@ -42,13 +43,13 @@ export interface PagePreset {
 export const STANDARD_PRESETS: PagePreset[] = [
   {
     slug: "about",
-    title: "Tentang Kami",
-    description: "Ceritakan profil, visi, dan kisah usaha Anda",
+    get title() { return t("Tentang Kami"); },
+    get description() { return t("Ceritakan profil, visi, dan kisah usaha Anda"); },
   },
   {
     slug: "contact",
-    title: "Kontak",
-    description: "Alamat toko, jam operasional, dan saluran komunikasi",
+    get title() { return t("Kontak"); },
+    get description() { return t("Alamat toko, jam operasional, dan saluran komunikasi"); },
   },
 ];
 
@@ -85,17 +86,17 @@ export async function confirmDeletePage(
   let ok = false;
   try {
     ok = await confirmFn({
-      title: "Hapus Halaman?",
-      body: `Halaman "${page.title}" (${formatSlugPath(
+      title: t("Hapus halaman?"),
+      body: t("Halaman \"{0}\" ({1}) akan dihapus permanen. Tindakan ini tidak dapat dibatalkan.", page.title, formatSlugPath(
         page.slug
-      )}) akan dihapus permanen. Tindakan ini tidak dapat dibatalkan.`,
-      confirmLabel: "Hapus Halaman",
-      cancelLabel: "Batal",
+      )),
+      confirmLabel: t("Hapus halaman"),
+      cancelLabel: t("Batal"),
       danger: true,
     });
   } catch {
     if (typeof window !== "undefined" && window.confirm) {
-      ok = window.confirm(`Apakah Anda yakin ingin menghapus halaman "${page.title}"?`);
+      ok = window.confirm(t("Apakah Anda yakin ingin menghapus halaman \"{0}\"?", page.title));
     }
   }
 
@@ -156,7 +157,7 @@ export function PagesPanel({
         setIsAdding(false);
       }
     } catch (err: unknown) {
-      setErrorMsg(err instanceof Error ? err.message : "Gagal membuat halaman preset");
+      setErrorMsg(err instanceof Error ? err.message : t("Gagal membuat halaman siap pakai"));
     } finally {
       setIsSubmitting(false);
     }
@@ -173,15 +174,15 @@ export function PagesPanel({
     const slug = cleanSlugString(customSlug);
 
     if (!title) {
-      setErrorMsg("Judul halaman wajib diisi.");
+      setErrorMsg(t("Judul halaman wajib diisi."));
       return;
     }
     if (!slug) {
-      setErrorMsg("Slug URL wajib diisi.");
+      setErrorMsg(t("Alamat URL wajib diisi."));
       return;
     }
     if (pages.some((p) => p.slug === slug)) {
-      setErrorMsg(`Slug URL "${slug}" sudah digunakan oleh halaman lain.`);
+      setErrorMsg(t("Alamat URL \"{0}\" sudah digunakan oleh halaman lain.", slug));
       return;
     }
 
@@ -196,7 +197,7 @@ export function PagesPanel({
         setIsAdding(false);
       }
     } catch (err: unknown) {
-      setErrorMsg(err instanceof Error ? err.message : "Gagal membuat halaman");
+      setErrorMsg(err instanceof Error ? err.message : t("Gagal membuat halaman"));
     } finally {
       setIsSubmitting(false);
     }
@@ -211,17 +212,17 @@ export function PagesPanel({
     <div className={`st-pages ${className}`.trim()}>
       <div className="st-panel-head st-panel-head-row">
         <div>
-          <h2>Halaman</h2>
-          <p>Setiap halaman tampil di menu navigasi situs.</p>
+          <h2>{t("Halaman")}</h2>
+          <p>{t("Setiap halaman tampil di menu navigasi situs.")}</p>
         </div>
         {onClose && (
-          <button type="button" className="d-icon-btn d-icon-btn-sm" onClick={onClose} title="Tutup panel" aria-label="Tutup panel">
+          <button type="button" className="d-icon-btn d-icon-btn-sm" onClick={onClose} title={t("Tutup panel")} aria-label={t("Tutup panel")}>
             <X weight="bold" />
           </button>
         )}
       </div>
 
-      <ul className="st-page-list" aria-label="Daftar halaman">
+      <ul className="st-page-list" aria-label={t("Daftar halaman")}>
         {pages.map((page) => {
           const isActive = page.slug === activeSlug;
           const isHome = page.slug === "home";
@@ -237,8 +238,8 @@ export function PagesPanel({
                   <code>{formatSlugPath(page.slug)}</code>
                 </span>
                 {isHome
-                  ? <span className="st-page-badge">Utama</span>
-                  : page.published_version !== undefined && <span className={`st-page-badge${published ? " st-page-badge-ok" : ""}`}>{published ? "Terbit" : "Draf"}</span>}
+                  ? <span className="st-page-badge">{t("Utama")}</span>
+                  : page.published_version !== undefined && <span className={`st-page-badge${published ? " st-page-badge-ok" : ""}`}>{published ? t("Terbit") : t("Draf")}</span>}
               </button>
               <button
                 type="button"
@@ -246,8 +247,8 @@ export function PagesPanel({
                 data-delete-slug={page.slug}
                 disabled={isHome}
                 onClick={(e) => handleDelete(e, page)}
-                title={isHome ? "Halaman utama tidak dapat dihapus" : `Hapus halaman ${page.title}`}
-                aria-label={isHome ? "Halaman utama tidak dapat dihapus" : `Hapus halaman ${page.title}`}
+                title={isHome ? t("Halaman utama tidak dapat dihapus") : t("Hapus halaman {0}", page.title)}
+                aria-label={isHome ? t("Halaman utama tidak dapat dihapus") : t("Hapus halaman {0}", page.title)}
               >
                 <Trash weight="bold" />
               </button>
@@ -259,20 +260,20 @@ export function PagesPanel({
       {!isAdding ? (
         <button type="button" className="st-add-page" onClick={() => setIsAdding(true)}>
           <Plus weight="bold" aria-hidden="true" />
-          Tambah halaman
+          {t("Tambah halaman")}
         </button>
       ) : (
         <div className="st-add-card">
           <div className="st-add-card-head">
-            <strong>Halaman baru</strong>
-            <button type="button" className="d-icon-btn d-icon-btn-sm" onClick={() => { setIsAdding(false); setErrorMsg(null); }} title="Batal" aria-label="Batal">
+            <strong>{t("Halaman baru")}</strong>
+            <button type="button" className="d-icon-btn d-icon-btn-sm" onClick={() => { setIsAdding(false); setErrorMsg(null); }} title={t("Batal")} aria-label={t("Batal")}>
               <X weight="bold" />
             </button>
           </div>
 
           {availablePresets.length > 0 && (
             <div className="st-add-sec">
-              <span className="st-add-label">Siap pakai</span>
+              <span className="st-add-label">{t("Siap pakai")}</span>
               <div className="st-presets">
                 {availablePresets.map((preset) => (
                   <button key={preset.slug} type="button" className="st-preset" data-preset-slug={preset.slug} disabled={isSubmitting} onClick={() => handleCreatePreset(preset)}>
@@ -280,7 +281,7 @@ export function PagesPanel({
                       <strong>{preset.title}</strong>
                       <span>{preset.description}</span>
                     </span>
-                    <span className="st-preset-add"><Plus weight="bold" aria-hidden="true" />Tambah</span>
+                    <span className="st-preset-add"><Plus weight="bold" aria-hidden="true" />{t("Tambah")}</span>
                   </button>
                 ))}
               </div>
@@ -289,27 +290,27 @@ export function PagesPanel({
 
           <form onSubmit={handleCreateCustom} className="st-add-sec">
             <span className="st-add-label">
-              Halaman kustom
-              {!isPro && <span className="st-pro-chip"><Crown weight="fill" aria-hidden="true" />Paket Pro</span>}
+              {t("Halaman kustom")}
+              {!isPro && <span className="st-pro-chip"><Crown weight="fill" aria-hidden="true" />{t("Paket Pro")}</span>}
             </span>
 
             {!isPro && (
               <div className="st-pro-note">
-                <p>Halaman kustom memerlukan paket Pro. Starter mendapatkan Beranda, Tentang Kami, dan Kontak.</p>
+                <p>{t("Halaman kustom memerlukan paket Pro. Starter mendapatkan Beranda, Tentang Kami, dan Kontak.")}</p>
                 <button type="button" className="d-btn d-btn-sm" onClick={onUpgradeClick}>
                   <LockSimple weight="bold" aria-hidden="true" />
-                  Upgrade ke Pro
+                  {t("Tingkatkan ke Pro")}
                 </button>
               </div>
             )}
 
             <label className="d-field" htmlFor={titleInputId}>
-              <span>Judul halaman</span>
+              <span>{t("Judul halaman")}</span>
               <input id={titleInputId} data-testid="input-custom-title" type="text" disabled={!isPro || isSubmitting}
-                value={customTitle} onChange={(e) => handleTitleChange(e.target.value)} placeholder="Contoh: Layanan Kami" maxLength={60} />
+                value={customTitle} onChange={(e) => handleTitleChange(e.target.value)} placeholder={t("Contoh: Layanan Kami")} maxLength={60} />
             </label>
             <label className="d-field" htmlFor={slugInputId}>
-              <span>Alamat (URL)</span>
+              <span>{t("Alamat (URL)")}</span>
               <span className="st-slug">
                 <span aria-hidden="true">/</span>
                 <input id={slugInputId} data-testid="input-custom-slug" type="text" disabled={!isPro || isSubmitting}
@@ -321,10 +322,10 @@ export function PagesPanel({
 
             {isPro && (
               <div className="st-add-actions">
-                <button type="button" className="d-btn d-btn-sm d-btn-ghost" onClick={() => { setIsAdding(false); setErrorMsg(null); }}>Batal</button>
+                <button type="button" className="d-btn d-btn-sm d-btn-ghost" onClick={() => { setIsAdding(false); setErrorMsg(null); }}>{t("Batal")}</button>
                 <button type="submit" className="d-btn d-btn-sm d-btn-primary" disabled={isSubmitting || !customTitle.trim() || !customSlug.trim()}>
                   <Plus weight="bold" aria-hidden="true" />
-                  Buat halaman
+                  {t("Buat halaman")}
                 </button>
               </div>
             )}

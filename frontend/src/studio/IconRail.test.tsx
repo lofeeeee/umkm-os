@@ -10,10 +10,10 @@ describe("IconRail component (Studio Enhancement Task 4)", () => {
     );
 
     expect(html).toContain("Halaman");
-    expect(html).toContain("Elemen");
+    expect(html).toContain("Blok");
     expect(html).toContain("Desain");
     expect(html).toContain("Coretan");
-    expect(html).toContain('aria-label="Bilah Alat Studio"');
+    expect(html).toContain('aria-label="Bilah alat Studio"');
   });
 
   it("applies active class and aria-pressed when a tab is selected", () => {

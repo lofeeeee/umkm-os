@@ -24,6 +24,8 @@ import { PublicNav, type NavLink } from "./PublicNav";
 import { fontStack, primaryVars, safeColor, text, waLink } from "./safe";
 import { Site, type GridProduct } from "./Site";
 import type { Business, OpenStatus } from "./types";
+import { t as tx, tmap } from "@/i18n";
+import { LanguageSwitch } from "@/i18n/react";
 
 /** Halaman terbit yang bisa ditautkan dari navigasi (dari `/public/site`). */
 export interface SitePageLink { slug: string; title: string; current?: boolean }
@@ -50,8 +52,15 @@ export interface StudioSiteProps {
 const isEmbed = (b: BlockV2) =>
   (b.kind === "chatbot" && (b.layout === "floating" || b.layout === "bar")) || (b.kind === "whatsapp" && b.layout === "floating");
 
+/** Label navigasi untuk anchor bawaan (diterjemahkan sesuai bahasa pengunjung). */
+const ANCHOR_LABEL: Record<string, string> = tmap({
+  kontak: "Kontak", produk: "Produk", menu: "Menu", koleksi: "Koleksi", karya: "Karya", galeri: "Galeri",
+  lokasi: "Lokasi", "jam-buka": "Jam buka", testimoni: "Testimoni", tentang: "Tentang",
+});
+
 /** `jam-buka` → `Jam buka` (label navigasi dari nama anchor, bukan slug mentah). */
 function titleCase(s: string): string {
+  if (ANCHOR_LABEL[s]) return ANCHOR_LABEL[s]!;
   const t = s.replace(/-/g, " ");
   return t.charAt(0).toUpperCase() + t.slice(1);
 }
@@ -75,9 +84,9 @@ export function TextBlock({ b }: { b: Pick<BlockV2, "data"> }) {
   const title = text(b.data.title);
   return (
     <div className="s-text">
-      {(title || editing) && <h2 className="s-title"><T path="title" v={b.data.title} placeholder="Judul (opsional)" /></h2>}
+      {(title || editing) && <h2 className="s-title"><T path="title" v={b.data.title} placeholder={tx("Judul (opsional)")} /></h2>}
       {editing
-        ? <p><T path="body" v={b.data.body} multiline placeholder="Tulis paragraf di sini…" /></p>
+        ? <p><T path="body" v={b.data.body} multiline placeholder={tx("Tulis paragraf di sini…")} /></p>
         : text(b.data.body).split("\n").filter((p) => p.trim()).map((p, i) => <p key={i}>{p}</p>)}
     </div>
   );
@@ -94,18 +103,18 @@ function WaIcon() {
 export function WhatsAppButton({ b, business, floating }: { b: Pick<BlockV2, "data">; business: Business; floating?: boolean }) {
   const editing = useEditing();
   const href = whatsappHref(business.profile.whatsapp ?? business.profile.phone, text(b.data.message));
-  const label = text(b.data.label) || "Pesan via WhatsApp";
+  const label = text(b.data.label) || tx("Pesan via WhatsApp");
   if (editing) {
     // `<a>` tanpa href: elemen yang sama dengan situs terbit (paritas DOM), tetapi klik tidak
     // menavigasi sehingga label di dalamnya tetap bisa diketik.
     return (
       <a className="s-btn s-wa">
         <WaIcon />
-        <T path="label" v={b.data.label} placeholder="Pesan via WhatsApp" />
+        <T path="label" v={b.data.label} placeholder={tx("Pesan via WhatsApp")} />
       </a>
     );
   }
-  if (!href) return floating ? null : <p className="s-muted">Nomor WhatsApp belum diatur di Profil bisnis.</p>;
+  if (!href) return floating ? null : <p className="s-muted">{tx("Nomor WhatsApp belum diatur di Profil bisnis.")}</p>;
   return (
     <a className={floating ? "s-wa-float" : "s-btn s-wa"} href={href} target="_blank" rel="noopener noreferrer" aria-label={floating ? label : undefined}>
       <WaIcon />
@@ -285,15 +294,16 @@ export function StudioSite(props: StudioSiteProps) {
           <footer className="sv2-foot">
             <span>© {props.business.profile.name}</span>
             {/* UAT 15 Nov customer #5: keranjang/pesanan/akun terjangkau dari halaman depan juga. */}
-            <nav aria-label="Belanja">
-              <a href="/keranjang">Keranjang</a>
-              <a href="/pesanan">Pesanan saya</a>
-              <a href="/akun">Akun</a>
+            <nav aria-label={tx("Belanja")}>
+              <a href="/keranjang">{tx("Keranjang")}</a>
+              <a href="/pesanan">{tx("Pesanan saya")}</a>
+              <a href="/akun">{tx("Akun")}</a>
             </nav>
-            <nav aria-label="Informasi toko">
-              <a href="/kebijakan-privasi">Kebijakan privasi</a>
-              <a href="/syarat-transaksi">Syarat transaksi</a>
+            <nav aria-label={tx("Informasi toko")}>
+              <a href="/kebijakan-privasi">{tx("Kebijakan privasi")}</a>
+              <a href="/syarat-transaksi">{tx("Syarat transaksi")}</a>
             </nav>
+            {!editing && <LanguageSwitch className="s-lang" />}
           </footer>
         </div>
       </div>
@@ -350,11 +360,11 @@ function EditorChat({ b, variant, open, primary, floating, selected, onSelect }:
 
 /** Pratinjau tombol WhatsApp melayang di editor. */
 function WaPlaceholder({ b, business, selected, onSelect }: { b: BlockV2; business: Business; selected?: boolean; onSelect?: () => void }) {
-  const label = text(b.data.label) || "Pesan via WhatsApp";
+  const label = text(b.data.label) || tx("Pesan via WhatsApp");
   const href = whatsappHref(business.profile.whatsapp ?? business.profile.phone, text(b.data.message));
   return (
     <span className={`s-wa-float${selected ? " sf-float-selected" : ""}${href ? "" : " sf-wa-nonum"}`} data-editor-preview="" data-block-id={b.id}
-      title={href ? label : "Nomor WhatsApp belum diatur di Profil bisnis — tombol ini tidak tampil di situs"}
+      title={href ? label : tx("Nomor WhatsApp belum diatur di Profil bisnis — tombol ini tidak tampil di situs")}
       onPointerDown={onSelect}>
       <svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.1 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.1 5.1 0 0 0 1.1 2.7 11.7 11.7 0 0 0 4.5 4c1.7.7 2.3.8 3.2.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.1-1.2l-.4-.3Z" /></svg>
       <span className="s-sr-only">{label}</span>

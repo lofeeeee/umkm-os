@@ -8,6 +8,9 @@ import { T, useEditing } from "./edit";
 import { PublicNav } from "./PublicNav";
 import { fontStack, primaryVars, safeColor, safeHref, sizesFor, srcSet, text, waLink } from "./safe";
 import type { Business, Json, OpenStatus, PageContent, Section } from "./types";
+import { t as tx, m } from "@/i18n";
+import { rupiah } from "@/lib/labels";
+import { LanguageSwitch } from "@/i18n/react";
 
 export type SiteTheme = {
   primary: string;
@@ -54,12 +57,10 @@ export interface GridProduct {
   available: boolean;
 }
 
-function rp(v: string): string {
-  const [i, f = "00"] = v.split(".");
-  return `Rp${(i ?? "0").replace(/\B(?=(\d{3})+(?!\d))/g, ".")}${f === "00" ? "" : `,${f}`}`;
-}
+/** Harga produk: format sama dengan dasbor (pemisah ribuan mengikuti bahasa). */
+const rp = (v: string): string => rupiah(v);
 
-const DAYS = ["", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"];
+const DAYS = ["", m("Senin"), m("Selasa"), m("Rabu"), m("Kamis"), m("Jumat"), m("Sabtu"), m("Minggu")];
 
 type Data = Section["data"];
 
@@ -114,7 +115,7 @@ function Cta({ cta }: { cta: Json | undefined }) {
 function Title({ v }: { v: Json | undefined }) {
   const t = text(v);
   const editing = useEditing();
-  return t || editing ? <h2 className="s-title"><T path="title" v={v} placeholder="Judul" /></h2> : null;
+  return t || editing ? <h2 className="s-title"><T path="title" v={v} placeholder={tx("Judul")} /></h2> : null;
 }
 
 function Paragraphs({ v, path = "body" }: { v: Json | undefined; path?: string }) {
@@ -132,18 +133,19 @@ function Paragraphs({ v, path = "body" }: { v: Json | undefined; path?: string }
 
 function Subtitle({ v }: { v: Json | undefined }) {
   const editing = useEditing();
-  return text(v) || editing ? <p className="s-lead"><T path="subtitle" v={v} multiline placeholder="Kalimat pendek tentang usaha Anda" /></p> : null;
+  return text(v) || editing ? <p className="s-lead"><T path="subtitle" v={v} multiline placeholder={tx("Kalimat pendek tentang usaha Anda")} /></p> : null;
 }
 
 function Caption({ v, path }: { v: Json | undefined; path: string }) {
   const editing = useEditing();
-  return text(v) || editing ? <figcaption><T path={path} v={v} placeholder="Keterangan" /></figcaption> : null;
+  return text(v) || editing ? <figcaption><T path={path} v={v} placeholder={tx("Keterangan")} /></figcaption> : null;
 }
 
 function SectionBody({ s, props }: { s: Section; props: SiteProps }) {
   const d: Data = s.data;
   const { business: b, assetUrl, content } = props;
   const theme = content.theme as (PageContent["theme"] & SiteTheme) | undefined;
+  const editing = useEditing();
   switch (s.type) {
     case "header": {
       // Renderer v1 (warisan): header selalu jadi bilah atas. Gaya `side` di v1 tidak pernah
@@ -167,7 +169,7 @@ function SectionBody({ s, props }: { s: Section; props: SiteProps }) {
       return (
         <div className={`s-hero${hasImg(d.image ?? b.profile.cover ?? undefined, assetUrl) ? " has-media" : ""}`}>
           <div className="s-hero-text">
-            <h1><T path="title" v={d.title} placeholder="Judul utama" /></h1>
+            <h1><T path="title" v={d.title} placeholder={tx("Judul utama")} /></h1>
             <Subtitle v={d.subtitle} />
             <Cta cta={d.cta} />
           </div>
@@ -208,8 +210,8 @@ function SectionBody({ s, props }: { s: Section; props: SiteProps }) {
       return (
         <div>
           <Title v={d.title} />
-          {props.products === undefined && <p className="s-muted">Produk aktif toko tampil di sini.</p>}
-          {props.products !== undefined && items.length === 0 && <p className="s-muted">Belum ada produk.</p>}
+          {props.products === undefined && <p className="s-muted">{tx("Produk aktif toko tampil di sini.")}</p>}
+          {props.products !== undefined && items.length === 0 && <p className="s-muted">{tx("Belum ada produk.")}</p>}
           <div className="s-products">
             {items.map((p) => (
               <a key={p.slug} className="s-product" href={`/produk/${p.slug}`}>
@@ -223,7 +225,7 @@ function SectionBody({ s, props }: { s: Section; props: SiteProps }) {
                 <span className="s-product-price">
                   {p.promo_price ? <><s>{rp(p.price)}</s> {rp(p.promo_price)}</> : rp(p.price)}
                 </span>
-                {!p.available && <span className="s-muted">Stok habis</span>}
+                {!p.available && <span className="s-muted">{tx("Stok habis")}</span>}
               </a>
             ))}
           </div>
@@ -234,7 +236,7 @@ function SectionBody({ s, props }: { s: Section; props: SiteProps }) {
       return (
         <div className={`s-promo${hasImg(d.image, assetUrl) ? " has-media" : ""}`}>
           <div>
-            <h2 className="s-title"><T path="title" v={d.title} placeholder="Judul promo" /></h2>
+            <h2 className="s-title"><T path="title" v={d.title} placeholder={tx("Judul promo")} /></h2>
             <Paragraphs v={d.body} />
             <Cta cta={d.cta} />
           </div>
@@ -279,7 +281,7 @@ function SectionBody({ s, props }: { s: Section; props: SiteProps }) {
             {list(d.items).map((t, i) => (
               <blockquote key={i} className="s-card">
                 <p>“<T path={`items.${i}.quote`} v={t.quote} multiline />”</p>
-                <cite><T path={`items.${i}.name`} v={t.name} placeholder="Nama" /></cite>
+                <cite><T path={`items.${i}.name`} v={t.name} placeholder={tx("Nama")} /></cite>
               </blockquote>
             ))}
           </div>
@@ -291,11 +293,11 @@ function SectionBody({ s, props }: { s: Section; props: SiteProps }) {
           <Title v={d.title} />
           {props.status && (
             <p className={`s-status s-status-${props.status.status}`}>
-              {props.status.status === "open" ? "Buka sekarang" : "Tutup sekarang"}
+              {props.status.status === "open" ? tx("Buka sekarang") : tx("Tutup sekarang")}
             </p>
           )}
           {b.hours.length === 0 ? (
-            <p className="s-muted">Jam buka belum diatur.</p>
+            <p className="s-muted">{tx("Jam buka belum diatur.")}</p>
           ) : (
             <table className="s-hours">
               <tbody>
@@ -303,8 +305,8 @@ function SectionBody({ s, props }: { s: Section; props: SiteProps }) {
                   const h = b.hours.find((x) => x.day_of_week === day);
                   return (
                     <tr key={day}>
-                      <th scope="row">{DAYS[day]}</th>
-                      <td>{h ? `${h.open} – ${h.close}` : "Tutup"}</td>
+                      <th scope="row">{tx(DAYS[day] ?? "")}</th>
+                      <td>{h ? tx("{0} – {1}", h.open, h.close) : tx("Tutup")}</td>
                     </tr>
                   );
                 })}
@@ -317,7 +319,7 @@ function SectionBody({ s, props }: { s: Section; props: SiteProps }) {
       return (
         <div>
           <Title v={d.title} />
-          {b.addresses.length === 0 && <p className="s-muted">Alamat belum diatur.</p>}
+          {b.addresses.length === 0 && <p className="s-muted">{tx("Alamat belum diatur.")}</p>}
           <ul className="s-plain">
             {b.addresses.map((a, i) => (
               <li key={i}>
@@ -327,7 +329,7 @@ function SectionBody({ s, props }: { s: Section; props: SiteProps }) {
                   <>
                     {" "}
                     <Link href={`https://www.openstreetmap.org/?mlat=${a.latitude}&mlon=${a.longitude}#map=17/${a.latitude}/${a.longitude}`}>
-                      Lihat peta
+                      {tx("Lihat peta")}
                     </Link>
                   </>
                 )}
@@ -336,10 +338,10 @@ function SectionBody({ s, props }: { s: Section; props: SiteProps }) {
           </ul>
           {(b.profile.pickup_available || b.profile.delivery_available) && (
             <p className="s-muted">
-              {[b.profile.pickup_available && "Bisa ambil di tempat", b.profile.delivery_available && "Bisa diantar"]
+              {[b.profile.pickup_available && tx("Bisa ambil di tempat"), b.profile.delivery_available && tx("Bisa diantar")]
                 .filter(Boolean)
                 .join(" · ")}
-              {b.profile.fulfillment_note ? ` — ${b.profile.fulfillment_note}` : ""}
+              {b.profile.fulfillment_note ? tx(" — {0}", b.profile.fulfillment_note) : ""}
             </p>
           )}
         </div>
@@ -352,9 +354,9 @@ function SectionBody({ s, props }: { s: Section; props: SiteProps }) {
       return (
         <div>
           <Title v={d.title} />
-          {!any && <p className="s-muted">Kontak belum diatur.</p>}
+          {!any && <p className="s-muted">{tx("Kontak belum diatur.")}</p>}
           <div className="s-contact">
-            {d.show_whatsapp === true && wa && <Link className="s-btn" href={wa}>WhatsApp</Link>}
+            {d.show_whatsapp === true && wa && <Link className="s-btn" href={wa}>{tx("WhatsApp")}</Link>}
             {d.show_phone === true && p.phone && <Link href={`tel:${p.phone}`}>{p.phone}</Link>}
             {d.show_email === true && p.email && <Link href={`mailto:${p.email}`}>{p.email}</Link>}
           </div>
@@ -371,9 +373,10 @@ function SectionBody({ s, props }: { s: Section; props: SiteProps }) {
         <div className="s-foot">
           <span><T path="text" v={d.text} /></span>
           <span className="s-muted">
-            © {b.profile.name} · <a href="/keranjang">Keranjang</a> · <a href="/pesanan">Pesanan saya</a> · <a href="/akun">Akun</a>
-            {" · "}<a href="/kebijakan-privasi">Kebijakan privasi</a> · <a href="/syarat-transaksi">Syarat transaksi</a>
+            © {b.profile.name} · <a href="/keranjang">{tx("Keranjang")}</a> · <a href="/pesanan">{tx("Pesanan saya")}</a> · <a href="/akun">{tx("Akun")}</a>
+            {" · "}<a href="/kebijakan-privasi">{tx("Kebijakan privasi")}</a> · <a href="/syarat-transaksi">{tx("Syarat transaksi")}</a>
           </span>
+          {!editing && <LanguageSwitch className="s-lang" />}
         </div>
       );
     default:
@@ -424,7 +427,7 @@ export function Site(props: SiteProps) {
           className={`s s--${s.type}${s.enabled ? "" : " s-disabled"}${s.type === "header" && isSticky ? " s-sticky" : ""}`}
           data-section-type={s.type}
         >
-          {preview && !s.enabled && <div className="s-disabled-badge">Nonaktif — tidak tampil di publik</div>}
+          {preview && !s.enabled && <div className="s-disabled-badge">{tx("Nonaktif — tidak tampil di publik")}</div>}
           <div className="s-inner">
             <SectionBody s={s} props={props} />
           </div>

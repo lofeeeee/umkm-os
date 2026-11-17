@@ -429,3 +429,9 @@
 /* Blok yang sedang diseret melayang di atas yang lain dan mengikuti kursor tanpa jeda. */
 .sf-editing .sv2-block:has(> .sf-block-active), .sf-editing .sv2-block:has(.sf-block-active) { z-index: 30; will-change: transform; transition: none; }
 .sf-editing .sf-block-active { transform: scale(1.01); box-shadow: 0 28px 56px -18px rgb(15 23 42 / 0.5); opacity: 0.94; }
+
+/* Pemilih bahasa di situs toko (kaki halaman & navigasi keranjang). */
+.s-lang { display: inline-flex; gap: 2px; padding: 2px; border-radius: 999px; background: var(--s-soft, #f4f4f5); font-family: var(--s-font, inherit); }
+.s-lang button { min-width: 32px; min-height: 24px; padding: 0 8px; border: 0; border-radius: 999px; background: transparent; color: var(--s-muted, #63636e); font: 700 0.75rem/1 inherit; cursor: pointer; }
+.s-lang button[aria-pressed="true"] { background: var(--s-primary, #4f46e5); color: var(--s-on-primary, #fff); }
+.shop-nav-links .s-lang { margin-left: 4px; vertical-align: middle; }

@@ -8,6 +8,8 @@ import type { ReactNode } from "react";
 
 import { APPROVAL_STATUS, CONVERSATION_STATUS, TICKET_STATUS, status } from "@/lib/labels";
 import { Badge } from "@/ui/page";
+import { t as tx, tmap, intlLocale } from "@/i18n";
+import { Tr } from "@/i18n/react";
 
 export interface CustomerContext { id: string; name: string; email: string | null; phone: string | null; has_account: boolean }
 export interface ConversationSummary {
@@ -34,34 +36,34 @@ export interface ConversationDetail extends ConversationSummary {
   masked: boolean;
 }
 
-export const CONV_STATUS: Record<string, string> = {
+export const CONV_STATUS: Record<string, string> = tmap({
   AI: "Dijawab AI", WAITING_HUMAN: "Menunggu staf", HUMAN: "Ditangani staf", CLOSED: "Selesai",
-};
-const SENDER: Record<string, string> = { CUSTOMER: "Pelanggan", AI: "Asisten AI", ADMIN: "Staf", SYSTEM: "Sistem" };
-const EVENT: Record<string, string> = {
+});
+const SENDER: Record<string, string> = tmap({ CUSTOMER: "Pelanggan", AI: "Asisten AI", ADMIN: "Staf", SYSTEM: "Sistem" });
+const EVENT: Record<string, string> = tmap({
   created: "Percakapan dimulai", assigned: "Ditugaskan", unassigned: "Penugasan dilepas",
   handover_requested: "Diteruskan ke staf", taken_over: "Diambil alih staf", released: "Dikembalikan ke AI", closed: "Ditutup",
-  draft_created: "Draft AI dibuat", draft_sent: "Draft AI dikirim", draft_discarded: "Draft AI dibuang",
-  draft_approval_requested: "Draft AI menunggu persetujuan",
-};
-const ACTOR: Record<string, string> = { customer: "pelanggan", ai: "AI", staff: "staf", system: "sistem" };
-const DECISION: Record<string, string> = {
-  send_auto: "dikirim otomatis", draft_for_admin: "draft untuk staf", handover: "dialihkan ke staf", human_queue: "antre staf",
-};
+  draft_created: "Draf AI dibuat", draft_sent: "Draf AI dikirim", draft_discarded: "Draf AI dibuang",
+  draft_approval_requested: "Draf AI menunggu persetujuan",
+});
+const ACTOR: Record<string, string> = tmap({ customer: "pelanggan", ai: "AI", staff: "staf", system: "sistem" });
+const DECISION: Record<string, string> = tmap({
+  send_auto: "dikirim otomatis", draft_for_admin: "draf untuk staf", handover: "dialihkan ke staf", human_queue: "antre staf",
+});
 
 export function when(iso: string): string {
   const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? iso : d.toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" });
+  return Number.isNaN(d.getTime()) ? iso : d.toLocaleString(intlLocale(), { dateStyle: "medium", timeStyle: "short" });
 }
 
 function RunMeta({ r }: { r: AiRun }) {
   return (
     <div className="d-muted cv-run" data-testid="ai-meta">
-      {r.provider_name ?? "provider"} · {r.model} ({r.source}) · {r.prompt_tokens}+{r.completion_tokens} token · {r.latency_ms} ms
+      <Tr s="{0} · {1} ({2}) · {3}+{4} token · {5} ms" a={[r.provider_name ?? "provider", r.model, r.source, r.prompt_tokens, r.completion_tokens, r.latency_ms]} />
       {r.decision && <> · {DECISION[r.decision] ?? r.decision}</>}
-      {r.status !== "ok" && <> · status {r.status}{r.error_code ? ` (${r.error_code})` : ""}</>}
+      {r.status !== "ok" && <>{" "}{tx("· status")}{" "}{r.status}{r.error_code ? ` (${r.error_code})` : ""}</>}
       {r.tool_calls.length > 0 && (
-        <ul aria-label="Tool">
+        <ul aria-label={tx("Tool")}>
           {r.tool_calls.map((t, i) => (
             <li key={i}>{t.name} — {t.status}{t.args_summary && Object.keys(t.args_summary).length > 0 ? ` ${JSON.stringify(t.args_summary)}` : ""}</li>
           ))}
@@ -80,12 +82,12 @@ export function ConversationView({ d, staff }: { d: ConversationDetail; staff?: 
   return (
     <div className="cv">
       {d.masked && (
-        <div className="d-alert d-alert-info" role="note"><div>Data sensitif (kontak pelanggan, email/nomor dalam pesan) disamarkan untuk peran Anda.</div></div>
+        <div className="d-alert d-alert-info" role="note"><div>{tx("Data sensitif (kontak pelanggan, email/nomor dalam pesan) disamarkan untuk peran Anda.")}</div></div>
       )}
       <div className="d-split">
         <div className="d-stack" style={{ alignContent: "start", minWidth: 0 }}>
-          <section className="d-card" aria-label="Timeline">
-            <header className="d-card-head"><div className="d-card-head-text"><h2>Percakapan</h2><p>{d.timeline.length} pesan · dimulai {when(d.created_at)}</p></div></header>
+          <section className="d-card" aria-label={tx("Timeline")}>
+            <header className="d-card-head"><div className="d-card-head-text"><h2>{tx("Percakapan")}</h2><p>{d.timeline.length}{" "}{tx("pesan · dimulai")}{" "}{when(d.created_at)}</p></div></header>
             <ol className="cv-timeline">
               {d.timeline.map((m) => (
                 <li key={m.id} className={`cv-msg cv-${m.sender.toLowerCase()}`}>
@@ -101,7 +103,7 @@ export function ConversationView({ d, staff }: { d: ConversationDetail; staff?: 
             </ol>
             {d.other_ai_runs.length > 0 && (
               <details className="d-details" style={{ marginTop: 16 }}>
-                <summary>Pemanggilan AI tanpa balasan ({d.other_ai_runs.length})</summary>
+                <summary><Tr s="Pemanggilan AI tanpa balasan ({0})" a={[d.other_ai_runs.length]} /></summary>
                 {d.other_ai_runs.map((r) => <RunMeta key={r.run_id} r={r} />)}
               </details>
             )}
@@ -110,49 +112,49 @@ export function ConversationView({ d, staff }: { d: ConversationDetail; staff?: 
         </div>
 
         <div className="d-stack" style={{ alignContent: "start", minWidth: 0 }}>
-          <section className="d-card" aria-label="Status percakapan">
-            <header className="d-card-head"><div className="d-card-head-text"><h2>Status</h2></div><Badge tone={st.tone}>{st.label}</Badge></header>
+          <section className="d-card" aria-label={tx("Status percakapan")}>
+            <header className="d-card-head"><div className="d-card-head-text"><h2>{tx("Status")}</h2></div><Badge tone={st.tone}>{st.label}</Badge></header>
             <dl className="d-dl">
-              <dt>Status</dt><dd>{st.label}</dd>
-              <dt>Kanal</dt><dd>{d.channel === "web" ? "Chat website" : d.channel}</dd>
-              <dt>Ditangani</dt><dd>{d.assignee_email ?? "—"}</dd>
-              <dt>Persetujuan AI</dt><dd>{d.consent_version} · {when(d.consented_at)}</dd>
-              {d.closed_at && <><dt>Ditutup</dt><dd>{when(d.closed_at)}</dd></>}
+              <dt>{tx("Status")}</dt><dd>{st.label}</dd>
+              <dt>{tx("Kanal")}</dt><dd>{d.channel === "web" ? tx("Chat website") : d.channel}</dd>
+              <dt>{tx("Ditangani")}</dt><dd>{d.assignee_email ?? "—"}</dd>
+              <dt>{tx("Persetujuan AI")}</dt><dd>{d.consent_version} · {when(d.consented_at)}</dd>
+              {d.closed_at && <><dt>{tx("Ditutup")}</dt><dd>{when(d.closed_at)}</dd></>}
             </dl>
           </section>
-          <section className="d-card" aria-label="Pelanggan">
-            <header className="d-card-head"><div className="d-card-head-text"><h2>Pelanggan</h2></div></header>
+          <section className="d-card" aria-label={tx("Pelanggan")}>
+            <header className="d-card-head"><div className="d-card-head-text"><h2>{tx("Pelanggan")}</h2></div></header>
             {d.customer ? (
               <dl className="d-dl">
-                <dt>Nama</dt><dd>{d.customer.name}</dd>
-                <dt>Email</dt><dd>{d.customer.email ?? "—"}</dd>
-                <dt>Telepon</dt><dd>{d.customer.phone ?? "—"}</dd>
-                <dt>Akun</dt><dd>{d.customer.has_account ? "Terverifikasi" : "Tamu"}</dd>
+                <dt>{tx("Nama")}</dt><dd>{d.customer.name}</dd>
+                <dt>{tx("Email")}</dt><dd>{d.customer.email ?? "—"}</dd>
+                <dt>{tx("Telepon")}</dt><dd>{d.customer.phone ?? "—"}</dd>
+                <dt>{tx("Akun")}</dt><dd>{d.customer.has_account ? tx("Terverifikasi") : tx("Tamu")}</dd>
               </dl>
-            ) : <p className="d-muted">Pengunjung anonim (belum masuk akun).</p>}
+            ) : <p className="d-muted">{tx("Pengunjung anonim (belum masuk akun).")}</p>}
           </section>
-          <section className="d-card" aria-label="Tiket">
-            <header className="d-card-head"><div className="d-card-head-text"><h2>Tiket terkait</h2></div></header>
-            {d.tickets.length === 0 ? <p className="d-muted">Belum ada.</p> : (
+          <section className="d-card" aria-label={tx("Tiket")}>
+            <header className="d-card-head"><div className="d-card-head-text"><h2>{tx("Tiket terkait")}</h2></div></header>
+            {d.tickets.length === 0 ? <p className="d-muted">{tx("Belum ada.")}</p> : (
               <ul className="d-facts">{d.tickets.map((x) => <li key={x.id}><span><strong>{x.code}</strong> {x.subject} <Badge tone={status(TICKET_STATUS, x.status).tone} plain>{status(TICKET_STATUS, x.status).label}</Badge></span></li>)}</ul>
             )}
           </section>
-          <section className="d-card" aria-label="Riwayat">
-            <header className="d-card-head"><div className="d-card-head-text"><h2>Riwayat penugasan</h2></div></header>
+          <section className="d-card" aria-label={tx("Riwayat")}>
+            <header className="d-card-head"><div className="d-card-head-text"><h2>{tx("Riwayat penugasan")}</h2></div></header>
             <ol className="d-timeline">
               {[...d.history].reverse().map((e, i) => (
                 <li key={i}>
-                  <span>{EVENT[e.kind] ?? e.kind} — oleh {ACTOR[e.actor_type] ?? e.actor_type}{e.actor_email ? ` (${e.actor_email})` : ""}</span>
+                  <span>{EVENT[e.kind] ?? e.kind}{" "}{tx("— oleh")}{" "}{ACTOR[e.actor_type] ?? e.actor_type}{e.actor_email ? ` (${e.actor_email})` : ""}</span>
                   <span className="d-muted d-small">{when(e.created_at)}</span>
                 </li>
               ))}
             </ol>
           </section>
           {d.approvals.length > 0 && (
-            <section className="d-card" aria-label="Approval">
-              <header className="d-card-head"><div className="d-card-head-text"><h2>Persetujuan</h2></div></header>
+            <section className="d-card" aria-label={tx("Persetujuan")}>
+              <header className="d-card-head"><div className="d-card-head-text"><h2>{tx("Persetujuan")}</h2></div></header>
               <ul className="d-facts">
-                {d.approvals.map((a) => <li key={a.id}><span>{a.summary} — <Badge tone={status(APPROVAL_STATUS, a.status).tone} plain>{status(APPROVAL_STATUS, a.status).label}</Badge> <span className="d-muted">(langkah {a.current_step + 1})</span></span></li>)}
+                {d.approvals.map((a) => <li key={a.id}><span>{a.summary} — <Badge tone={status(APPROVAL_STATUS, a.status).tone} plain>{status(APPROVAL_STATUS, a.status).label}</Badge> <span className="d-muted"><Tr s="(langkah {0})" a={[a.current_step + 1]} /></span></span></li>)}
               </ul>
             </section>
           )}

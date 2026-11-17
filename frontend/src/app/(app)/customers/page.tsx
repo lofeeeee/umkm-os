@@ -14,6 +14,7 @@ import { ORDER_STATUS, relatif, rupiah, status, tanggal } from "@/lib/labels";
 import { confirm } from "@/ui/dialog";
 import { Badge, BusyButton, Card, EmptyState, PageHeader, PageSkeleton, SearchInput, Skeleton } from "@/ui/page";
 import { toast } from "@/ui/toast";
+import { t as tx } from "@/i18n";
 
 interface Summary { id: string; name: string; email: string | null; phone: string | null; tags: string[]; has_account: boolean; created_at: string; deletion_requested: boolean }
 interface Customer extends Summary {
@@ -44,20 +45,20 @@ function Customers({ ctx }: { ctx: TenantCtx }) {
   if (open) return <Detail ctx={ctx} url={`${base}/${open}`} onBack={() => { setOpen(null); void load(); }} />;
   return (
     <>
-      <PageHeader title="Pelanggan" description="Pelanggan tercatat otomatis saat memesan. Tambahkan tag dan catatan internal untuk layanan yang lebih personal." />
+      <PageHeader title={tx("Pelanggan")} description={tx("Pelanggan tercatat otomatis saat memesan. Tambahkan tag dan catatan internal untuk layanan yang lebih personal.")} />
       <Alert kind="error">{err}</Alert>
       <div className="d-toolbar">
-        <SearchInput label="Cari pelanggan" placeholder="Cari nama, email, atau telepon…" value={q} onChange={setQ} />
+        <SearchInput label={tx("Cari pelanggan")} placeholder={tx("Cari nama, email, atau telepon…")} value={q} onChange={setQ} />
       </div>
       <div className="d-table-wrap">
         {items === null ? <div style={{ padding: 20 }}><Skeleton lines={5} /></div> : items.length === 0 ? (
-          <EmptyState icon={Users} title={q ? "Tidak ada yang cocok" : "Belum ada pelanggan"}
-            action={!q ? <Link className="d-btn" href={`/website?tenant=${ctx.tenant.id}`}>Periksa Website</Link> : undefined}>
-            {q ? "Coba nama, email, atau nomor lain." : "Pelanggan tercatat otomatis saat mereka memesan lewat website toko Anda."}
+          <EmptyState icon={Users} title={q ? tx("Tidak ada yang cocok") : tx("Belum ada pelanggan")}
+            action={!q ? <Link className="d-btn" href={`/website?tenant=${ctx.tenant.id}`}>{tx("Periksa Website")}</Link> : undefined}>
+            {q ? tx("Coba nama, email, atau nomor lain.") : tx("Pelanggan tercatat otomatis saat mereka memesan lewat website toko Anda.")}
           </EmptyState>
         ) : (
           <table className="d-table d-table-stack">
-            <thead><tr><th>Nama</th><th>Kontak</th><th className="d-hide-sm">Tag</th><th className="d-hide-sm">Sejak</th><th><span className="sr-only">Aksi</span></th></tr></thead>
+            <thead><tr><th>{tx("Nama")}</th><th>{tx("Kontak")}</th><th className="d-hide-sm">{tx("Tag")}</th><th className="d-hide-sm">{tx("Sejak")}</th><th><span className="sr-only">{tx("Aksi")}</span></th></tr></thead>
             <tbody>
               {items.map((c) => (
                 <tr key={c.id}>
@@ -67,8 +68,8 @@ function Customers({ ctx }: { ctx: TenantCtx }) {
                       <div>
                         <span className="d-strong">{c.name}</span>
                         <span className="d-sub">
-                          {c.has_account ? "Punya akun" : "Tamu"}
-                          {c.deletion_requested && " · dijadwalkan hapus"}
+                          {c.has_account ? tx("Punya akun") : tx("Tamu")}
+                          {c.deletion_requested && tx(" · dijadwalkan hapus")}
                         </span>
                       </div>
                     </div>
@@ -76,7 +77,7 @@ function Customers({ ctx }: { ctx: TenantCtx }) {
                   <td>{c.email ?? <span className="d-muted">—</span>}{c.phone && <span className="d-sub">{c.phone}</span>}</td>
                   <td className="d-hide-sm"><div className="d-chips">{c.tags.map((t) => <span key={t} className="d-chip" style={{ paddingRight: 10 }}>{t}</span>)}</div></td>
                   <td className="d-hide-sm d-muted">{tanggal(c.created_at)}</td>
-                  <td className="d-actions"><button className="d-btn d-btn-sm" onClick={() => setOpen(c.id)}>Buka</button></td>
+                  <td className="d-actions"><button className="d-btn d-btn-sm" onClick={() => setOpen(c.id)}>{tx("Buka")}</button></td>
                 </tr>
               ))}
             </tbody>
@@ -118,51 +119,51 @@ function Detail({ ctx, url, onBack }: { ctx: TenantCtx; url: string; onBack: () 
   return (
     <>
       <PageHeader
-        back={{ onClick: onBack, label: "Semua pelanggan" }}
+        back={{ onClick: onBack, label: tx("Semua pelanggan") }}
         title={c.name}
-        description={`${c.has_account ? "Punya akun" : "Pelanggan tamu"} · tercatat sejak ${tanggal(c.created_at)}`}
+        description={tx("{0} · tercatat sejak {1}", c.has_account ? tx("Punya akun") : tx("Pelanggan tamu"), tanggal(c.created_at))}
         actions={can ? (
           <>
-            <button className="d-btn" onClick={exportJson}><DownloadSimple weight="bold" aria-hidden="true" />Ekspor data</button>
+            <button className="d-btn" onClick={exportJson}><DownloadSimple weight="bold" aria-hidden="true" />{tx("Ekspor data")}</button>
             {!c.deletion_requested && (
               <button className="d-btn d-btn-danger" onClick={async () => {
-                if (await confirm({ title: "Minta hapus data pelanggan?", body: "Data pelanggan akan dianonimkan otomatis 30 hari setelah permintaan ini. Riwayat pesanan tetap tersimpan tanpa identitas.", confirmLabel: "Minta hapus data", danger: true })) {
-                  void run(() => api("POST", `${url}/deletion-request`), "Permintaan hapus dicatat.");
+                if (await confirm({ title: tx("Minta hapus data pelanggan?"), body: tx("Data pelanggan akan dianonimkan otomatis 30 hari setelah permintaan ini. Riwayat pesanan tetap tersimpan tanpa identitas."), confirmLabel: tx("Minta hapus data"), danger: true })) {
+                  void run(() => api("POST", `${url}/deletion-request`), tx("Permintaan hapus dicatat."));
                 }
-              }}><Trash weight="bold" aria-hidden="true" />Minta hapus data</button>
+              }}><Trash weight="bold" aria-hidden="true" />{tx("Minta hapus data")}</button>
             )}
           </>
         ) : undefined}
       />
-      {c.deletion_requested && <Alert kind="warn">Data pelanggan ini dijadwalkan untuk dianonimkan.</Alert>}
+      {c.deletion_requested && <Alert kind="warn">{tx("Data pelanggan ini dijadwalkan untuk dianonimkan.")}</Alert>}
       <Alert kind="error">{err}</Alert>
       <div className="d-split">
         <div style={{ minWidth: 0 }}>
-          <Card title="Profil" description="Catatan internal tidak pernah terlihat pelanggan.">
+          <Card title={tx("Profil")} description={tx("Catatan internal tidak pernah terlihat pelanggan.")}>
             <form onSubmit={(e) => {
               e.preventDefault();
               void run(() => api("PUT", url, { json: {
                 name: f.name, email: f.email || null, phone: f.phone || null,
                 tags: f.tags.split(",").map((t) => t.trim()).filter(Boolean), internal_note: f.internal_note || null,
-              } }), "Tersimpan.");
+              } }), tx("Tersimpan."));
             }}>
               <div className="d-grid">
-                <label className="d-field"><span>Nama</span><input disabled={!can} value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></label>
-                <label className="d-field"><span>Email</span><input type="email" disabled={!can} value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></label>
-                <label className="d-field"><span>Telepon</span><input type="tel" disabled={!can} value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} /></label>
-                <label className="d-field"><span>Tag <span className="d-opt">(pisahkan koma)</span></span><input disabled={!can} placeholder="mis. langganan, grosir" value={f.tags} onChange={(e) => setF({ ...f, tags: e.target.value })} /></label>
+                <label className="d-field"><span>{tx("Nama")}</span><input disabled={!can} value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></label>
+                <label className="d-field"><span>{tx("Email")}</span><input type="email" disabled={!can} value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></label>
+                <label className="d-field"><span>{tx("Telepon")}</span><input type="tel" disabled={!can} value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} /></label>
+                <label className="d-field"><span>{tx("Tag")}{" "}<span className="d-opt">{tx("(pisahkan koma)")}</span></span><input disabled={!can} placeholder={tx("mis. langganan, grosir")} value={f.tags} onChange={(e) => setF({ ...f, tags: e.target.value })} /></label>
               </div>
-              <label className="d-field"><span>Catatan internal</span>
-                <textarea disabled={!can} rows={3} maxLength={2000} placeholder="mis. Suka kopi tanpa gula" value={f.internal_note} onChange={(e) => setF({ ...f, internal_note: e.target.value })} />
+              <label className="d-field"><span>{tx("Catatan internal")}</span>
+                <textarea disabled={!can} rows={3} maxLength={2000} placeholder={tx("mis. Suka kopi tanpa gula")} value={f.internal_note} onChange={(e) => setF({ ...f, internal_note: e.target.value })} />
               </label>
-              {can && <BusyButton busy={busy}>Simpan</BusyButton>}
+              {can && <BusyButton busy={busy}>{tx("Simpan")}</BusyButton>}
             </form>
           </Card>
-          <Card flush title="Riwayat pesanan">
-            {c.orders.length === 0 ? <EmptyState title="Belum ada pesanan" /> : (
+          <Card flush title={tx("Riwayat pesanan")}>
+            {c.orders.length === 0 ? <EmptyState title={tx("Belum ada pesanan")} /> : (
               <div className="d-table-wrap">
                 <table className="d-table">
-                  <thead><tr><th>Pesanan</th><th>Status</th><th className="d-num">Total</th></tr></thead>
+                  <thead><tr><th>{tx("Pesanan")}</th><th>{tx("Status")}</th><th className="d-num">{tx("Total")}</th></tr></thead>
                   <tbody>
                     {c.orders.map((o) => {
                       const st = status(ORDER_STATUS, o.status);
@@ -181,16 +182,16 @@ function Detail({ ctx, url, onBack }: { ctx: TenantCtx; url: string; onBack: () 
           </Card>
         </div>
         <div className="d-stack" style={{ alignContent: "start" }}>
-          <Card title="Ringkasan">
+          <Card title={tx("Ringkasan")}>
             <dl className="d-dl">
-              <dt>Pesanan</dt><dd>{c.orders.length}</dd>
-              <dt>Belanja selesai</dt><dd>{rupiah(spent)}</dd>
-              <dt>Terakhir pesan</dt><dd>{c.orders[0] ? relatif(c.orders[0].created_at) : "—"}</dd>
+              <dt>{tx("Pesanan")}</dt><dd>{c.orders.length}</dd>
+              <dt>{tx("Belanja selesai")}</dt><dd>{rupiah(spent)}</dd>
+              <dt>{tx("Terakhir pesan")}</dt><dd>{c.orders[0] ? relatif(c.orders[0].created_at) : "—"}</dd>
             </dl>
           </Card>
-          <Card title="Alamat">
-            {c.addresses.length === 0 ? <p className="d-muted">Belum ada alamat.</p> : (
-              <ul className="d-facts">{c.addresses.map((a, i) => <li key={i}><span><strong>{a.label ?? `Alamat ${i + 1}`}</strong><br />{a.address}{a.note && <><br /><span className="d-muted">{a.note}</span></>}</span></li>)}</ul>
+          <Card title={tx("Alamat")}>
+            {c.addresses.length === 0 ? <p className="d-muted">{tx("Belum ada alamat.")}</p> : (
+              <ul className="d-facts">{c.addresses.map((a, i) => <li key={i}><span><strong>{a.label ?? tx("Alamat {0}", i + 1)}</strong><br />{a.address}{a.note && <><br /><span className="d-muted">{a.note}</span></>}</span></li>)}</ul>
             )}
           </Card>
         </div>

@@ -6,6 +6,7 @@ import Link from "@/ui/link";
 import type { ReactNode } from "react";
 
 import { ArrowLeft, MagnifyingGlass, Tray } from "@phosphor-icons/react/ssr";
+import { t as tx } from "@/i18n";
 
 export function PageHeader({
   title, description, actions, back,
@@ -98,7 +99,7 @@ export function Skeleton({ lines = 3 }: { lines?: number }) {
 /** Kerangka halaman saat data pertama dimuat: judul + blok, bukan teks "Memuat…". */
 export function PageSkeleton() {
   return (
-    <div aria-busy="true" aria-label="Memuat">
+    <div aria-busy="true" aria-label={tx("Memuat")}>
       <span className="d-skel d-skel-title" />
       <span className="d-skel d-skel-block" style={{ marginBottom: 16 }} />
       <span className="d-skel d-skel-block" style={{ height: 220 }} />
@@ -148,7 +149,7 @@ export function Tabs<T extends string>({
           type="button"
           role="tab"
           aria-selected={value === it.value}
-          aria-label={it.count !== undefined ? `${it.label} (${it.count})` : undefined}
+          aria-label={it.count !== undefined ? tx("{0} ({1})", it.label, it.count) : undefined}
           onClick={() => onChange(it.value)}
         >
           {it.label}

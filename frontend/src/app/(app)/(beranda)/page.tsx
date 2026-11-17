@@ -15,6 +15,8 @@ import { Alert, WithTenant, type TenantCtx } from "@/dashboard/shell";
 import { api } from "@/lib/api";
 import { ORDER_STATUS, angka, relatif, rupiah, rupiahShort, status } from "@/lib/labels";
 import { Badge, Card, EmptyState, Stat } from "@/ui/page";
+import { t as tx } from "@/i18n";
+import { Tr } from "@/i18n/react";
 
 interface Overview {
   revenue: string; orders: number; paid_orders: number;
@@ -31,10 +33,10 @@ export default function Home() {
 
 function greeting(): string {
   const h = new Date().getHours();
-  if (h < 11) return "Selamat pagi";
-  if (h < 15) return "Selamat siang";
-  if (h < 18) return "Selamat sore";
-  return "Selamat malam";
+  if (h < 11) return tx("Selamat pagi");
+  if (h < 15) return tx("Selamat siang");
+  if (h < 18) return tx("Selamat sore");
+  return tx("Selamat malam");
 }
 
 /** Petunjuk tata letak dari kunjungan terakhir (per toko) agar kerangka seukuran konten akhir —
@@ -49,8 +51,8 @@ function writeHint(t: string, h: LayoutHint) {
 }
 
 const STAT_LABELS = [
-  { label: "Omzet", icon: CurrencyCircleDollar }, { label: "Pesanan", icon: Receipt }, { label: "Stok menipis", icon: Stack },
-  { label: "Pelanggan", icon: Users }, { label: "Tiket", icon: ChatCircleDots },
+  { get label() { return tx("Omzet"); }, icon: CurrencyCircleDollar }, { get label() { return tx("Pesanan"); }, icon: Receipt }, { get label() { return tx("Stok menipis"); }, icon: Stack },
+  { get label() { return tx("Pelanggan"); }, icon: Users }, { get label() { return tx("Tiket"); }, icon: ChatCircleDots },
 ];
 
 /** Hasil `null` = gagal/tak berizin; langkah tersebut dianggap belum diketahui (disembunyikan). */
@@ -101,11 +103,11 @@ function Dashboard({ ctx }: { ctx: TenantCtx }) {
   }, [base, ctx.can, ctx.tenant.id]);
 
   const steps: { key: keyof Setup; title: string; desc: string; href: string; icon: typeof Globe }[] = [
-    { key: "profile", title: "Lengkapi profil bisnis", desc: "Alamat, kontak, dan jam buka tampil di website.", href: `/business${q}`, icon: Buildings },
-    { key: "product", title: "Tambahkan produk pertama", desc: "Produk aktif tampil di katalog dan bisa dipesan.", href: `/products${q}`, icon: Package },
-    { key: "qris", title: "Aktifkan pembayaran QRIS", desc: "Unggah QRIS toko dan nyalakan pesanan online.", href: `/shop-settings${q}`, icon: CurrencyCircleDollar },
-    { key: "website", title: "Terbitkan website", desc: "Pilih template, sesuaikan, lalu terbitkan.", href: `/website${q}`, icon: Globe },
-    { key: "team", title: "Undang anggota tim", desc: "Bagi tugas dengan peran dan izin yang tepat.", href: `/team${q}`, icon: UsersThree },
+    { key: "profile", title: tx("Lengkapi profil bisnis"), desc: tx("Alamat, kontak, dan jam buka tampil di website."), href: `/business${q}`, icon: Buildings },
+    { key: "product", title: tx("Tambahkan produk pertama"), desc: tx("Produk aktif tampil di katalog dan bisa dipesan."), href: `/products${q}`, icon: Package },
+    { key: "qris", title: tx("Aktifkan pembayaran QRIS"), desc: tx("Unggah QRIS toko dan nyalakan pesanan online."), href: `/shop-settings${q}`, icon: CurrencyCircleDollar },
+    { key: "website", title: tx("Terbitkan website"), desc: tx("Pilih templat, sesuaikan, lalu terbitkan."), href: `/website${q}`, icon: Globe },
+    { key: "team", title: tx("Undang anggota tim"), desc: tx("Bagi tugas dengan peran dan izin yang tepat."), href: `/team${q}`, icon: UsersThree },
   ];
   const known = setup ? steps.filter((s) => setup[s.key] !== undefined) : [];
   const done = known.filter((s) => setup?.[s.key]).length;
@@ -118,41 +120,41 @@ function Dashboard({ ctx }: { ctx: TenantCtx }) {
     <>
       <div className="d-page-head">
         <div className="d-page-head-text">
-          <h1>Beranda</h1>
-          <p>{greeting()} — ini ringkasan {ctx.tenant.name} dalam 30 hari terakhir.</p>
+          <h1>{tx("Beranda")}</h1>
+          <p>{greeting()}{" "}<Tr s="— ini ringkasan {0} dalam 30 hari terakhir." a={[ctx.tenant.name]} /></p>
         </div>
         <div className="d-page-head-actions">
           {ctx.tenant.primary_hostname && (
             <a className="d-btn" href={`https://${ctx.tenant.primary_hostname}`} target="_blank" rel="noreferrer">
-              <Globe weight="bold" aria-hidden="true" /> Lihat situs
+              <Globe weight="bold" aria-hidden="true" />{" "}{tx("Lihat situs")}
             </a>
           )}
-          <Link className="d-btn d-btn-primary" href={`/website${q}`}>Kelola website</Link>
+          <Link className="d-btn d-btn-primary" href={`/website${q}`}>{tx("Kelola website")}</Link>
         </div>
       </div>
 
       {/* P10: sinkron pembayaran GoPay — muncul tepat setelah login bila perlu tindakan. */}
       {gopay && ctx.can("tenant.update") && gopay.connected && gopay.status === "needs_relogin" && (
         <Alert kind="warn">
-          Koneksi GoPay terputus — pembayaran QRIS tidak lagi dikonfirmasi otomatis sampai disambungkan ulang.{" "}
-          <Link className="d-strong" href={`/shop-settings${q}#gopay`}>Sambungkan ulang</Link>
+          <Tr s="Koneksi GoPay terputus — pembayaran QRIS tidak lagi dikonfirmasi otomatis sampai disambungkan ulang.{0}" a={[" "]} />
+          <Link className="d-strong" href={`/shop-settings${q}#gopay`}>{tx("Sambungkan ulang")}</Link>
         </Alert>
       )}
 
       {ov === undefined && ctx.can("analytics.read") && (
-        <section aria-busy="true" aria-label="Memuat ringkasan" className="d-stat-grid">
+        <section aria-busy="true" aria-label={tx("Memuat ringkasan")} className="d-stat-grid">
           {STAT_LABELS.map((x) => (
             <Stat key={x.label} icon={x.icon} label={x.label} value={<span className="d-skel d-skel-text" />} note={<span className="d-skel d-skel-text" style={{ width: "12ch" }} />} />
           ))}
         </section>
       )}
       {ov && (
-        <section aria-label="Ringkasan toko" className="d-stat-grid d-stagger">
-          <Stat icon={CurrencyCircleDollar} label="Omzet" value={rupiahShort(ov.revenue)} note={`${angka(ov.paid_orders)} pesanan terbayar`} href={`/analytics${q}`} />
-          <Stat icon={Receipt} label="Pesanan" value={angka(ov.orders)} note={`${angka(ov.orders - ov.paid_orders)} belum dibayar`} href={`/orders${q}`} />
-          <Stat icon={Stack} label="Stok menipis" value={angka(ov.stock_alerts)} note="varian di bawah ambang" href={`/inventory${q}`} warn={ov.stock_alerts > 0} />
-          <Stat icon={Users} label="Pelanggan" value={angka(ov.customers_total)} note={`+${angka(ov.customers_new)} baru`} href={`/customers${q}`} />
-          <Stat icon={ChatCircleDots} label="Tiket" value={angka(ov.tickets_created)} note={`${angka(ov.ai_resolved)} diselesaikan AI`} href={`/tickets${q}`} />
+        <section aria-label={tx("Ringkasan toko")} className="d-stat-grid d-stagger">
+          <Stat icon={CurrencyCircleDollar} label={tx("Omzet")} value={rupiahShort(ov.revenue)} note={tx("{0} pesanan terbayar", angka(ov.paid_orders))} href={`/analytics${q}`} />
+          <Stat icon={Receipt} label={tx("Pesanan")} value={angka(ov.orders)} note={tx("{0} belum dibayar", angka(ov.orders - ov.paid_orders))} href={`/orders${q}`} />
+          <Stat icon={Stack} label={tx("Stok menipis")} value={angka(ov.stock_alerts)} note={tx("varian di bawah ambang")} href={`/inventory${q}`} warn={ov.stock_alerts > 0} />
+          <Stat icon={Users} label={tx("Pelanggan")} value={angka(ov.customers_total)} note={tx("+{0} baru", angka(ov.customers_new))} href={`/customers${q}`} />
+          <Stat icon={ChatCircleDots} label={tx("Tiket")} value={angka(ov.tickets_created)} note={tx("{0} diselesaikan AI", angka(ov.ai_resolved))} href={`/tickets${q}`} />
         </section>
       )}
 
@@ -161,16 +163,16 @@ function Dashboard({ ctx }: { ctx: TenantCtx }) {
           {orders !== null && (
             <Card
               flush
-              title="Pesanan terbaru"
-              actions={<Link className="d-btn d-btn-ghost d-btn-sm" href={`/orders${q}`}>Lihat semua <ArrowRight weight="bold" aria-hidden="true" /></Link>}
+              title={tx("Pesanan terbaru")}
+              actions={<Link className="d-btn d-btn-ghost d-btn-sm" href={`/orders${q}`}>{tx("Lihat semua")}{" "}<ArrowRight weight="bold" aria-hidden="true" /></Link>}
             >
               {orders === undefined ? (
                 hint.orders === 0 ? (
-                  <EmptyState icon={Receipt} title="Memuat pesanan…" />
+                  <EmptyState icon={Receipt} title={tx("Memuat pesanan…")} />
                 ) : (
-                  <div className="d-table-wrap" aria-busy="true" aria-label="Memuat pesanan">
+                  <div className="d-table-wrap" aria-busy="true" aria-label={tx("Memuat pesanan")}>
                     <table className="d-table" aria-hidden="true">
-                      <thead><tr><th>Pesanan</th><th className="d-hide-sm">Pelanggan</th><th>Status</th><th className="d-num">Total</th></tr></thead>
+                      <thead><tr><th>{tx("Pesanan")}</th><th className="d-hide-sm">{tx("Pelanggan")}</th><th>{tx("Status")}</th><th className="d-num">{tx("Total")}</th></tr></thead>
                       <tbody>
                         {Array.from({ length: hint.orders ?? 5 }, (_, i) => (
                           <tr key={i}>
@@ -185,13 +187,13 @@ function Dashboard({ ctx }: { ctx: TenantCtx }) {
                   </div>
                 )
               ) : orders.length === 0 ? (
-                <EmptyState icon={Receipt} title="Belum ada pesanan">
-                  Pesanan dari website toko akan muncul di sini. Pastikan produk aktif dan QRIS sudah diatur.
+                <EmptyState icon={Receipt} title={tx("Belum ada pesanan")}>
+                  {tx("Pesanan dari website toko akan muncul di sini. Pastikan produk aktif dan QRIS sudah diatur.")}
                 </EmptyState>
               ) : (
                 <div className="d-table-wrap">
                   <table className="d-table">
-                    <thead><tr><th>Pesanan</th><th className="d-hide-sm">Pelanggan</th><th>Status</th><th className="d-num">Total</th></tr></thead>
+                    <thead><tr><th>{tx("Pesanan")}</th><th className="d-hide-sm">{tx("Pelanggan")}</th><th>{tx("Status")}</th><th className="d-num">{tx("Total")}</th></tr></thead>
                     <tbody>
                       {orders.map((o) => {
                         const st = status(ORDER_STATUS, o.status);
@@ -213,39 +215,39 @@ function Dashboard({ ctx }: { ctx: TenantCtx }) {
 
           {gopay && ctx.can("tenant.update") && !gopay.connected && setup?.qris && (
             <Alert kind="info">
-              Aktifkan konfirmasi pembayaran otomatis: pesanan yang dibayar lewat QRIS langsung berstatus Diproses tanpa cek manual. Cukup hubungkan sekali.{" "}
-              <Link className="d-strong" href={`/shop-settings${q}#gopay`}>Hubungkan GoPay</Link>
+              <Tr s="Aktifkan konfirmasi pembayaran otomatis: pesanan yang dibayar lewat QRIS langsung berstatus Diproses tanpa cek manual. Cukup hubungkan sekali.{0}" a={[" "]} />
+              <Link className="d-strong" href={`/shop-settings${q}#gopay`}>{tx("Hubungkan GoPay")}</Link>
             </Alert>
           )}
 
-          <h2 className="d-section-title">Pintasan</h2>
+          <h2 className="d-section-title">{tx("Pintasan")}</h2>
           <div className="d-quick">
             {ctx.can("products.create") && (
               <Link className="d-quick-item" href={`/products${q}&new=1`}>
-                <Package aria-hidden="true" weight="bold" /><span>Tambah produk</span><ArrowRight aria-hidden="true" weight="bold" />
+                <Package aria-hidden="true" weight="bold" /><span>{tx("Tambah produk")}</span><ArrowRight aria-hidden="true" weight="bold" />
               </Link>
             )}
             {ctx.can("conversations.read") && (
               <Link className="d-quick-item" href={`/conversations${q}`}>
-                <ChatCircleDots aria-hidden="true" weight="bold" /><span>Balas percakapan</span><ArrowRight aria-hidden="true" weight="bold" />
+                <ChatCircleDots aria-hidden="true" weight="bold" /><span>{tx("Balas percakapan")}</span><ArrowRight aria-hidden="true" weight="bold" />
               </Link>
             )}
             {ctx.can("inventory.read") && (
               <Link className="d-quick-item" href={`/inventory${q}`}>
-                <Stack aria-hidden="true" weight="bold" /><span>Catat stok masuk</span><ArrowRight aria-hidden="true" weight="bold" />
+                <Stack aria-hidden="true" weight="bold" /><span>{tx("Catat stok masuk")}</span><ArrowRight aria-hidden="true" weight="bold" />
               </Link>
             )}
             <Link className="d-quick-item" href={`/business${q}`}>
-              <Buildings aria-hidden="true" weight="bold" /><span>Ubah jam buka</span><ArrowRight aria-hidden="true" weight="bold" />
+              <Buildings aria-hidden="true" weight="bold" /><span>{tx("Ubah jam buka")}</span><ArrowRight aria-hidden="true" weight="bold" />
             </Link>
           </div>
         </div>
 
         {!allDone && (
           <Card
-            title="Siapkan toko Anda"
-            description={setup ? `${done} dari ${known.length} langkah selesai` : "Memeriksa…"}
-            label="Penyiapan toko"
+            title={tx("Siapkan toko Anda")}
+            description={setup ? tx("{0} dari {1} langkah selesai", done, known.length) : tx("Memeriksa…")}
+            label={tx("Penyiapan toko")}
             className="d-split-first"
           >
             <div className="d-progress" aria-hidden="true" style={{ marginBottom: 12 }}>
@@ -274,7 +276,7 @@ function Dashboard({ ctx }: { ctx: TenantCtx }) {
                       <span className="d-step-dot" aria-hidden="true"><Check weight="bold" /></span>
                       <span className="d-step-text">
                         <strong>{s.title}</strong>
-                        <span>{setup[s.key] ? "Selesai" : s.desc}</span>
+                        <span>{setup[s.key] ? tx("Selesai") : s.desc}</span>
                       </span>
                       <ArrowRight weight="bold" aria-hidden="true" />
                     </Link>
@@ -287,11 +289,11 @@ function Dashboard({ ctx }: { ctx: TenantCtx }) {
       </div>
 
       <footer className="d-page-legal">
-        <span>© {new Date().getFullYear()} UMKM Business OS</span>
-        <nav aria-label="Legal">
-          <a href="/legal/syarat" target="_blank" rel="noopener">Syarat layanan</a>
+        <span><Tr s="© {0} UMKM Business OS" a={[new Date().getFullYear()]} /></span>
+        <nav aria-label={tx("Legal")}>
+          <a href="/legal/syarat" target="_blank" rel="noopener">{tx("Syarat layanan")}</a>
           <span aria-hidden="true">·</span>
-          <a href="/legal/privasi" target="_blank" rel="noopener">Kebijakan privasi</a>
+          <a href="/legal/privasi" target="_blank" rel="noopener">{tx("Kebijakan privasi")}</a>
         </nav>
       </footer>
     </>

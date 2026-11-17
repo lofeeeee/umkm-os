@@ -71,10 +71,10 @@ test("studio: template → edit inline → simpan otomatis → terbit → situs 
 
   // Plugin Teks dari katalog (P9-8): cari → tambah → isi lewat inspector.
   const notice = `Libur Lebaran: toko tutup 1–3 April ${Date.now()}`;
-  await page.getByRole("button", { name: "Elemen" }).click(); // keluar dari pengaturan banner, buka katalog
-  await page.getByRole("searchbox", { name: "Cari plugin" }).fill("teks");
+  await page.getByRole("navigation", { name: "Bilah alat Studio" }).getByRole("button", { name: "Blok" }).click(); // keluar dari pengaturan banner, buka katalog
+  await page.getByRole("searchbox", { name: "Cari blok" }).fill("teks");
   await page.getByRole("button", { name: "Tambah Teks" }).click();
-  await page.getByRole("complementary", { name: "Pengaturan plugin" }).getByRole("textbox", { name: /^Isi/ }).fill(notice);
+  await page.getByRole("complementary", { name: "Pengaturan blok" }).getByRole("textbox", { name: /^Isi/ }).fill(notice);
   await expect(badge).toHaveText(/Draf tersimpan/, { timeout: 15_000 });
 
   // Kuas: satu coretan di latar halaman ikut tersimpan dan terbit.
@@ -96,7 +96,7 @@ test("studio: template → edit inline → simpan otomatis → terbit → situs 
   await expect(checks).toContainText("nomor WhatsApp/telepon di Profil bisnis kosong");
   // "Tunjukkan" memilih blok terkait di kanvas; lalu terbitkan tetap.
   await checks.getByRole("listitem").filter({ hasText: "Blok Jam buka kosong" }).getByRole("button", { name: "Tunjukkan" }).click();
-  await expect(page.getByRole("complementary", { name: "Pengaturan plugin" })).toContainText("Jam buka");
+  await expect(page.getByRole("complementary", { name: "Pengaturan blok" })).toContainText("Jam buka");
   await page.getByRole("button", { name: "Terbitkan", exact: true }).click();
   await page.getByRole("button", { name: "Terbitkan sekarang" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Website diterbitkan." })).toBeVisible();

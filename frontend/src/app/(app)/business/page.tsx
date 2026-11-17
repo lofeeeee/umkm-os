@@ -12,8 +12,9 @@ import { toast } from "@/ui/toast";
 import { api, apiUrl, describe } from "@/lib/api";
 import { SOCIAL_PLATFORMS } from "@/renderer/sections";
 import type { Address, Business, BusinessProfile, HourException, Hours, Json } from "@/renderer/types";
+import { t, m } from "@/i18n";
 
-const DAYS = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"];
+const DAYS = [m("Senin"), m("Selasa"), m("Rabu"), m("Kamis"), m("Jumat"), m("Sabtu"), m("Minggu")];
 const ZONES = ["Asia/Jakarta", "Asia/Makassar", "Asia/Jayapura"];
 
 export default function BusinessPage() {
@@ -28,7 +29,7 @@ function Section({ title, description, children, onSave, disabled, msg }: {
     <Card
       title={title}
       description={description}
-      footer={!disabled && <BusyButton type="button" busy={busy} onClick={async () => { setBusy(true); try { await onSave(); } finally { setBusy(false); } }}>Simpan {title.toLowerCase()}</BusyButton>}
+      footer={!disabled && <BusyButton type="button" busy={busy} onClick={async () => { setBusy(true); try { await onSave(); } finally { setBusy(false); } }}>{t("Simpan")}{" "}{title.toLowerCase()}</BusyButton>}
     >
       <Alert kind="error">{msg.err}</Alert>
       {children}
@@ -78,10 +79,10 @@ function Form({ ctx }: { ctx: TenantCtx }) {
     try {
       const b = await api<Business>("PUT", `${base}/${path}`, { json: body });
       setData(b);
-      toast.ok("Tersimpan.");
+      toast.ok(t("Tersimpan."));
       setStatus(await api("GET", `${base}/status`));
     } catch (e) {
-      setMsgs((m) => ({ ...m, [part]: { err: describe(e, { name: "Nama bisnis" }) } }));
+      setMsgs((m) => ({ ...m, [part]: { err: describe(e, { name: t("Nama bisnis") }) } }));
     }
   }
 
@@ -95,7 +96,7 @@ function Form({ ctx }: { ctx: TenantCtx }) {
     </label>
   );
   const imageProps = (key: "logo" | "cover") => ({
-    f: { key, label: key === "logo" ? "Logo usaha" : "Gambar sampul", kind: "image" as const },
+    f: { key, label: key === "logo" ? t("Logo usaha") : t("Gambar sampul"), kind: "image" as const },
     data: (p[key] ? { [key]: p[key] } : {}) as { [k: string]: Json },
     onChange: (d: { [k: string]: Json }) => setP({ [key]: (d[key] as string | undefined) ?? null }),
     disabled: !canEdit,
@@ -108,31 +109,31 @@ function Form({ ctx }: { ctx: TenantCtx }) {
   return (
     <Assets.Provider value={assets}>
       <PageHeader
-        title="Profil bisnis"
-        description="Informasi ini tampil di website toko dan dipakai Asisten AI untuk menjawab pelanggan."
+        title={t("Profil bisnis")}
+        description={t("Informasi ini tampil di website toko dan dipakai Asisten AI untuk menjawab pelanggan.")}
         actions={status && (
-          <span className="d-row" title={`Waktu lokal ${status.local_time.replace("T", " ")}`}>
-            <Badge tone={status.status === "open" ? "ok" : "neutral"}>{status.status === "open" ? "Sedang buka" : "Sedang tutup"}</Badge>
+          <span className="d-row" title={t("Waktu lokal {0}", status.local_time.replace("T", " "))}>
+            <Badge tone={status.status === "open" ? "ok" : "neutral"}>{status.status === "open" ? t("Sedang buka") : t("Sedang tutup")}</Badge>
             <span className="d-muted d-small">pukul {status.local_time.slice(11, 16)}</span>
           </span>
         )}
       />
-      {!canEdit && <Alert kind="info">Anda hanya dapat melihat. Hanya pemilik toko yang dapat mengubah profil.</Alert>}
+      {!canEdit && <Alert kind="info">{t("Anda hanya dapat melihat. Hanya pemilik toko yang dapat mengubah profil.")}</Alert>}
 
-      <Section title="Profil" description="Nama, kontak, logo, dan cara pesanan diterima." disabled={!canEdit} msg={msgs.profile ?? {}}
+      <Section title={t("Profil")} description={t("Nama, kontak, logo, dan cara pesanan diterima.")} disabled={!canEdit} msg={msgs.profile ?? {}}
         onSave={() => save("profile", "profile", { ...p, socials: p.socials })}>
         <div className="d-grid2">
-          {field("Nama bisnis *", "name")}
-          <label className="d-field"><span>Zona waktu</span>
+          {field(t("Nama bisnis *"), "name")}
+          <label className="d-field"><span>{t("Zona waktu")}</span>
             <select value={p.timezone} disabled={!canEdit} onChange={(e) => setP({ timezone: e.target.value })}>
               {[...new Set([p.timezone, ...ZONES])].map((z) => <option key={z}>{z}</option>)}
             </select>
           </label>
-          {field("Telepon", "phone", "tel")}
-          {field("WhatsApp", "whatsapp", "tel")}
-          {field("Email", "email", "email")}
+          {field(t("Telepon"), "phone", "tel")}
+          {field(t("WhatsApp"), "whatsapp", "tel")}
+          {field(t("Email"), "email", "email")}
         </div>
-        <label className="d-field"><span>Deskripsi</span>
+        <label className="d-field"><span>{t("Deskripsi")}</span>
           <textarea value={p.description ?? ""} maxLength={2000} disabled={!canEdit} onChange={(e) => setP({ description: e.target.value })} />
         </label>
         <div className="d-grid2">
@@ -140,30 +141,30 @@ function Form({ ctx }: { ctx: TenantCtx }) {
           <FieldInput {...imageProps("cover")} />
         </div>
         <fieldset className="e-list-item">
-          <legend>Media sosial</legend>
+          <legend>{t("Media sosial")}</legend>
           {p.socials.map((s, i) => (
             <div className="d-row" key={i}>
-              <select value={s.platform} disabled={!canEdit} aria-label="Platform"
+              <select value={s.platform} disabled={!canEdit} aria-label={t("Platform")}
                 onChange={(e) => setP({ socials: p.socials.map((x, j) => (j === i ? { ...x, platform: e.target.value } : x)) })}>
                 {SOCIAL_PLATFORMS.map((o) => <option key={o}>{o}</option>)}
               </select>
               <input style={{ flex: 1 }} value={s.url} placeholder="https://" disabled={!canEdit} aria-label="URL"
                 onChange={(e) => setP({ socials: p.socials.map((x, j) => (j === i ? { ...x, url: e.target.value } : x)) })} />
-              <button className="d-icon-btn" aria-label="Hapus media sosial" disabled={!canEdit} onClick={() => setP({ socials: p.socials.filter((_, j) => j !== i) })}><Trash weight="bold" /></button>
+              <button className="d-icon-btn" aria-label={t("Hapus media sosial")} disabled={!canEdit} onClick={() => setP({ socials: p.socials.filter((_, j) => j !== i) })}><Trash weight="bold" /></button>
             </div>
           ))}
           <button className="d-btn d-btn-sm" style={{ marginTop: 8 }} disabled={!canEdit || p.socials.length >= 10}
-            onClick={() => setP({ socials: [...p.socials, { platform: "instagram", url: "https://" }] })}><Plus weight="bold" aria-hidden="true" />Tambah media sosial</button>
+            onClick={() => setP({ socials: [...p.socials, { platform: "instagram", url: "https://" }] })}><Plus weight="bold" aria-hidden="true" />{t("Tambah media sosial")}</button>
         </fieldset>
-        <h3>Cara pesanan diterima</h3>
+        <h3>{t("Cara pesanan diterima")}</h3>
         <div className="d-grid">
-          <label className="d-switch"><input type="checkbox" checked={p.pickup_available} disabled={!canEdit} onChange={(e) => setP({ pickup_available: e.target.checked })} /><span><strong>Bisa ambil di tempat</strong><span className="d-muted">Pembeli mengambil sendiri di toko.</span></span></label>
-          <label className="d-switch"><input type="checkbox" checked={p.delivery_available} disabled={!canEdit} onChange={(e) => setP({ delivery_available: e.target.checked })} /><span><strong>Bisa diantar</strong><span className="d-muted">Ongkir diatur di Pembayaran & pengiriman.</span></span></label>
+          <label className="d-switch"><input type="checkbox" checked={p.pickup_available} disabled={!canEdit} onChange={(e) => setP({ pickup_available: e.target.checked })} /><span><strong>{t("Bisa ambil di tempat")}</strong><span className="d-muted">{t("Pembeli mengambil sendiri di toko.")}</span></span></label>
+          <label className="d-switch"><input type="checkbox" checked={p.delivery_available} disabled={!canEdit} onChange={(e) => setP({ delivery_available: e.target.checked })} /><span><strong>{t("Bisa diantar")}</strong><span className="d-muted">{t("Ongkir diatur di Pembayaran & pengiriman.")}</span></span></label>
         </div>
-        {field("Catatan pengambilan/pengantaran", "fulfillment_note")}
+        {field(t("Catatan pengambilan/pengantaran"), "fulfillment_note")}
       </Section>
 
-      <Section title="Alamat" description="Tampil di bagian Lokasi website. Koordinat opsional untuk peta." disabled={!canEdit} msg={msgs.addresses ?? {}}
+      <Section title={t("Alamat")} description={t("Tampil di bagian Lokasi website. Koordinat opsional untuk peta.")} disabled={!canEdit} msg={msgs.addresses ?? {}}
         onSave={() => save("addresses", "addresses", data.addresses.map((a) => ({
           label: a.label || null, address: a.address,
           latitude: a.latitude ?? null, longitude: a.longitude ?? null,
@@ -174,20 +175,20 @@ function Form({ ctx }: { ctx: TenantCtx }) {
           return (
             <div className="e-list-item" key={i}>
               <div className="d-grid2">
-                <label className="d-field"><span>Label</span><input value={a.label ?? ""} disabled={!canEdit} onChange={(e) => set({ label: e.target.value })} /></label>
-                <label className="d-field"><span>Alamat *</span><input aria-required="true" value={a.address} disabled={!canEdit} onChange={(e) => set({ address: e.target.value })} /></label>
-                <label className="d-field"><span>Latitude</span><input inputMode="decimal" value={a.latitude ?? ""} disabled={!canEdit} onChange={(e) => set({ latitude: num(e.target.value) })} /></label>
-                <label className="d-field"><span>Longitude</span><input inputMode="decimal" value={a.longitude ?? ""} disabled={!canEdit} onChange={(e) => set({ longitude: num(e.target.value) })} /></label>
+                <label className="d-field"><span>{t("Label")}</span><input value={a.label ?? ""} disabled={!canEdit} onChange={(e) => set({ label: e.target.value })} /></label>
+                <label className="d-field"><span>{t("Alamat *")}</span><input aria-required="true" value={a.address} disabled={!canEdit} onChange={(e) => set({ address: e.target.value })} /></label>
+                <label className="d-field"><span>{t("Latitude")}</span><input inputMode="decimal" value={a.latitude ?? ""} disabled={!canEdit} onChange={(e) => set({ latitude: num(e.target.value) })} /></label>
+                <label className="d-field"><span>{t("Longitude")}</span><input inputMode="decimal" value={a.longitude ?? ""} disabled={!canEdit} onChange={(e) => set({ longitude: num(e.target.value) })} /></label>
               </div>
-              <button className="d-btn d-btn-sm d-btn-ghost" style={{ color: "var(--danger)" }} disabled={!canEdit} onClick={() => setData({ ...data, addresses: data.addresses.filter((_, j) => j !== i) })}><Trash weight="bold" aria-hidden="true" />Hapus alamat</button>
+              <button className="d-btn d-btn-sm d-btn-ghost" style={{ color: "var(--danger)" }} disabled={!canEdit} onClick={() => setData({ ...data, addresses: data.addresses.filter((_, j) => j !== i) })}><Trash weight="bold" aria-hidden="true" />{t("Hapus alamat")}</button>
             </div>
           );
         })}
         <p><button className="d-btn d-btn-sm" disabled={!canEdit || data.addresses.length >= 10}
-          onClick={() => setData({ ...data, addresses: [...data.addresses, { address: "" }] })}><Plus weight="bold" aria-hidden="true" />Tambah alamat</button></p>
+          onClick={() => setData({ ...data, addresses: [...data.addresses, { address: "" }] })}><Plus weight="bold" aria-hidden="true" />{t("Tambah alamat")}</button></p>
       </Section>
 
-      <Section title="Jam buka" description="Jam tutup lebih kecil dari jam buka berarti tutup lewat tengah malam." disabled={!canEdit} msg={msgs.hours ?? {}} onSave={() => save("hours", "hours", data.hours)}>
+      <Section title={t("Jam buka")} description={t("Jam tutup lebih kecil dari jam buka berarti tutup lewat tengah malam.")} disabled={!canEdit} msg={msgs.hours ?? {}} onSave={() => save("hours", "hours", data.hours)}>
         <table className="d-table d-hours">
           <tbody>
             {DAYS.map((name, i) => {
@@ -195,15 +196,15 @@ function Form({ ctx }: { ctx: TenantCtx }) {
               const h = hoursByDay(d);
               return (
                 <tr key={d}>
-                  <th scope="row">{name}</th>
+                  <th scope="row">{t(name)}</th>
                   <td><label className="d-switch" style={{ margin: 0 }}>
-                    <input type="checkbox" checked={!!h} disabled={!canEdit} onChange={(e) => setHours(d, e.target.checked ? { day_of_week: d, open: "08:00", close: "17:00" } : null)} /> <span>{h ? "Buka" : <span className="d-muted">Tutup</span>}</span>
+                    <input type="checkbox" checked={!!h} disabled={!canEdit} onChange={(e) => setHours(d, e.target.checked ? { day_of_week: d, open: "08:00", close: "17:00" } : null)} /> <span>{h ? t("Buka") : <span className="d-muted">{t("Tutup")}</span>}</span>
                   </label></td>
                   <td>{h ? (
                     <span className="d-row" style={{ flexWrap: "nowrap" }}>
-                      <input type="time" aria-label={`Buka ${name}`} value={h.open} disabled={!canEdit} onChange={(e) => setHours(d, { ...h, open: e.target.value })} />
+                      <input type="time" aria-label={t("Buka {0}", name)} value={h.open} disabled={!canEdit} onChange={(e) => setHours(d, { ...h, open: e.target.value })} />
                       <span className="d-muted">–</span>
-                      <input type="time" aria-label={`Tutup ${name}`} value={h.close} disabled={!canEdit} onChange={(e) => setHours(d, { ...h, close: e.target.value })} />
+                      <input type="time" aria-label={t("Tutup {0}", name)} value={h.close} disabled={!canEdit} onChange={(e) => setHours(d, { ...h, close: e.target.value })} />
                     </span>
                   ) : null}</td>
                 </tr>
@@ -213,7 +214,7 @@ function Form({ ctx }: { ctx: TenantCtx }) {
         </table>
       </Section>
 
-      <Section title="Hari libur & jam khusus" description="Tanggal tertentu yang berbeda dari jam buka biasa, mis. libur Lebaran." disabled={!canEdit} msg={msgs.exceptions ?? {}}
+      <Section title={t("Hari libur & jam khusus")} description={t("Tanggal tertentu yang berbeda dari jam buka biasa, mis. libur Lebaran.")} disabled={!canEdit} msg={msgs.exceptions ?? {}}
         onSave={() => save("exceptions", "hour-exceptions", data.exceptions.map((x) => ({
           date: x.date, is_closed: x.is_closed, note: x.note || null,
           open: x.is_closed ? null : x.open ?? null, close: x.is_closed ? null : x.close ?? null,
@@ -222,21 +223,21 @@ function Form({ ctx }: { ctx: TenantCtx }) {
           const set = (patch: Partial<HourException>) => setData({ ...data, exceptions: data.exceptions.map((y, j) => (j === i ? { ...y, ...patch } : y)) });
           return (
             <div className="d-row e-list-item" key={i}>
-              <input type="date" aria-label="Tanggal" value={x.date} disabled={!canEdit} onChange={(e) => set({ date: e.target.value })} />
+              <input type="date" aria-label={t("Tanggal")} value={x.date} disabled={!canEdit} onChange={(e) => set({ date: e.target.value })} />
               <label className="d-check" style={{ margin: 0 }}>
-                <input type="checkbox" checked={x.is_closed} disabled={!canEdit} onChange={(e) => set({ is_closed: e.target.checked, open: e.target.checked ? null : "08:00", close: e.target.checked ? null : "12:00" })} /> Tutup
+                <input type="checkbox" checked={x.is_closed} disabled={!canEdit} onChange={(e) => set({ is_closed: e.target.checked, open: e.target.checked ? null : "08:00", close: e.target.checked ? null : "12:00" })} />{" "}{t("Tutup")}
               </label>
               {!x.is_closed && <>
-                <input type="time" aria-label="Buka" value={x.open ?? ""} disabled={!canEdit} onChange={(e) => set({ open: e.target.value })} />
-                <input type="time" aria-label="Tutup" value={x.close ?? ""} disabled={!canEdit} onChange={(e) => set({ close: e.target.value })} />
+                <input type="time" aria-label={t("Waktu buka")} value={x.open ?? ""} disabled={!canEdit} onChange={(e) => set({ open: e.target.value })} />
+                <input type="time" aria-label={t("Waktu tutup")} value={x.close ?? ""} disabled={!canEdit} onChange={(e) => set({ close: e.target.value })} />
               </>}
-              <input aria-label="Catatan" placeholder="Catatan" value={x.note ?? ""} maxLength={120} disabled={!canEdit} onChange={(e) => set({ note: e.target.value })} />
-              <button className="d-icon-btn" aria-label="Hapus tanggal" disabled={!canEdit} onClick={() => setData({ ...data, exceptions: data.exceptions.filter((_, j) => j !== i) })}><Trash weight="bold" /></button>
+              <input aria-label={t("Catatan")} placeholder={t("Catatan")} value={x.note ?? ""} maxLength={120} disabled={!canEdit} onChange={(e) => set({ note: e.target.value })} />
+              <button className="d-icon-btn" aria-label={t("Hapus tanggal")} disabled={!canEdit} onClick={() => setData({ ...data, exceptions: data.exceptions.filter((_, j) => j !== i) })}><Trash weight="bold" /></button>
             </div>
           );
         })}
         <p><button className="d-btn d-btn-sm" disabled={!canEdit}
-          onClick={() => setData({ ...data, exceptions: [...data.exceptions, { date: new Date().toISOString().slice(0, 10), is_closed: true }] })}><Plus weight="bold" aria-hidden="true" />Tambah tanggal</button></p>
+          onClick={() => setData({ ...data, exceptions: [...data.exceptions, { date: new Date().toISOString().slice(0, 10), is_closed: true }] })}><Plus weight="bold" aria-hidden="true" />{t("Tambah tanggal")}</button></p>
       </Section>
     </Assets.Provider>
   );

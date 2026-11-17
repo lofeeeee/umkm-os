@@ -14,6 +14,7 @@ import { STOCK_MOVEMENT, angka, waktu } from "@/lib/labels";
 import { Sheet } from "@/ui/dialog";
 import { Badge, BusyButton, EmptyState, PageHeader, SearchInput, Skeleton, Tabs } from "@/ui/page";
 import { toast } from "@/ui/toast";
+import { t as tx } from "@/i18n";
 
 interface Row {
   variant_id: string; product_name: string; variant_name: string; sku: string;
@@ -46,24 +47,24 @@ function Stock({ ctx }: { ctx: TenantCtx }) {
   const row = rows?.find((r) => r.variant_id === open);
   return (
     <>
-      <PageHeader title="Stok" description="Jumlah fisik, yang sedang dipesan, dan yang tersedia per varian. Catat stok masuk/keluar agar riwayatnya rapi." />
+      <PageHeader title={tx("Stok")} description={tx("Jumlah fisik, yang sedang dipesan, dan yang tersedia per varian. Catat stok masuk/keluar agar riwayatnya rapi.")} />
       <Alert kind="error">{err}</Alert>
-      <Tabs label="Filter stok" value={low} onChange={setLow} items={[{ value: "all", label: "Semua varian" }, { value: "low", label: "Stok menipis" }]} />
+      <Tabs label={tx("Filter stok")} value={low} onChange={setLow} items={[{ value: "all", label: tx("Semua varian") }, { value: "low", label: tx("Stok menipis") }]} />
       <div className="d-toolbar">
-        <SearchInput label="Cari" placeholder="Cari produk atau SKU…" value={q} onChange={setQ} />
+        <SearchInput label={tx("Cari")} placeholder={tx("Cari produk atau SKU…")} value={q} onChange={setQ} />
       </div>
       <div className="d-table-wrap">
         {rows === null ? <div style={{ padding: 20 }}><Skeleton lines={5} /></div> : rows.length === 0 ? (
           <EmptyState
             icon={Stack}
-            title={low === "low" ? "Tidak ada stok menipis" : q ? "Tidak ada yang cocok" : "Belum ada data stok"}
-            action={low === "all" && !q ? <Link className="d-btn d-btn-primary" href={`/products?tenant=${ctx.tenant.id}`}>Buka Produk</Link> : undefined}
+            title={low === "low" ? tx("Tidak ada stok menipis") : q ? tx("Tidak ada yang cocok") : tx("Belum ada data stok")}
+            action={low === "all" && !q ? <Link className="d-btn d-btn-primary" href={`/products?tenant=${ctx.tenant.id}`}>{tx("Buka Produk")}</Link> : undefined}
           >
-            {low === "low" ? "Semua varian masih di atas ambang minimum." : q ? "Coba kata kunci lain." : "Stok muncul setelah Anda menambahkan produk. Setiap varian punya catatan stoknya sendiri."}
+            {low === "low" ? tx("Semua varian masih di atas ambang minimum.") : q ? tx("Coba kata kunci lain.") : tx("Stok muncul setelah Anda menambahkan produk. Setiap varian punya catatan stoknya sendiri.")}
           </EmptyState>
         ) : (
           <table className="d-table d-table-stack">
-            <thead><tr><th>Produk</th><th className="d-num">Fisik</th><th className="d-num">Dipesan</th><th className="d-num">Tersedia</th><th className="d-num d-hide-sm">Ambang</th><th><span className="sr-only">Aksi</span></th></tr></thead>
+            <thead><tr><th>{tx("Produk")}</th><th className="d-num">{tx("Fisik")}</th><th className="d-num">{tx("Dipesan")}</th><th className="d-num">{tx("Tersedia")}</th><th className="d-num d-hide-sm">{tx("Ambang")}</th><th><span className="sr-only">{tx("Aksi")}</span></th></tr></thead>
             <tbody>
               {rows.map((r) => (
                 <tr key={r.variant_id}>
@@ -72,7 +73,7 @@ function Stock({ ctx }: { ctx: TenantCtx }) {
                   <td className="d-num d-muted">{r.reserved}</td>
                   <td className="d-num">{r.is_low ? <Badge tone="warn">{r.available}</Badge> : <span className="d-strong">{r.available}</span>}</td>
                   <td className="d-num d-hide-sm d-muted">{r.min_stock ?? "—"}</td>
-                  <td className="d-actions"><button className="d-btn d-btn-sm" onClick={() => setOpen(r.variant_id)}>Kelola</button></td>
+                  <td className="d-actions"><button className="d-btn d-btn-sm" onClick={() => setOpen(r.variant_id)}>{tx("Kelola")}</button></td>
                 </tr>
               ))}
             </tbody>
@@ -87,9 +88,9 @@ function Stock({ ctx }: { ctx: TenantCtx }) {
 }
 
 const KINDS = [
-  { value: "stock_in", label: "Stok masuk", icon: ArrowDown, hint: "Barang datang dari pemasok/produksi." },
-  { value: "stock_out", label: "Stok keluar", icon: ArrowUp, hint: "Rusak, hilang, atau dipakai sendiri." },
-  { value: "adjustment", label: "Opname", icon: Scales, hint: "Isi jumlah fisik hasil hitung ulang." },
+  { value: "stock_in", get label() { return tx("Stok masuk"); }, icon: ArrowDown, get hint() { return tx("Barang datang dari pemasok/produksi."); } },
+  { value: "stock_out", get label() { return tx("Stok keluar"); }, icon: ArrowUp, get hint() { return tx("Rusak, hilang, atau dipakai sendiri."); } },
+  { value: "adjustment", get label() { return tx("Opname"); }, icon: Scales, get hint() { return tx("Isi jumlah fisik hasil hitung ulang."); } },
 ] as const;
 
 function Manage({ ctx, base, row, onChange }: { ctx: TenantCtx; base: string; row: Row; onChange: () => Promise<unknown> }) {
@@ -110,17 +111,17 @@ function Manage({ ctx, base, row, onChange }: { ctx: TenantCtx; base: string; ro
   return (
     <>
       <dl className="d-stat-grid" style={{ margin: "0 0 20px" }}>
-        <div className="d-stat"><dt className="d-stat-label">Fisik</dt><dd className="d-stat-value" style={{ margin: 0 }}>{angka(row.on_hand)}</dd></div>
-        <div className="d-stat"><dt className="d-stat-label">Dipesan</dt><dd className="d-stat-value" style={{ margin: 0 }}>{angka(row.reserved)}</dd></div>
-        <div className={`d-stat${row.is_low ? " d-stat-warn" : ""}`}><dt className="d-stat-label">Tersedia</dt><dd className="d-stat-value" style={{ margin: 0 }}>{angka(row.available)}</dd></div>
+        <div className="d-stat"><dt className="d-stat-label">{tx("Fisik")}</dt><dd className="d-stat-value" style={{ margin: 0 }}>{angka(row.on_hand)}</dd></div>
+        <div className="d-stat"><dt className="d-stat-label">{tx("Dipesan")}</dt><dd className="d-stat-value" style={{ margin: 0 }}>{angka(row.reserved)}</dd></div>
+        <div className={`d-stat${row.is_low ? " d-stat-warn" : ""}`}><dt className="d-stat-label">{tx("Tersedia")}</dt><dd className="d-stat-value" style={{ margin: 0 }}>{angka(row.available)}</dd></div>
       </dl>
       <Alert kind="error">{err}</Alert>
       {can && (
         <>
           <section className="d-form-section">
-            <h3>Catat perubahan stok</h3>
+            <h3>{tx("Catat perubahan stok")}</h3>
             <p className="d-muted">{kind.hint}</p>
-            <div className="d-seg" role="group" aria-label="Jenis perubahan" style={{ marginBottom: 16 }}>
+            <div className="d-seg" role="group" aria-label={tx("Jenis perubahan")} style={{ marginBottom: 16 }}>
               {KINDS.map((k) => (
                 <button key={k.value} type="button" aria-pressed={m.kind === k.value} onClick={() => setM({ ...m, kind: k.value })}>{k.label}</button>
               ))}
@@ -129,48 +130,48 @@ function Manage({ ctx, base, row, onChange }: { ctx: TenantCtx; base: string; ro
               e.preventDefault();
               void run("move", () => api("POST", `${base}/${row.variant_id}/movements`, {
                 json: { kind: m.kind, quantity: Number(m.quantity), reason: m.reason, reference: m.reference || null },
-              }), "Mutasi tercatat.").then(() => setM((x) => ({ ...x, quantity: "", reason: "", reference: "" })));
+              }), tx("Mutasi tercatat.")).then(() => setM((x) => ({ ...x, quantity: "", reason: "", reference: "" })));
             }}>
               <div className="d-grid">
-                <label className="d-field"><span>{m.kind === "adjustment" ? "Jumlah fisik" : "Jumlah"}</span>
-                  <input aria-label="Jumlah" inputMode="numeric" value={m.quantity} onChange={(e) => setM({ ...m, quantity: e.target.value })} />
+                <label className="d-field"><span>{m.kind === "adjustment" ? tx("Jumlah fisik") : tx("Jumlah")}</span>
+                  <input aria-label={tx("Jumlah")} inputMode="numeric" value={m.quantity} onChange={(e) => setM({ ...m, quantity: e.target.value })} />
                 </label>
-                <label className="d-field"><span>Alasan</span>
-                  <input aria-label="Alasan" placeholder="mis. Kiriman pemasok" maxLength={200} value={m.reason} onChange={(e) => setM({ ...m, reason: e.target.value })} />
+                <label className="d-field"><span>{tx("Alasan")}</span>
+                  <input aria-label={tx("Alasan")} placeholder={tx("mis. Kiriman pemasok")} maxLength={200} value={m.reason} onChange={(e) => setM({ ...m, reason: e.target.value })} />
                 </label>
               </div>
-              <label className="d-field"><span>Referensi <span className="d-opt">(opsional, mis. no. nota)</span></span>
-                <input aria-label="Referensi" maxLength={100} value={m.reference} onChange={(e) => setM({ ...m, reference: e.target.value })} />
+              <label className="d-field"><span>{tx("Referensi")}{" "}<span className="d-opt">{tx("(opsional, mis. no. nota)")}</span></span>
+                <input aria-label={tx("Referensi")} maxLength={100} value={m.reference} onChange={(e) => setM({ ...m, reference: e.target.value })} />
               </label>
-              <BusyButton busy={busy === "move"} disabled={!m.quantity || !m.reason.trim()}>Catat</BusyButton>
+              <BusyButton busy={busy === "move"} disabled={!m.quantity || !m.reason.trim()}>{tx("Catat")}</BusyButton>
             </form>
           </section>
           <section className="d-form-section">
-            <h3>Peringatan stok</h3>
-            <p className="d-muted">Anda diberi tahu saat stok tersedia turun di bawah ambang.</p>
-            <label className="d-field" style={{ maxWidth: 200 }}><span>Ambang menipis</span>
-              <input aria-label="Ambang stok menipis" placeholder="mis. 5" inputMode="numeric" value={s.min_stock} onChange={(e) => setS({ ...s, min_stock: e.target.value })} />
+            <h3>{tx("Peringatan stok")}</h3>
+            <p className="d-muted">{tx("Anda diberi tahu saat stok tersedia turun di bawah ambang.")}</p>
+            <label className="d-field" style={{ maxWidth: 200 }}><span>{tx("Ambang menipis")}</span>
+              <input aria-label={tx("Ambang stok menipis")} placeholder={tx("mis. 5")} inputMode="numeric" value={s.min_stock} onChange={(e) => setS({ ...s, min_stock: e.target.value })} />
             </label>
             <label className="d-switch">
               <input type="checkbox" checked={s.allow_negative} onChange={(e) => setS({ ...s, allow_negative: e.target.checked })} />
-              <span><strong>Izinkan stok negatif</strong><span className="d-muted">Pesanan tetap diterima meski stok habis (pre-order).</span></span>
+              <span><strong>{tx("Izinkan stok negatif")}</strong><span className="d-muted">{tx("Pesanan tetap diterima meski stok habis (pre-order).")}</span></span>
             </label>
             <BusyButton type="button" className="d-btn" busy={busy === "settings"} onClick={() => run("settings", () => api("PUT", `${base}/${row.variant_id}/settings`, {
               json: { min_stock: s.min_stock === "" ? null : Number(s.min_stock), allow_negative: s.allow_negative },
-            }), "Pengaturan tersimpan.")}>Simpan pengaturan</BusyButton>
+            }), tx("Pengaturan tersimpan."))}>{tx("Simpan pengaturan")}</BusyButton>
           </section>
         </>
       )}
       <section className="d-form-section">
-        <h3>Riwayat</h3>
-        {moves === null ? <Skeleton lines={3} /> : moves.length === 0 ? <p className="d-muted">Belum ada mutasi.</p> : (
+        <h3>{tx("Riwayat")}</h3>
+        {moves === null ? <Skeleton lines={3} /> : moves.length === 0 ? <p className="d-muted">{tx("Belum ada mutasi.")}</p> : (
           <div className="d-table-wrap">
             <table className="d-table">
-              <thead><tr><th>Waktu</th><th>Jenis</th><th className="d-num">Perubahan</th><th className="d-num">Setelah</th></tr></thead>
+              <thead><tr><th>{tx("Waktu")}</th><th>{tx("Jenis")}</th><th className="d-num">{tx("Perubahan")}</th><th className="d-num">{tx("Setelah")}</th></tr></thead>
               <tbody>
                 {moves.map((x) => (
                   <tr key={x.id}>
-                    <td className="d-nowrap">{waktu(x.created_at)}<span className="d-sub">{x.reason}{x.reference && ` · ${x.reference}`}</span></td>
+                    <td className="d-nowrap">{waktu(x.created_at)}<span className="d-sub">{x.reason}{x.reference && tx(" · {0}", x.reference)}</span></td>
                     <td>{STOCK_MOVEMENT[x.kind] ?? x.kind}</td>
                     <td className="d-num" style={{ color: x.delta > 0 ? "var(--ok)" : x.delta < 0 ? "var(--danger)" : undefined }}>{x.delta > 0 ? `+${x.delta}` : x.delta}</td>
                     <td className="d-num">{x.on_hand_after}</td>

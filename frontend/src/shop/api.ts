@@ -2,6 +2,8 @@
 // Akun customer (ADR-0005): cookie host-only __Host-umkm_cust + header CSRF (disimpan di memori saja).
 
 import { API_ORIGIN, ApiError } from "@/lib/api";
+import { rupiah as formatRupiah } from "@/lib/labels";
+import { t as tx, tmap } from "@/i18n";
 
 let csrf: string | null = null;
 
@@ -67,15 +69,13 @@ export async function loadCustomer(): Promise<CustomerSession | null> {
   }
 }
 
-/** `"15000.50"` → `"Rp15.000,50"`. */
+/** `"15000.50"` → `"Rp15.000,50"` (ID) / `"Rp15,000.50"` (EN) — satu format dengan dasbor. */
 export function rupiah(v: string | null | undefined): string {
   if (!v) return "";
-  const [i, f = "00"] = v.split(".");
-  const int = (i ?? "0").replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-  return `Rp${int}${f === "00" ? "" : `,${f}`}`;
+  return formatRupiah(v);
 }
 
-export const STATUS_TEXT: Record<string, string> = {
+export const STATUS_TEXT: Record<string, string> = tmap({
   PENDING: "Menunggu",
   AWAITING_PAYMENT: "Menunggu pembayaran",
   PAID: "Dibayar",
@@ -89,4 +89,4 @@ export const STATUS_TEXT: Record<string, string> = {
   CANCELLED: "Dibatalkan",
   EXPIRED: "Kedaluwarsa",
   REFUNDED: "Dana dikembalikan",
-};
+});

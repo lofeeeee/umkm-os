@@ -16,6 +16,7 @@ import { ConversationView, when, type ConversationDetail, type ConversationSumma
 import { API_ORIGIN, ApiError, api, describe } from "@/lib/api";
 import { CONVERSATION_STATUS, relatif, status } from "@/lib/labels";
 import { BusyButton, EmptyState, PageHeader, PageSkeleton, Skeleton, Tabs } from "@/ui/page";
+import { t, tmap } from "@/i18n";
 
 export default function ConversationsPage() {
   return <WithTenant>{(ctx) => <Conversations ctx={ctx} />}</WithTenant>;
@@ -24,19 +25,19 @@ export default function ConversationsPage() {
 interface Counts { ai: number; waiting_human: number; human: number; closed: number; mine: number }
 type Tab = "waiting" | "mine" | "ai" | "human" | "closed" | "all";
 const TABS: Record<Tab, { label: string; query: string; count?: (c: Counts) => number }> = {
-  waiting: { label: "Menunggu staf", query: "&status=WAITING_HUMAN", count: (c) => c.waiting_human },
-  mine: { label: "Ditangani saya", query: "&mine=true", count: (c) => c.mine },
-  ai: { label: "Dijawab AI", query: "&status=AI", count: (c) => c.ai },
-  human: { label: "Ditangani staf", query: "&status=HUMAN", count: (c) => c.human },
-  closed: { label: "Selesai", query: "&status=CLOSED" },
-  all: { label: "Semua", query: "" },
+  waiting: { get label() { return t("Menunggu staf"); }, query: "&status=WAITING_HUMAN", count: (c) => c.waiting_human },
+  mine: { get label() { return t("Ditangani saya"); }, query: "&mine=true", count: (c) => c.mine },
+  ai: { get label() { return t("Dijawab AI"); }, query: "&status=AI", count: (c) => c.ai },
+  human: { get label() { return t("Ditangani staf"); }, query: "&status=HUMAN", count: (c) => c.human },
+  closed: { get label() { return t("Selesai"); }, query: "&status=CLOSED" },
+  all: { get label() { return t("Semua"); }, query: "" },
 };
 
-const REASON: Record<string, string> = {
+const REASON: Record<string, string> = tmap({
   assigned_to_other: "Percakapan sedang ditangani staf lain.",
   conversation_closed: "Percakapan sudah ditutup.",
-  draft_decided: "Draft sudah diputus.",
-};
+  draft_decided: "Draf sudah diputus.",
+});
 
 function errText(e: unknown): string {
   if (e instanceof ApiError) {
@@ -92,15 +93,15 @@ function Conversations({ ctx }: { ctx: TenantCtx }) {
   }, [openId, loadOne, load]);
   useChatPings(ctx.tenant.id, onPing);
 
-  if (!ctx.can("conversations.read")) return <Alert kind="error">Anda tidak punya izin melihat percakapan.</Alert>;
+  if (!ctx.can("conversations.read")) return <Alert kind="error">{t("Anda tidak punya izin melihat percakapan.")}</Alert>;
   const back = () => { setOpenId(null); setOpen(null); void load(); };
   if (openId) {
     return (
       <>
         <PageHeader
-          back={{ onClick: back, label: "Semua percakapan" }}
-          title={open?.customer?.name ?? "Pengunjung"}
-          description={open ? `${status(CONVERSATION_STATUS, open.status).label} · ${open.message_count} pesan · terakhir ${when(open.last_message_at)}` : undefined}
+          back={{ onClick: back, label: t("Semua percakapan") }}
+          title={open?.customer?.name ?? t("Pengunjung")}
+          description={open ? t("{0} · {1} pesan · terakhir {2}", status(CONVERSATION_STATUS, open.status).label, open.message_count, when(open.last_message_at)) : undefined}
         />
         <Alert kind="error">{err}</Alert>
         {!open ? <PageSkeleton /> : (
@@ -114,20 +115,20 @@ function Conversations({ ctx }: { ctx: TenantCtx }) {
   }
   return (
     <>
-      <PageHeader title="Percakapan" description="Chat pelanggan dari website. Asisten AI menjawab otomatis; yang butuh manusia masuk ke antrean Menunggu staf." />
+      <PageHeader title={t("Percakapan")} description={t("Chat pelanggan dari website. Asisten AI menjawab otomatis; yang butuh manusia masuk ke antrean Menunggu staf.")} />
       <Alert kind="error">{err}</Alert>
-      {masked && <Alert kind="info">Data sensitif disamarkan untuk peran Anda.</Alert>}
+      {masked && <Alert kind="info">{t("Data sensitif disamarkan untuk peran Anda.")}</Alert>}
       <Tabs
-        label="Antrean"
+        label={t("Antrean")}
         value={tab}
         onChange={setTab}
         items={(Object.keys(TABS) as Tab[]).map((k) => ({ value: k, label: TABS[k].label, count: counts && TABS[k].count ? TABS[k].count(counts) : undefined }))}
       />
       {items === null ? <div className="d-card"><Skeleton lines={6} /></div> : items.length === 0 ? (
-        <div className="d-card"><EmptyState icon={ChatCircleDots} title="Antrean kosong"
-          action={<Link className="d-btn" href={`/ai?tenant=${ctx.tenant.id}`}>Atur Asisten AI & chat website</Link>}>{tab === "waiting" ? "Tidak ada pelanggan yang menunggu staf. Kerja bagus!" : "Belum ada percakapan di tab ini."}</EmptyState></div>
+        <div className="d-card"><EmptyState icon={ChatCircleDots} title={t("Antrean kosong")}
+          action={<Link className="d-btn" href={`/ai?tenant=${ctx.tenant.id}`}>{t("Atur Asisten AI & chat website")}</Link>}>{tab === "waiting" ? t("Tidak ada pelanggan yang menunggu staf. Kerja bagus!") : t("Belum ada percakapan di tab ini.")}</EmptyState></div>
       ) : (
-        <ul className="cv-list" aria-label="Daftar percakapan">
+        <ul className="cv-list" aria-label={t("Daftar percakapan")}>
           {items.map((c) => {
             const st = status(CONVERSATION_STATUS, c.status);
             return (
@@ -136,7 +137,7 @@ function Conversations({ ctx }: { ctx: TenantCtx }) {
                   <span className="d-cell-main">
                     <span className="d-avatar d-avatar-muted" aria-hidden="true">{(c.customer?.name?.trim()[0] ?? "?").toUpperCase()}</span>
                     <span style={{ minWidth: 0 }}>
-                      <strong>{c.customer?.name ?? "Pengunjung"}</strong>
+                      <strong>{c.customer?.name ?? t("Pengunjung")}</strong>
                       <span className="cv-preview">{c.last_message ?? "—"}</span>
                     </span>
                   </span>
@@ -144,7 +145,7 @@ function Conversations({ ctx }: { ctx: TenantCtx }) {
                     <span className="d-muted d-small">{relatif(c.last_message_at)}</span>
                     <span className="cv-badge" data-status={c.status}>{st.label}</span>
                   </span>
-                  <span className="d-muted">{c.message_count} pesan{c.assignee_email ? ` · ${c.assignee_email}` : ""}</span>
+                  <span className="d-muted">{c.message_count} pesan{c.assignee_email ? t(" · {0}", c.assignee_email) : ""}</span>
                 </button>
               </li>
             );
@@ -170,7 +171,7 @@ function StaffPanel({ ctx, d, url, onDone }: { ctx: TenantCtx; d: ConversationDe
     try {
       const r = await fn();
       const pending = (r as { approval_request_id?: string } | undefined)?.approval_request_id;
-      setMsg({ ok: pending ? "Menunggu persetujuan sebelum dikirim." : ok });
+      setMsg({ ok: pending ? t("Menunggu persetujuan sebelum dikirim.") : ok });
       await onDone();
     } catch (e) {
       setMsg({ err: errText(e) });
@@ -183,48 +184,48 @@ function StaffPanel({ ctx, d, url, onDone }: { ctx: TenantCtx; d: ConversationDe
     e.preventDefault();
     const form = e.currentTarget;
     const body = String(new FormData(form).get("body") ?? "");
-    void run(async () => { await api("POST", `${url}/messages`, { json: { body } }); form.reset(); }, "Balasan terkirim.");
+    void run(async () => { await api("POST", `${url}/messages`, { json: { body } }); form.reset(); }, t("Balasan terkirim."));
   }
 
   const pending = d.drafts.filter((x) => x.status === "pending" || x.status === "approval_pending");
   return (
-    <section className="d-card" aria-label="Tindakan staf">
+    <section className="d-card" aria-label={t("Tindakan staf")}>
       <header className="d-card-head">
-        <div className="d-card-head-text"><h2>Tindakan staf</h2>{d.status !== "HUMAN" && !closed && <p>Membalas = mengambil alih; AI berhenti menjawab.</p>}</div>
+        <div className="d-card-head-text"><h2>{t("Tindakan staf")}</h2>{d.status !== "HUMAN" && !closed && <p>{t("Membalas = mengambil alih; AI berhenti menjawab.")}</p>}</div>
         <div className="d-card-head-actions">
           {canTake && !closed && d.status !== "HUMAN" && (
-            <button className="d-btn d-btn-sm" disabled={busy} onClick={() => void run(() => api("POST", `${url}/takeover`), "Percakapan Anda tangani.")}>Ambil alih</button>
+            <button className="d-btn d-btn-sm" disabled={busy} onClick={() => void run(() => api("POST", `${url}/takeover`), t("Percakapan Anda tangani."))}>{t("Ambil alih")}</button>
           )}
           {canTake && !closed && d.status !== "AI" && !byOther && (
-            <button className="d-btn d-btn-sm" disabled={busy} onClick={() => void run(() => api("POST", `${url}/release`), "Dikembalikan ke asisten AI.")}>Kembalikan ke AI</button>
+            <button className="d-btn d-btn-sm" disabled={busy} onClick={() => void run(() => api("POST", `${url}/release`), t("Dikembalikan ke asisten AI."))}>{t("Kembalikan ke AI")}</button>
           )}
           {!closed && !byOther && (
             <button className="d-btn d-btn-sm d-btn-danger" disabled={busy} onClick={async () => {
-              if (await confirm({ title: "Tutup percakapan?", body: "Pelanggan perlu memulai chat baru untuk menghubungi toko lagi.", confirmLabel: "Tutup percakapan", danger: true })) void run(() => api("POST", `${url}/close`), "Percakapan ditutup.");
-            }}>Tutup percakapan</button>
+              if (await confirm({ title: t("Tutup percakapan?"), body: t("Pelanggan perlu memulai chat baru untuk menghubungi toko lagi."), confirmLabel: t("Tutup percakapan"), danger: true })) void run(() => api("POST", `${url}/close`), t("Percakapan ditutup."));
+            }}>{t("Tutup percakapan")}</button>
           )}
         </div>
       </header>
       <Alert kind="error">{msg.err}</Alert>
       <Alert kind="ok">{msg.ok}</Alert>
-      {byOther && <p className="d-muted">Sedang ditangani {d.assignee_email ?? "staf lain"}.</p>}
+      {byOther && <p className="d-muted">{t("Sedang ditangani")}{" "}{d.assignee_email ?? t("staf lain")}.</p>}
       {pending.length > 0 && !closed && (
-        <div aria-label="Draft AI">
-          <h3>Draft AI menunggu keputusan</h3>
+        <div aria-label={t("Draf AI")}>
+          <h3>{t("Draf AI menunggu keputusan")}</h3>
           {pending.map((x) => (
             <div key={x.id} className="cv-draft">
               {x.status === "approval_pending" ? (
-                <p>{x.body} <strong className="d-muted">— menunggu persetujuan</strong></p>
+                <p>{x.body} <strong className="d-muted">{t("— menunggu persetujuan")}</strong></p>
               ) : (
                 <>
-                  <label className="d-field"><span>Draft (boleh diedit)</span>
+                  <label className="d-field"><span>{t("Draf (boleh diedit)")}</span>
                     <textarea rows={3} maxLength={4000} value={edit[x.id] ?? x.body} onChange={(e) => setEdit({ ...edit, [x.id]: e.target.value })} />
                   </label>
                   <div className="d-row">
                     <button className="d-btn d-btn-primary" disabled={busy || byOther} onClick={() => void run(
-                      () => api("POST", `${url}/drafts/${x.id}/send`, { json: { body: edit[x.id] ?? null } }), "Draft terkirim.")}>Kirim draft</button>
+                      () => api("POST", `${url}/drafts/${x.id}/send`, { json: { body: edit[x.id] ?? null } }), t("Draf terkirim."))}>{t("Kirim draf")}</button>
                     <button className="d-btn" disabled={busy} onClick={() => void run(
-                      () => api("POST", `${url}/drafts/${x.id}/discard`), "Draft dibuang.")}>Buang</button>
+                      () => api("POST", `${url}/drafts/${x.id}/discard`), t("Draf dibuang."))}>{t("Buang")}</button>
                   </div>
                 </>
               )}
@@ -234,18 +235,18 @@ function StaffPanel({ ctx, d, url, onDone }: { ctx: TenantCtx; d: ConversationDe
       )}
       {!closed && !byOther && (
         <form className="d-composer" onSubmit={reply} style={{ marginTop: 0 }}>
-          <label className="sr-only" htmlFor="cv-reply">Balas pelanggan</label>
-          <textarea id="cv-reply" name="body" rows={3} maxLength={4000} required placeholder="Tulis balasan untuk pelanggan… (Ctrl+Enter untuk kirim)"
+          <label className="sr-only" htmlFor="cv-reply">{t("Balas pelanggan")}</label>
+          <textarea id="cv-reply" name="body" rows={3} maxLength={4000} required placeholder={t("Tulis balasan untuk pelanggan… (Ctrl+Enter untuk kirim)")}
             onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) e.currentTarget.form?.requestSubmit(); }} />
           <div className="d-row" style={{ justifyContent: "flex-end" }}>
-            <BusyButton busy={busy}>Kirim balasan</BusyButton>
+            <BusyButton busy={busy}>{t("Kirim balasan")}</BusyButton>
           </div>
         </form>
       )}
       {canTake && !closed && <AssignForm ctx={ctx} d={d} url={url} run={run} busy={busy} />}
       {ctx.can("tickets.reply") && (
         <details className="d-details cv-ticket" open>
-        <summary>Buat tiket dari percakapan</summary>
+        <summary>{t("Buat tiket dari percakapan")}</summary>
         <form onSubmit={(e) => {
           e.preventDefault();
           const form = e.currentTarget;
@@ -253,18 +254,18 @@ function StaffPanel({ ctx, d, url, onDone }: { ctx: TenantCtx; d: ConversationDe
           void run(async () => {
             await api("POST", `${url}/tickets`, { json: { subject: f.get("subject"), priority: f.get("priority"), description: f.get("description") || null } });
             form.reset();
-          }, "Tiket dibuat.");
+          }, t("Tiket dibuat."));
         }}>
           <div className="d-grid">
-          <label className="d-field"><span>Subjek tiket</span><input name="subject" maxLength={200} required /></label>
-          <label className="d-field"><span>Prioritas</span>
+          <label className="d-field"><span>{t("Subjek tiket")}</span><input name="subject" maxLength={200} required /></label>
+          <label className="d-field"><span>{t("Prioritas")}</span>
             <select name="priority" defaultValue="normal">
-              <option value="low">Rendah</option><option value="normal">Normal</option><option value="high">Tinggi</option><option value="urgent">Mendesak</option>
+              <option value="low">{t("Rendah")}</option><option value="normal">{t("Normal")}</option><option value="high">{t("Tinggi")}</option><option value="urgent">{t("Mendesak")}</option>
             </select>
           </label>
           </div>
-          <label className="d-field"><span>Keterangan <span className="d-opt">(opsional)</span></span><textarea name="description" rows={2} maxLength={5000} /></label>
-          <button className="d-btn" disabled={busy}>Buat tiket</button>
+          <label className="d-field"><span>{t("Keterangan")}{" "}<span className="d-opt">{t("(opsional)")}</span></span><textarea name="description" rows={2} maxLength={5000} /></label>
+          <button className="d-btn" disabled={busy}>{t("Buat tiket")}</button>
         </form>
         </details>
       )}
@@ -291,13 +292,13 @@ function AssignForm({ ctx, d, url, run, busy }: {
   if (!members || members.length === 0) return null;
   return (
     <div className="d-row" style={{ marginTop: 16, alignItems: "flex-end" }}>
-      <label className="d-field" style={{ margin: 0, flex: 1 }}><span>Tugaskan ke</span>
+      <label className="d-field" style={{ margin: 0, flex: 1 }}><span>{t("Tugaskan ke")}</span>
         <select value={to} onChange={(e) => setTo(e.target.value)}>
-          <option value="">Pilih anggota…</option>
+          <option value="">{t("Pilih anggota…")}</option>
           {members.map((m) => <option key={m.user_id} value={m.user_id}>{m.email} ({m.role_name})</option>)}
         </select>
       </label>
-      <button className="d-btn" disabled={busy || !to} onClick={() => void run(() => api("POST", `${url}/assign`, { json: { user_id: to } }), "Percakapan ditugaskan.")}>Tugaskan</button>
+      <button className="d-btn" disabled={busy || !to} onClick={() => void run(() => api("POST", `${url}/assign`, { json: { user_id: to } }), t("Percakapan ditugaskan."))}>{t("Tugaskan")}</button>
     </div>
   );
 }

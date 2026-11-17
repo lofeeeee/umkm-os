@@ -8,6 +8,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 
 import { X } from "@phosphor-icons/react/ssr";
+import { t } from "@/i18n";
 
 /* ---------------- confirm() ---------------- */
 interface ConfirmOpts {
@@ -68,9 +69,9 @@ export function ConfirmHost() {
             {p.body && <p>{p.body}</p>}
           </div>
           <div className="d-dialog-foot">
-            <button type="button" className="d-btn" onClick={() => done(false)}>{p.cancelLabel ?? "Batal"}</button>
+            <button type="button" className="d-btn" onClick={() => done(false)}>{p.cancelLabel ?? t("Batal")}</button>
             <button type="submit" className={`d-btn ${p.danger ? "d-btn-danger-solid" : "d-btn-primary"}`} autoFocus>
-              {p.confirmLabel ?? "Lanjutkan"}
+              {p.confirmLabel ?? t("Lanjutkan")}
             </button>
           </div>
         </form>
@@ -122,7 +123,7 @@ export function Sheet({
               <h2 id={id}>{title}</h2>
               {description && <p>{description}</p>}
             </div>
-            <button type="button" className="d-icon-btn" aria-label="Tutup panel" onClick={onClose}>
+            <button type="button" className="d-icon-btn" aria-label={t("Tutup panel")} onClick={onClose}>
               <X weight="bold" />
             </button>
           </header>

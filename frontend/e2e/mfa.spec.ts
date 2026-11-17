@@ -72,9 +72,9 @@ test("MFA: aktifkan, login dua langkah, kode pemulihan, kebijakan toko", async (
   await page.waitForURL(/\/security\?tenant=/);
   await expect(page.getByText("Belum aktif")).toBeVisible();
   // Mewajibkan MFA sebelum sesi lolos MFA ditolak (Owner tidak mengunci dirinya sendiri).
-  await page.getByLabel(/Wajibkan MFA untuk Owner/).click();
+  await page.getByLabel(/Wajibkan MFA untuk Pemilik/).click();
   await expect(page.getByRole("alert").filter({ hasText: /Aktifkan MFA di akun Anda/ })).toBeVisible();
-  await expect(page.getByLabel(/Wajibkan MFA untuk Owner/)).not.toBeChecked();
+  await expect(page.getByLabel(/Wajibkan MFA untuk Pemilik/)).not.toBeChecked();
 
   await page.getByRole("button", { name: "Siapkan MFA" }).click();
   const secret = (await page.getByTestId("mfa-secret").textContent()) ?? "";
@@ -92,9 +92,9 @@ test("MFA: aktifkan, login dua langkah, kode pemulihan, kebijakan toko", async (
   await expect(page.getByText(/Aktif · sisa kode pemulihan: 10/)).toBeVisible();
 
   // Sesi kini lolos MFA → kebijakan toko boleh diaktifkan.
-  await page.getByLabel(/Wajibkan MFA untuk Owner/).click();
+  await page.getByLabel(/Wajibkan MFA untuk Pemilik/).click();
   await expect(page.getByText("Kebijakan toko tersimpan.")).toBeVisible();
-  await expect(page.getByLabel(/Wajibkan MFA untuk Owner/)).toBeChecked();
+  await expect(page.getByLabel(/Wajibkan MFA untuk Pemilik/)).toBeChecked();
 
   // Login dua langkah dengan TOTP (langkah berikutnya: kode langkah ini sudah dipakai saat aktivasi).
   await page.getByRole("button", { name: "Keluar", exact: true }).click();

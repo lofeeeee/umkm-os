@@ -19,6 +19,8 @@ import { Badge, BusyButton, Card, EmptyState, PageHeader, SearchInput, Skeleton,
 import { sized } from "@/renderer/safe";
 import { useFieldErrors } from "@/ui/form";
 import { toast } from "@/ui/toast";
+import { t as tx } from "@/i18n";
+import { Tr } from "@/i18n/react";
 
 interface Variant { id?: string; sku: string; option_values: string[]; price: string; promo_price: string | null; is_active: boolean; name?: string }
 interface Option { name: string; values: string[] }
@@ -48,7 +50,7 @@ function priceRange(p: Product): string {
   if (prices.length === 0) return "—";
   const lo = Math.min(...prices);
   const hi = Math.max(...prices);
-  return lo === hi ? rupiah(lo) : `${rupiah(lo)} – ${rupiah(hi)}`;
+  return lo === hi ? rupiah(lo) : tx("{0} – {1}", rupiah(lo), rupiah(hi));
 }
 
 function Catalog({ ctx }: { ctx: TenantCtx }) {
@@ -87,9 +89,9 @@ function Catalog({ ctx }: { ctx: TenantCtx }) {
   async function setProductStatus(p: Product, to: string) {
     if (to === "archived") {
       const ok = await confirm({
-        title: `Arsipkan “${p.name}”?`,
-        body: "Produk disembunyikan dari website dan tidak bisa dipesan. Anda bisa mengaktifkannya lagi kapan saja.",
-        confirmLabel: "Arsipkan",
+        title: tx("Arsipkan “{0}”?", p.name),
+        body: tx("Produk disembunyikan dari website dan tidak bisa dipesan. Anda bisa mengaktifkannya lagi kapan saja."),
+        confirmLabel: tx("Arsipkan"),
         danger: true,
       });
       if (!ok) return;
@@ -97,7 +99,7 @@ function Catalog({ ctx }: { ctx: TenantCtx }) {
     try {
       await api("POST", `${base}/products/${p.id}/status`, { json: { status: to } });
       await load();
-      toast.ok(to === "active" ? `“${p.name}” aktif dan tampil di website.` : `“${p.name}” diarsipkan.`);
+      toast.ok(to === "active" ? tx("“{0}” aktif dan tampil di website.", p.name) : tx("“{0}” diarsipkan.", p.name));
     } catch (e) { toast.error(describe(e)); }
   }
 
@@ -113,44 +115,44 @@ function Catalog({ ctx }: { ctx: TenantCtx }) {
   return (
     <Assets.Provider value={assets}>
       <PageHeader
-        title="Produk"
-        description="Kelola katalog yang tampil di website toko. Produk berstatus Aktif bisa dipesan pembeli."
+        title={tx("Produk")}
+        description={tx("Kelola katalog yang tampil di website toko. Produk berstatus Aktif bisa dipesan pembeli.")}
         actions={
           <>
-            <button type="button" className="d-btn" onClick={() => setCatsOpen(true)}><Tag weight="bold" aria-hidden="true" />Kategori</button>
-            {canCreate && <button type="button" className="d-btn d-btn-primary" onClick={() => setEdit(emptyProduct())}><Plus weight="bold" aria-hidden="true" />Tambah produk</button>}
+            <button type="button" className="d-btn" onClick={() => setCatsOpen(true)}><Tag weight="bold" aria-hidden="true" />{tx("Kategori")}</button>
+            {canCreate && <button type="button" className="d-btn d-btn-primary" onClick={() => setEdit(emptyProduct())}><Plus weight="bold" aria-hidden="true" />{tx("Tambah produk")}</button>}
           </>
         }
       />
       <Alert kind="error">{err}</Alert>
 
       <Tabs
-        label="Filter status produk"
+        label={tx("Filter status produk")}
         value={tab}
         onChange={setTab}
         items={[
-          { value: "", label: "Semua", count: items?.length },
-          { value: "active", label: "Aktif", count: counts.active },
-          { value: "draft", label: "Draf", count: counts.draft },
-          { value: "archived", label: "Arsip", count: counts.archived },
+          { value: "", label: tx("Semua"), count: items?.length },
+          { value: "active", label: tx("Aktif"), count: counts.active },
+          { value: "draft", label: tx("Draf"), count: counts.draft },
+          { value: "archived", label: tx("Arsip"), count: counts.archived },
         ]}
       />
       <div className="d-toolbar">
-        <SearchInput label="Cari produk" placeholder="Cari nama atau SKU…" value={q} onChange={setQ} />
+        <SearchInput label={tx("Cari produk")} placeholder={tx("Cari nama atau SKU…")} value={q} onChange={setQ} />
       </div>
 
       <div className="d-table-wrap">
         {items === null ? <div style={{ padding: 20 }}><Skeleton lines={5} /></div> : shown.length === 0 ? (
           <EmptyState
             icon={Package}
-            title={q || tab ? "Tidak ada produk yang cocok" : "Belum ada produk"}
-            action={!q && !tab && canCreate ? <button type="button" className="d-btn d-btn-primary" onClick={() => setEdit(emptyProduct())}>Tambah produk pertama</button> : undefined}
+            title={q || tab ? tx("Tidak ada produk yang cocok") : tx("Belum ada produk")}
+            action={!q && !tab && canCreate ? <button type="button" className="d-btn d-btn-primary" onClick={() => setEdit(emptyProduct())}>{tx("Tambah produk pertama")}</button> : undefined}
           >
-            {q || tab ? "Coba kata kunci lain atau pilih tab Semua." : "Tambahkan produk agar tampil di website dan bisa dipesan pembeli."}
+            {q || tab ? tx("Coba kata kunci lain atau pilih tab Semua.") : tx("Tambahkan produk agar tampil di website dan bisa dipesan pembeli.")}
           </EmptyState>
         ) : (
           <table className="d-table d-table-stack">
-            <thead><tr><th>Produk</th><th className="d-hide-sm">Kategori</th><th className="d-num">Harga</th><th>Status</th><th><span className="sr-only">Aksi</span></th></tr></thead>
+            <thead><tr><th>{tx("Produk")}</th><th className="d-hide-sm">{tx("Kategori")}</th><th className="d-num">{tx("Harga")}</th><th>{tx("Status")}</th><th><span className="sr-only">{tx("Aksi")}</span></th></tr></thead>
             <tbody>
               {shown.map((p) => {
                 const st = status(PRODUCT_STATUS, p.status);
@@ -164,8 +166,8 @@ function Catalog({ ctx }: { ctx: TenantCtx }) {
                         <div>
                           <button type="button" className="d-link d-strong" style={{ color: "var(--ink)" }} onClick={() => setEdit(p)} disabled={!ctx.can("products.update")}>{p.name}</button>
                           <span className="d-sub">
-                            {p.variants.length > 1 ? `${p.variants.length} varian` : p.variants[0]?.sku}
-                            {!p.available && " · stok habis/tidak tersedia"}
+                            {p.variants.length > 1 ? tx("{0} varian", p.variants.length) : p.variants[0]?.sku}
+                            {!p.available && tx(" · stok habis/tidak tersedia")}
                           </span>
                         </div>
                       </div>
@@ -175,13 +177,13 @@ function Catalog({ ctx }: { ctx: TenantCtx }) {
                     <td><Badge tone={st.tone}>{st.label}</Badge></td>
                     <td className="d-actions">
                       <div className="d-row">
-                        {p.status !== "active" && ctx.can("products.update") && <button type="button" className="d-btn d-btn-sm" onClick={() => void setProductStatus(p, "active")}>Aktifkan</button>}
+                        {p.status !== "active" && ctx.can("products.update") && <button type="button" className="d-btn d-btn-sm" onClick={() => void setProductStatus(p, "active")}>{tx("Aktifkan")}</button>}
                         <RowMenu
                           items={[
-                            ...(ctx.can("products.update") ? [{ label: "Ubah", run: () => setEdit(p) }] : []),
-                            ...(p.status === "active" && ctx.can("products.archive") ? [{ label: "Arsipkan", run: () => void setProductStatus(p, "archived"), danger: true }] : []),
+                            ...(ctx.can("products.update") ? [{ label: tx("Ubah"), run: () => setEdit(p) }] : []),
+                            ...(p.status === "active" && ctx.can("products.archive") ? [{ label: tx("Arsipkan"), run: () => void setProductStatus(p, "archived"), danger: true }] : []),
                           ]}
-                          label={`Aksi untuk ${p.name}`}
+                          label={tx("Aksi untuk {0}", p.name)}
                         />
                       </div>
                     </td>
@@ -197,13 +199,13 @@ function Catalog({ ctx }: { ctx: TenantCtx }) {
         open={!!edit}
         onClose={closeEditor}
         wide
-        title={edit?.id ? `Ubah produk` : "Produk baru"}
-        description={edit?.id ? edit.name : "Disimpan sebagai draf; aktifkan setelah siap dijual."}
+        title={edit?.id ? tx("Ubah produk") : tx("Produk baru")}
+        description={edit?.id ? edit.name : tx("Disimpan sebagai draf; aktifkan setelah siap dijual.")}
       >
-        {edit && <Editor key={edit.id || "new"} ctx={ctx} base={base} initial={edit} cats={cats} onCancel={closeEditor} onSaved={async (name) => { closeEditor(); await load(); toast.ok(`“${name}” tersimpan.`); }} />}
+        {edit && <Editor key={edit.id || "new"} ctx={ctx} base={base} initial={edit} cats={cats} onCancel={closeEditor} onSaved={async (name) => { closeEditor(); await load(); toast.ok(tx("“{0}” tersimpan.", name)); }} />}
       </Sheet>
 
-      <Sheet open={catsOpen} onClose={() => setCatsOpen(false)} title="Kategori" description="Kelompokkan produk agar pembeli mudah mencari di website.">
+      <Sheet open={catsOpen} onClose={() => setCatsOpen(false)} title={tx("Kategori")} description={tx("Kelompokkan produk agar pembeli mudah mencari di website.")}>
         <Categories ctx={ctx} base={base} cats={cats} reload={load} />
       </Sheet>
     </Assets.Provider>
@@ -224,7 +226,7 @@ function Editor({ ctx, base, initial, cats, onCancel, onSaved }: {
 }) {
   const [p, setP] = useState<Product>(initial);
   const [hasVariants, setHasVariants] = useState(initial.options.length > 0);
-  const [options, setOptions] = useState<Option[]>(initial.options.length ? initial.options : [{ name: "Ukuran", values: [] }]);
+  const [options, setOptions] = useState<Option[]>(initial.options.length ? initial.options : [{ name: tx("Ukuran"), values: [] }]);
   const [optDraft, setOptDraft] = useState<Record<number, string>>({});
   const formRef = useRef<HTMLFormElement>(null);
   const f = useFieldErrors(formRef);
@@ -285,70 +287,70 @@ function Editor({ ctx, base, initial, cats, onCancel, onSaved }: {
   return (
     <form ref={formRef} noValidate onSubmit={(e) => { e.preventDefault(); void save(); }} style={{ display: "contents" }}>
       <Alert kind="error">{f.general}</Alert>
-      {f.count > 0 && <Alert kind="error">Periksa {f.count} isian yang ditandai di bawah.</Alert>}
+      {f.count > 0 && <Alert kind="error"><Tr s="Periksa {0} isian yang ditandai di bawah." a={[f.count]} /></Alert>}
 
       <section className="d-form-section">
-        <h3>Informasi produk</h3>
-        <p className="d-muted">Nama dan deskripsi tampil di halaman produk website.</p>
-        <label className="d-field"><span>Nama <span className="d-req">*</span></span>
-          <input aria-required="true" {...fieldProps("name")} value={p.name} maxLength={120} placeholder="mis. Kopi Susu Gula Aren" onChange={(e) => setP({ ...p, name: e.target.value })} />
+        <h3>{tx("Informasi produk")}</h3>
+        <p className="d-muted">{tx("Nama dan deskripsi tampil di halaman produk website.")}</p>
+        <label className="d-field"><span>{tx("Nama")}{" "}<span className="d-req">*</span></span>
+          <input aria-required="true" {...fieldProps("name")} value={p.name} maxLength={120} placeholder={tx("mis. Kopi Susu Gula Aren")} onChange={(e) => setP({ ...p, name: e.target.value })} />
           {f.error("name")}
         </label>
         <div className="d-grid">
-          <label className="d-field"><span>Kategori</span>
+          <label className="d-field"><span>{tx("Kategori")}</span>
             <select value={p.category_id ?? ""} onChange={(e) => setP({ ...p, category_id: e.target.value || null })}>
-              <option value="">Tanpa kategori</option>
-              {cats.map((c) => <option key={c.id} value={c.id}>{c.parent_id ? `— ${c.name}` : c.name}</option>)}
+              <option value="">{tx("Tanpa kategori")}</option>
+              {cats.map((c) => <option key={c.id} value={c.id}>{c.parent_id ? tx("— {0}", c.name) : c.name}</option>)}
             </select>
           </label>
           <label className="d-switch" style={{ alignSelf: "center" }}>
             <input type="checkbox" checked={p.available} onChange={(e) => setP({ ...p, available: e.target.checked })} />
-            <span><strong>Tersedia untuk dijual</strong><span className="d-muted">Matikan bila stok sedang kosong.</span></span>
+            <span><strong>{tx("Tersedia untuk dijual")}</strong><span className="d-muted">{tx("Matikan bila stok sedang kosong.")}</span></span>
           </label>
         </div>
-        <label className="d-field"><span>Deskripsi <span className="d-opt">(opsional)</span></span>
-          <textarea rows={4} maxLength={5000} value={p.description ?? ""} placeholder="Bahan, ukuran, cara penyajian…" onChange={(e) => setP({ ...p, description: e.target.value || null })} />
+        <label className="d-field"><span>{tx("Deskripsi")}{" "}<span className="d-opt">{tx("(opsional)")}</span></span>
+          <textarea rows={4} maxLength={5000} value={p.description ?? ""} placeholder={tx("Bahan, ukuran, cara penyajian…")} onChange={(e) => setP({ ...p, description: e.target.value || null })} />
         </label>
       </section>
 
       <section className="d-form-section">
-        <h3>Foto</h3>
-        <p className="d-muted">Foto pertama menjadi sampul di katalog. Maksimal 10 foto.</p>
+        <h3>{tx("Foto")}</h3>
+        <p className="d-muted">{tx("Foto pertama menjadi sampul di katalog. Maksimal 10 foto.")}</p>
         <div className="d-grid">
           {p.images.map((r, i) => (
-            <ImagePicker key={`${r}-${i}`} label={i === 0 ? "Foto sampul" : `Foto ${i + 1}`} value={r}
+            <ImagePicker key={`${r}-${i}`} label={i === 0 ? tx("Foto sampul") : tx("Foto {0}", i + 1)} value={r}
               onChange={(v) => setP({ ...p, images: v ? p.images.map((x, j) => (j === i ? v : x)) : p.images.filter((_, j) => j !== i) })} />
           ))}
-          {p.images.length < 10 && <ImagePicker key={`add-${p.images.length}`} label={p.images.length === 0 ? "Foto sampul" : "Tambah foto"} value={undefined} onChange={(v) => v && setP({ ...p, images: [...p.images, v] })} />}
+          {p.images.length < 10 && <ImagePicker key={`add-${p.images.length}`} label={p.images.length === 0 ? tx("Foto sampul") : tx("Tambah foto")} value={undefined} onChange={(v) => v && setP({ ...p, images: [...p.images, v] })} />}
         </div>
       </section>
 
       <section className="d-form-section">
-        <h3>Harga & varian</h3>
-        <p className="d-muted">Harga promo opsional; bila diisi, harga normal tampil dicoret.</p>
+        <h3>{tx("Harga & varian")}</h3>
+        <p className="d-muted">{tx("Harga promo opsional; bila diisi, harga normal tampil dicoret.")}</p>
         <label className="d-switch">
           <input type="checkbox" checked={hasVariants} onChange={(e) => setHasVariants(e.target.checked)} />
-          <span><strong>Produk ini punya varian</strong><span className="d-muted">mis. ukuran, rasa, atau warna dengan harga berbeda.</span></span>
+          <span><strong>{tx("Produk ini punya varian")}</strong><span className="d-muted">{tx("mis. ukuran, rasa, atau warna dengan harga berbeda.")}</span></span>
         </label>
 
         {!hasVariants || usedOptions.length === 0 ? (
           <>
-            {hasVariants && usedOptions.length === 0 && <p className="d-hint">Isi nama opsi dan minimal satu nilai di bawah untuk membuat varian.</p>}
+            {hasVariants && usedOptions.length === 0 && <p className="d-hint">{tx("Isi nama opsi dan minimal satu nilai di bawah untuk membuat varian.")}</p>}
             {!hasVariants && (
               <div className="d-grid">
                 <label className="d-field"><span>SKU <span className="d-req">*</span></span>
-                  <input aria-required="true" {...fieldProps("variants[0].sku")} value={single.sku} maxLength={64} placeholder="mis. KSA-01" onChange={(e) => setVariant(0, { sku: e.target.value })} />
+                  <input aria-required="true" {...fieldProps("variants[0].sku")} value={single.sku} maxLength={64} placeholder={tx("mis. KSA-01")} onChange={(e) => setVariant(0, { sku: e.target.value })} />
                   {f.error("variants[0].sku")}
                 </label>
-                <label className="d-field"><span>Harga <span className="d-req">*</span></span>
-                  <div className="d-input-prefix"><span aria-hidden="true">Rp</span>
-                    <input aria-required="true" aria-label="Harga" inputMode="decimal" {...fieldProps("variants[0].price")} value={single.price} placeholder="0" onChange={(e) => setVariant(0, { price: e.target.value })} />
+                <label className="d-field"><span>{tx("Harga")}{" "}<span className="d-req">*</span></span>
+                  <div className="d-input-prefix"><span aria-hidden="true">{tx("Rp")}</span>
+                    <input aria-required="true" aria-label={tx("Harga")} inputMode="decimal" {...fieldProps("variants[0].price")} value={single.price} placeholder="0" onChange={(e) => setVariant(0, { price: e.target.value })} />
                   </div>
                   {f.error("variants[0].price")}
                 </label>
-                <label className="d-field"><span>Harga promo <span className="d-opt">(opsional)</span></span>
-                  <div className="d-input-prefix"><span aria-hidden="true">Rp</span>
-                    <input aria-label="Harga promo" inputMode="decimal" {...fieldProps("variants[0].promo_price")} value={single.promo_price ?? ""} placeholder="—" onChange={(e) => setVariant(0, { promo_price: e.target.value || null })} />
+                <label className="d-field"><span>{tx("Harga promo")}{" "}<span className="d-opt">{tx("(opsional)")}</span></span>
+                  <div className="d-input-prefix"><span aria-hidden="true">{tx("Rp")}</span>
+                    <input aria-label={tx("Harga promo")} inputMode="decimal" {...fieldProps("variants[0].promo_price")} value={single.promo_price ?? ""} placeholder="—" onChange={(e) => setVariant(0, { promo_price: e.target.value || null })} />
                   </div>
                   {f.error("variants[0].promo_price")}
                 </label>
@@ -362,20 +364,20 @@ function Editor({ ctx, base, initial, cats, onCancel, onSaved }: {
             {options.map((o, i) => (
               <div className="e-list-item" key={i}>
                 <div className="d-row" style={{ alignItems: "flex-end", flexWrap: "nowrap" }}>
-                  <label className="d-field" style={{ flex: "0 0 160px", margin: 0 }}><span>Nama opsi</span>
-                    <input value={o.name} maxLength={40} placeholder="Ukuran" onChange={(e) => setOptions(options.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))} />
+                  <label className="d-field" style={{ flex: "0 0 160px", margin: 0 }}><span>{tx("Nama opsi")}</span>
+                    <input value={o.name} maxLength={40} placeholder={tx("Ukuran")} onChange={(e) => setOptions(options.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))} />
                   </label>
-                  <label className="d-field" style={{ flex: 1, margin: 0 }}><span>Tambah nilai (pisahkan koma, tekan Enter)</span>
-                    <input value={optDraft[i] ?? ""} placeholder="S, M, L" onChange={(e) => setOptDraft({ ...optDraft, [i]: e.target.value })}
+                  <label className="d-field" style={{ flex: 1, margin: 0 }}><span>{tx("Tambah nilai (pisahkan koma, tekan Enter)")}</span>
+                    <input value={optDraft[i] ?? ""} placeholder={tx("S, M, L")} onChange={(e) => setOptDraft({ ...optDraft, [i]: e.target.value })}
                       onKeyDown={(e) => { if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addValue(i); } }} onBlur={() => addValue(i)} />
                   </label>
-                  <button type="button" className="d-icon-btn" aria-label={`Hapus opsi ${o.name || i + 1}`} onClick={() => setOptions(options.filter((_, j) => j !== i))}><Trash weight="bold" /></button>
+                  <button type="button" className="d-icon-btn" aria-label={tx("Hapus opsi {0}", o.name || i + 1)} onClick={() => setOptions(options.filter((_, j) => j !== i))}><Trash weight="bold" /></button>
                 </div>
                 {o.values.length > 0 && (
                   <div className="d-chips" style={{ marginTop: 10 }}>
                     {o.values.map((v) => (
                       <span className="d-chip" key={v}>{v}
-                        <button type="button" aria-label={`Hapus nilai ${v}`} onClick={() => setOptions(options.map((x, j) => (j === i ? { ...x, values: x.values.filter((y) => y !== v) } : x)))}><X weight="bold" /></button>
+                        <button type="button" aria-label={tx("Hapus nilai {0}", v)} onClick={() => setOptions(options.map((x, j) => (j === i ? { ...x, values: x.values.filter((y) => y !== v) } : x)))}><X weight="bold" /></button>
                       </span>
                     ))}
                   </div>
@@ -384,7 +386,7 @@ function Editor({ ctx, base, initial, cats, onCancel, onSaved }: {
             ))}
             {options.length < 3 && (
               <button type="button" className="d-btn d-btn-sm" style={{ justifySelf: "start" }} onClick={() => setOptions([...options, { name: "", values: [] }])}>
-                <Plus weight="bold" aria-hidden="true" />Tambah opsi
+                <Plus weight="bold" aria-hidden="true" />{tx("Tambah opsi")}
               </button>
             )}
           </div>
@@ -393,23 +395,23 @@ function Editor({ ctx, base, initial, cats, onCancel, onSaved }: {
         {hasVariants && usedOptions.length > 0 && (
           <div className="d-table-wrap">
             <table className="d-table">
-              <thead><tr><th>Varian</th><th>SKU</th><th>Harga</th><th>Harga promo</th><th>Aktif</th></tr></thead>
+              <thead><tr><th>{tx("Varian")}</th><th>SKU</th><th>{tx("Harga")}</th><th>{tx("Harga promo")}</th><th>{tx("Aktif")}</th></tr></thead>
               <tbody>
                 {variants.map((v, i) => (
                   <tr key={v.option_values.join("|")}>
                     <td className="d-strong d-nowrap">{v.option_values.join(" / ")}</td>
                     <td>
-                      <input aria-required="true" aria-label={`SKU varian ${i + 1}`} {...fieldProps(`variants[${i}].sku`)} value={v.sku} maxLength={64} onChange={(e) => setVariant(i, { sku: e.target.value })} />
+                      <input aria-required="true" aria-label={tx("SKU varian {0}", i + 1)} {...fieldProps(`variants[${i}].sku`)} value={v.sku} maxLength={64} onChange={(e) => setVariant(i, { sku: e.target.value })} />
                       {f.error(`variants[${i}].sku`)}
                     </td>
                     <td>
-                      <input aria-required="true" aria-label={`Harga varian ${i + 1}`} inputMode="decimal" {...fieldProps(`variants[${i}].price`)} value={v.price} onChange={(e) => setVariant(i, { price: e.target.value })} />
+                      <input aria-required="true" aria-label={tx("Harga varian {0}", i + 1)} inputMode="decimal" {...fieldProps(`variants[${i}].price`)} value={v.price} onChange={(e) => setVariant(i, { price: e.target.value })} />
                       {f.error(`variants[${i}].price`)}
                     </td>
                     <td>
-                      <input aria-label={`Harga promo varian ${i + 1}`} inputMode="decimal" {...fieldProps(`variants[${i}].promo_price`)} value={v.promo_price ?? ""} onChange={(e) => setVariant(i, { promo_price: e.target.value || null })} />
+                      <input aria-label={tx("Harga promo varian {0}", i + 1)} inputMode="decimal" {...fieldProps(`variants[${i}].promo_price`)} value={v.promo_price ?? ""} onChange={(e) => setVariant(i, { promo_price: e.target.value || null })} />
                     </td>
-                    <td><input aria-label={`Aktif varian ${i + 1}`} type="checkbox" checked={v.is_active} onChange={(e) => setVariant(i, { is_active: e.target.checked })} /></td>
+                    <td><input aria-label={tx("Aktif varian {0}", i + 1)} type="checkbox" checked={v.is_active} onChange={(e) => setVariant(i, { is_active: e.target.checked })} /></td>
                   </tr>
                 ))}
               </tbody>
@@ -421,8 +423,8 @@ function Editor({ ctx, base, initial, cats, onCancel, onSaved }: {
 
       <section className="d-form-section">
         <details className="d-details">
-          <summary>Pengaturan lanjutan</summary>
-          <label className="d-field"><span>Slug URL <span className="d-opt">(kosongkan agar dibuat otomatis)</span></span>
+          <summary>{tx("Pengaturan lanjutan")}</summary>
+          <label className="d-field"><span>{tx("Alamat URL")}{" "}<span className="d-opt">{tx("(kosongkan agar dibuat otomatis)")}</span></span>
             <input {...fieldProps("slug")} value={p.slug} maxLength={80} placeholder="kopi-susu-gula-aren" onChange={(e) => setP({ ...p, slug: e.target.value })} />
             {f.error("slug")}
           </label>
@@ -430,9 +432,9 @@ function Editor({ ctx, base, initial, cats, onCancel, onSaved }: {
       </section>
 
       <div className="d-sheet-foot" style={{ margin: "0 -20px -20px", position: "sticky", bottom: -20 }}>
-        <span className="d-muted">{p.id ? `Status: ${status(PRODUCT_STATUS, p.status).label}` : "Produk baru disimpan sebagai draf."}</span>
-        <button type="button" className="d-btn" onClick={onCancel}>Batal</button>
-        <BusyButton busy={busy} disabled={!canSave}>Simpan</BusyButton>
+        <span className="d-muted">{p.id ? tx("Status: {0}", status(PRODUCT_STATUS, p.status).label) : tx("Produk baru disimpan sebagai draf.")}</span>
+        <button type="button" className="d-btn" onClick={onCancel}>{tx("Batal")}</button>
+        <BusyButton busy={busy} disabled={!canSave}>{tx("Simpan")}</BusyButton>
       </div>
     </form>
   );
@@ -450,37 +452,37 @@ function Categories({ ctx, base, cats, reload }: { ctx: TenantCtx; base: string;
       await api("POST", `${base}/categories`, { json: { name, parent_id: parent || null } });
       setName("");
       await reload();
-      toast.ok("Kategori ditambahkan.");
+      toast.ok(tx("Kategori ditambahkan."));
     } catch (e) { toast.error(describe(e)); } finally { setBusy(false); }
   }
   async function remove(c: Category) {
-    if (!(await confirm({ title: `Hapus kategori “${c.name}”?`, body: "Produk di kategori ini menjadi tanpa kategori.", confirmLabel: "Hapus", danger: true }))) return;
-    try { await api("DELETE", `${base}/categories/${c.id}`); await reload(); toast.ok("Kategori dihapus."); } catch (e) { toast.error(describe(e)); }
+    if (!(await confirm({ title: tx("Hapus kategori “{0}”?", c.name), body: tx("Produk di kategori ini menjadi tanpa kategori."), confirmLabel: tx("Hapus"), danger: true }))) return;
+    try { await api("DELETE", `${base}/categories/${c.id}`); await reload(); toast.ok(tx("Kategori dihapus.")); } catch (e) { toast.error(describe(e)); }
   }
   return (
     <>
       {can && (
         <form className="d-stack" onSubmit={(e) => { e.preventDefault(); void add(); }} style={{ marginBottom: 20 }}>
           <div className="d-grid">
-            <label className="d-field"><span>Nama kategori</span><input value={name} maxLength={60} placeholder="mis. Minuman" onChange={(e) => setName(e.target.value)} /></label>
-            <label className="d-field"><span>Induk</span>
+            <label className="d-field"><span>{tx("Nama kategori")}</span><input value={name} maxLength={60} placeholder={tx("mis. Minuman")} onChange={(e) => setName(e.target.value)} /></label>
+            <label className="d-field"><span>{tx("Induk")}</span>
               <select value={parent} onChange={(e) => setParent(e.target.value)}>
-                <option value="">Kategori utama</option>
-                {cats.filter((c) => !c.parent_id).map((c) => <option key={c.id} value={c.id}>Sub dari {c.name}</option>)}
+                <option value="">{tx("Kategori utama")}</option>
+                {cats.filter((c) => !c.parent_id).map((c) => <option key={c.id} value={c.id}>{tx("Sub dari")}{" "}{c.name}</option>)}
               </select>
             </label>
           </div>
-          <BusyButton busy={busy} className="d-btn" disabled={!name.trim()}><Plus weight="bold" aria-hidden="true" />Tambah kategori</BusyButton>
+          <BusyButton busy={busy} className="d-btn" disabled={!name.trim()}><Plus weight="bold" aria-hidden="true" />{tx("Tambah kategori")}</BusyButton>
         </form>
       )}
-      {cats.length === 0 ? <EmptyState icon={Tag} title="Belum ada kategori">Kategori membantu pembeli menyaring katalog.</EmptyState> : (
+      {cats.length === 0 ? <EmptyState icon={Tag} title={tx("Belum ada kategori")}>{tx("Kategori membantu pembeli menyaring katalog.")}</EmptyState> : (
         <ul className="d-list">
           {cats.map((c) => (
             <li key={c.id}>
               <div className="d-list-main" style={{ paddingLeft: c.parent_id ? 16 : 0 }}>
-                <strong>{c.parent_id ? `↳ ${c.name}` : c.name}</strong>
+                <strong>{c.parent_id ? tx("↳ {0}", c.name) : c.name}</strong>
               </div>
-              {can && <button type="button" className="d-btn d-btn-sm d-btn-ghost" onClick={() => void remove(c)} aria-label={`Hapus kategori ${c.name}`}><Trash weight="bold" aria-hidden="true" />Hapus</button>}
+              {can && <button type="button" className="d-btn d-btn-sm d-btn-ghost" onClick={() => void remove(c)} aria-label={tx("Hapus kategori {0}", c.name)}><Trash weight="bold" aria-hidden="true" />{tx("Hapus")}</button>}
             </li>
           ))}
         </ul>

@@ -34,9 +34,9 @@ describe("ThemePanel (Studio Enhancement Task 6)", () => {
 
     // Verify static markup contains required navbar labels
     const html = renderToStaticMarkup(<ThemePanel {...props} />);
-    expect(html).toContain("Bilah Atas (Top Bar)");
-    expect(html).toContain("Bilah Samping (Side Bar)");
-    expect(html).toContain("Navigasi Menempel (Sticky Navbar)");
+    expect(html).toContain("Bilah atas");
+    expect(html).toContain("Bilah samping");
+    expect(html).toContain("Navigasi menempel saat digulir");
 
     // Call component function directly to test interaction handlers
     const tree = ThemePanel(props);
@@ -58,14 +58,14 @@ describe("ThemePanel (Studio Enhancement Task 6)", () => {
       return null;
     }
 
-    // Find "Bilah Samping (Side Bar)" button
+    // Find "Bilah samping" button
     const sideBarBtn = findElement(
       tree,
       (el) =>
         el.type === "button" &&
-        (el.props?.children === "Bilah Samping (Side Bar)" ||
+        (el.props?.children === "Bilah samping" ||
           (Array.isArray(el.props?.children) &&
-            el.props.children.includes("Bilah Samping (Side Bar)")))
+            el.props.children.includes("Bilah samping")))
     );
     expect(sideBarBtn).toBeTruthy();
     sideBarBtn.props.onClick();
@@ -101,7 +101,7 @@ describe("ThemePanel (Studio Enhancement Task 6)", () => {
       (el) =>
         el.type === "input" &&
         el.props?.type === "checkbox" &&
-        el.props?.["aria-label"] === "Navigasi Menempel (Sticky Navbar)"
+        el.props?.["aria-label"] === "Navigasi menempel saat digulir"
     );
     expect(stickyInput).toBeTruthy();
     stickyInput.props.onChange({ target: { checked: false } });
@@ -210,12 +210,12 @@ describe("ThemePanel (Studio Enhancement Task 6)", () => {
     };
 
     const html = renderToStaticMarkup(<ThemePanel {...props} />);
-    expect(html).toContain("Latar Belakang Gambar");
-    expect(html).toContain("Hapus Latar");
+    expect(html).toContain("Gambar latar");
+    expect(html).toContain("Hapus latar");
     expect(html).toContain("https://storage.test/asset:existing-bg");
     expect(html).toContain("Penuh");
     expect(html).toContain("Proporsional");
-    expect(html).toContain("Motif Pola");
+    expect(html).toContain("Motif berulang");
     expect(html).toContain("Tengah");
     expect(html).toContain("Atas");
     expect(html).toContain("Bawah");
@@ -246,9 +246,9 @@ describe("ThemePanel (Studio Enhancement Task 6)", () => {
       tree,
       (el) =>
         el.type === "button" &&
-        (el.props?.children === "Hapus Latar" ||
+        (el.props?.children === "Hapus latar" ||
           (Array.isArray(el.props?.children) &&
-            el.props.children.includes("Hapus Latar")))
+            el.props.children.includes("Hapus latar")))
     );
     expect(removeBtn).toBeTruthy();
     removeBtn.props.onClick();
@@ -281,7 +281,7 @@ describe("ThemePanel (Studio Enhancement Task 6)", () => {
       tree,
       (el) =>
         el.type === "select" &&
-        el.props?.["aria-label"] === "Ukuran Latar Belakang"
+        el.props?.["aria-label"] === "Ukuran gambar latar"
     );
     expect(sizeSelect).toBeTruthy();
     sizeSelect.props.onChange({ target: { value: "repeat" } });
@@ -292,7 +292,7 @@ describe("ThemePanel (Studio Enhancement Task 6)", () => {
       tree,
       (el) =>
         el.type === "select" &&
-        el.props?.["aria-label"] === "Posisi Latar Belakang"
+        el.props?.["aria-label"] === "Posisi gambar latar"
     );
     expect(posSelect).toBeTruthy();
     posSelect.props.onChange({ target: { value: "top" } });

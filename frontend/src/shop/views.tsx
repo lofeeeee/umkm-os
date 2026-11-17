@@ -19,8 +19,11 @@ import {
   type CheckoutConfig, type CustomerSession, type OrderSummary, type PublicOrder, type PublicProduct,
 } from "./api";
 import { addToCart, cartCount, clearCart, displaySubtotalSen, getCart, saveOrder, savedOrders, setQuantity, type CartItem } from "./cart";
+import { t as tx, tmap, intlLocale } from "@/i18n";
+import { Tr } from "@/i18n/react";
+import { LanguageSwitch } from "@/i18n/react";
 
-const ERR: Record<string, string> = {
+const ERR: Record<string, string> = tmap({
   required: "wajib diisi",
   invalid_email: "email tidak valid",
   invalid_phone: "nomor telepon tidak valid",
@@ -30,37 +33,38 @@ const ERR: Record<string, string> = {
   fulfillment_unavailable: "metode pengambilan tidak tersedia",
   too_long: "terlalu panjang",
   weak_password: "password minimal 8 karakter dan tidak sama dengan email",
-};
+});
 
-const FIELD: Record<string, string> = {
+const FIELD: Record<string, string> = tmap({
   name: "Nama", email: "Email", phone: "Nomor telepon", delivery_address: "Alamat pengiriman",
-  note: "Catatan", fulfillment: "Pengambilan", password: "Password", items: "Keranjang",
-};
+  get note() { return tx("Catatan"); }, fulfillment: "Pengambilan", password: "Password", items: "Keranjang",
+});
 
 function explain(e: unknown): string {
   if (e instanceof ApiError) {
     const f = e.fieldErrors;
-    if (f.some((x) => x.code === "fulfillment_unavailable")) return "Cara pengambilan yang dipilih sudah tidak tersedia. Muat ulang halaman lalu pilih yang lain.";
-    if (f.length) return f.map((x) => `${FIELD[x.path] ?? x.path}: ${ERR[x.code] ?? x.code}`).join("; ");
+    if (f.some((x) => x.code === "fulfillment_unavailable")) return tx("Cara pengambilan yang dipilih sudah tidak tersedia. Muat ulang halaman lalu pilih yang lain.");
+    if (f.length) return f.map((x) => tx("{0}: {1}", FIELD[x.path] ?? x.path, ERR[x.code] ?? x.code)).join("; ");
     const reason = (e.details as { reason?: string } | null)?.reason;
-    if (reason === "insufficient_stock") return "Stok tidak mencukupi untuk salah satu produk. Kurangi jumlahnya.";
-    if (reason === "payment_not_configured") return "Toko belum menerima pesanan online.";
-    if (reason === "email_taken") return "Email sudah terdaftar di toko ini. Silakan masuk.";
-    if (e.status === 429) return "Terlalu banyak percobaan. Coba lagi beberapa menit lagi.";
+    if (reason === "insufficient_stock") return tx("Stok tidak mencukupi untuk salah satu produk. Kurangi jumlahnya.");
+    if (reason === "payment_not_configured") return tx("Toko belum menerima pesanan online.");
+    if (reason === "email_taken") return tx("Email sudah terdaftar di toko ini. Silakan masuk.");
+    if (e.status === 429) return tx("Terlalu banyak percobaan. Coba lagi beberapa menit lagi.");
     return e.message;
   }
-  return "Tidak dapat menghubungi toko. Periksa koneksi Anda.";
+  return tx("Tidak dapat menghubungi toko. Periksa koneksi Anda.");
 }
 
 function Shell({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div className="shop">
-      <nav className="shop-nav" aria-label="Navigasi toko">
-        <a href="/">← Kembali ke toko</a>
+      <nav className="shop-nav" aria-label={tx("Navigasi toko")}>
+        <a href="/">{tx("← Kembali ke toko")}</a>
         <span className="shop-nav-links">
-          <a href="/keranjang">Keranjang</a>
-          <a href="/pesanan">Pesanan</a>
-          <a href="/akun">Akun</a>
+          <a href="/keranjang">{tx("Keranjang")}</a>
+          <a href="/pesanan">{tx("Pesanan")}</a>
+          <a href="/akun">{tx("Akun")}</a>
+          <LanguageSwitch className="s-lang" />
         </span>
       </nav>
       <main className="shop-main">
@@ -90,7 +94,7 @@ export function CartFab() {
     };
   }, []);
   if (n === 0) return null;
-  return <a className="shop-fab" href="/keranjang">Keranjang ({n})</a>;
+  return <a className="shop-fab" href="/keranjang"><Tr s="Keranjang ({0})" a={[n]} /></a>;
 }
 
 // ------------------------------------------------------------------ produk
@@ -108,14 +112,14 @@ export function ProductPage({ slug }: { slug: string }) {
         setPick(x.variants[0]?.option_values ?? []);
         document.title = x.name;
       })
-      .catch((e) => setErr(e instanceof ApiError && e.status === 404 ? "Produk tidak ditemukan." : explain(e)));
+      .catch((e) => setErr(e instanceof ApiError && e.status === 404 ? tx("Produk tidak ditemukan.") : explain(e)));
   }, [slug]);
   const variant = useMemo(
     () => p?.variants.find((v) => v.option_values.length === pick.length && v.option_values.every((x, i) => x === pick[i])),
     [p, pick],
   );
-  if (err) return <Shell title="Produk"><Msg kind="error">{err}</Msg></Shell>;
-  if (!p) return <Shell title="Produk"><p className="s-muted" aria-busy="true">Memuat…</p></Shell>;
+  if (err) return <Shell title={tx("Produk")}><Msg kind="error">{err}</Msg></Shell>;
+  if (!p) return <Shell title={tx("Produk")}><p className="s-muted" aria-busy="true">{tx("Memuat…")}</p></Shell>;
   const sellable = p.available && !!variant;
   return (
     <Shell title={p.name}>
@@ -142,10 +146,10 @@ export function ProductPage({ slug }: { slug: string }) {
               </select>
             </label>
           ))}
-          {!variant && p.options.length > 0 && <Msg kind="error">Kombinasi ini tidak tersedia.</Msg>}
-          {!p.available && <Msg kind="error">Produk sedang tidak tersedia.</Msg>}
+          {!variant && p.options.length > 0 && <Msg kind="error">{tx("Kombinasi ini tidak tersedia.")}</Msg>}
+          {!p.available && <Msg kind="error">{tx("Produk sedang tidak tersedia.")}</Msg>}
           <label className="shop-field">
-            Jumlah
+            {tx("Jumlah")}
             <input type="number" min={1} max={999} value={qty} onChange={(e) => setQty(Math.max(1, Math.min(999, Number(e.target.value) || 1)))} />
           </label>
           <button
@@ -157,9 +161,9 @@ export function ProductPage({ slug }: { slug: string }) {
               setAdded(true);
             }}
           >
-            Tambah ke keranjang
+            {tx("Tambah ke keranjang")}
           </button>
-          <Msg kind="ok">{added ? <>Ditambahkan. <a href="/keranjang">Lihat keranjang</a></> : null}</Msg>
+          <Msg kind="ok">{added ? <>{tx("Ditambahkan.")}{" "}<a href="/keranjang">{tx("Lihat keranjang")}</a></> : null}</Msg>
         </div>
       </div>
     </Shell>
@@ -253,19 +257,19 @@ export function CartPage() {
   const fee = cfg && form.fulfillment === "delivery" ? Math.round(Number(cfg.delivery_fee) * 100) : 0;
   const sen = (n: number) => rupiah(`${Math.floor(n / 100)}.${String(n % 100).padStart(2, "0")}`);
   return (
-    <Shell title="Keranjang">
+    <Shell title={tx("Keranjang")}>
       {cart.length === 0 ? (
-        <p className="s-muted">Keranjang masih kosong. <a href="/">Lihat produk</a></p>
+        <p className="s-muted">{tx("Keranjang masih kosong.")}{" "}<a href="/">{tx("Lihat produk")}</a></p>
       ) : (
         <>
           <table className="shop-table">
-            <thead><tr><th>Produk</th><th>Jumlah</th><th>Harga</th></tr></thead>
+            <thead><tr><th>{tx("Produk")}</th><th>{tx("Jumlah")}</th><th>{tx("Harga")}</th></tr></thead>
             <tbody>
               {cart.map((c) => (
                 <tr key={c.variant_id}>
                   <td><a href={`/produk/${c.slug}`}>{c.name}</a>{c.variant_name !== "Default" && <div className="s-muted">{c.variant_name}</div>}</td>
                   <td>
-                    <input aria-label={`Jumlah ${c.name}`} type="number" min={0} max={999} value={c.quantity}
+                    <input aria-label={tx("Jumlah {0}", c.name)} type="number" min={0} max={999} value={c.quantity}
                       onChange={(e) => { setQuantity(c.variant_id, Math.max(0, Number(e.target.value) || 0)); setKey(null); }} />
                   </td>
                   <td>{rupiah(c.price)}</td>
@@ -273,37 +277,37 @@ export function CartPage() {
               ))}
             </tbody>
           </table>
-          <p className="shop-total">Perkiraan total: <strong>{sen(subtotal + fee)}</strong>{fee > 0 && <span className="s-muted"> (termasuk ongkir {sen(fee)})</span>}</p>
-          <p className="s-muted">Total resmi dihitung toko saat pesanan dibuat.</p>
-          {cfg && !cfg.checkout_enabled && <Msg kind="error">Toko belum menerima pesanan online.</Msg>}
+          <p className="shop-total">{tx("Perkiraan total:")}{" "}<strong>{sen(subtotal + fee)}</strong>{fee > 0 && <span className="s-muted">{" "}<Tr s="(termasuk ongkir {0})" a={[sen(fee)]} /></span>}</p>
+          <p className="s-muted">{tx("Total resmi dihitung toko saat pesanan dibuat.")}</p>
+          {cfg && !cfg.checkout_enabled && <Msg kind="error">{tx("Toko belum menerima pesanan online.")}</Msg>}
           {cfg?.checkout_enabled && !cfg.pickup_available && !cfg.delivery_available && (
-            <Msg kind="error">Toko belum mengatur cara pengambilan atau pengiriman, jadi pesanan online belum bisa dibuat. Silakan hubungi toko secara langsung.</Msg>
+            <Msg kind="error">{tx("Toko belum mengatur cara pengambilan atau pengiriman, jadi pesanan online belum bisa dibuat. Silakan hubungi toko secara langsung.")}</Msg>
           )}
           {cfg?.checkout_enabled && (cfg.pickup_available || cfg.delivery_available) && (
             <form className="shop-form" onSubmit={submit}>
               <fieldset>
-                <legend>Pengambilan</legend>
+                <legend>{tx("Pengambilan")}</legend>
                 {cfg.pickup_available && (
-                  <label className="shop-check"><input type="radio" name="f" checked={form.fulfillment === "pickup"} onChange={() => set("fulfillment", "pickup")} /> Ambil di toko</label>
+                  <label className="shop-check"><input type="radio" name="f" checked={form.fulfillment === "pickup"} onChange={() => set("fulfillment", "pickup")} />{" "}{tx("Ambil di toko")}</label>
                 )}
                 {cfg.delivery_available && (
-                  <label className="shop-check"><input type="radio" name="f" checked={form.fulfillment === "delivery"} onChange={() => set("fulfillment", "delivery")} /> Dikirim ({rupiah(cfg.delivery_fee)})</label>
+                  <label className="shop-check"><input type="radio" name="f" checked={form.fulfillment === "delivery"} onChange={() => set("fulfillment", "delivery")} />{" "}<Tr s="Dikirim ({0})" a={[rupiah(cfg.delivery_fee)]} /></label>
                 )}
               </fieldset>
-              <label className="shop-field">Nama<input required maxLength={120} value={form.name} onChange={(e) => set("name", e.target.value)} autoComplete="name" /></label>
-              <label className="shop-field">Email<input type="email" maxLength={254} value={form.email} onChange={(e) => set("email", e.target.value)} autoComplete="email" /></label>
-              <label className="shop-field">Nomor WhatsApp/telepon<input type="tel" maxLength={20} value={form.phone} onChange={(e) => set("phone", e.target.value)} autoComplete="tel" /></label>
+              <label className="shop-field">{tx("Nama")}<input required maxLength={120} value={form.name} onChange={(e) => set("name", e.target.value)} autoComplete="name" /></label>
+              <label className="shop-field">{tx("Email")}<input type="email" maxLength={254} value={form.email} onChange={(e) => set("email", e.target.value)} autoComplete="email" /></label>
+              <label className="shop-field">{tx("Nomor WhatsApp/telepon")}<input type="tel" maxLength={20} value={form.phone} onChange={(e) => set("phone", e.target.value)} autoComplete="tel" /></label>
               {form.fulfillment === "delivery" && (
-                <label className="shop-field">Alamat pengiriman<textarea required maxLength={500} value={form.delivery_address} onChange={(e) => set("delivery_address", e.target.value)} autoComplete="street-address" /></label>
+                <label className="shop-field">{tx("Alamat pengiriman")}<textarea required maxLength={500} value={form.delivery_address} onChange={(e) => set("delivery_address", e.target.value)} autoComplete="street-address" /></label>
               )}
-              <label className="shop-field">Catatan (opsional)<textarea maxLength={500} value={form.note} onChange={(e) => set("note", e.target.value)} /></label>
+              <label className="shop-field">{tx("Catatan (opsional)")}<textarea maxLength={500} value={form.note} onChange={(e) => set("note", e.target.value)} /></label>
               <label className="shop-check">
                 <input type="checkbox" checked={form.accept} onChange={(e) => set("accept", e.target.checked)} required />
-                Saya menyetujui <a href="/kebijakan-privasi" target="_blank" rel="noopener">kebijakan privasi</a> dan <a href="/syarat-transaksi" target="_blank" rel="noopener">syarat transaksi</a>.
+                {tx("Saya menyetujui")}{" "}<a href="/kebijakan-privasi" target="_blank" rel="noopener">{tx("kebijakan privasi")}</a> dan <a href="/syarat-transaksi" target="_blank" rel="noopener">{tx("syarat transaksi")}</a>.
               </label>
-              {customer && <p className="s-muted">Masuk sebagai {customer.email}.</p>}
+              {customer && <p className="s-muted"><Tr s="Masuk sebagai {0}." a={[customer.email]} /></p>}
               <Msg kind="error">{err}</Msg>
-              <button className="s-btn" disabled={busy || !form.accept}>{busy ? "Memproses…" : "Buat pesanan"}</button>
+              <button className="s-btn" disabled={busy || !form.accept}>{busy ? tx("Memproses…") : tx("Buat pesanan")}</button>
             </form>
           )}
           {!cfg && <Msg kind="error">{err}</Msg>}
@@ -353,7 +357,7 @@ export function OrderPage() {
           setOrder(o);
           setErr(null);
         },
-        (e) => setErr(e instanceof ApiError && e.status === 404 ? "Pesanan tidak ditemukan." : explain(e)),
+        (e) => setErr(e instanceof ApiError && e.status === 404 ? tx("Pesanan tidak ditemukan.") : explain(e)),
       ),
     [],
   );
@@ -374,18 +378,18 @@ export function OrderPage() {
     const id = setInterval(() => { void load(token); }, 5000);
     return () => clearInterval(id);
   }, [token, order?.status, load]);
-  if (token === undefined) return <Shell title="Pesanan"><p className="s-muted" aria-busy="true">Memuat…</p></Shell>;
+  if (token === undefined) return <Shell title={tx("Pesanan")}><p className="s-muted" aria-busy="true">{tx("Memuat…")}</p></Shell>;
   if (!token) {
     const saved = savedOrders();
     return (
-      <Shell title="Pesanan saya">
-        {saved.length === 0 && <p className="s-muted">Belum ada pesanan di perangkat ini.</p>}
+      <Shell title={tx("Pesanan saya")}>
+        {saved.length === 0 && <p className="s-muted">{tx("Belum ada pesanan di perangkat ini.")}</p>}
         <ul className="shop-list">
           {saved.map((o) => (
             <li key={o.code}><a href={`/pesanan#token=${encodeURIComponent(o.token)}`}>{o.code}</a> <span className="s-muted">{o.created_at.slice(0, 10)}</span></li>
           ))}
         </ul>
-        <p className="s-muted">Punya akun? <a href="/akun">Lihat riwayat di akun</a>.</p>
+        <p className="s-muted">{tx("Punya akun?")}{" "}<a href="/akun">{tx("Lihat riwayat di akun")}</a>.</p>
       </Shell>
     );
   }
@@ -395,7 +399,7 @@ export function OrderPage() {
     setErr(null);
     try {
       setOrder(await shopApi<PublicOrder>("POST", "/orders/current/payment-claim", { json: { payer_reference: ref || null } }, { "x-order-token": token }));
-      setOk("Terima kasih. Toko akan memverifikasi pembayaran Anda.");
+      setOk(tx("Terima kasih. Toko akan memverifikasi pembayaran Anda."));
     } catch (e) {
       setErr(explain(e));
     } finally {
@@ -408,7 +412,7 @@ export function OrderPage() {
     setErr(null);
     try {
       await shopApi("POST", "/orders/current/payment-proof", { bytes: await prepareImage(file) }, { "x-order-token": token });
-      setOk("Bukti pembayaran terkirim.");
+      setOk(tx("Bukti pembayaran terkirim."));
       await load(token);
     } catch (e) {
       setErr(explain(e));
@@ -416,62 +420,62 @@ export function OrderPage() {
       setBusy(false);
     }
   }
-  if (!order) return <Shell title="Pesanan"><Msg kind="error">{err}</Msg>{!err && <p className="s-muted" aria-busy="true">Memuat…</p>}</Shell>;
+  if (!order) return <Shell title={tx("Pesanan")}><Msg kind="error">{err}</Msg>{!err && <p className="s-muted" aria-busy="true">{tx("Memuat…")}</p>}</Shell>;
   const p = order.payment;
   const waiting = order.status === "AWAITING_PAYMENT" && p && (p.status === "pending" || p.status === "claimed");
   return (
-    <Shell title={`Pesanan ${order.code}`}>
+    <Shell title={tx("Pesanan {0}", order.code)}>
       <p className="shop-status" data-status={order.status}>{STATUS_TEXT[order.status] ?? order.status}</p>
       <Msg kind="ok">{ok}</Msg>
       <Msg kind="error">{err}</Msg>
       {waiting && (
-        <section className="shop-pay" aria-label="Pembayaran QRIS">
-          <h2>Bayar dengan QRIS</h2>
+        <section className="shop-pay" aria-label={tx("Pembayaran QRIS")}>
+          <h2>{tx("Bayar dengan QRIS")}</h2>
           {gopay?.available && gopay.qr_svg ? (
             <>
-              <p>Pindai kode QRIS berikut, lalu bayar <strong>tepat {rupiah(`${gopay.total_rupiah}.00`)}</strong>. Pembayaran terkonfirmasi otomatis.</p>
+              <p>{tx("Pindai kode QRIS berikut, lalu bayar")}{" "}<strong>tepat {rupiah(`${gopay.total_rupiah}.00`)}</strong>{tx(". Pembayaran terkonfirmasi otomatis.")}</p>
               {/* eslint-disable-next-line @next/next/no-img-element -- QR dinamis SVG inline (data URL) */}
-              <img className="shop-qris" src={`data:image/svg+xml;utf8,${encodeURIComponent(gopay.qr_svg)}`} alt="QRIS pembayaran" />
-              <p className="s-muted">Nominal berakhiran angka unik agar pembayaran Anda dikenali otomatis — jangan dibulatkan. Status pesanan berubah sendiri setelah dibayar.</p>
+              <img className="shop-qris" src={`data:image/svg+xml;utf8,${encodeURIComponent(gopay.qr_svg)}`} alt={tx("QRIS pembayaran")} />
+              <p className="s-muted">{tx("Nominal berakhiran angka unik agar pembayaran Anda dikenali otomatis — jangan dibulatkan. Status pesanan berubah sendiri setelah dibayar.")}</p>
             </>
           ) : (
             <>
-              <p>Pindai kode QRIS berikut dengan aplikasi pembayaran Anda, lalu bayar <strong>tepat {rupiah(p.amount)}</strong>.</p>
+              <p>{tx("Pindai kode QRIS berikut dengan aplikasi pembayaran Anda, lalu bayar")}{" "}<strong>tepat {rupiah(p.amount)}</strong>.</p>
               {p.qris_url && (
                 // eslint-disable-next-line @next/next/no-img-element -- QRIS toko, signed URL
-                <img className="shop-qris" src={fileUrl(p.qris_url)} alt={`QRIS ${p.receiver_name ?? "toko"}`} />
+                <img className="shop-qris" src={fileUrl(p.qris_url)} alt={tx("QRIS {0}", p.receiver_name ?? "toko")} />
               )}
-              <p className="s-muted">Penerima: {p.receiver_name}. Cantumkan kode pesanan {order.code} bila aplikasi meminta catatan.</p>
+              <p className="s-muted"><Tr s="Penerima: {0}. Cantumkan kode pesanan {1} bila aplikasi meminta catatan." a={[p.receiver_name, order.code]} /></p>
             </>
           )}
-          <p className="s-muted">Bayar sebelum {new Date(order.expires_at).toLocaleString("id-ID")}.</p>
+          <p className="s-muted">{tx("Bayar sebelum")}{" "}{new Date(order.expires_at).toLocaleString(intlLocale())}.</p>
           {p.status === "claimed" ? (
-            <p>Anda sudah menandai pembayaran. Toko sedang memverifikasi.</p>
+            <p>{tx("Anda sudah menandai pembayaran. Toko sedang memverifikasi.")}</p>
           ) : (
             <>
-              <label className="shop-field">Nama pembayar / catatan (opsional)<input maxLength={120} value={ref} onChange={(e) => setRef(e.target.value)} /></label>
-              <button className="s-btn" onClick={claim} disabled={busy}>Saya sudah membayar</button>
+              <label className="shop-field">{tx("Nama pembayar / catatan (opsional)")}<input maxLength={120} value={ref} onChange={(e) => setRef(e.target.value)} /></label>
+              <button className="s-btn" onClick={claim} disabled={busy}>{tx("Saya sudah membayar")}</button>
             </>
           )}
-          <label className="shop-field">Unggah bukti pembayaran (opsional, PNG/JPEG/WebP)
+          <label className="shop-field">{tx("Unggah bukti pembayaran (opsional, PNG/JPEG/WebP)")}
             <input type="file" accept="image/png,image/jpeg,image/webp" disabled={busy}
               onChange={(e) => { const f = e.target.files?.[0]; if (f) void proof(f); }} />
           </label>
         </section>
       )}
-      {p?.status === "rejected" && <Msg kind="error">Pembayaran ditolak toko: {p.rejection_reason}</Msg>}
+      {p?.status === "rejected" && <Msg kind="error">{tx("Pembayaran ditolak toko:")}{" "}{p.rejection_reason}</Msg>}
       <table className="shop-table">
-        <thead><tr><th>Produk</th><th>Jumlah</th><th>Subtotal</th></tr></thead>
+        <thead><tr><th>{tx("Produk")}</th><th>{tx("Jumlah")}</th><th>{tx("Subtotal")}</th></tr></thead>
         <tbody>
           {order.items.map((i, k) => (
             <tr key={k}><td>{i.product_name}{i.variant_name !== "Default" && <div className="s-muted">{i.variant_name}</div>}</td><td>{i.quantity}</td><td>{rupiah(i.line_total)}</td></tr>
           ))}
         </tbody>
       </table>
-      {order.delivery_fee !== "0.00" && <p>Ongkir: {rupiah(order.delivery_fee)}</p>}
-      <p className="shop-total">Total: <strong>{rupiah(order.total)}</strong></p>
-      <p className="s-muted">{order.fulfillment === "delivery" ? `Dikirim ke: ${order.delivery_address ?? ""}` : "Ambil di toko"}</p>
-      <button className="d-link" onClick={() => token && load(token)}>Perbarui status</button>
+      {order.delivery_fee !== "0.00" && <p>{tx("Ongkir:")}{" "}{rupiah(order.delivery_fee)}</p>}
+      <p className="shop-total">{tx("Total:")}{" "}<strong>{rupiah(order.total)}</strong></p>
+      <p className="s-muted">{order.fulfillment === "delivery" ? tx("Dikirim ke: {0}", order.delivery_address ?? "") : tx("Ambil di toko")}</p>
+      <button className="d-link" onClick={() => token && load(token)}>{tx("Perbarui status")}</button>
       <OrderTickets token={token} />
     </Shell>
   );
@@ -479,10 +483,10 @@ export function OrderPage() {
 
 interface PublicTicket { id: string; code: string; subject: string; status: string; messages: { id: string; author_type: string; body: string; created_at: string }[] }
 
-const TICKET_STATUS: Record<string, string> = {
+const TICKET_STATUS: Record<string, string> = tmap({
   OPEN: "Diterima", ASSIGNED: "Diterima", IN_PROGRESS: "Sedang ditangani", WAITING_CUSTOMER: "Menunggu balasan Anda",
   WAITING_INTERNAL: "Sedang ditangani", RESOLVED: "Selesai", CLOSED: "Ditutup",
-};
+});
 
 /** Laporan masalah pesanan (P4-3): tiket hanya dengan balasan publik toko. */
 function OrderTickets({ token }: { token: string }) {
@@ -501,28 +505,28 @@ function OrderTickets({ token }: { token: string }) {
     try { await f(); await load(); } catch (e) { setErr(explain(e)); }
   }
   return (
-    <section aria-label="Bantuan pesanan">
-      <h2>Ada masalah dengan pesanan?</h2>
+    <section aria-label={tx("Bantuan pesanan")}>
+      <h2>{tx("Ada masalah dengan pesanan?")}</h2>
       <Msg kind="error">{err}</Msg>
       {items.map((t) => (
         <div key={t.id} className="shop-pay">
           <strong>{t.subject}</strong> <span className="s-muted">({t.code} · {TICKET_STATUS[t.status] ?? t.status})</span>
           <ul className="shop-list">
-            {t.messages.map((m) => <li key={m.id}><strong>{m.author_type === "customer" ? "Anda" : "Toko"}:</strong> {m.body}</li>)}
+            {t.messages.map((m) => <li key={m.id}><strong>{m.author_type === "customer" ? tx("Anda") : tx("Toko")}:</strong> {m.body}</li>)}
           </ul>
-          <label className="shop-field">Balas<textarea maxLength={5000} value={reply[t.id] ?? ""} onChange={(e) => setReply({ ...reply, [t.id]: e.target.value })} /></label>
+          <label className="shop-field">{tx("Balas")}<textarea maxLength={5000} value={reply[t.id] ?? ""} onChange={(e) => setReply({ ...reply, [t.id]: e.target.value })} /></label>
           <button className="s-btn" disabled={!(reply[t.id] ?? "").trim()} onClick={() => run(async () => {
             await shopApi("POST", `/orders/current/tickets/${t.id}/messages`, { json: { body: reply[t.id] } }, h);
             setReply({ ...reply, [t.id]: "" });
-          })}>Kirim balasan</button>
+          })}>{tx("Kirim balasan")}</button>
         </div>
       ))}
-      <label className="shop-field">Judul masalah<input maxLength={200} value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} /></label>
-      <label className="shop-field">Ceritakan masalahnya<textarea maxLength={5000} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></label>
+      <label className="shop-field">{tx("Judul masalah")}<input maxLength={200} value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} /></label>
+      <label className="shop-field">{tx("Ceritakan masalahnya")}<textarea maxLength={5000} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></label>
       <button className="s-btn" disabled={!form.subject.trim()} onClick={() => run(async () => {
         await shopApi("POST", "/orders/current/tickets", { json: { subject: form.subject, description: form.description || null } }, h);
         setForm({ subject: "", description: "" });
-      })}>Laporkan masalah</button>
+      })}>{tx("Laporkan masalah")}</button>
     </section>
   );
 }
@@ -557,7 +561,7 @@ export function AccountPage() {
     try {
       if (mode === "register") {
         await shopApi("POST", "/customer/register", { json: { email: f.email, password: f.password, accept_privacy: f.accept, accept_terms: f.accept } });
-        setOk("Akun dibuat. Periksa email Anda untuk verifikasi, lalu masuk.");
+        setOk(tx("Akun dibuat. Periksa email Anda untuk verifikasi, lalu masuk."));
         setMode("login");
       } else {
         const s = await shopApi<CustomerSession>("POST", "/customer/login", { json: { email: f.email, password: f.password } });
@@ -568,39 +572,39 @@ export function AccountPage() {
       setErr(explain(e2));
     }
   }
-  if (!ready) return <Shell title="Akun"><p className="s-muted" aria-busy="true">Memuat…</p></Shell>;
+  if (!ready) return <Shell title={tx("Akun")}><p className="s-muted" aria-busy="true">{tx("Memuat…")}</p></Shell>;
   if (me) {
     return (
-      <Shell title="Akun saya">
-        <p>{me.email} {me.email_verified ? "(terverifikasi)" : "(belum terverifikasi)"}</p>
-        {!me.email_verified && <p className="s-muted">Verifikasi email untuk melihat pesanan yang dibuat dengan email ini sebelum Anda mendaftar.</p>}
-        <h2>Riwayat pesanan</h2>
-        {orders.length === 0 && <p className="s-muted">Belum ada pesanan.</p>}
+      <Shell title={tx("Akun saya")}>
+        <p>{me.email} {me.email_verified ? tx("(terverifikasi)") : tx("(belum terverifikasi)")}</p>
+        {!me.email_verified && <p className="s-muted">{tx("Verifikasi email untuk melihat pesanan yang dibuat dengan email ini sebelum Anda mendaftar.")}</p>}
+        <h2>{tx("Riwayat pesanan")}</h2>
+        {orders.length === 0 && <p className="s-muted">{tx("Belum ada pesanan.")}</p>}
         <ul className="shop-list">
           {orders.map((o) => <li key={o.id}>{o.code} — {STATUS_TEXT[o.status] ?? o.status} — {rupiah(o.total)}</li>)}
         </ul>
-        <button className="s-btn" onClick={async () => { await shopApi("POST", "/customer/logout").catch(() => null); setCustomerCsrf(null); setMe(null); }}>Keluar</button>
+        <button className="s-btn" onClick={async () => { await shopApi("POST", "/customer/logout").catch(() => null); setCustomerCsrf(null); setMe(null); }}>{tx("Keluar")}</button>
       </Shell>
     );
   }
   return (
-    <Shell title={mode === "login" ? "Masuk" : "Daftar akun"}>
-      <p className="s-muted">Akun bersifat opsional: Anda tetap bisa memesan tanpa akun.</p>
+    <Shell title={mode === "login" ? tx("Masuk") : tx("Daftar akun")}>
+      <p className="s-muted">{tx("Akun bersifat opsional: Anda tetap bisa memesan tanpa akun.")}</p>
       <form className="shop-form" onSubmit={submit}>
-        <label className="shop-field">Email<input type="email" required value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} autoComplete="email" /></label>
-        <label className="shop-field">Password<input type="password" required minLength={8} value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} autoComplete={mode === "login" ? "current-password" : "new-password"} /></label>
+        <label className="shop-field">{tx("Email")}<input type="email" required value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} autoComplete="email" /></label>
+        <label className="shop-field">{tx("Password")}<input type="password" required minLength={8} value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} autoComplete={mode === "login" ? "current-password" : "new-password"} /></label>
         {mode === "register" && (
           <label className="shop-check">
             <input type="checkbox" checked={f.accept} onChange={(e) => setF({ ...f, accept: e.target.checked })} required />
-            Saya menyetujui <a href="/kebijakan-privasi" target="_blank" rel="noopener">kebijakan privasi</a> dan <a href="/syarat-transaksi" target="_blank" rel="noopener">syarat</a>.
+            {tx("Saya menyetujui")}{" "}<a href="/kebijakan-privasi" target="_blank" rel="noopener">{tx("kebijakan privasi")}</a> dan <a href="/syarat-transaksi" target="_blank" rel="noopener">syarat</a>.
           </label>
         )}
         <Msg kind="error">{err}</Msg>
         <Msg kind="ok">{ok}</Msg>
-        <button className="s-btn">{mode === "login" ? "Masuk" : "Daftar"}</button>
+        <button className="s-btn">{mode === "login" ? tx("Masuk") : tx("Daftar")}</button>
       </form>
       <button className="d-link" onClick={() => setMode(mode === "login" ? "register" : "login")}>
-        {mode === "login" ? "Belum punya akun? Daftar" : "Sudah punya akun? Masuk"}
+        {mode === "login" ? tx("Belum punya akun? Daftar") : tx("Sudah punya akun? Masuk")}
       </button>
     </Shell>
   );
@@ -618,10 +622,10 @@ export function VerifyPage() {
   }, [token]);
   const state = token === null ? "bad" : token === undefined ? "busy" : result;
   return (
-    <Shell title="Verifikasi email">
-      {state === "busy" && <p className="s-muted" aria-busy="true">Memverifikasi…</p>}
-      {state === "ok" && <Msg kind="ok">Email terverifikasi{linked > 0 ? ` dan ${linked} riwayat pesanan ditautkan` : ""}. <a href="/akun">Masuk ke akun</a></Msg>}
-      {state === "bad" && <Msg kind="error">Tautan verifikasi tidak valid atau kedaluwarsa.</Msg>}
+    <Shell title={tx("Verifikasi email")}>
+      {state === "busy" && <p className="s-muted" aria-busy="true">{tx("Memverifikasi…")}</p>}
+      {state === "ok" && <Msg kind="ok">{tx("Email terverifikasi")}{linked > 0 ? tx(" dan {0} riwayat pesanan ditautkan", linked) : ""}. <a href="/akun">{tx("Masuk ke akun")}</a></Msg>}
+      {state === "bad" && <Msg kind="error">{tx("Tautan verifikasi tidak valid atau kedaluwarsa.")}</Msg>}
     </Shell>
   );
 }
@@ -629,7 +633,7 @@ export function VerifyPage() {
 /** Teks hukum (D-12) di situs toko: sumber sama dengan dashboard (`@/legal/content`). */
 export function LegalPage({ kind }: { kind: "privacy" | "terms" }) {
   return (
-    <Shell title={kind === "privacy" ? "Kebijakan privasi" : "Syarat & ketentuan"}>
+    <Shell title={kind === "privacy" ? tx("Kebijakan privasi") : tx("Syarat & ketentuan")}>
       <LegalDoc sections={kind === "privacy" ? PRIVACY : TERMS} />
     </Shell>
   );

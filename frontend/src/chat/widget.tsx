@@ -15,17 +15,18 @@ import { onColor } from "@/renderer/safe";
 import { shopApi } from "@/shop/api";
 
 import "./chat.css";
+import { t, tmap } from "@/i18n";
 
 export interface ChatMessage { id: string; seq: number; sender: "CUSTOMER" | "AI" | "ADMIN" | "SYSTEM"; body: string; created_at: string }
 interface Conversation { conversation_id: string; status: string; messages: ChatMessage[] }
 interface Config { enabled: boolean; consent_version: string; consent_text: string }
 
-export const SENDER_LABEL: Record<ChatMessage["sender"], string> = {
+export const SENDER_LABEL: Record<ChatMessage["sender"], string> = tmap({
   CUSTOMER: "Anda",
   AI: "Asisten AI",
   ADMIN: "Staf toko",
   SYSTEM: "Info",
-};
+});
 
 /** Gabungkan pesan baru tanpa duplikat, urut seq. */
 export function merge(list: ChatMessage[], add: ChatMessage[]): ChatMessage[] {
@@ -36,11 +37,11 @@ export function merge(list: ChatMessage[], add: ChatMessage[]): ChatMessage[] {
 
 function errorText(e: unknown): string {
   if (e instanceof ApiError) {
-    if (e.status === 429) return "Terlalu banyak pesan. Coba lagi sebentar lagi.";
-    if (e.status === 422) return "Pesan tidak valid (1–4000 karakter).";
+    if (e.status === 429) return t("Terlalu banyak pesan. Coba lagi sebentar lagi.");
+    if (e.status === 422) return t("Pesan tidak valid (1–4000 karakter).");
     return e.message;
   }
-  return "Tidak dapat menghubungi toko.";
+  return t("Tidak dapat menghubungi toko.");
 }
 
 /** Tampilan widget (plugin Chatbot Studio, ADR-0017): gelembung bulat, bilah bawah, atau menempel di halaman. */
@@ -100,33 +101,33 @@ export function ChatShell({ variant, heading, welcome, primary, open, onOpen, on
       {!open && variant === "bubble" && (
         <button type="button" className="chat-fab" data-interactive onClick={onOpen} aria-expanded="false">
           <IconChat />
-          <span>Chat</span>
+          <span>{t("Chat")}</span>
         </button>
       )}
       {!open && variant === "bar" && (
-        <button type="button" className="chat-bar" data-interactive onClick={onOpen} aria-expanded="false" aria-label="Chat">
+        <button type="button" className="chat-bar" data-interactive onClick={onOpen} aria-expanded="false" aria-label={t("Chat")}>
           <span className="chat-avatar chat-avatar-sm" aria-hidden="true">{initial(heading)}</span>
           <span className="chat-bar-who">{heading}</span>
-          <span className="chat-bar-input">{welcome?.trim() || "Tulis pertanyaan…"}</span>
+          <span className="chat-bar-input">{welcome?.trim() || t("Tulis pertanyaan…")}</span>
           <span className="chat-bar-go" aria-hidden="true"><IconSend /></span>
         </button>
       )}
       {!open && variant === "inline" && (
-        <button type="button" className="chat-inline-min" data-interactive onClick={onOpen} aria-expanded="false" aria-label="Chat">
+        <button type="button" className="chat-inline-min" data-interactive onClick={onOpen} aria-expanded="false" aria-label={t("Chat")}>
           <span className="chat-avatar chat-avatar-sm" aria-hidden="true">{initial(heading)}</span>
-          <span className="chat-inline-min-text"><strong>{heading}</strong><span>{welcome?.trim() || "Ketuk untuk mulai chat"}</span></span>
+          <span className="chat-inline-min-text"><strong>{heading}</strong><span>{welcome?.trim() || t("Ketuk untuk mulai chat")}</span></span>
           <IconUp />
         </button>
       )}
       {open && (
-        <section className="chat-panel" role="dialog" aria-label="Chat dengan toko">
+        <section className="chat-panel" role="dialog" aria-label={t("Chat dengan toko")}>
           <header className="chat-head">
             <span className="chat-avatar" aria-hidden="true">{initial(heading)}<i className="chat-presence" /></span>
             <span className="chat-head-text">
               <strong>{heading}</strong>
               <span className="chat-status">{status}</span>
             </span>
-            <button type="button" className="chat-x" data-interactive onClick={onClose} aria-label={variant === "inline" ? "Minimalkan chat" : "Tutup chat"}>
+            <button type="button" className="chat-x" data-interactive onClick={onClose} aria-label={variant === "inline" ? t("Minimalkan chat") : t("Tutup chat")}>
               {variant === "inline" ? <IconMin /> : <IconClose />}
             </button>
           </header>
@@ -237,8 +238,8 @@ export function ChatWidget({ variant = "bubble", title, welcome, startOpen = fal
   });
 
   const waiting = conv?.status === "WAITING_HUMAN";
-  const heading = title?.trim() || "Chat dengan toko";
-  const status = waiting ? "Menunggu staf toko…" : conv?.status === "HUMAN" ? "Staf toko membalas" : "Online · biasanya membalas cepat";
+  const heading = title?.trim() || t("Chat dengan toko");
+  const status = waiting ? t("Menunggu staf toko…") : conv?.status === "HUMAN" ? t("Staf toko membalas") : t("Online · biasanya membalas cepat");
   return (
     <ChatShell variant={variant} heading={heading} welcome={welcome} primary={primary} open={open} onOpen={() => setOpen(true)} onClose={() => setOpen(false)} status={status}>
       {err && <p className="chat-err" role="alert">{err}</p>}
@@ -247,32 +248,32 @@ export function ChatWidget({ variant = "bubble", title, welcome, startOpen = fal
           {welcome?.trim() && <p className="chat-msg chat-ai chat-welcome"><span className="chat-body">{welcome}</span></p>}
           <div className="chat-consent-card">
             <p>{cfg.consent_text}</p>
-            <button type="button" className="chat-btn" disabled={busy} onClick={begin}>Setuju &amp; mulai chat</button>
+            <button type="button" className="chat-btn" disabled={busy} onClick={begin}>{t("Setuju & mulai chat")}</button>
           </div>
         </div>
       ) : (
         <>
-          <ol className="chat-log" ref={logRef} aria-live="polite" aria-label="Pesan">
+          <ol className="chat-log" ref={logRef} aria-live="polite" aria-label={t("Pesan")}>
             {messages.map((m) => (
               <li key={m.id} className={`chat-msg chat-${m.sender.toLowerCase()}`}>
                 <span className="chat-who">{SENDER_LABEL[m.sender]}</span>
                 <span className="chat-body">{m.body}</span>
               </li>
             ))}
-            {busy && <li className="chat-typing" aria-label="Mengetik"><i /><i /><i /></li>}
+            {busy && <li className="chat-typing" aria-label={t("Mengetik")}><i /><i /><i /></li>}
           </ol>
-          {waiting && <p className="chat-note" role="status">Menunggu staf toko…</p>}
+          {waiting && <p className="chat-note" role="status">{t("Menunggu staf toko…")}</p>}
           <form className="chat-form" onSubmit={send}>
-            <label className="chat-sr" htmlFor="chat-input">Tulis pesan</label>
+            <label className="chat-sr" htmlFor="chat-input">{t("Tulis pesan")}</label>
             <textarea
-              id="chat-input" name="body" rows={1} maxLength={4000} required placeholder="Tulis pesan…"
+              id="chat-input" name="body" rows={1} maxLength={4000} required placeholder={t("Tulis pesan…")}
               onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); e.currentTarget.form?.requestSubmit(); } }}
             />
-            <button className="chat-send" disabled={busy} aria-label="Kirim"><IconSend /></button>
+            <button className="chat-send" disabled={busy} aria-label={t("Kirim")}><IconSend /></button>
           </form>
           <div className="chat-actions">
-            {conv.status === "AI" && <button type="button" className="chat-link" disabled={busy} onClick={handover}>Bicara dengan admin</button>}
-            <button type="button" className="chat-link" disabled={busy} onClick={end}>Akhiri chat</button>
+            {conv.status === "AI" && <button type="button" className="chat-link" disabled={busy} onClick={handover}>{t("Bicara dengan admin")}</button>}
+            <button type="button" className="chat-link" disabled={busy} onClick={end}>{t("Akhiri chat")}</button>
           </div>
         </>
       )}
@@ -291,23 +292,23 @@ export interface ChatPreviewProps extends ChatLook {
 
 /** Contoh percakapan dengan markup & CSS yang sama persis dengan widget di situs terbit. */
 export function ChatPreview({ variant = "bubble", title, welcome, primary, open, onOpenChange, ready = null }: ChatPreviewProps) {
-  const heading = title?.trim() || "Chat dengan toko";
+  const heading = title?.trim() || t("Chat dengan toko");
   const off = ready === false;
   return (
     <ChatShell
       preview off={off}
       variant={variant} heading={heading} welcome={welcome} primary={primary}
       open={open} onOpen={() => onOpenChange?.(true)} onClose={() => onOpenChange?.(false)}
-      status={off ? "Nonaktif — tidak tampil di situs" : "Online · biasanya membalas cepat"}
+      status={off ? t("Nonaktif — tidak tampil di situs") : t("Online · biasanya membalas cepat")}
     >
-      {off && <p className="chat-note chat-note-warn">Aktifkan chatbot di menu Asisten AI agar tampil untuk pembeli.</p>}
-      <ol className="chat-log" aria-label="Contoh percakapan">
-        <li className="chat-msg chat-ai"><span className="chat-who">{SENDER_LABEL.AI}</span><span className="chat-body">{welcome?.trim() || "Halo! Ada yang bisa kami bantu?"}</span></li>
-        <li className="chat-msg chat-customer"><span className="chat-who">{SENDER_LABEL.CUSTOMER}</span><span className="chat-body">Kopi susunya masih ada?</span></li>
-        <li className="chat-msg chat-ai"><span className="chat-who">{SENDER_LABEL.AI}</span><span className="chat-body">Masih, kak! Tersedia ukuran Regular dan Large 😊</span></li>
+      {off && <p className="chat-note chat-note-warn">{t("Aktifkan chatbot di menu Asisten AI agar tampil untuk pembeli.")}</p>}
+      <ol className="chat-log" aria-label={t("Contoh percakapan")}>
+        <li className="chat-msg chat-ai"><span className="chat-who">{SENDER_LABEL.AI}</span><span className="chat-body">{welcome?.trim() || t("Halo! Ada yang bisa kami bantu?")}</span></li>
+        <li className="chat-msg chat-customer"><span className="chat-who">{SENDER_LABEL.CUSTOMER}</span><span className="chat-body">{t("Kopi susunya masih ada?")}</span></li>
+        <li className="chat-msg chat-ai"><span className="chat-who">{SENDER_LABEL.AI}</span><span className="chat-body">{t("Masih, kak! Tersedia ukuran Regular dan Large 😊")}</span></li>
       </ol>
       <div className="chat-form" aria-hidden="true">
-        <span className="chat-fake-input">Tulis pesan…</span>
+        <span className="chat-fake-input">{t("Tulis pesan…")}</span>
         <span className="chat-send"><IconSend /></span>
       </div>
     </ChatShell>

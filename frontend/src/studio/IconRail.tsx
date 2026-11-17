@@ -1,6 +1,7 @@
 "use client";
 
 import { Files, PaintBrush, Palette, PuzzlePiece } from "@phosphor-icons/react/ssr";
+import { t as tx } from "@/i18n";
 
 export type StudioTab = "pages" | "elements" | "theme" | "draw";
 
@@ -11,14 +12,14 @@ export interface IconRailProps {
 
 export function IconRail({ activeTab, onSelectTab }: IconRailProps) {
   const tabs: { id: StudioTab; label: string; icon: typeof Files }[] = [
-    { id: "pages", label: "Halaman", icon: Files },
-    { id: "elements", label: "Elemen", icon: PuzzlePiece },
-    { id: "theme", label: "Desain", icon: Palette },
-    { id: "draw", label: "Coretan", icon: PaintBrush },
+    { id: "pages", label: tx("Halaman"), icon: Files },
+    { id: "elements", label: tx("Blok"), icon: PuzzlePiece },
+    { id: "theme", label: tx("Desain"), icon: Palette },
+    { id: "draw", label: tx("Coretan"), icon: PaintBrush },
   ];
 
   return (
-    <nav className="st-rail" aria-label="Bilah Alat Studio">
+    <nav className="st-rail" aria-label={tx("Bilah alat Studio")}>
       {tabs.map((t) => {
         const Icon = t.icon;
         const active = activeTab === t.id;

@@ -8,6 +8,7 @@ import { createContext, useContext, type KeyboardEvent } from "react";
 
 import { text } from "./safe";
 import type { Json } from "./types";
+import { t as tx } from "@/i18n";
 
 export interface EditApi {
   /** `path` relatif terhadap data section, mis. "title", "cta.label", "items.0.quote". */
@@ -29,13 +30,13 @@ export function T({ path, v, multiline, placeholder }: { path: string; v: Json |
       key={t}
       className="s-edit"
       data-interactive
-      data-placeholder={placeholder ?? "Ketik di sini…"}
+      data-placeholder={placeholder ?? tx("Ketik di sini…")}
       contentEditable="plaintext-only"
       suppressContentEditableWarning
       spellCheck
       role="textbox"
       aria-multiline={multiline || undefined}
-      aria-label={`Ubah ${path}`}
+      aria-label={tx("Ubah {0}", path)}
       onBlur={(e) => done(e.currentTarget)}
       onKeyDown={(e: KeyboardEvent<HTMLSpanElement>) => {
         e.stopPropagation();

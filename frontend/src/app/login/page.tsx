@@ -8,6 +8,7 @@ import { Alert } from "@/dashboard/shell";
 import { api, describe, setCsrf, type MfaChallenge, type Session } from "@/lib/api";
 import { AuthShell, PasswordInput } from "@/ui/auth";
 import { BusyButton } from "@/ui/page";
+import { t } from "@/i18n";
 
 export default function Login() {
   const router = useRouter();
@@ -65,31 +66,31 @@ export default function Login() {
   }
 
   return (
-    <AuthShell pitch="Satu tempat untuk semua operasional usaha Anda">
+    <AuthShell pitch={t("Satu tempat untuk semua operasional usaha Anda")}>
       {mfaToken ? (
         <>
-          <h1>Verifikasi dua langkah</h1>
-          <p className="d-muted">Masukkan 6 digit dari aplikasi authenticator, atau salah satu kode pemulihan (format xxxxx-xxxxx).</p>
+          <h1>{t("Verifikasi dua langkah")}</h1>
+          <p className="d-muted">{t("Masukkan 6 digit dari aplikasi authenticator, atau salah satu kode pemulihan (format xxxxx-xxxxx).")}</p>
           <form className="d-card" onSubmit={submitCode}>
             <Alert kind="error">{error}</Alert>
-            <label className="d-field"><span>Kode verifikasi</span>
+            <label className="d-field"><span>{t("Kode verifikasi")}</span>
               <input name="code" className="d-otp" autoComplete="one-time-code" inputMode="text" maxLength={16} required autoFocus placeholder="123456" />
             </label>
-            <BusyButton busy={busy} className="d-btn d-btn-primary d-btn-block d-btn-lg">Verifikasi</BusyButton>
-            <button type="button" className="d-btn d-btn-ghost d-btn-block" style={{ marginTop: 8 }} onClick={() => { setMfaToken(null); setError(null); }}>Batal</button>
+            <BusyButton busy={busy} className="d-btn d-btn-primary d-btn-block d-btn-lg">{t("Verifikasi")}</BusyButton>
+            <button type="button" className="d-btn d-btn-ghost d-btn-block" style={{ marginTop: 8 }} onClick={() => { setMfaToken(null); setError(null); }}>{t("Batal")}</button>
           </form>
         </>
       ) : (
         <>
-          <h1>Masuk</h1>
-          <p className="d-muted">Selamat datang kembali. Masuk untuk mengelola toko Anda.</p>
+          <h1>{t("Masuk")}</h1>
+          <p className="d-muted">{t("Selamat datang kembali. Masuk untuk mengelola toko Anda.")}</p>
           <form className="d-card" onSubmit={submit}>
             <Alert kind="error">{error}</Alert>
-            <label className="d-field"><span>Email</span><input name="email" type="email" autoComplete="email" required autoFocus placeholder="nama@contoh.id" /></label>
+            <label className="d-field"><span>{t("Email")}</span><input name="email" type="email" autoComplete="email" required autoFocus placeholder={t("nama@contoh.id")} /></label>
             <PasswordInput name="password" autoComplete="current-password" />
-            <BusyButton busy={busy} className="d-btn d-btn-primary d-btn-block d-btn-lg">Masuk</BusyButton>
+            <BusyButton busy={busy} className="d-btn d-btn-primary d-btn-block d-btn-lg">{t("Masuk")}</BusyButton>
           </form>
-          <p>Belum punya akun? <Link href="/register">Daftarkan usaha Anda</Link></p>
+          <p>{t("Belum punya akun?")}{" "}<Link href="/register">{t("Daftarkan usaha Anda")}</Link></p>
         </>
       )}
     </AuthShell>

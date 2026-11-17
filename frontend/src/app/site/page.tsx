@@ -16,6 +16,7 @@ import { route } from "@/shop/route";
 import { AccountPage, CartFab, CartPage, LegalPage, OrderPage, ProductPage, VerifyPage } from "@/shop/views";
 import { ChatWidget } from "@/chat/widget";
 import "@/shop/shop.css";
+import { t } from "@/i18n";
 
 function toGrid(p: PublicProduct): GridProduct {
   const v = p.variants[0];
@@ -97,10 +98,10 @@ function WebsitePage({ slug }: { slug: string }) {
 function Fallback({ state }: { state: "loading" | "missing" | "inactive" | "error" }) {
   return (
     <main className="d-narrow" aria-busy={state === "loading"}>
-      {state === "loading" && <p className="d-muted">Memuat…</p>}
-      {state === "missing" && <><h1>Halaman tidak ditemukan</h1><p className="d-muted">Situs ini belum tersedia.</p></>}
-      {state === "inactive" && <><h1>Toko sedang tidak aktif</h1><p className="d-muted">Silakan kembali lagi nanti.</p></>}
-      {state === "error" && <><h1>Terjadi gangguan</h1><p className="d-muted">Coba muat ulang beberapa saat lagi.</p></>}
+      {state === "loading" && <p className="d-muted">{t("Memuat…")}</p>}
+      {state === "missing" && <><h1>{t("Halaman tidak ditemukan")}</h1><p className="d-muted">{t("Situs ini belum tersedia.")}</p></>}
+      {state === "inactive" && <><h1>{t("Toko sedang tidak aktif")}</h1><p className="d-muted">{t("Silakan kembali lagi nanti.")}</p></>}
+      {state === "error" && <><h1>{t("Terjadi gangguan")}</h1><p className="d-muted">{t("Coba muat ulang beberapa saat lagi.")}</p></>}
     </main>
   );
 }

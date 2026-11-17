@@ -24,6 +24,7 @@ import type { DrawingStroke } from "./DrawingLayer";
 import { BlockEditorContext, type BlockEditor, type GestureMode } from "./editor-context";
 import { COLS, DESIGN_WIDTH, GAP, ROW, compact, place, spanWidth } from "./grid";
 import type { TplCell } from "./templates";
+import { t as tx } from "@/i18n";
 
 /** Plugin yang sedang diseret dari panel (dataTransfer tidak bisa dibaca saat dragover). */
 let paletteDrag: { kind: string; w: number } | null = null;
@@ -270,8 +271,8 @@ export function LiveCanvas(p: LiveCanvasProps) {
     const el = blockEl(id);
     if (!c || !g || !el || c.locked) return;
     if (isStacked(g)) {
-      if (mode !== "move") P.onHint("Ubah ukuran di tampilan Desktop atau Tablet — di ponsel blok selalu selebar layar.");
-      else P.onHint("Di ponsel blok ditumpuk otomatis. Geser blok di tampilan Desktop atau Tablet.");
+      if (mode !== "move") P.onHint(tx("Ubah ukuran di tampilan Desktop atau Tablet — di ponsel blok selalu selebar layar."));
+      else P.onHint(tx("Di ponsel blok ditumpuk otomatis. Geser blok di tampilan Desktop atau Tablet."));
       return;
     }
     // Cegah seleksi teks & seret gambar bawaan browser selama gerakan.
@@ -434,13 +435,13 @@ export function LiveCanvas(p: LiveCanvasProps) {
   const drawing = !!p.draw.tool;
   const gridOverlay = (
     <>
-      {insert && <div className="lc-insert" style={{ transform: `translate(${insert.left}px, ${insert.top - 7}px)`, width: insert.width }} aria-hidden="true"><span>Lepas di sini</span></div>}
+      {insert && <div className="lc-insert" style={{ transform: `translate(${insert.left}px, ${insert.top - 7}px)`, width: insert.width }} aria-hidden="true"><span>{tx("Lepas di sini")}</span></div>}
       {drawing && (
         <div
           className={`lc-ink-capture lc-ink-${p.draw.tool}`}
           style={{ ["--ink" as string]: p.draw.config.color, ["--ink-size" as string]: `${p.draw.config.size}px` }}
           onPointerDown={inkDown} onPointerMove={inkMove} onPointerUp={inkUp} onPointerCancel={inkUp}
-          aria-label={p.draw.tool === "brush" ? "Area menggambar" : "Area menghapus coretan"}
+          aria-label={p.draw.tool === "brush" ? tx("Area menggambar") : tx("Area menghapus coretan")}
         >
           {liveLayer}
         </div>

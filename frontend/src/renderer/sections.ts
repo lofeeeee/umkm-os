@@ -4,6 +4,7 @@
 
 import defaults from "./section-defaults.json";
 import type { Json, Section, SectionType } from "./types";
+import { t, tmap, m } from "@/i18n";
 
 export type FieldKind = "text" | "textarea" | "image" | "number" | "bool" | "href" | "select";
 
@@ -21,14 +22,14 @@ export interface Field {
   minItems?: number;
 }
 
-const title = (max = 120, required = false): Field => ({ key: "title", label: "Judul", kind: "text", max, required });
-const cta: Field = { key: "cta", label: "Tombol", kind: "cta" };
-const image = (key = "image", label = "Gambar"): Field => ({ key, label, kind: "image" });
+const title = (max = 120, required = false): Field => ({ key: "title", get label() { return t("Judul"); }, kind: "text", max, required });
+const cta: Field = { key: "cta", get label() { return t("Tombol"); }, kind: "cta" };
+const image = (key = "image", label: string = m("Gambar")): Field => ({ key, get label() { return t(label); }, kind: "image" });
 
 export const SOCIAL_PLATFORMS = ["instagram", "facebook", "tiktok", "youtube", "x", "website"];
 export const FONT_PRESETS = ["inter", "poppins", "nunito", "merriweather", "system"];
 
-export const SECTION_LABELS: Record<SectionType, string> = {
+export const SECTION_LABELS: Record<SectionType, string> = tmap({
   header: "Kepala halaman & navigasi",
   hero: "Banner utama",
   about: "Tentang",
@@ -40,48 +41,48 @@ export const SECTION_LABELS: Record<SectionType, string> = {
   location: "Lokasi",
   contact: "Kontak & media sosial",
   footer: "Kaki halaman",
-};
+});
 
 export const FIELDS: Record<SectionType, Field[]> = {
   header: [
     title(80, true),
-    image("logo", "Logo (kosong = logo profil bisnis)"),
-    { key: "nav", label: "Menu", kind: "list", maxItems: 8, item: [
-      { key: "label", label: "Teks", kind: "text", max: 40, required: true },
-      { key: "href", label: "Tautan", kind: "href", required: true },
+    image("logo", m("Logo (kosong = logo profil bisnis)")),
+    { key: "nav", get label() { return t("Menu"); }, kind: "list", maxItems: 8, item: [
+      { key: "label", get label() { return t("Teks"); }, kind: "text", max: 40, required: true },
+      { key: "href", get label() { return t("Tautan"); }, kind: "href", required: true },
     ] },
   ],
-  hero: [title(120, true), { key: "subtitle", label: "Subjudul", kind: "textarea", max: 240 }, image(), cta],
-  about: [title(), { key: "body", label: "Isi", kind: "textarea", max: 2000, required: true }, image()],
-  product_grid: [title(), { key: "limit", label: "Jumlah produk", kind: "number", min: 1, max: 24, required: true }],
-  promotion: [title(120, true), { key: "body", label: "Isi", kind: "textarea", max: 500 }, image(), cta],
+  hero: [title(120, true), { key: "subtitle", get label() { return t("Subjudul"); }, kind: "textarea", max: 240 }, image(), cta],
+  about: [title(), { key: "body", get label() { return t("Isi"); }, kind: "textarea", max: 2000, required: true }, image()],
+  product_grid: [title(), { key: "limit", get label() { return t("Jumlah produk"); }, kind: "number", min: 1, max: 24, required: true }],
+  promotion: [title(120, true), { key: "body", get label() { return t("Isi"); }, kind: "textarea", max: 500 }, image(), cta],
   gallery: [
     title(),
-    { key: "images", label: "Gambar", kind: "list", maxItems: 24, item: [
-      { key: "asset", label: "Gambar", kind: "image", required: true },
-      { key: "caption", label: "Keterangan", kind: "text", max: 120 },
+    { key: "images", get label() { return t("Gambar"); }, kind: "list", maxItems: 24, item: [
+      { key: "asset", get label() { return t("Gambar"); }, kind: "image", required: true },
+      { key: "caption", get label() { return t("Keterangan"); }, kind: "text", max: 120 },
     ] },
   ],
   testimonials: [
     title(),
-    { key: "items", label: "Testimoni", kind: "list", minItems: 1, maxItems: 12, item: [
-      { key: "name", label: "Nama", kind: "text", max: 80, required: true },
-      { key: "quote", label: "Kutipan", kind: "textarea", max: 500, required: true },
+    { key: "items", get label() { return t("Testimoni"); }, kind: "list", minItems: 1, maxItems: 12, item: [
+      { key: "name", get label() { return t("Nama"); }, kind: "text", max: 80, required: true },
+      { key: "quote", get label() { return t("Kutipan"); }, kind: "textarea", max: 500, required: true },
     ] },
   ],
   business_hours: [title()],
-  location: [title(), { key: "show_map", label: "Tampilkan tautan peta", kind: "bool" }],
+  location: [title(), { key: "show_map", get label() { return t("Tampilkan tautan peta"); }, kind: "bool" }],
   contact: [
     title(),
-    { key: "show_whatsapp", label: "Tampilkan WhatsApp", kind: "bool" },
-    { key: "show_phone", label: "Tampilkan telepon", kind: "bool" },
-    { key: "show_email", label: "Tampilkan email", kind: "bool" },
-    { key: "socials", label: "Media sosial", kind: "list", maxItems: 10, item: [
-      { key: "platform", label: "Platform", kind: "select", options: SOCIAL_PLATFORMS, required: true },
-      { key: "url", label: "URL (https://)", kind: "href", required: true },
+    { key: "show_whatsapp", get label() { return t("Tampilkan WhatsApp"); }, kind: "bool" },
+    { key: "show_phone", get label() { return t("Tampilkan telepon"); }, kind: "bool" },
+    { key: "show_email", get label() { return t("Tampilkan email"); }, kind: "bool" },
+    { key: "socials", get label() { return t("Media sosial"); }, kind: "list", maxItems: 10, item: [
+      { key: "platform", get label() { return t("Platform"); }, kind: "select", options: SOCIAL_PLATFORMS, required: true },
+      { key: "url", get label() { return t("URL (https://)"); }, kind: "href", required: true },
     ] },
   ],
-  footer: [{ key: "text", label: "Teks", kind: "text", max: 240 }],
+  footer: [{ key: "text", get label() { return t("Teks"); }, kind: "text", max: 240 }],
 };
 
 export function defaultData(type: SectionType): { [k: string]: Json } {

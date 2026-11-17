@@ -1,5 +1,6 @@
 // Klien API dashboard (ADR-0015): cookie sesi HttpOnly (dikirim browser) + header CSRF.
 // Token CSRF tidak disimpan di storage persisten; diambil ulang dari GET /auth/session.
+import { t as tx, tmap } from "@/i18n";
 
 export const API_ORIGIN = (process.env.NEXT_PUBLIC_API_ORIGIN ?? "").replace(/\/$/, "");
 
@@ -70,7 +71,7 @@ export interface Membership { tenant_id: string; name: string; slug: string; rol
  * Nama peran dalam bahasa Indonesia. Satu sumber untuk sidebar, home, dan Tim —
  * dulu home punya peta sendiri yang tidak kena karena API mengirim huruf besar.
  */
-const ROLE_TEXT: Record<string, string> = {
+const ROLE_TEXT: Record<string, string> = tmap({
   owner: "Pemilik",
   admin: "Admin",
   manager: "Manajer",
@@ -78,7 +79,7 @@ const ROLE_TEXT: Record<string, string> = {
   support_agent: "Agen dukungan",
   staff: "Staf",
   viewer: "Pengamat",
-};
+});
 export function roleLabel(role: string): string {
   return ROLE_TEXT[role.trim().toLowerCase()] ?? role;
 }
@@ -110,7 +111,7 @@ export function tenantParam(): string | null {
   return t && /^[0-9a-f-]{36}$/.test(t) ? t : null;
 }
 
-export const ERROR_TEXT: Record<string, string> = {
+export const ERROR_TEXT: Record<string, string> = tmap({
   required: "wajib diisi",
   too_long: "terlalu panjang",
   unsafe_url: "tautan tidak aman / tidak valid",
@@ -118,10 +119,10 @@ export const ERROR_TEXT: Record<string, string> = {
   asset_not_found: "gambar tidak ditemukan",
   invalid_color: "warna harus #RRGGBB",
   invalid_font_preset: "font tidak dikenal",
-  unknown_field: "field tidak dikenal",
+  unknown_field: "isian tidak dikenal",
   duplicate_id: "id ganda",
   out_of_range: "di luar rentang",
-  invalid_length: "jumlah item tidak valid",
+  invalid_length: "jumlah butir tidak valid",
   invalid_email: "email tidak valid",
   invalid_phone: "nomor tidak valid (8–15 digit)",
   invalid_timezone: "timezone tidak dikenal",
@@ -131,7 +132,7 @@ export const ERROR_TEXT: Record<string, string> = {
   invalid_date: "format tanggal YYYY-MM-DD",
   closed_xor_hours: "pilih tutup ATAU isi jam",
   invalid_or_duplicate_date: "tanggal tidak valid atau ganda",
-  template_mismatch: "template tidak sesuai website",
+  template_mismatch: "templat tidak sesuai website",
   latitude_longitude_pair: "isi latitude dan longitude bersamaan",
   control_character: "karakter tidak diizinkan",
   // P3: katalog, stok, CRM, pesanan
@@ -139,7 +140,7 @@ export const ERROR_TEXT: Record<string, string> = {
   promo_not_below_price: "harga promo harus di bawah harga normal",
   invalid_sku: "SKU hanya huruf/angka/titik/strip, maks 64",
   duplicate_sku: "SKU ganda",
-  invalid_slug: "slug hanya huruf kecil, angka, dan strip",
+  invalid_slug: "alamat URL hanya huruf kecil, angka, dan strip",
   unknown_value: "nilai opsi tidak dikenal",
   count_mismatch: "isi semua opsi varian",
   duplicate_combination: "kombinasi varian ganda",
@@ -174,12 +175,12 @@ export const ERROR_TEXT: Record<string, string> = {
   provider_not_available: "provider tidak ada atau nonaktif",
   same_as_primary: "harus berbeda dari provider utama",
   platform_fields_not_allowed: "AI platform tidak memakai URL/kunci sendiri",
-};
+});
 
-export const LIMIT_TEXT: Record<string, string> = {
+export const LIMIT_TEXT: Record<string, string> = tmap({
   max_products: "produk", max_members: "anggota tim", storage_bytes: "penyimpanan file (byte)",
   conversations_monthly: "percakapan per bulan", platform_ai_tokens_monthly: "token AI per bulan",
-};
+});
 
 /**
  * Pesan validasi per-field untuk ditampilkan inline di bawah input.
@@ -200,31 +201,31 @@ export function fieldErrors(e: unknown): Map<string, string> {
 
 /** Label ramah untuk path error API. */
 export function fieldLabel(path: string): string {
-  if (path === "name") return "Nama produk";
-  if (path === "slug") return "Slug URL";
-  if (path === "options") return "Opsi varian";
+  if (path === "name") return tx("Nama produk");
+  if (path === "slug") return tx("Alamat URL");
+  if (path === "options") return tx("Opsi varian");
   const v = path.match(/^variants\[(\d+)\]\.(\w+)$/);
   if (v) {
     const n = Number(v[1] ?? 0) + 1;
-    const part: Record<string, string> = { sku: "SKU", price: "Harga", promo_price: "Harga promo", option_values: "Nilai opsi", name: "Nama varian" };
+    const part: Record<string, string> = tmap({ sku: "SKU", price: "Harga", promo_price: "Harga promo", option_values: "Nilai opsi", name: "Nama varian" });
     const key = v[2] ?? "";
-    return `Varian ${n} · ${part[key] ?? key}`;
+    return tx("Varian {0} · {1}", n, part[key] ?? key);
   }
   return path;
 }
 
 /** Nama bidang umum untuk pesan validasi (UAT 15 Nov: "name: wajib diisi" → "Nama: wajib diisi"). */
-export const FIELD_TEXT: Record<string, string> = {
+export const FIELD_TEXT: Record<string, string> = tmap({
   name: "Nama", email: "Email", phone: "Telepon", whatsapp: "WhatsApp", description: "Deskripsi",
   address: "Alamat", label: "Label", latitude: "Latitude", longitude: "Longitude", timezone: "Zona waktu",
   url: "URL", platform: "Platform", fulfillment_note: "Catatan pengambilan/pengantaran", note: "Catatan",
   date: "Tanggal", open: "Jam buka", close: "Jam tutup", password: "Password", price: "Harga", sku: "SKU",
-  slug: "Slug", title: "Judul", delivery_fee: "Ongkir", quantity: "Jumlah", reason: "Alasan",
-};
+  slug: "Alamat URL", title: "Judul", delivery_fee: "Ongkir", quantity: "Jumlah", reason: "Alasan",
+});
 
 /** `addresses[0].city` → label bidang terakhir (+ nomor urut bila dalam daftar). */
 function genericLabel(path: string, labels?: Record<string, string>): string {
-  if (!path) return "Dokumen";
+  if (!path) return tx("Dokumen");
   if (labels?.[path]) return labels[path]!;
   const m = /^(?:.*?\[(\d+)\]\.)?([^.[\]]+)$/.exec(path);
   const last = m?.[2] ?? path;
@@ -241,12 +242,12 @@ export function describe(e: unknown, labels?: Record<string, string>): string {
     const reason = (e.details as { reason?: string; limit?: string; max?: number } | null)?.reason;
     if (e.status === 403 && reason === "plan_limit") {
       const d = e.details as { limit?: string; max?: number };
-      return `Batas paket tercapai (${LIMIT_TEXT[d.limit ?? ""] ?? d.limit}: maks ${d.max}). Tingkatkan paket di menu Langganan.`;
+      return tx("Batas paket tercapai ({0}: maks {1}). Tingkatkan paket di menu Langganan.", LIMIT_TEXT[d.limit ?? ""] ?? d.limit, d.max);
     }
-    if (e.status === 403 && reason === "subscription_expired") return "Langganan toko sudah berakhir. Perpanjang di menu Langganan.";
-    if (e.status === 403) return "Anda tidak punya izin untuk aksi ini.";
+    if (e.status === 403 && reason === "subscription_expired") return tx("Langganan toko sudah berakhir. Perpanjang di menu Langganan.");
+    if (e.status === 403) return tx("Anda tidak punya izin untuk aksi ini.");
     if (e.status === 409) return e.message;
     return e.message;
   }
-  return "Tidak dapat menghubungi server.";
+  return tx("Tidak dapat menghubungi server.");
 }

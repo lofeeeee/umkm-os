@@ -15,6 +15,7 @@ import { useState, type ReactNode } from "react";
 import { DotsSixVertical, LockSimple } from "@phosphor-icons/react/ssr";
 
 import { useBlockEditor } from "./editor-context";
+import { t } from "@/i18n";
 
 export interface EditableBlockWrapperProps {
   blockId: string;
@@ -72,7 +73,7 @@ export function EditableBlockWrapper({ blockId, label, selected, locked, onSelec
       <span className="sf-block-bar" data-interactive>
         <span
           className="sf-block-tag"
-          title={locked ? "Posisi terkunci" : "Seret untuk memindahkan"}
+          title={locked ? t("Posisi terkunci") : t("Seret untuk memindahkan")}
           onPointerDown={(e) => {
             if (e.button !== 0) return;
             e.stopPropagation();
@@ -85,17 +86,17 @@ export function EditableBlockWrapper({ blockId, label, selected, locked, onSelec
         </span>
         {selected && ed?.toolbar && <span className="sf-block-tools">{ed.toolbar(blockId)}</span>}
       </span>
-      {locked && <span className="sf-block-lock" aria-hidden="true" title="Blok terkunci" />}
+      {locked && <span className="sf-block-lock" aria-hidden="true" title={t("Blok terkunci")} />}
       {children}
       {ed && !locked && (
         <>
-          <span className="sf-handle sf-handle-x" data-interactive aria-hidden="true" title="Tarik untuk mengubah lebar"
+          <span className="sf-handle sf-handle-x" data-interactive aria-hidden="true" title={t("Tarik untuk mengubah lebar")}
             onPointerDown={(e) => { if (e.button !== 0) return; e.stopPropagation(); onSelect(); ed.startGesture(blockId, "resize-x", e); }} />
-          <span className="sf-handle sf-handle-y" data-interactive aria-hidden="true" title="Tarik untuk mengubah tinggi"
+          <span className="sf-handle sf-handle-y" data-interactive aria-hidden="true" title={t("Tarik untuk mengubah tinggi")}
             onPointerDown={(e) => { if (e.button !== 0) return; e.stopPropagation(); onSelect(); ed.startGesture(blockId, "resize-y", e); }} />
         </>
       )}
-      {fileOver && <span className="sf-drop-hint" aria-hidden="true">Lepas untuk memasang foto</span>}
+      {fileOver && <span className="sf-drop-hint" aria-hidden="true">{t("Lepas untuk memasang foto")}</span>}
     </div>
   );
 }

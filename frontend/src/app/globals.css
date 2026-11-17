@@ -1360,3 +1360,15 @@ main.d-legal { max-width: 720px; }
 
 .st-save-bad { color: var(--danger); font-weight: 600; }
 .st-save-bad svg { color: var(--danger); }
+
+/* ============================================================
+   Pemilih bahasa (ID | EN) — dasbor, halaman masuk/daftar
+   ============================================================ */
+.lang-switch { display: inline-flex; gap: 2px; padding: 2px; border-radius: 8px; background: var(--surface-hover); }
+.lang-switch button {
+  min-width: 30px; height: 26px; padding: 0 6px; border: 0; border-radius: 6px; background: transparent; color: var(--muted);
+  font: 650 0.6875rem/1 inherit; letter-spacing: 0.04em; cursor: pointer; transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease;
+}
+.lang-switch button:hover { color: var(--ink); }
+.lang-switch button[aria-pressed="true"] { background: var(--card); color: var(--ink); box-shadow: var(--shadow-sm); }
+.d-auth-theme { display: flex; align-items: center; gap: 8px; }
