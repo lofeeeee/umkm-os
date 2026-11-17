@@ -95,6 +95,12 @@ function hasImg(r: Json | undefined, assetUrl: SiteProps["assetUrl"]): boolean {
   return typeof r === "string" && !!assetUrl(r);
 }
 
+/** Petunjuk arah Google Maps: koordinat bila ada, selain itu alamat teks. */
+function directionsHref(a: { address: string; latitude?: number | null; longitude?: number | null }): string {
+  const dest = a.latitude != null && a.longitude != null ? `${a.latitude},${a.longitude}` : a.address;
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(dest)}`;
+}
+
 function Link({ href, children, className }: { href: Json | undefined; children: ReactNode; className?: string }) {
   const h = safeHref(href);
   if (!h) return <span className={className}>{children}</span>;
@@ -327,17 +333,17 @@ function SectionBody({ s, props }: { s: Section; props: SiteProps }) {
               <li key={i}>
                 {a.label && <strong>{a.label}: </strong>}
                 {a.address}
-                {d.show_map === true && a.latitude != null && a.longitude != null && (
-                  <>
-                    {" "}
-                    <Link href={`https://www.openstreetmap.org/?mlat=${a.latitude}&mlon=${a.longitude}#map=17/${a.latitude}/${a.longitude}`}>
-                      {tx("Lihat peta")}
-                    </Link>
-                  </>
-                )}
               </li>
             ))}
           </ul>
+          {/* Panel peta: tautan petunjuk arah (tanpa iframe/JS pihak ketiga — CSP tetap ketat). Mengisi
+              sisa tinggi kartu lokasi yang disejajarkan dengan tetangganya, jadi tidak ada ruang kosong. */}
+          {d.show_map === true && b.addresses[0] && (
+            <Link className="s-map" href={directionsHref(b.addresses[0])}>
+              <span className="s-map-pin" aria-hidden="true" />
+              <span className="s-map-cta">{tx("Petunjuk arah")} →</span>
+            </Link>
+          )}
           {(b.profile.pickup_available || b.profile.delivery_available) && (
             <p className="s-muted">
               {[b.profile.pickup_available && tx("Bisa ambil di tempat"), b.profile.delivery_available && tx("Bisa diantar")]

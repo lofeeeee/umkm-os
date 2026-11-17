@@ -17,6 +17,40 @@ const doc: PageV2 = {
   ],
 };
 
+describe("footer & kartu lokasi", () => {
+  const full: Business = {
+    ...biz,
+    profile: { ...biz.profile, name: "Kopi Senja", description: "Kopi susu gula aren", phone: "0812", socials: [{ platform: "instagram", url: "https://instagram.com/kopi" }, { platform: "x", url: "javascript:alert(1)" }] },
+    addresses: [{ address: "Jl. Mawar 1, Bandung" }],
+    hours: [{ day_of_week: 1, open: "08:00", close: "17:00" }],
+  };
+  const page: PageV2 = { schema_version: 2, template: "t", theme: { primary: "#C2410C", font: "inter" }, blocks: [
+    { id: "loc", kind: "location", x: 0, y: 0, w: 6, h: 6, style: "card", data: { title: "Lokasi", show_map: true } },
+    { id: "jam", kind: "business_hours", x: 6, y: 0, w: 6, h: 9, style: "card", data: { title: "Jam" } },
+  ] };
+  const html = renderToStaticMarkup(<StudioSite doc={page} business={full} status={{ status: "open", timezone: "Asia/Jakarta", local_time: "09:00" }} assetUrl={() => undefined} pages={[{ slug: "home", title: "Beranda", current: true }, { slug: "tentang", title: "Tentang" }]} />);
+  it("footer memuat identitas, status, WhatsApp, kolom tautan, kontak, dan sosial yang aman", () => {
+    expect(html).toContain('class="sf-name">Kopi Senja');
+    expect(html).toContain("Kopi susu gula aren");
+    expect(html).toContain("sf-status-open");
+    expect(html).toMatch(/class="sf-wa" href="https:\/\/wa\.me\//);
+    expect(html).toContain('href="/tentang"');
+    expect(html).toContain('href="/keranjang"');
+    expect(html).toContain("Jl. Mawar 1, Bandung");
+    expect(html).toContain('href="https://instagram.com/kopi"');
+    expect(html).not.toContain("javascript:");
+  });
+  it("kartu bersebelahan disamakan tingginya; peta jadi tautan petunjuk arah", () => {
+    expect(html).toMatch(/id="loc"[^>]*style="grid-column:1 \/ span 6;grid-row:1 \/ span 9/);
+    expect(html).toContain('class="s-map" href="https://www.google.com/maps/dir/?api=1&amp;destination=Jl.%20Mawar%201%2C%20Bandung"');
+  });
+  it("tanpa data kontak, kolom kontak tidak dirender", () => {
+    const bare = renderToStaticMarkup(<StudioSite doc={page} business={biz} assetUrl={() => undefined} />);
+    expect(bare).not.toContain("sf-addr");
+    expect(bare).not.toContain("sf-status");
+  });
+});
+
 describe("renderer publik Studio (v2)", () => {
   it("urutan ponsel atas→bawah lalu kiri→kanan", () => {
     expect(mobileSorted(doc.blocks).map((b) => b.id)).toEqual(["hero", "chat", "teks", "wa"]);

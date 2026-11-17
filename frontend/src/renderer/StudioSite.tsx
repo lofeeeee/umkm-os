@@ -19,13 +19,14 @@ import { DESIGN_WIDTH, spanWidth } from "@/studio/grid";
 import type { BlockV2, PageV2 } from "@/studio/doc";
 import { pluginDef } from "@/studio/plugins";
 
+import { bandSpans } from "./bands";
 import { InkLayer } from "./ink";
 import { PublicNav, type NavLink } from "./PublicNav";
+import { SiteFooter } from "./SiteFooter";
 import { fontStack, primaryVars, safeColor, text, waLink } from "./safe";
 import { Site, type GridProduct, hasPublicContent } from "./Site";
 import type { Business, OpenStatus } from "./types";
 import { t as tx, tmap } from "@/i18n";
-import { LanguageSwitch } from "@/i18n/react";
 
 /** Halaman terbit yang bisa ditautkan dari navigasi (dari `/public/site`). */
 export interface SitePageLink { slug: string; title: string; current?: boolean }
@@ -214,6 +215,7 @@ export function StudioSite(props: StudioSiteProps) {
   // Situs publik: blok tanpa data toko (jam/alamat/kontak/galeri kosong, WhatsApp tanpa nomor) tidak dirender.
   const grid = mobileSorted(doc.blocks.filter((b) => !isEmbed(b) && (editing || publicBlock(b, props))));
   const anchors = anchorsFor(grid);
+  const spans = bandSpans(grid);
   const chat = doc.blocks.find((b) => b.kind === "chatbot" && isEmbed(b));
   const wa = doc.blocks.find((b) => b.kind === "whatsapp" && isEmbed(b));
   const bgUrl = doc.theme.background_image ? (props.assetUrl(doc.theme.background_image) ?? doc.theme.background_image) : undefined;
@@ -234,7 +236,7 @@ export function StudioSite(props: StudioSiteProps) {
   } as CSSProperties;
   return (
     <div
-      className={`sv2 site${isSideNav ? " s-has-side-nav" : ""}${editing ? " sf-editing" : ""}`}
+      className={`sv2 site${isSideNav ? " s-has-side-nav" : ""}${editing ? " sf-editing" : ""}${chat?.layout === "bar" ? " s-dock-bar" : chat || wa ? " s-dock-float" : ""}`}
       data-surface={doc.theme.surface ?? "light"}
       data-mode={mode}
       style={style}
@@ -279,7 +281,7 @@ export function StudioSite(props: StudioSiteProps) {
               );
               const cellStyle = {
                 gridColumn: `${b.x + 1} / span ${b.w}`,
-                gridRow: `${b.y + 1} / span ${b.h}`,
+                gridRow: `${b.y + 1} / span ${spans.get(b.id) ?? b.h}`,
                 ["--order" as string]: i,
                 // Tinggi manual (auto_height=false) dipertahankan persis seperti di editor (baris 24 px + celah 12 px).
                 ...(b.auto_height === false ? { minHeight: b.h * 36 } : {}),
@@ -309,21 +311,13 @@ export function StudioSite(props: StudioSiteProps) {
             })}
             {editing && <GridOverlay />}
           </div>
-          {/* P9-9: kebijakan privasi & syarat selalu bisa dijangkau dari situs (chat & akun mengumpulkan data). */}
-          <footer className="sv2-foot">
-            <span>© {props.business.profile.name}</span>
-            {/* UAT 15 Nov customer #5: keranjang/pesanan/akun terjangkau dari halaman depan juga. */}
-            <nav aria-label={tx("Belanja")}>
-              <a href="/keranjang">{tx("Keranjang")}</a>
-              <a href="/pesanan">{tx("Pesanan saya")}</a>
-              <a href="/akun">{tx("Akun")}</a>
-            </nav>
-            <nav aria-label={tx("Informasi toko")}>
-              <a href="/kebijakan-privasi">{tx("Kebijakan privasi")}</a>
-              <a href="/syarat-transaksi">{tx("Syarat transaksi")}</a>
-            </nav>
-            {!editing && <LanguageSwitch className="s-lang" />}
-          </footer>
+          <SiteFooter
+            business={props.business}
+            status={props.status}
+            logoUrl={logoUrl}
+            pages={(props.pages ?? []).length > 1 ? navLinks : []}
+            editing={editing}
+          />
         </div>
       </div>
       {chat && (editing
