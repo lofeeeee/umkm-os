@@ -152,106 +152,31 @@ describe("PagesPanel component (Studio Enhancement Task 5)", () => {
     expect(onDeleteMock).not.toHaveBeenCalled();
   });
 
-  it("menampilkan preset halaman standar (Tentang Kami & Kontak) jika belum dibuat", () => {
-    const pagesOnlyHome: PageItem[] = [{ slug: "home", title: "Beranda" }];
+  const panel = (pages: PageItem[], isPro: boolean) => renderToStaticMarkup(
+    <PagesPanel pages={pages} activeSlug="home" defaultOpenAdd={true} onSelectPage={() => {}}
+      onCreatePage={async () => true} onDeletePage={async () => true} isPro={isPro} onUpgradeClick={() => {}} />,
+  );
 
-    const html = renderToStaticMarkup(
-      <PagesPanel
-        pages={pagesOnlyHome}
-        activeSlug="home"
-        defaultOpenAdd={true}
-        onSelectPage={() => {}}
-        onCreatePage={async () => true}
-        onDeletePage={async () => true}
-        isPro={false}
-        onUpgradeClick={() => {}}
-      />
-    );
-
-    // Karena belum ada 'about' dan 'contact', preset keduanya tampil
-    expect(html).toContain("Tentang Kami");
-    expect(html).toContain("Kontak");
-    expect(html).toContain("data-preset-slug=\"about\"");
-    expect(html).toContain("data-preset-slug=\"contact\"");
-  });
-
-  it("menyembunyikan preset jika halaman standar sudah ada di daftar", () => {
-    const pagesWithAbout: PageItem[] = [
-      { slug: "home", title: "Beranda" },
-      { slug: "about", title: "Tentang Kami" },
-    ];
-
-    const html = renderToStaticMarkup(
-      <PagesPanel
-        pages={pagesWithAbout}
-        activeSlug="home"
-        defaultOpenAdd={true}
-        onSelectPage={() => {}}
-        onCreatePage={async () => true}
-        onDeletePage={async () => true}
-        isPro={false}
-        onUpgradeClick={() => {}}
-      />
-    );
-
-    // Preset 'about' sudah ada, jadi tidak muncul di preset quick-add
-    expect(html).not.toContain("data-preset-slug=\"about\"");
-    // Preset 'contact' belum ada, jadi tetap muncul
-    expect(html).toContain("data-preset-slug=\"contact\"");
-  });
-
-  it("menampilkan pembatasan Starter (Paket Pro badge, pesan bantuan, upgrade CTA, input disabled)", () => {
-    const html = renderToStaticMarkup(
-      <PagesPanel
-        pages={samplePages}
-        activeSlug="home"
-        defaultOpenAdd={true}
-        onSelectPage={() => {}}
-        onCreatePage={async () => true}
-        onDeletePage={async () => true}
-        isPro={false}
-        onUpgradeClick={() => {}}
-      />
-    );
-
-    expect(html).toContain("Paket Pro");
-    expect(html).toContain(
-      "Halaman kustom memerlukan paket Pro. Starter mendapatkan Beranda, Tentang Kami, dan Kontak."
-    );
-    expect(html).toContain("Tingkatkan ke Pro");
-
-    // Input custom page dinonaktifkan (disabled) pada paket Starter
-    expect(html).toMatch(/data-testid="input-custom-title"[^>]*\sdisabled(=|[\s>])/);
-    expect(html).toMatch(/data-testid="input-custom-slug"[^>]*\sdisabled(=|[\s>])/);
-  });
-
-  it("mengaktifkan input kustom secara penuh saat pengguna adalah Pro (isPro=true)", () => {
-    const html = renderToStaticMarkup(
-      <PagesPanel
-        pages={samplePages}
-        activeSlug="home"
-        defaultOpenAdd={true}
-        onSelectPage={() => {}}
-        onCreatePage={async () => true}
-        onDeletePage={async () => true}
-        isPro={true}
-        onUpgradeClick={() => {}}
-      />
-    );
-
-    // Pada Pro, tidak ada pemblokiran upgrade CTA
-    expect(html).not.toContain("Tingkatkan ke Pro");
-    expect(html).not.toContain(
-      "Halaman kustom memerlukan paket Pro. Starter mendapatkan Beranda, Tentang Kami, dan Kontak."
-    );
-
-    // Input kustom aktif (tidak disabled)
-    expect(html).toContain('data-testid="input-custom-title"');
-    expect(html).toContain('data-testid="input-custom-slug"');
+  it("standar: Halaman 1 = Beranda, halaman berikutnya bernama bebas (Starter juga)", () => {
+    const html = panel([{ slug: "promo", title: "Promo Spesial" }, { slug: "home", title: "Home" }], false);
+    expect(html.indexOf("Halaman 1")).toBeLessThan(html.indexOf("Beranda"));
+    expect(html.indexOf("Beranda")).toBeLessThan(html.indexOf("Promo Spesial"));
+    expect(html).toContain("Halaman 3");
+    expect(html).toContain("2 dari 5 halaman");
     expect(html).not.toMatch(/data-testid="input-custom-title"[^>]*\sdisabled(=|[\s>])/);
-    expect(html).not.toMatch(/data-testid="input-custom-slug"[^>]*\sdisabled(=|[\s>])/);
+    expect(html).toContain("Tentang Kami"); // saran nama
+    expect(html).not.toContain("Tingkatkan ke Pro");
+  });
 
-    // Tombol submit kustom aktif
-    expect(html).toContain("Buat halaman");
+  it("Starter penuh di 5 halaman → ajakan naik paket; Pro sampai 30", () => {
+    const five: PageItem[] = ["home", "a", "b", "c", "d"].map((slug) => ({ slug, title: slug }));
+    const starter = panel(five, false);
+    expect(starter).toContain("5 dari 5 halaman");
+    expect(starter).toContain("Paket Starter maksimal 5 halaman");
+    expect(starter).toContain("Tingkatkan ke Pro");
+    expect(starter).not.toContain("input-custom-title");
+    const pro = panel(five, true);
+    expect(pro).toContain("5 dari 30 halaman");
+    expect(pro).toContain("input-custom-title");
   });
 });

@@ -223,6 +223,11 @@ fn repo_err(e: WebsiteError) -> ApiError {
             ErrorBody::new(ErrorCode::BadRequest)
                 .with_message("Halaman beranda tidak dapat dihapus"),
         ),
+        WebsiteError::PageLimit(n) => ApiError(
+            ErrorBody::new(ErrorCode::Forbidden)
+                .with_message("Batas jumlah halaman paket ini tercapai")
+                .with_details(serde_json::json!({ "max_pages": n })),
+        ),
         WebsiteError::Db(e) => internal(e),
     }
 }
@@ -442,7 +447,7 @@ pub struct PagePath {
     params(("tenant_id" = Uuid, Path)), request_body = CreatePage,
     responses(
         (status = 201, description = "Halaman dibuat", body = SuccessEnvelope<PageView>),
-        (status = 403, description = "Halaman kustom memerlukan paket Pro", body = umkm_shared::http::ErrorEnvelope),
+        (status = 403, description = "Batas jumlah halaman paket tercapai (Starter 5, Pro 30)", body = umkm_shared::http::ErrorEnvelope),
         (status = 409, description = "Slug sudah ada", body = umkm_shared::http::ErrorEnvelope)
     )
 )]
@@ -456,13 +461,10 @@ pub async fn create_page(
     actor.require("website.edit")?;
     req.validate()?;
 
+    // Standar halaman: Halaman 1 = Beranda (slug `home`, dibuat otomatis); halaman berikutnya bernama bebas.
+    // Paket hanya membatasi JUMLAH halaman (Starter 5, Pro 30), bukan nama/slug.
     let plan = crate::billing::plan_of(&state, actor.tenant_id).await?;
-    if plan.plan.code != "pro" && !["home", "about", "contact"].contains(&req.slug.as_str()) {
-        return Err(ApiError(
-            ErrorBody::new(ErrorCode::Forbidden)
-                .with_message("Halaman kustom memerlukan paket Pro"),
-        ));
-    }
+    let max_pages = umkm_domain::website::max_pages(plan.plan.code == "pro");
 
     let tpl_key = template_of(&state, actor.tenant_id).await?;
     let initial_content = if let Ok(Some(tpl)) = repo::find_template(pool(&state)?, &tpl_key).await
@@ -483,6 +485,7 @@ pub async fn create_page(
         &req.slug,
         req.title.trim(),
         &initial_content,
+        max_pages,
         (Some(id.as_str()), Some(&ip)),
     )
     .await

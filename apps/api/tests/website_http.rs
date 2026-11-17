@@ -615,24 +615,28 @@ async fn create_page_starter_vs_pro(pool: PgPool) {
     assert_eq!(r.status, 201, "{}", r.json());
     assert_eq!(r.json()["data"]["slug"], "contact");
 
-    // Starter: slug kustom ditolak (403 Forbidden dengan pesan khusus)
+    // Starter: nama/slug bebas diizinkan; yang dibatasi hanya jumlah (Beranda + 4 = 5 halaman).
     let r = create_page_req(&a, t, &owner, "promo", "Promo Spesial").await;
+    assert_eq!(r.status, 201, "{}", r.json());
+    assert_eq!(r.json()["data"]["title"], "Promo Spesial");
+    let r = create_page_req(&a, t, &owner, "galeri", "Galeri").await;
+    assert_eq!(r.status, 201, "{}", r.json());
+    let r = create_page_req(&a, t, &owner, "lebih", "Satu lagi").await;
     assert_eq!(r.status, 403, "{}", r.json());
     assert_eq!(
         r.json()["error"]["message"],
-        "Halaman kustom memerlukan paket Pro"
+        "Batas jumlah halaman paket ini tercapai"
     );
+    assert_eq!(r.json()["error"]["details"]["max_pages"], 5);
 
     // Format slug tidak valid -> 404 (slug_ok)
     let r = create_page_req(&a, t, &owner, "-invalid-", "Invalid").await;
     assert_eq!(r.status, 404);
 
-    // Upgrade ke Pro -> slug kustom sekarang diizinkan
+    // Pro: batas naik
     pro(&pool, t).await;
-    let r = create_page_req(&a, t, &owner, "promo", "Promo Spesial").await;
+    let r = create_page_req(&a, t, &owner, "lebih", "Satu lagi").await;
     assert_eq!(r.status, 201, "{}", r.json());
-    assert_eq!(r.json()["data"]["slug"], "promo");
-    assert_eq!(r.json()["data"]["title"], "Promo Spesial");
 
     // Slug duplikat -> 409 Conflict
     let r = create_page_req(&a, t, &owner, "about", "Tentang Kami Lagi").await;

@@ -76,6 +76,8 @@ pub enum WebsiteError {
     AlreadyExists,
     #[error("halaman home tidak dapat dihapus")]
     CannotDeleteHome,
+    #[error("batas {0} halaman tercapai")]
+    PageLimit(usize),
     #[error(transparent)]
     Db(#[from] sqlx::Error),
 }
@@ -331,22 +333,32 @@ pub async fn save_draft(
 }
 
 /// Buat halaman baru pada website tenant.
+/// `max_pages`: batas jumlah halaman (termasuk Beranda) menurut paket. Baris website dikunci supaya dua
+/// permintaan bersamaan tidak bisa melewati batas.
 pub async fn create_page(
     pool: &PgPool,
     actor: &Actor,
     slug: &str,
     title: &str,
     initial_content: &Value,
+    max_pages: usize,
     ctx: Ctx<'_>,
 ) -> Result<PageView, WebsiteError> {
     let mut tx = tx(pool, actor.tenant_id).await?;
     let tid = actor.tenant_id.as_uuid();
     let website_id: Uuid =
-        sqlx::query_scalar("SELECT id FROM tenant_websites WHERE tenant_id = $1")
+        sqlx::query_scalar("SELECT id FROM tenant_websites WHERE tenant_id = $1 FOR UPDATE")
             .bind(tid)
             .fetch_optional(&mut *tx)
             .await?
             .ok_or(WebsiteError::NotFound)?;
+    let pages: i64 = sqlx::query_scalar("SELECT count(*) FROM website_pages WHERE website_id = $1")
+        .bind(website_id)
+        .fetch_one(&mut *tx)
+        .await?;
+    if pages as usize >= max_pages {
+        return Err(WebsiteError::PageLimit(max_pages));
+    }
 
     let page_id: Uuid = match sqlx::query_scalar(
         "INSERT INTO website_pages (tenant_id, website_id, slug, title, draft_content, draft_updated_by)
