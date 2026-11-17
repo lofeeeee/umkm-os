@@ -43,7 +43,10 @@ export function DeviceFrame({ device, surface = "light", children }: DeviceFrame
   return (
     <div className="sf-frame-outer" data-device={device}>
       <div className="st-frame sf-frame" data-surface={surface} data-device={device} style={style}>
-        {children}
+        {/* Area gulir TERPISAH dari bingkai: bingkai (transform) = "layar" bagi elemen fixed, jadi
+            chatbot gelembung/bilah & WhatsApp melayang tetap menempel di pojok saat isi digulir —
+            sama seperti di situs terbit. Kalau bingkai sendiri yang digulir, elemen fixed ikut tergulir. */}
+        <div className="st-frame-scroll">{children}</div>
       </div>
     </div>
   );

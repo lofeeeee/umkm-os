@@ -179,7 +179,7 @@ export function LiveCanvas(p: LiveCanvasProps) {
     if (!autoScroll.current.raf) {
       const tick = () => {
         const g = gesture.current;
-        const frame = g?.grid.closest<HTMLElement>(".st-frame");
+        const frame = g?.frame;
         if (!g || !frame) { autoScroll.current.raf = 0; return; }
         const fr = frame.getBoundingClientRect();
         const { x, y } = autoScroll.current;
@@ -276,7 +276,7 @@ export function LiveCanvas(p: LiveCanvasProps) {
     stopGesture.current();
     const gr = g.getBoundingClientRect();
     const br = el.getBoundingClientRect();
-    const frame = g.closest<HTMLElement>(".st-frame");
+    const frame = g.closest<HTMLElement>(".st-frame-scroll");
     gesture.current = {
       id, mode, sx: e.clientX, sy: e.clientY, started: false, base: P.cells, orig: c, grid: g,
       rects: snapshot(g), pitch: pitchOf(g), grabDx: e.clientX - br.left, grabDy: e.clientY - br.top, relLeft: br.left - gr.left, relTop: br.top - gr.top,

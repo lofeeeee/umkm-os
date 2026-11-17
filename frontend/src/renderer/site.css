@@ -344,7 +344,7 @@
   flex: none;
   min-width: 0;
 }
-.st-frame > .sv2 { min-height: 100%; }
+.st-frame > .sv2, .st-frame-scroll > .sv2 { min-height: 100%; }
 .st-frame[data-surface="cream"] { --pg-bg: #fbf6ee; }
 .st-frame[data-surface="dark"] { --pg-bg: #0d0d12; }
 /* Ikon perangkat: bingkai ponsel/tablet diberi sudut membulat agar terbaca sebagai perangkat. */

@@ -53,7 +53,7 @@
 .lc { flex: 1; min-height: 0; display: flex; }
 .lc .sf-frame-outer { flex: 1; min-height: 0; padding: 0; align-items: stretch; }
 .lc .st-frame {
-  height: 100%; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin;
+  height: 100%; overflow: hidden;
   border-radius: 14px; box-shadow: 0 0 0 1px rgb(9 9 11 / 0.08), 0 24px 60px -28px rgb(9 9 11 / 0.35);
   transition: width var(--dur-slow) var(--ease-out);
 }
@@ -63,7 +63,8 @@
   margin: 9px 0; height: calc(100% - 18px);
 }
 .lc[data-device="tablet"] .st-frame { border-radius: 22px; }
-.lc .st-frame > .sv2 { min-height: 100%; }
+.lc .st-frame-scroll { height: 100%; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+.lc .st-frame-scroll > .sv2 { min-height: 100%; }
 .lc-grabbing, .lc-grabbing * { cursor: grabbing !important; user-select: none !important; }
 .lc img { -webkit-user-drag: none; }
 

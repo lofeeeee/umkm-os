@@ -155,7 +155,7 @@
    di dalam bingkai Studio. Di situs publik tidak ada container bernama itu, sehingga @media di atas
    tetap yang berlaku dan perilaku pelanggan tidak berubah. */
 @container storefront (min-width: 640px) {
-  .chat-panel { left: auto; right: 16px; bottom: 16px; width: 380px; height: min(560px, calc(100cqh - 32px)); max-height: none; }
+  .chat-panel { left: auto; right: 16px; bottom: 16px; width: 380px; height: min(560px, calc(100% - 32px)); max-height: none; }
   .chat-v-inline .chat-panel { width: auto; height: 100%; }
 }
 @container storefront (max-width: 639px) {
