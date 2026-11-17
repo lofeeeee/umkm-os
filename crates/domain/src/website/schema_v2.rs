@@ -25,7 +25,7 @@ pub const ROOT_KEYS: [&str; 6] = [
     "blocks",
     "drawings",
 ];
-pub const THEME_KEYS: [&str; 10] = [
+pub const THEME_KEYS: [&str; 11] = [
     "primary",
     "font",
     "surface",
@@ -36,6 +36,7 @@ pub const THEME_KEYS: [&str; 10] = [
     "background_size",
     "background_position",
     "background_opacity",
+    "hide_badge",
 ];
 pub const NAVBAR_STYLES: [&str; 2] = ["top", "side"];
 pub const BACKGROUND_SIZES: [&str; 3] = ["cover", "contain", "repeat"];
@@ -109,6 +110,20 @@ pub fn hide_unentitled_blocks(
         plan_of(b.get("kind").and_then(Value::as_str).unwrap_or_default()) == "starter"
     });
     before - blocks.len()
+}
+
+/// Lencana "Dibuat dengan UMKM OS" di footer situs: hanya toko Pro yang boleh menyembunyikannya. Seperti
+/// `hide_unentitled_blocks`, pilihan di draf/versi tidak diubah (naik paket → langsung berlaku), hanya dibuang
+/// dari dokumen publik. Mengembalikan `true` bila pilihan diabaikan.
+pub fn enforce_badge(content: &mut Value, has_pro: bool) -> bool {
+    if has_pro {
+        return false;
+    }
+    content
+        .get_mut("theme")
+        .and_then(Value::as_object_mut)
+        .and_then(|t| t.remove("hide_badge"))
+        .is_some()
 }
 
 /// Blok "embed" berada di luar grid (gelembung/bilah) sehingga dikecualikan dari cek tumpang tindih.
@@ -218,6 +233,7 @@ fn theme(v: &mut V, t: &Value) {
         Some(_) => v.err("theme.navbar_style", "invalid_navbar_style"),
     }
     v.boolean(m, "theme", "navbar_sticky");
+    v.boolean(m, "theme", "hide_badge");
     v.asset(m, "theme", "background_image", false);
     match m.get("background_size") {
         None => {}
@@ -773,6 +789,19 @@ mod tests {
         // Dokumen v1 tidak disentuh.
         let mut v1 = json!({"schema_version": 1, "sections": [{"type": "gallery"}]});
         assert_eq!(hide_unentitled_blocks(&mut v1, false, plan), 0);
+    }
+
+    #[test]
+    fn badge_can_only_be_hidden_on_pro() {
+        let src = json!({"schema_version": 2, "theme": {"primary": "#000000", "font": "inter", "hide_badge": true}});
+        let mut starter = src.clone();
+        assert!(enforce_badge(&mut starter, false));
+        assert!(starter["theme"].get("hide_badge").is_none());
+        let mut pro = src.clone();
+        assert!(!enforce_badge(&mut pro, true));
+        assert_eq!(pro["theme"]["hide_badge"], json!(true));
+        let mut none = json!({"schema_version": 2});
+        assert!(!enforce_badge(&mut none, false));
     }
 
     #[test]

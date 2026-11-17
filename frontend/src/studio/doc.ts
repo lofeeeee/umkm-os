@@ -20,6 +20,7 @@ export interface StudioState {
   textScale?: number;
   navbarStyle?: "top" | "side";
   navbarSticky?: boolean;
+  hideBadge?: boolean;
   backgroundImage?: string;
   backgroundSize?: "cover" | "contain" | "repeat";
   backgroundPosition?: string;
@@ -46,6 +47,8 @@ export interface PageV2 {
     text_scale?: number;
     navbar_style?: "top" | "side";
     navbar_sticky?: boolean;
+    /** Sembunyikan lencana "Dibuat dengan UMKM OS" (berlaku hanya untuk paket Pro; ditegakkan server). */
+    hide_badge?: boolean;
     background_image?: string;
     background_size?: "cover" | "contain" | "repeat";
     background_position?: string;
@@ -96,6 +99,7 @@ export function toDoc(st: StudioState, template: string): PageV2 {
   };
   if (st.navbarStyle) theme.navbar_style = st.navbarStyle;
   if (st.navbarSticky !== undefined) theme.navbar_sticky = st.navbarSticky;
+  if (st.hideBadge) theme.hide_badge = true;
   if (st.backgroundImage?.trim()) theme.background_image = st.backgroundImage.trim();
   if (st.backgroundSize) theme.background_size = st.backgroundSize;
   if (st.backgroundPosition?.trim()) theme.background_position = st.backgroundPosition.trim();
@@ -154,6 +158,7 @@ export function fromDoc(doc: PageV2, minSize: (k: PluginKind) => { minW: number;
     textScale: doc.theme.text_scale ?? 1,
     navbarStyle: doc.theme.navbar_style,
     navbarSticky: doc.theme.navbar_sticky,
+    hideBadge: doc.theme.hide_badge,
     backgroundImage: doc.theme.background_image,
     backgroundSize: doc.theme.background_size,
     backgroundPosition: doc.theme.background_position,

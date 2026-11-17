@@ -6642,8 +6642,8 @@ paths:
       tags:
       - gopay
       summary: |-
-        Cek & perbarui sesi GoPay sekarang (refresh token). Tidak perlu login ulang selama GoBiz masih
-        menerima refresh token; sesi yang ditandai perlu login ulang dicoba sekali lagi.
+        Cek sesi GoPay sekarang: uji access token tersimpan, perbarui hanya bila ditolak/jatuh tempo.
+        Sesi yang ditandai perlu login ulang diuji lagi (pulih bila token ternyata masih diterima).
       operationId: check_session
       parameters:
       - name: tenant_id
@@ -12944,7 +12944,7 @@ components:
             properties:
               result:
                 type: string
-                description: '`refreshed` | `needs_relogin` | `transient` | `busy`'
+                description: '`valid` (token tersimpan masih diterima GoBiz) | `refreshed` | `needs_relogin` | `transient` | `busy`'
           description: 'Hasil "Cek sekarang": status terbaru + apa yang terjadi saat sesi diperbarui.'
         meta:
           $ref: '#/components/schemas/Meta'
@@ -14316,6 +14316,11 @@ components:
               items:
                 $ref: '#/components/schemas/PublicPageLink'
               description: Halaman terbit untuk navigasi (slug + judul). Halaman draf tidak disertakan.
+            platform_url:
+              type:
+              - string
+              - 'null'
+              description: Beranda platform untuk lencana "Dibuat dengan UMKM OS" (`None` = tanpa tautan, mis. router uji).
             status:
               $ref: '#/components/schemas/StatusView'
         meta:

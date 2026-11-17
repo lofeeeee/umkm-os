@@ -165,6 +165,8 @@ pub struct PublicSite {
     pub assets: BTreeMap<String, String>,
     /// Halaman terbit untuk navigasi (slug + judul). Halaman draf tidak disertakan.
     pub pages: Vec<PublicPageLink>,
+    /// Beranda platform untuk lencana "Dibuat dengan UMKM OS" (`None` = tanpa tautan, mis. router uji).
+    pub platform_url: Option<String>,
 }
 
 /// Satu tautan navigasi situs publik.
@@ -827,6 +829,8 @@ pub async fn load_public_site(
         has_pro,
         umkm_domain::website::schema_v2::plugin_plan,
     );
+    // Lencana platform hanya boleh disembunyikan toko Pro (dokumen draf/versi tetap utuh).
+    umkm_domain::website::schema_v2::enforce_badge(&mut content, has_pro);
     let info = business_repo::load(p, t)
         .await
         .map_err(internal)?
@@ -858,6 +862,10 @@ pub async fn load_public_site(
         status: status_view(status),
         assets,
         pages,
+        platform_url: state.auth.as_ref().map(|a| {
+            let scheme = if a.secure_cookies { "https" } else { "http" };
+            format!("{scheme}://{}/", a.root_domain)
+        }),
     })
 }
 

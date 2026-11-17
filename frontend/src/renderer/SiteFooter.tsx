@@ -20,6 +20,9 @@ export interface SiteFooterProps {
   pages: NavLink[];
   /** Kanvas Studio: tanpa pemilih bahasa (bukan bagian dokumen). */
   editing?: boolean;
+  /** Lencana "Dibuat dengan UMKM OS"; hanya toko Pro yang bisa mematikannya (server membuang pilihan toko non-Pro). */
+  badge?: boolean;
+  platformUrl?: string | null;
 }
 
 const SOCIAL_LABEL: Record<string, string> = {
@@ -35,7 +38,24 @@ function Col({ title, children, wide }: { title: string; children: ReactNode; wi
   );
 }
 
-export function SiteFooter({ business, status, logoUrl, pages, editing }: SiteFooterProps) {
+/** Lencana platform: kecil & netral (tidak bersaing dengan merek toko), tautan `nofollow` ke beranda platform. */
+function MadeWith({ href }: { href?: string }) {
+  const body = (
+    <>
+      <span className="sf-made-mark" aria-hidden="true">U</span>
+      <span>{tx("Dibuat dengan")} <strong>UMKM OS</strong></span>
+    </>
+  );
+  return (
+    <div className="sf-made">
+      {href
+        ? <a href={href} target="_blank" rel="noopener nofollow" data-testid="made-with">{body}</a>
+        : <span data-testid="made-with">{body}</span>}
+    </div>
+  );
+}
+
+export function SiteFooter({ business, status, logoUrl, pages, editing, badge = true, platformUrl }: SiteFooterProps) {
   const p = business.profile;
   const name = p.name;
   const wa = waLink(p.whatsapp);
@@ -117,6 +137,7 @@ export function SiteFooter({ business, status, logoUrl, pages, editing }: SiteFo
           </nav>
           {!editing && <LanguageSwitch className="s-lang" />}
         </div>
+        {badge && <MadeWith href={editing ? undefined : platformUrl ?? undefined} />}
       </div>
     </footer>
   );

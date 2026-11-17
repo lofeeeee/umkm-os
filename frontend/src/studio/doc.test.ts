@@ -48,6 +48,7 @@ describe("dokumen Studio v2", () => {
       ...st,
       navbarStyle: "side",
       navbarSticky: true,
+      hideBadge: true,
       backgroundImage: "asset:6f9619ff-8b86-d011-b42d-00c04fc964ff",
       backgroundSize: "contain",
       backgroundPosition: "top left",
@@ -59,6 +60,8 @@ describe("dokumen Studio v2", () => {
     const d = toDoc(customSt, "custom");
     expect(d.theme.navbar_style).toBe("side");
     expect(d.theme.navbar_sticky).toBe(true);
+    expect(d.theme.hide_badge).toBe(true);
+    expect(fromDoc(d, () => ({ minW: 1, minH: 1 })).hideBadge).toBe(true);
     expect(d.theme.background_image).toBe("asset:6f9619ff-8b86-d011-b42d-00c04fc964ff");
     expect(d.theme.background_size).toBe("contain");
     expect(d.theme.background_position).toBe("top left");
@@ -87,6 +90,7 @@ describe("dokumen Studio v2", () => {
     };
     const d = toDoc(emptySt, "clean");
     expect(d.theme).not.toHaveProperty("navbar_style");
+    expect(d.theme).not.toHaveProperty("hide_badge");
     expect(d.theme).not.toHaveProperty("navbar_sticky");
     expect(d.theme).not.toHaveProperty("background_image");
     expect(d.theme).not.toHaveProperty("background_size");

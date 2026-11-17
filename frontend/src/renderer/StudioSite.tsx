@@ -48,6 +48,8 @@ export interface StudioSiteProps {
   onSelect?: (id: string | null) => void;
   /** Menulis `data[path]` pada blok (hanya mode studio-edit; dari `T` contentEditable). */
   onEditBlock?: (id: string, path: string, value: string) => void;
+  /** Tautan lencana "Dibuat dengan UMKM OS" (dari server). */
+  platformUrl?: string | null;
 }
 
 const isEmbed = (b: BlockV2) =>
@@ -317,6 +319,8 @@ export function StudioSite(props: StudioSiteProps) {
             logoUrl={logoUrl}
             pages={(props.pages ?? []).length > 1 ? navLinks : []}
             editing={editing}
+            badge={doc.theme.hide_badge !== true}
+            platformUrl={props.platformUrl}
           />
         </div>
       </div>

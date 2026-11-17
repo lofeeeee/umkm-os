@@ -15,6 +15,7 @@ describe("ThemePanel (Studio Enhancement Task 6)", () => {
     textScale: 1,
     navbarStyle: "top",
     navbarSticky: true,
+    hideBadge: false,
     backgroundImage: undefined,
     backgroundSize: "cover",
     backgroundPosition: "center",

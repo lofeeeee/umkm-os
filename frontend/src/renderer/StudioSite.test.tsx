@@ -44,6 +44,13 @@ describe("footer & kartu lokasi", () => {
     expect(html).toMatch(/id="loc"[^>]*style="grid-column:1 \/ span 6;grid-row:1 \/ span 9/);
     expect(html).toContain('class="s-map" href="https://www.google.com/maps/dir/?api=1&amp;destination=Jl.%20Mawar%201%2C%20Bandung"');
   });
+  it("lencana \"Dibuat dengan UMKM OS\" tampil bawaan, bertaut ke platform; hide_badge menyembunyikannya", () => {
+    const linked = renderToStaticMarkup(<StudioSite doc={page} business={full} assetUrl={() => undefined} platformUrl="https://umkm.example/" />);
+    expect(linked).toMatch(/<a href="https:\/\/umkm\.example\/" target="_blank" rel="noopener nofollow" data-testid="made-with">/);
+    expect(html).toContain('data-testid="made-with"');
+    const hidden = renderToStaticMarkup(<StudioSite doc={{ ...page, theme: { ...page.theme, hide_badge: true } }} business={full} assetUrl={() => undefined} />);
+    expect(hidden).not.toContain("made-with");
+  });
   it("tanpa data kontak, kolom kontak tidak dirender", () => {
     const bare = renderToStaticMarkup(<StudioSite doc={page} business={biz} assetUrl={() => undefined} />);
     expect(bare).not.toContain("sf-addr");

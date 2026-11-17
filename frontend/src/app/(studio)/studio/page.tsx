@@ -257,6 +257,7 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
     textScale: st?.textScale ?? 1,
     navbarStyle: st?.navbarStyle ?? "top",
     navbarSticky: st?.navbarSticky ?? false,
+    hideBadge: st?.hideBadge ?? false,
     backgroundImage: st?.backgroundImage,
     backgroundSize: st?.backgroundSize,
     backgroundPosition: st?.backgroundPosition,
@@ -636,7 +637,8 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
               onUpgradeClick={() => window.open(`/subscription?tenant=${ctx.tenant.id}`, "_self")}
             />
           ) : activeTab === "theme" ? (
-            <ThemePanel config={themeConfig} onChange={updateTheme} onUploadBackground={uploadBg} assetUrl={assets.url} />
+            <ThemePanel config={themeConfig} onChange={updateTheme} onUploadBackground={uploadBg} assetUrl={assets.url}
+              isPro={planCode === "pro"} onUpgradeClick={() => window.open(`/subscription?tenant=${ctx.tenant.id}`, "_self")} />
           ) : activeTab === "draw" ? (
             <DrawPanel
               activeTool={drawTool}

@@ -62,4 +62,6 @@ export interface PublicSite {
   assets: Record<string, string>;
   /** Halaman terbit untuk navigasi. Lama/absent = nav hanya nama toko. */
   pages?: { slug: string; title: string }[];
+  /** Beranda platform untuk lencana footer (server lama: absen → lencana tanpa tautan). */
+  platform_url?: string | null;
 }

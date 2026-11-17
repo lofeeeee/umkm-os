@@ -1,5 +1,5 @@
 import type { ChangeEvent } from "react";
-import { Trash, UploadSimple } from "@phosphor-icons/react/ssr";
+import { Crown, LockSimple, Trash, UploadSimple } from "@phosphor-icons/react/ssr";
 
 import { FONT_LABELS, FONT_PRESETS } from "@/renderer/sections";
 import { PALETTES } from "@/studio/plugins";
@@ -12,6 +12,7 @@ export interface ThemeConfig {
   textScale: number;
   navbarStyle: "top" | "side";
   navbarSticky: boolean;
+  hideBadge: boolean;
   backgroundImage?: string;
   backgroundSize?: "cover" | "contain" | "repeat";
   backgroundPosition?: string;
@@ -24,6 +25,9 @@ export interface ThemePanelProps {
   onUploadBackground: (file: File) => Promise<string | null>; // returns asset:uuid
   assetUrl: (ref: string) => string | undefined;
   className?: string;
+  /** Paket Pro: boleh menyembunyikan lencana "Dibuat dengan UMKM OS". */
+  isPro?: boolean;
+  onUpgradeClick?: () => void;
 }
 
 export const TEXT_SCALES = [
@@ -55,6 +59,8 @@ export function ThemePanel({
   onUploadBackground,
   assetUrl,
   className = "",
+  isPro = false,
+  onUpgradeClick,
 }: ThemePanelProps) {
   const bgUrl = config.backgroundImage
     ? assetUrl(config.backgroundImage)
@@ -118,6 +124,38 @@ export function ThemePanel({
             </span>
           </span>
         </label>
+      </div>
+
+      {/* 1b. Lencana platform di footer (Pro boleh menyembunyikan; server menegakkan). */}
+      <div className="st-section">
+        <h3>
+          {tx("Lencana footer")}
+          {!isPro && <span className="st-pro-chip"><Crown weight="fill" aria-hidden="true" />{tx("Paket Pro")}</span>}
+        </h3>
+        <label className="d-switch u-m-0">
+          <input
+            type="checkbox"
+            aria-label={tx("Sembunyikan lencana “Dibuat dengan UMKM OS”")}
+            checked={isPro && config.hideBadge}
+            disabled={!isPro}
+            onChange={(e) => onChange({ hideBadge: e.target.checked })}
+          />
+          <span>
+            <strong>{tx("Sembunyikan lencana “Dibuat dengan UMKM OS”")}</strong>
+            <span className="d-muted">
+              {tx("Footer situs hanya menampilkan merek toko Anda.")}
+            </span>
+          </span>
+        </label>
+        {!isPro && onUpgradeClick && (
+          <div className="st-pro-note">
+            <p>{tx("Menyembunyikan lencana memerlukan paket Pro.")}</p>
+            <button type="button" className="d-btn d-btn-sm" onClick={onUpgradeClick}>
+              <LockSimple weight="bold" aria-hidden="true" />
+              {tx("Tingkatkan ke Pro")}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* 2. Warna & Palet */}

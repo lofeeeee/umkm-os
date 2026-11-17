@@ -110,6 +110,7 @@ export function normalizePageV2(raw: unknown): PageV2 {
   const nav = oneOf(t.navbar_style, NAVBAR_STYLES);
   if (nav) theme.navbar_style = nav as PageV2["theme"]["navbar_style"];
   if (typeof t.navbar_sticky === "boolean") theme.navbar_sticky = t.navbar_sticky;
+  if (t.hide_badge === true) theme.hide_badge = true;
   const bg = str(t.background_image);
   if (bg) theme.background_image = bg;
   const bgSize = oneOf(t.background_size, BACKGROUND_SIZES);
