@@ -3,19 +3,37 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { prepareImage } from "@/lib/image";
+import { LAT_RANGE, LNG_RANGE, coordNumber, parseCoord } from "@/lib/coords";
+import { CoordField } from "@/ui/coord-field";
+import { ContactField } from "@/ui/contact-field";
 import { Assets, FieldInput, type Upload } from "@/dashboard/editor/fields";
 import { Plus, Trash } from "@phosphor-icons/react/ssr";
 
 import { Alert, WithTenant, type TenantCtx } from "@/dashboard/shell";
 import { Badge, BusyButton, Card, PageHeader, PageSkeleton } from "@/ui/page";
 import { toast } from "@/ui/toast";
-import { api, apiUrl, describe } from "@/lib/api";
+import { api, apiUrl, describe, ERROR_TEXT } from "@/lib/api";
 import { SOCIAL_PLATFORMS } from "@/renderer/sections";
-import type { Address, Business, BusinessProfile, HourException, Hours, Json } from "@/renderer/types";
+import type { Business, BusinessProfile, EditableAddress, HourException, Hours, Json } from "@/renderer/types";
 import { t, m } from "@/i18n";
 
 const DAYS = [m("Senin"), m("Selasa"), m("Rabu"), m("Kamis"), m("Jumat"), m("Sabtu"), m("Minggu")];
 const ZONES = ["Asia/Jakarta", "Asia/Makassar", "Asia/Jayapura"];
+
+/**
+ * Data bisnis saat diedit. Alamat memakai `EditableAddress` karena koordinat boleh berupa
+ * teks sementara (mis. "-") selagi pengguna mengetik — backend hanya menerima angka.
+ */
+type BusinessEdit = Omit<Business, "addresses"> & { addresses: EditableAddress[] };
+
+/**
+ * Teks untuk isian koordinat. Nilai dari server berupa angka (mis. -6.2); selama diedit
+ * boleh berupa teks sementara ("-", "-6.") yang disimpan pengguna.
+ */
+const coordText = (v: number | string | null | undefined): string | null => {
+  if (v === null || v === undefined || v === "") return null;
+  return typeof v === "number" ? String(v) : v;
+};
 
 export default function BusinessPage() {
   return <WithTenant>{(ctx) => <Form ctx={ctx} />}</WithTenant>;
@@ -40,7 +58,7 @@ function Section({ title, description, children, onSave, disabled, msg }: {
 function Form({ ctx }: { ctx: TenantCtx }) {
   const base = `/api/v1/tenants/${ctx.tenant.id}/business`;
   const canEdit = ctx.can("tenant.update");
-  const [data, setData] = useState<Business | null>(null);
+  const [data, setData] = useState<BusinessEdit | null>(null);
   const [uploads, setUploads] = useState<Upload[]>([]);
   const [status, setStatus] = useState<{ status: string; local_time: string } | null>(null);
   const [msgs, setMsgs] = useState<Record<string, { err?: string }>>({});
@@ -95,6 +113,19 @@ function Form({ ctx }: { ctx: TenantCtx }) {
         onChange={(e) => setP({ [key]: e.target.value } as Partial<BusinessProfile>)} />
     </label>
   );
+  /** Isian kontak: validasi langsung (hanya angka & awalan 0/62 untuk telepon). */
+  const contact = (label: string, key: "phone" | "whatsapp" | "email", kind: "phone" | "email") => (
+    <ContactField
+      label={label}
+      kind={kind}
+      value={(p[key] as string | null | undefined) ?? ""}
+      disabled={!canEdit}
+      errorText={ERROR_TEXT}
+      autoComplete={kind === "email" ? "email" : "tel"}
+      maxLength={kind === "email" ? 254 : 20}
+      onChange={(v) => setP({ [key]: v } as Partial<BusinessProfile>)}
+    />
+  );
   const imageProps = (key: "logo" | "cover") => ({
     f: { key, label: key === "logo" ? t("Logo usaha") : t("Gambar sampul"), kind: "image" as const },
     data: (p[key] ? { [key]: p[key] } : {}) as { [k: string]: Json },
@@ -129,9 +160,9 @@ function Form({ ctx }: { ctx: TenantCtx }) {
               {[...new Set([p.timezone, ...ZONES])].map((z) => <option key={z}>{z}</option>)}
             </select>
           </label>
-          {field(t("Telepon"), "phone", "tel")}
-          {field(t("WhatsApp"), "whatsapp", "tel")}
-          {field(t("Email"), "email", "email")}
+          {contact(t("Telepon"), "phone", "phone")}
+          {contact(t("WhatsApp"), "whatsapp", "phone")}
+          {contact(t("Email"), "email", "email")}
         </div>
         <label className="d-field"><span>{t("Deskripsi")}</span>
           <textarea value={p.description ?? ""} maxLength={2000} disabled={!canEdit} onChange={(e) => setP({ description: e.target.value })} />
@@ -167,18 +198,34 @@ function Form({ ctx }: { ctx: TenantCtx }) {
       <Section title={t("Alamat")} description={t("Tampil di bagian Lokasi website. Koordinat opsional untuk peta.")} disabled={!canEdit} msg={msgs.addresses ?? {}}
         onSave={() => save("addresses", "addresses", data.addresses.map((a) => ({
           label: a.label || null, address: a.address,
-          latitude: a.latitude ?? null, longitude: a.longitude ?? null,
+          // Teks sementara (mis. "-6.") dikirim sebagai angka; teks tak lengkap dibuang.
+          latitude: coordNumber(a.latitude),
+          longitude: coordNumber(a.longitude),
         })))}>
         {data.addresses.map((a, i) => {
-          const set = (patch: Partial<Address>) => setData({ ...data, addresses: data.addresses.map((x, j) => (j === i ? { ...x, ...patch } : x)) });
-          const num = (v: string) => (v.trim() === "" ? null : Number(v));
+          const set = (patch: Partial<EditableAddress>) =>
+            setData({ ...data, addresses: data.addresses.map((x, j) => (j === i ? { ...x, ...patch } : x)) as EditableAddress[] });
           return (
             <div className="e-list-item" key={i}>
               <div className="d-grid2">
                 <label className="d-field"><span>{t("Label")}</span><input value={a.label ?? ""} disabled={!canEdit} onChange={(e) => set({ label: e.target.value })} /></label>
                 <label className="d-field"><span>{t("Alamat *")}</span><input aria-required="true" value={a.address} disabled={!canEdit} onChange={(e) => set({ address: e.target.value })} /></label>
-                <label className="d-field"><span>{t("Latitude")}</span><input inputMode="decimal" value={a.latitude ?? ""} disabled={!canEdit} onChange={(e) => set({ latitude: num(e.target.value) })} /></label>
-                <label className="d-field"><span>{t("Longitude")}</span><input inputMode="decimal" value={a.longitude ?? ""} disabled={!canEdit} onChange={(e) => set({ longitude: num(e.target.value) })} /></label>
+                <CoordField
+                  label={t("Latitude")}
+                  value={coordText(a.latitude)}
+                  range={LAT_RANGE}
+                  hint={t("Boleh negatif. Latitude -90..90, bujur -180..180.")}
+                  disabled={!canEdit}
+                  onChange={(v) => set({ latitude: parseCoord(v) })}
+                />
+                <CoordField
+                  label={t("Longitude")}
+                  value={coordText(a.longitude)}
+                  range={LNG_RANGE}
+                  hint={t("Boleh negatif. Latitude -90..90, bujur -180..180.")}
+                  disabled={!canEdit}
+                  onChange={(v) => set({ longitude: parseCoord(v) })}
+                />
               </div>
               <button type="button" className="d-btn d-btn-sm d-btn-ghost u-danger" disabled={!canEdit} onClick={() => setData({ ...data, addresses: data.addresses.filter((_, j) => j !== i) })}><Trash weight="bold" aria-hidden="true" />{t("Hapus alamat")}</button>
             </div>
