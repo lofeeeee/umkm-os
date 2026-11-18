@@ -8,7 +8,7 @@ import type { Json } from "@/renderer/types";
 import manifest from "./plugin-manifest.json";
 import { t, m } from "@/i18n";
 
-export type PluginKind = SectionType | "chatbot" | "text" | "whatsapp" | "background" | "image" | "shape" | "logo";
+export type PluginKind = SectionType | "chatbot" | "text" | "whatsapp" | "background" | "image" | "shape" | "logo" | "article_body" | "blog_list";
 export type PluginCategory = "Konten" | "Jualan" | "Layanan" | "Info toko";
 
 export interface PluginDef {
@@ -44,6 +44,9 @@ export const PLUGINS: PluginDef[] = [
   { kind: "shape", get name() { return t("Bentuk"); }, get desc() { return t("Hiasan vektor berwarna merek: blob, bintang, kilau, cincin, panah, gelombang, dan lainnya."); }, category: "Konten", w: 2, h: 4, minW: 1, minH: 1,
     layouts: [{ value: "above", get label() { return t("Di atas blok"); } }, { value: "below", get label() { return t("Di belakang blok"); } }, { value: "sticky", get label() { return t("Menggantung"); } }], keywords: m("bentuk hiasan dekorasi stiker bintang blob ornamen") },
   { kind: "logo", get name() { return t("Logo"); }, get desc() { return t("Logo toko dari Profil bisnis — taruh di mana saja. Logo di menu navigasi otomatis disembunyikan agar tidak dobel."); }, category: "Info toko", w: 3, h: 3, minW: 1, minH: 1, keywords: m("logo merek brand identitas") },
+  { kind: "article_body", get name() { return t("Isi artikel"); }, get desc() { return t("Tulisan blog/artikel dengan judul bagian, daftar, kutipan, dan daftar isi otomatis — bagus untuk SEO."); }, category: "Konten", w: 8, h: 16, minW: 4, minH: 4, keywords: m("artikel blog tulisan cerita seo konten") },
+  { kind: "blog_list", get name() { return t("Daftar artikel"); }, get desc() { return t("Kartu artikel terbaru dari halaman artikel Anda, otomatis urut terbaru."); }, category: "Konten", w: 12, h: 10, minW: 4, minH: 4,
+    layouts: [{ value: "grid", get label() { return t("Grid"); } }, { value: "list", get label() { return t("Daftar"); } }], keywords: m("blog artikel berita kabar daftar") },
   { kind: "contact", get name() { return t("Kontak"); }, get desc() { return t("Tombol WhatsApp, telepon, dan media sosial."); }, category: "Info toko", w: 4, h: 5, minW: 3, minH: 2, keywords: m("whatsapp telepon sosial") },
 ];
 
@@ -65,6 +68,8 @@ export const EXTRA_DATA: Partial<Record<PluginKind, { [k: string]: Json }>> = {
   image: { fit: "contain", position: "center", opacity: 100, corner: "bottom-right" },
   shape: { shape: "blob", color: "primary", opacity: 100 },
   logo: { show_name: true },
+  article_body: { get body() { return t("## Pembuka\nTulis pembuka artikel di sini. Ceritakan apa yang akan dipelajari pembaca.\n\n## Langkah-langkah\n- Langkah pertama\n- Langkah kedua\n\n> Tips: gunakan judul bagian (##) agar daftar isi & Google memahami struktur artikel."); }, toc: true },
+  blog_list: { get title() { return t("Artikel terbaru"); }, limit: 6 },
   whatsapp: { get label() { return t("Pesan via WhatsApp"); }, get message() { return t("Halo, saya mau tanya produk di toko Anda."); } },
 };
 

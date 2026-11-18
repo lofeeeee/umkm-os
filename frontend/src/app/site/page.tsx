@@ -78,7 +78,7 @@ function WebsitePage({ slug }: { slug: string }) {
             status={site.status}
             products={products ?? []}
             assetUrl={assetUrl}
-            pages={(site.pages ?? []).map((p) => ({ slug: p.slug, title: p.title, current: p.slug === site.page.slug }))}
+            pages={(site.pages ?? []).map((p) => ({ slug: p.slug, title: p.title, current: p.slug === site.page.slug, article: p.article }))}
             platformUrl={site.platform_url}
           />
           <CartFab />

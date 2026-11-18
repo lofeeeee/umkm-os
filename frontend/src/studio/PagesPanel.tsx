@@ -14,6 +14,9 @@ import { confirm } from "@/ui/dialog";
 import { SYSTEM_PAGES, type SystemPage } from "./SystemPreview";
 import { t } from "@/i18n";
 
+/** Jenis halaman baru: biasa, artikel (isi artikel + metadata SEO), atau halaman blog (daftar artikel). */
+export type PageKind = "page" | "article" | "blog";
+
 export interface PageItem {
   slug: string;
   title: string;
@@ -25,7 +28,7 @@ export interface PagesPanelProps {
   pages: PageItem[];
   activeSlug: string;
   onSelectPage: (slug: string) => void;
-  onCreatePage: (slug: string, title: string) => Promise<boolean>;
+  onCreatePage: (slug: string, title: string, kind?: PageKind) => Promise<boolean>;
   onDeletePage: (slug: string) => Promise<boolean>;
   isPro: boolean;
   onUpgradeClick: () => void;
@@ -110,6 +113,7 @@ export function PagesPanel({
 }: PagesPanelProps) {
   const [isAdding, setIsAdding] = useState(defaultOpenAdd);
   const [customTitle, setCustomTitle] = useState("");
+  const [kind, setKind] = useState<PageKind>("page");
   const [customSlug, setCustomSlug] = useState("");
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -161,8 +165,9 @@ export function PagesPanel({
     setErrorMsg(null);
     setIsSubmitting(true);
     try {
-      const ok = await onCreatePage(slug, title);
+      const ok = await onCreatePage(slug, title, kind);
       if (ok) {
+        setKind("page");
         setCustomTitle("");
         setCustomSlug("");
         setSlugManuallyEdited(false);
@@ -253,6 +258,11 @@ export function PagesPanel({
             <button type="button" className="d-icon-btn d-icon-btn-sm" onClick={() => { setIsAdding(false); setErrorMsg(null); }} title={t("Batal")} aria-label={t("Batal")}>
               <X weight="bold" />
             </button>
+          </div>
+          <div className="d-seg u-w-full" role="group" aria-label={t("Jenis halaman")}>
+            {([["page", t("Halaman biasa")], ["article", t("Artikel")], ["blog", t("Halaman blog")]] as const).map(([v, l]) => (
+              <button key={v} type="button" className="u-grow" aria-pressed={kind === v} onClick={() => setKind(v)}>{l}</button>
+            ))}
           </div>
           <label className="d-field" htmlFor={titleInputId}>
             <span>{t("Nama halaman")}</span>

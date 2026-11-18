@@ -12352,6 +12352,11 @@ components:
       - slug
       - title
       properties:
+        article:
+          type:
+          - object
+          - 'null'
+          description: Metadata artikel (ringkasan, sampul, penulis, tanggal, tag) bila halaman ini artikel/blog.
         slug:
           type: string
         title:

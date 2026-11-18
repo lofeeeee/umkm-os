@@ -185,6 +185,10 @@ pub struct PublicSite {
 pub struct PublicPageLink {
     pub slug: String,
     pub title: String,
+    /// Metadata artikel (ringkasan, sampul, penulis, tanggal, tag) bila halaman ini artikel/blog.
+    #[schema(value_type = Option<Object>)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub article: Option<Value>,
 }
 
 // ------------------------------------------------------------------ helper
@@ -888,19 +892,29 @@ pub async fn load_public_site(
         .await
         .map_err(internal)?
         .ok_or_else(not_found)?;
-    let mut ids = BTreeSet::new();
-    asset_ids(&content, &mut ids);
-    ids.extend(info.profile.logo_object_id);
-    ids.extend(info.profile.cover_object_id);
-    let assets = signed_assets(state, t, ids).await?;
-    // Navigasi situs: halaman terbit. Kegagalan di sini tidak boleh menjatuhkan situs — nav tanpa
-    // tautan masih berguna (nama toko), jadi galat dianggap daftar kosong.
-    let pages = repo::published_pages(p, t)
+    // Navigasi situs: halaman terbit (+ metadata artikel untuk plugin Daftar artikel). Kegagalan di sini
+    // tidak boleh menjatuhkan situs — nav tanpa tautan masih berguna, jadi galat dianggap daftar kosong.
+    let pages: Vec<PublicPageLink> = repo::published_pages(p, t)
         .await
         .unwrap_or_default()
         .into_iter()
-        .map(|(slug, title)| PublicPageLink { slug, title })
+        .map(|x| PublicPageLink {
+            slug: x.slug,
+            title: x.title,
+            article: x.article.filter(Value::is_object),
+        })
         .collect();
+    let mut ids = BTreeSet::new();
+    asset_ids(&content, &mut ids);
+    for pg in &pages {
+        if let Some(a) = &pg.article {
+            asset_ids(a, &mut ids);
+        }
+    }
+    ids.extend(info.profile.logo_object_id);
+    ids.extend(info.profile.cover_object_id);
+    let assets = signed_assets(state, t, ids).await?;
+
     Ok(PublicSite {
         page: PublicPage {
             slug,

@@ -19,7 +19,8 @@ pub const MAX_BLOCKS: usize = 40;
 pub const MAX_Y: i64 = 2000;
 pub const MAX_H: i64 = 400;
 
-pub const ROOT_KEYS: [&str; 6] = [
+pub const ROOT_KEYS: [&str; 7] = [
+    "article",
     "schema_version",
     "template",
     "theme",
@@ -81,7 +82,7 @@ pub const MAX_DRAWING_STROKES: usize = 200;
 pub const MAX_STROKE_POINTS: usize = 1000;
 
 /// Plugin resmi (ADR-0019). Data 9 jenis pertama memakai aturan section v1.
-pub const PLUGIN_KINDS: [&str; 16] = [
+pub const PLUGIN_KINDS: [&str; 18] = [
     "hero",
     "about",
     "product_grid",
@@ -98,6 +99,8 @@ pub const PLUGIN_KINDS: [&str; 16] = [
     "image",
     "shape",
     "logo",
+    "article_body",
+    "blog_list",
 ];
 /// Gaya kotak blok. `soft` = 3D lembut (neumorphism), `flat` = 2D datar tanpa bayangan.
 pub const STYLES: [&str; 6] = ["plain", "card", "tint", "dark", "soft", "flat"];
@@ -141,6 +144,7 @@ pub fn layouts(kind: &str) -> &'static [&'static str] {
         "whatsapp" => &["floating", "inline"],
         "image" => &["above", "below", "sticky", "popup"],
         "shape" => &["above", "below", "sticky"],
+        "blog_list" => &["grid", "list"],
         _ => &[],
     }
 }
@@ -254,6 +258,33 @@ pub fn validate(doc: &Value) -> Result<ValidPage, Vec<FieldError>> {
         v.text(m, "seo", "description", 160, false);
         v.asset(m, "seo", "image", false);
         v.asset(m, "seo", "favicon", false);
+    }
+    // Halaman artikel/blog (SEO: og:type article + JSON-LD Article). Tanpa `article` = halaman biasa.
+    if let Some(a) = root.get("article")
+        && let Some(m) = v.object(
+            a,
+            "article",
+            &["excerpt", "cover", "author", "published_at", "tags"],
+        )
+    {
+        v.text(m, "article", "excerpt", 300, false);
+        v.asset(m, "article", "cover", false);
+        v.text(m, "article", "author", 80, false);
+        match m.get("published_at") {
+            None => {}
+            Some(Value::String(s)) if is_iso_date(s) => {}
+            Some(_) => v.err("article.published_at", "invalid_date"),
+        }
+        match m.get("tags") {
+            None => {}
+            Some(Value::Array(t))
+                if t.len() <= 8
+                    && t.iter().all(|x| {
+                        x.as_str()
+                            .is_some_and(|s| !s.trim().is_empty() && s.chars().count() <= 30)
+                    }) => {}
+            Some(_) => v.err("article.tags", "invalid_tags"),
+        }
     }
     match root.get("blocks") {
         Some(Value::Array(items)) => blocks(&mut v, items),
@@ -679,6 +710,21 @@ fn data(v: &mut V, kind: &str, d: &Value, p: &str) {
                 }
             }
         }
+        "article_body" => {
+            // Isi artikel: teks dengan penanda ringan (## judul, - daftar, > kutipan), dirender sebagai teks.
+            if let Some(m) = v.object(d, p, &["body", "toc"]) {
+                v.text(m, p, "body", 20000, true);
+                v.boolean(m, p, "toc");
+            }
+        }
+        "blog_list" => {
+            if let Some(m) = v.object(d, p, &["title", "limit"]) {
+                v.text(m, p, "title", 120, false);
+                if m.contains_key("limit") {
+                    v.int(m, p, "limit", 1, 24);
+                }
+            }
+        }
         "shape" => {
             if let Some(m) = v.object(d, p, &["shape", "color", "opacity", "rotate"]) {
                 match m.get("shape") {
@@ -760,6 +806,34 @@ fn data(v: &mut V, kind: &str, d: &Value, p: &str) {
         }
         _ => v.section_data(kind, d, p),
     }
+}
+
+/// Tanggal `YYYY-MM-DD` yang valid secara kalender (sederhana; tanpa zona waktu).
+fn is_iso_date(s: &str) -> bool {
+    let b = s.as_bytes();
+    if b.len() != 10 || b[4] != b'-' || b[7] != b'-' {
+        return false;
+    }
+    let num = |r: std::ops::Range<usize>| s[r].parse::<u32>().ok();
+    let (Some(y), Some(m), Some(d)) = (num(0..4), num(5..7), num(8..10)) else {
+        return false;
+    };
+    let leap = (y % 4 == 0 && y % 100 != 0) || y % 400 == 0;
+    let days = [
+        31,
+        if leap { 29 } else { 28 },
+        31,
+        30,
+        31,
+        30,
+        31,
+        31,
+        30,
+        31,
+        30,
+        31,
+    ];
+    (1900..=2200).contains(&y) && (1..=12).contains(&m) && d >= 1 && d <= days[(m - 1) as usize]
 }
 
 /// Warna opsional: heks, atau `primary`/`accent` (mengikuti brand kit).
@@ -1246,6 +1320,44 @@ mod tests {
         assert!(c.contains(&("blocks[0].data.shape".into(), "invalid_value")));
         assert!(c.contains(&("blocks[0].data.rotate".into(), "out_of_range")));
         assert!(c.contains(&("blocks[0].data.color".into(), "invalid_color")));
+    }
+
+    #[test]
+    fn article_pages_and_blog_plugins_validate() {
+        let img = Uuid::new_v4();
+        let mut d = doc(vec![
+            block(
+                "isi",
+                "article_body",
+                0,
+                0,
+                8,
+                10,
+                json!({"body": "## Pembuka\nHalo", "toc": true}),
+            ),
+            {
+                let mut b = block(
+                    "daftar",
+                    "blog_list",
+                    0,
+                    10,
+                    12,
+                    8,
+                    json!({"title": "Artikel terbaru", "limit": 6}),
+                );
+                b["layout"] = json!("grid");
+                b
+            },
+        ]);
+        d["article"] = json!({"excerpt": "Cara menyeduh kopi", "cover": format!("asset:{img}"),
+            "author": "Rina", "published_at": "2026-02-29".replace("02-29", "02-28"), "tags": ["kopi", "tips"]});
+        let ok = validate_page(&d).expect("artikel valid");
+        assert!(ok.asset_refs.contains(&img));
+        d["article"] = json!({"published_at": "2026-02-30", "tags": ["", "x"], "extra": 1});
+        let c = codes(&d);
+        assert!(c.contains(&("article.published_at".into(), "invalid_date")));
+        assert!(c.contains(&("article.tags".into(), "invalid_tags")));
+        assert!(c.contains(&("article.extra".into(), "unknown_field")));
     }
 
     #[test]

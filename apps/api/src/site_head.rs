@@ -512,21 +512,45 @@ async fn build_meta(
         .await
         .map_err(internal)?
         .map(|(_, c)| c);
+    // Halaman selain beranda: SEO & metadata artikel dari halaman itu sendiri (jatuh ke beranda bila kosong).
+    let page_slug = page_slug_of(path).filter(|s| s != website_repo::HOME);
+    let page = match &page_slug {
+        Some(s) => website_repo::published_content(p, t, s)
+            .await
+            .map_err(internal)?
+            .map(|(_, c)| c),
+        None => None,
+    };
     let seo = content
         .as_ref()
         .and_then(|c| c.get("seo"))
         .cloned()
         .unwrap_or(Value::Null);
-    let seo_str = |k: &str| {
-        seo.get(k)
+    let page_seo = page
+        .as_ref()
+        .and_then(|c| c.get("seo"))
+        .cloned()
+        .unwrap_or(Value::Null);
+    let article = page
+        .as_ref()
+        .and_then(|c| c.get("article"))
+        .filter(|a| a.is_object())
+        .cloned();
+    let pick = |v: &Value, k: &str| {
+        v.get(k)
             .and_then(Value::as_str)
             .map(str::trim)
             .filter(|s| !s.is_empty())
             .map(str::to_owned)
     };
+    let seo_str = |k: &str| pick(&seo, k);
+    let page_str = |k: &str| pick(&page_seo, k);
+    let art_str = |k: &str| article.as_ref().and_then(|a| pick(a, k));
 
     // Aset yang mungkin dipakai: gambar SEO, favicon, sampul/logo profil.
     let refs: Vec<String> = [
+        page_str("image"),
+        art_str("cover"),
         seo_str("image"),
         seo_str("favicon"),
         biz.profile.cover.clone(),
@@ -601,6 +625,72 @@ async fn build_meta(
         }));
     }
 
+    // Halaman lain (Tentang, Blog, artikel …): judul & deskripsi halaman itu; artikel → JSON-LD Article.
+    if page.is_some()
+        && let Some(slug) = &page_slug
+    {
+        let page_title = website_repo::published_pages(p, t)
+            .await
+            .map_err(internal)?
+            .into_iter()
+            .find(|x| &x.slug == slug)
+            .map(|x| x.title)
+            .unwrap_or_else(|| slug.clone());
+        let headline = page_str("title").unwrap_or_else(|| page_title.clone());
+        let desc = page_str("description")
+            .or_else(|| art_str("excerpt"))
+            .unwrap_or_else(|| store_desc.clone());
+        let image = abs(page_str("image"))
+            .or_else(|| abs(art_str("cover")))
+            .or(store_image.clone());
+        let (og_type, ld) = if article.is_some() {
+            let mut ld = json!({"@context": "https://schema.org", "@type": "Article", "headline": clip(&headline, 110),
+                "url": url, "mainEntityOfPage": url,
+                "publisher": {"@type": "Organization", "name": name}});
+            if !desc.is_empty() {
+                ld["description"] = json!(clip(&desc, 300));
+            }
+            if let Some(i) = &image {
+                ld["image"] = json!(i);
+            }
+            if let Some(d) = art_str("published_at") {
+                ld["datePublished"] = json!(d);
+            }
+            ld["author"] = match art_str("author") {
+                Some(a) => json!({"@type": "Person", "name": a}),
+                None => json!({"@type": "Organization", "name": name}),
+            };
+            if let Some(tags) = article
+                .as_ref()
+                .and_then(|a| a.get("tags"))
+                .and_then(Value::as_array)
+            {
+                ld["keywords"] = json!(
+                    tags.iter()
+                        .filter_map(Value::as_str)
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                );
+            }
+            ("article", ld)
+        } else {
+            (
+                "website",
+                local_business(&biz, &site_url, store_image.as_deref()),
+            )
+        };
+        return Ok(Some(HeadMeta {
+            title: format!("{headline} — {name}"),
+            description: clip(&desc, 160),
+            url,
+            site_name: name,
+            og_type,
+            image,
+            favicon,
+            json_ld: Some(ld),
+        }));
+    }
+
     let title = seo_str("title").unwrap_or_else(|| name.clone());
     Ok(Some(HeadMeta {
         json_ld: Some(local_business(&biz, &site_url, store_image.as_deref())),
@@ -632,7 +722,7 @@ pub async fn robots(
     cached(body, "text/plain; charset=utf-8")
 }
 
-/// `GET /api/v1/public/sitemap.xml` — beranda + produk aktif (maks 500).
+/// `GET /api/v1/public/sitemap.xml` — semua halaman terbit (dengan `lastmod`) + produk aktif (maks 500).
 pub async fn sitemap(
     State(state): State<AppState>,
     HostTenant(t): HostTenant,
@@ -644,21 +734,44 @@ pub async fn sitemap(
         state.site.scheme.as_str()
     };
     let base = format!("{scheme}://{}", host_of(&headers));
-    let mut urls = vec![format!("{base}/")];
+    // (url, lastmod) — halaman terbit (beranda, halaman lain, artikel) lalu produk aktif.
+    let mut urls: Vec<(String, Option<String>)> = Vec::new();
     if crate::billing::require_operational(&state, t).await.is_ok()
         && let Ok(p) = pool(&state)
-        && let Ok((list, _)) = catalog_repo::public_products(p, t, None, 500, 0).await
     {
-        urls.extend(
-            list.into_iter()
-                .map(|x| format!("{base}/produk/{}", x.slug)),
-        );
+        for pg in website_repo::published_pages(p, t)
+            .await
+            .unwrap_or_default()
+        {
+            let path = if pg.slug == website_repo::HOME {
+                "/".to_owned()
+            } else {
+                format!("/{}", pg.slug)
+            };
+            urls.push((format!("{base}{path}"), Some(pg.published_at)));
+        }
+        if let Ok((list, _)) = catalog_repo::public_products(p, t, None, 500, 0).await {
+            urls.extend(
+                list.into_iter()
+                    .map(|x| (format!("{base}/produk/{}", x.slug), None)),
+            );
+        }
+    }
+    if urls.is_empty() {
+        urls.push((format!("{base}/"), None));
     }
     let mut xml = String::from(
         "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n",
     );
-    for u in urls {
-        xml.push_str(&format!("  <url><loc>{}</loc></url>\n", esc(&u)));
+    for (u, lastmod) in urls {
+        match lastmod {
+            Some(d) => xml.push_str(&format!(
+                "  <url><loc>{}</loc><lastmod>{}</lastmod></url>\n",
+                esc(&u),
+                esc(&d)
+            )),
+            None => xml.push_str(&format!("  <url><loc>{}</loc></url>\n", esc(&u))),
+        }
     }
     xml.push_str("</urlset>\n");
     cached(xml, "application/xml; charset=utf-8")

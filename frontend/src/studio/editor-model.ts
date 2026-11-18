@@ -39,6 +39,8 @@ export const EXTRA_LIMITS: Partial<Record<PluginKind, Record<string, { max: numb
   image: { alt: { max: 160 } },
   shape: {},
   logo: {},
+  article_body: { body: { max: 20000, required: true } },
+  blog_list: { title: { max: 120 } },
 };
 /** Satu per halaman (ADR-0019 max_per_page). */
 export const SINGLE: PluginKind[] = ["chatbot", "whatsapp"];

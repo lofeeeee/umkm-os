@@ -16,7 +16,9 @@
     "background":     { "version": 1, "plan": "starter", "max_per_page": 40, "layouts": [] },
     "image":          { "version": 1, "plan": "starter", "max_per_page": 40, "layouts": ["above", "below", "sticky", "popup"] },
     "shape":          { "version": 1, "plan": "starter", "max_per_page": 40, "layouts": ["above", "below", "sticky"] },
-    "logo":           { "version": 1, "plan": "starter", "max_per_page": 40, "layouts": [] }
+    "logo":           { "version": 1, "plan": "starter", "max_per_page": 40, "layouts": [] },
+    "article_body":   { "version": 1, "plan": "starter", "max_per_page": 40, "layouts": [] },
+    "blog_list":      { "version": 1, "plan": "starter", "max_per_page": 40, "layouts": ["grid", "list"] }
   },
   "embed_layouts": { "chatbot": ["floating", "bar"], "whatsapp": ["floating"], "image": ["popup"] }
 }

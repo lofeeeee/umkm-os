@@ -146,6 +146,7 @@ export function normalizePageV2(raw: unknown): PageV2 {
   };
   const s = seo(m.seo);
   if (s) doc.seo = s;
+  if (m.article && typeof m.article === "object" && !Array.isArray(m.article)) doc.article = m.article as PageV2["article"];
   // `drawings` hanya relevan di editor; bentuknya sudah dijaga validator dan tidak memengaruhi tata letak.
   if (Array.isArray(m.drawings) && m.drawings.length > 0) doc.drawings = m.drawings as PageV2["drawings"];
   return doc;

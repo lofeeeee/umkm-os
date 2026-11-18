@@ -174,6 +174,26 @@ export function Inspector({ c, onBack, onChange, onWidth, onMove, onLayout, onDu
             <label className="d-field"><span>{tx("Judul (opsional)")}</span><input maxLength={120} value={String(c.data.title ?? "")} onChange={(e) => onChange({ data: { ...c.data, title: e.target.value } })} /></label>
             <label className="d-field"><span>{tx("Isi")}</span><textarea rows={6} maxLength={5000} value={String(c.data.body ?? "")} onChange={(e) => onChange({ data: { ...c.data, body: e.target.value } })} /><span className="d-hint">{tx("Baris kosong memisahkan paragraf.")}</span></label>
           </>
+        ) : c.kind === "article_body" ? (
+          <>
+            <label className="d-field"><span>{tx("Isi artikel")}</span>
+              <textarea rows={14} maxLength={20000} value={String(c.data.body ?? "")} onChange={(e) => onChange({ data: { ...c.data, body: e.target.value } })} />
+              <span className="d-hint">{tx("Penanda: ## Judul bagian, ### Subjudul, - daftar, 1. daftar bernomor, > kutipan, **tebal**, *miring*, [teks](tautan). Baris kosong = paragraf baru.")}</span>
+            </label>
+            <label className="d-switch">
+              <input type="checkbox" checked={c.data.toc === true} onChange={(e) => onChange({ data: { ...c.data, toc: e.target.checked } }, "")} />
+              <span><strong>{tx("Daftar isi otomatis")}</strong><span className="d-muted">{tx("Dibuat dari judul bagian (##). Membantu pembaca & Google.")}</span></span>
+            </label>
+            <p className="d-hint">{tx("Judul, ringkasan, sampul, penulis, dan tanggal artikel diatur di Halaman › Pengaturan halaman.")}</p>
+          </>
+        ) : c.kind === "blog_list" ? (
+          <>
+            <label className="d-field"><span>{tx("Judul")}</span><input maxLength={120} value={String(c.data.title ?? "")} onChange={(e) => onChange({ data: { ...c.data, title: e.target.value } })} /></label>
+            <label className="d-field"><span>{tx("Jumlah artikel")}</span>
+              <input type="number" min={1} max={24} value={typeof c.data.limit === "number" ? c.data.limit : 6} onChange={(e) => onChange({ data: { ...c.data, limit: Math.max(1, Math.min(24, Number(e.target.value) || 6)) } })} />
+            </label>
+            <p className="d-hint">{tx("Menampilkan halaman yang ditandai sebagai artikel dan sudah terbit, terbaru lebih dulu. Di Studio tampil contoh bila belum ada.")}</p>
+          </>
         ) : c.kind === "whatsapp" ? (
           <>
             <label className="d-field"><span>{tx("Tulisan tombol")}</span><input maxLength={40} value={String(c.data.label ?? "")} onChange={(e) => onChange({ data: { ...c.data, label: e.target.value } })} /></label>

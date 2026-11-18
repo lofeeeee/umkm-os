@@ -37,6 +37,8 @@ import { IconRail, type StudioTab } from "@/studio/IconRail";
 import { PagesPanel, type PageItem } from "@/studio/PagesPanel";
 import { ThemePanel, type ThemeConfig } from "@/studio/ThemePanel";
 import { ShopTextsPanel, SystemPreview, type SystemPage } from "@/studio/SystemPreview";
+import { PageSettings } from "@/studio/PageSettings";
+import type { PageKind } from "@/studio/PagesPanel";
 import { DrawPanel, type DrawConfig, type DrawTool, type DrawTarget } from "@/studio/DrawPanel";
 import type { DrawingStroke } from "@/studio/DrawingLayer";
 import { ImageCropModal } from "@/ui/ImageCropModal";
@@ -245,18 +247,28 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
     }
   }, [activeSlug, base, saveNow]);
 
-  const createPage = useCallback(async (slug: string, title: string): Promise<boolean> => {
+  const createPage = useCallback(async (slug: string, title: string, kind: PageKind = "page"): Promise<boolean> => {
     try {
       const r = await api<PageItem>("POST", `${base}/website/pages`, { json: { slug, title } });
       setPages((p) => [...p, r]);
       toast.ok(tx("Halaman {0} dibuat.", title));
       await switchPage(slug);
+      // Artikel: isi artikel + metadata (tanggal hari ini). Halaman blog: daftar artikel.
+      if (kind !== "page") {
+        const cell = cellFor(kind === "article" ? "article_body" : "blog_list");
+        update((s) => ({
+          ...s,
+          cells: insert([], { ...cell, w: kind === "article" ? 8 : 12, x: kind === "article" ? 2 : 0 }, { x: kind === "article" ? 2 : 0, y: 0 }) as StudioCell[],
+          installed: s.installed.includes(cell.kind) ? s.installed : [...s.installed, cell.kind],
+          article: kind === "article" ? { published_at: new Date().toISOString().slice(0, 10) } : s.article,
+        }), "");
+      }
       return true;
     } catch (e) {
       toast.error(describe(e));
       return false;
     }
-  }, [base, switchPage]);
+  }, [base, switchPage, update]);
 
   const deletePage = useCallback(async (slug: string): Promise<boolean> => {
     try {
@@ -677,6 +689,7 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
               upgradeHref={needsUpgrade(pluginPlan(selected.kind), planCode) ? `/subscription?tenant=${ctx.tenant.id}` : null}
             />
           ) : activeTab === "pages" ? (
+            <>
             <PagesPanel
               pages={pages}
               activeSlug={activeSlug}
@@ -688,6 +701,13 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
               isPro={planCode === "pro"}
               onUpgradeClick={() => window.open(`/subscription?tenant=${ctx.tenant.id}`, "_self")}
             />
+            {!systemPage && (
+              <PageSettings seo={st.seo} article={st.article} isHome={activeSlug === "home"} assetUrl={assets.url}
+                onSeo={(next) => update((x) => ({ ...x, seo: next }), "seo")}
+                onArticle={(next) => update((x) => ({ ...x, article: next }), "article")}
+                upload={async (f) => (await assets.upload(f))?.ref ?? null} />
+            )}
+            </>
           ) : activeTab === "theme" ? (
             <ThemePanel config={themeConfig} onChange={updateTheme} onAddBackground={addBackground}
               isPro={planCode === "pro"} onUpgradeClick={() => window.open(`/subscription?tenant=${ctx.tenant.id}`, "_self")} />
@@ -831,7 +851,7 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
                 {i.cellId && <button type="button" className="d-btn d-btn-sm" onClick={() => { setSel(i.cellId!); setPanelOpen(true); setChecks(null); }}>{tx("Tunjukkan")}</button>}
                 {i.area === "business" && <Link className="d-btn d-btn-sm" href={`/business?tenant=${ctx.tenant.id}`}>{tx("Profil bisnis")}</Link>}
                 {i.area === "products" && <Link className="d-btn d-btn-sm" href={`/products?tenant=${ctx.tenant.id}`}>{tx("Produk")}</Link>}
-                {i.area === "seo" && <button type="button" className="d-btn d-btn-sm" onClick={() => { setSel(null); setPanelOpen(true); setChecks(null); setTimeout(() => document.getElementById("seo-description")?.focus(), 50); }}>{tx("Isi deskripsi")}</button>}
+                {i.area === "seo" && <button type="button" className="d-btn d-btn-sm" onClick={() => { setSel(null); setSystemPage(null); selectTab("pages"); setPanelOpen(true); setChecks(null); setTimeout(() => document.getElementById("seo-description")?.focus(), 80); }}>{tx("Isi deskripsi")}</button>}
                 {i.area === "ai" && <Link className="d-btn d-btn-sm" href={`/ai?tenant=${ctx.tenant.id}`}>{tx("Asisten AI")}</Link>}
               </span>
             </li>

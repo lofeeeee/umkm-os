@@ -4,6 +4,7 @@
 import type { Json } from "@/renderer/types";
 
 import { type DrawingStroke } from "./DrawingLayer";
+import type { ArticleMeta } from "@/renderer/article";
 import manifest from "./plugin-manifest.json";
 import { PALETTES } from "./plugins";
 import { onColor } from "@/renderer/safe";
@@ -36,6 +37,8 @@ export interface StudioState {
   backgroundOpacity?: number; // 0..=100
   drawings?: DrawingStroke[];
   seo?: StudioSeo;
+  /** Halaman artikel/blog (SEO Article). */
+  article?: ArticleMeta;
   installed: PluginKind[];
   cells: TplCell[];
 }
@@ -76,6 +79,8 @@ export interface PageV2 {
     background_opacity?: number;
   };
   seo?: StudioSeo;
+  /** Halaman artikel/blog (SEO Article). */
+  article?: ArticleMeta;
   drawings?: DrawingStroke[];
   blocks: BlockV2[];
 }
@@ -84,6 +89,19 @@ const LAYOUTS = manifest.plugins as Record<string, { layouts: string[] }>;
 const hasLayouts = (k: string) => (LAYOUTS[k]?.layouts.length ?? 0) > 0;
 /** id blok: `[a-z0-9-]`, 1–40, tanpa garis bawah (aturan server). */
 export const safeId = (id: string) => id.toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40) || "blok";
+
+/** Metadata artikel: buang isian kosong (tanggal harus YYYY-MM-DD, maks 8 tag). */
+function cleanArticle(a: ArticleMeta | undefined): ArticleMeta | undefined {
+  if (!a) return undefined;
+  const out: ArticleMeta = {};
+  if (a.excerpt?.trim()) out.excerpt = a.excerpt.trim().slice(0, 300);
+  if (a.cover?.trim()) out.cover = a.cover.trim();
+  if (a.author?.trim()) out.author = a.author.trim().slice(0, 80);
+  if (a.published_at && /^\d{4}-\d{2}-\d{2}$/.test(a.published_at)) out.published_at = a.published_at;
+  const tags = (a.tags ?? []).map((x) => x.trim().slice(0, 30)).filter(Boolean).slice(0, 8);
+  if (tags.length) out.tags = tags;
+  return out;
+}
 
 /** Buang string kosong di SEO agar tidak dikirim (server menolak teks wajib kosong hanya bila required). */
 function cleanSeo(seo: StudioSeo | undefined): StudioSeo | undefined {
@@ -136,6 +154,8 @@ export function toDoc(st: StudioState, template: string): PageV2 {
   };
   const seo = cleanSeo(st.seo);
   if (seo) doc.seo = seo;
+  const art = cleanArticle(st.article);
+  if (art) doc.article = art;
   const drawings = cleanDrawings(st.drawings, idMap);
   if (drawings.length > 0) doc.drawings = drawings;
   return doc;
@@ -189,6 +209,7 @@ export function fromDoc(doc: PageV2, minSize: (k: PluginKind) => { minW: number;
     backgroundOpacity: doc.theme.background_opacity,
     drawings: doc.drawings,
     seo: doc.seo,
+    article: doc.article,
     installed: [],
     cells,
   };

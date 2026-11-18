@@ -89,6 +89,8 @@ fn studio_document_from_defaults_validates() {
             }
             "shape" => json!({"shape": "blob", "color": "primary", "opacity": 100}),
             "logo" => json!({"show_name": true}),
+            "article_body" => json!({"body": "Isi artikel"}),
+            "blog_list" => json!({"title": "Artikel", "limit": 6}),
             k => map[k].clone(),
         };
         blocks.push(json!({"id": format!("{}-1", kind.replace('_', "-")), "kind": kind, "x": 0, "y": y, "w": 12, "h": 4, "style": "plain", "data": data}));

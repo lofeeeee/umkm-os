@@ -24,6 +24,7 @@ import { InkLayer } from "./ink";
 import { PublicNav, type NavLink } from "./PublicNav";
 import { BackgroundLayer, FreeImage, ShapeLayer, isBehind, isLayer, isPopupImage, layerVisible, mobileRows } from "./layers";
 import { LogoLayer } from "./LogoLayer";
+import { ArticleBody, BlogList, type ArticleMeta } from "./article";
 import { PopupImage } from "./PopupImage";
 import { frameAttrs, frameStyle } from "./frame";
 import { SiteFooter } from "./SiteFooter";
@@ -33,7 +34,7 @@ import type { Business, OpenStatus, SectionType } from "./types";
 import { t as tx, tmap } from "@/i18n";
 
 /** Halaman terbit yang bisa ditautkan dari navigasi (dari `/public/site`). */
-export interface SitePageLink { slug: string; title: string; current?: boolean }
+export interface SitePageLink { slug: string; title: string; current?: boolean; article?: ArticleMeta }
 
 export type RenderMode = "customer" | "studio-edit";
 
@@ -157,6 +158,22 @@ function publicBlock(b: BlockV2, props: StudioSiteProps): boolean {
 
 function Block({ b, props }: { b: BlockV2; props: StudioSiteProps }) {
   let body: ReactNode;
+  if (b.kind === "article_body") {
+    const cur = props.pages?.find((p) => p.current);
+    const meta = props.doc.article;
+    return <div className={`st-content st-style-${b.style}`}><div className="site s-solo"><section className="s"><div className="s-inner">
+      <ArticleBody body={text(b.data.body)} toc={b.data.toc === true} title={meta ? cur?.title : undefined} meta={meta}
+        coverUrl={meta?.cover ? props.assetUrl(meta.cover) : undefined} />
+    </div></section></div></div>;
+  }
+  if (b.kind === "blog_list") {
+    // Halaman yang sedang dibuka tidak ikut didaftar ("Artikel lainnya" di halaman artikel).
+    const entries = (props.pages ?? []).filter((p) => p.article && !p.current).map((p) => ({ slug: p.slug, title: p.title, article: p.article! }));
+    const limit = typeof b.data.limit === "number" ? b.data.limit : 6;
+    return <div className={`st-content st-style-${b.style}`}><div className="site s-solo">
+      <BlogList title={text(b.data.title)} entries={entries} limit={limit} layout={b.layout === "list" ? "list" : "grid"} assetUrl={props.assetUrl} editing={props.mode === "studio-edit"} />
+    </div></div>;
+  }
   if (b.kind === "shape") return <ShapeLayer b={b} />;
   if (b.kind === "logo") {
     const logo = props.business.profile.logo ? props.assetUrl(props.business.profile.logo) : undefined;

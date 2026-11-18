@@ -330,3 +330,112 @@ async fn og_image_is_a_stable_redirect_not_an_expiring_signed_url(pool: PgPool) 
         404
     );
 }
+
+/// Blog/artikel: halaman artikel mendapat judul & deskripsi sendiri, og:type article, JSON-LD Article; sitemap
+/// memuat semua halaman terbit dengan lastmod.
+#[sqlx::test(migrator = "MIGRATOR")]
+async fn article_page_has_its_own_seo_and_is_in_the_sitemap(pool: PgPool) {
+    let a = app(&pool).await;
+    let router = build_router(
+        a.state.clone().with_site(SiteHead::new(
+            Some(SHELL.into()),
+            "https://api.ryasai.my.id".into(),
+            "https".into(),
+        )),
+        LIMITS,
+    );
+    let t = tenant(&pool, "kopi").await;
+    let o = member(&pool, t, "Owner").await;
+    publish_doc(&a, t, &o, studio_doc()).await;
+    let w = format!("/api/v1/tenants/{t}/website");
+    let r = json(
+        &a.router,
+        Method::POST,
+        &format!("{w}/pages"),
+        Some(&o),
+        Some(json!({"slug": "cara-seduh", "title": "Cara seduh kopi"})),
+    )
+    .await;
+    assert_eq!(r.status, 201, "{}", r.json());
+    let mut art = studio_doc();
+    art["seo"] = json!({"description": "Panduan V60 untuk pemula"});
+    art["article"] = json!({"excerpt": "Panduan singkat", "author": "Rina", "published_at": "2026-11-01", "tags": ["kopi", "v60"]});
+    art["blocks"] = json!([{"id": "isi", "kind": "article_body", "x": 0, "y": 0, "w": 12, "h": 10, "style": "plain", "data": {"body": "## Alat\nSiapkan V60.", "toc": true}}]);
+    let d = json(
+        &a.router,
+        Method::GET,
+        &format!("{w}/pages/cara-seduh/draft"),
+        Some(&o),
+        None,
+    )
+    .await;
+    let rev = d.json()["data"]["revision"].as_i64().unwrap();
+    let r = json(
+        &a.router,
+        Method::PUT,
+        &format!("{w}/pages/cara-seduh/draft"),
+        Some(&o),
+        Some(json!({"content": art, "base_revision": rev})),
+    )
+    .await;
+    assert_eq!(r.status, 200, "{}", r.json());
+    let r = json(
+        &a.router,
+        Method::POST,
+        &format!("{w}/pages/cara-seduh/publish"),
+        Some(&o),
+        Some(json!({})),
+    )
+    .await;
+    assert_eq!(r.status, 200, "{}", r.json());
+
+    let html = String::from_utf8(
+        doc(
+            &router,
+            "/api/v1/public/document?path=/cara-seduh",
+            "kopi.ryasai.my.id",
+            SHELL,
+        )
+        .await
+        .bytes,
+    )
+    .unwrap();
+    assert!(
+        html.contains("<title>Cara seduh kopi — Kopi &lt;Senja&gt;</title>"),
+        "{html}"
+    );
+    assert!(
+        html.contains("content=\"Panduan V60 untuk pemula\""),
+        "{html}"
+    );
+    assert!(
+        html.contains("<meta property=\"og:type\" content=\"article\">"),
+        "{html}"
+    );
+    assert!(html.contains("\"@type\":\"Article\""), "{html}");
+    assert!(html.contains("\"datePublished\":\"2026-11-01\""), "{html}");
+    assert!(html.contains("\"name\":\"Rina\""), "{html}");
+
+    // Situs publik: daftar halaman membawa metadata artikel (plugin Daftar artikel).
+    let site = get(&router, "/api/v1/public/site", "kopi.ryasai.my.id").await;
+    let pages = site.json()["data"]["pages"].clone();
+    let p = pages
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|p| p["slug"] == "cara-seduh")
+        .unwrap()
+        .clone();
+    assert_eq!(p["article"]["author"], "Rina");
+
+    let xml = String::from_utf8(
+        get(&router, "/api/v1/public/sitemap.xml", "kopi.ryasai.my.id")
+            .await
+            .bytes,
+    )
+    .unwrap();
+    assert!(
+        xml.contains("<loc>https://kopi.ryasai.my.id/cara-seduh</loc><lastmod>"),
+        "{xml}"
+    );
+}

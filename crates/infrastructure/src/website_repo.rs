@@ -696,14 +696,26 @@ pub async fn published_content(
 
 /// Ringkasan halaman TERBIT untuk navigasi situs publik (judul dipakai sebagai label tautan).
 /// Hanya halaman yang sudah punya versi terbit — halaman draf tidak boleh membocorkan judulnya.
+/// Satu halaman terbit: slug, judul, metadata artikel (bila halaman artikel), dan waktu terbit.
+#[derive(Debug, Clone)]
+pub struct PublishedPage {
+    pub slug: String,
+    pub title: String,
+    pub article: Option<Value>,
+    /// Tanggal versi terbit (`YYYY-MM-DD`, UTC) — untuk `lastmod` sitemap.
+    pub published_at: String,
+}
+
 pub async fn published_pages(
     pool: &PgPool,
     t: TenantId,
-) -> Result<Vec<(String, String)>, sqlx::Error> {
+) -> Result<Vec<PublishedPage>, sqlx::Error> {
     let mut tx = tx(pool, t).await?;
     let rows = sqlx::query(
-        "SELECT p.slug, p.title FROM website_pages p
-         WHERE p.tenant_id = $1 AND p.published_version_id IS NOT NULL
+        "SELECT p.slug, p.title, v.content_json->'article' AS article,
+                to_char(v.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS published_at
+         FROM website_pages p JOIN website_page_versions v ON v.id = p.published_version_id
+         WHERE p.tenant_id = $1 AND v.tenant_id = $1
          ORDER BY (p.slug = 'home') DESC, p.slug",
     )
     .bind(t.as_uuid())
@@ -712,6 +724,11 @@ pub async fn published_pages(
     tx.commit().await?;
     Ok(rows
         .iter()
-        .map(|r| (r.get("slug"), r.get("title")))
+        .map(|r| PublishedPage {
+            slug: r.get("slug"),
+            title: r.get("title"),
+            article: r.get::<Option<Json<Value>>, _>("article").map(|Json(v)| v),
+            published_at: r.get("published_at"),
+        })
         .collect())
 }
