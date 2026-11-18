@@ -43,6 +43,8 @@ export interface BlockV2 {
   id: string; kind: PluginKind; x: number; y: number; w: number; h: number;
   locked?: boolean; auto_height?: boolean; style: CellStyle; layout?: string; chat_open?: boolean;
   hide_on?: "mobile" | "desktop";
+  /** Urutan khusus ponsel (0 = paling atas). */
+  m_order?: number;
   data: { [k: string]: Json };
 }
 export interface PageV2 {
@@ -105,6 +107,7 @@ export function toDoc(st: StudioState, template: string): PageV2 {
     if (hasLayouts(c.kind) && c.layout) b.layout = c.layout;
     if (c.kind === "chatbot") b.chat_open = c.chatOpen !== false;
     if (c.hideOn) b.hide_on = c.hideOn;
+    if (c.mOrder !== undefined) b.m_order = c.mOrder;
     return b;
   });
   const theme: PageV2["theme"] = {
@@ -165,7 +168,7 @@ export function fromDoc(doc: PageV2, minSize: (k: PluginKind) => { minW: number;
   const cells: TplCell[] = doc.blocks.map((b) => ({
     id: b.id, kind: b.kind, x: b.x, y: b.y, w: b.w, h: b.h, ...minSize(b.kind),
     style: b.style, data: b.data, layout: b.layout, autoH: b.auto_height !== false, chatOpen: b.chat_open !== false,
-    locked: b.locked || undefined, hideOn: b.hide_on, ...(b.kind === "background" || (b.kind === "image" && b.layout !== "popup") ? { layer: true, autoH: false } : {}),
+    locked: b.locked || undefined, hideOn: b.hide_on, mOrder: b.m_order, ...(b.kind === "background" || (b.kind === "image" && b.layout !== "popup") ? { layer: true, autoH: false } : {}),
   }));
   return {
     primary: doc.theme.primary,

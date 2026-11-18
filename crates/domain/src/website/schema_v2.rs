@@ -522,6 +522,7 @@ fn blocks(v: &mut V, items: &[Value]) {
                 "layout",
                 "chat_open",
                 "hide_on",
+                "m_order",
                 "data",
             ],
         ) else {
@@ -567,6 +568,10 @@ fn blocks(v: &mut V, items: &[Value]) {
             None => {}
             Some(Value::String(s)) if HIDE_ON.contains(&s.as_str()) => {}
             Some(_) => v.err(&join(&p, "hide_on"), "invalid_hide_on"),
+        }
+        // Urutan khusus ponsel (Studio: susun ulang di pratinjau ponsel); tanpa ini = atas→bawah, kiri→kanan.
+        if m.contains_key("m_order") {
+            int_in(v, m, &p, "m_order", 0, MAX_BLOCKS as i64);
         }
         let layout = match m.get("layout") {
             None => None,
@@ -1134,6 +1139,17 @@ mod tests {
             "latar lama tetap per halaman"
         );
         validate_page(&page).expect("hasil timpa tetap valid");
+    }
+
+    #[test]
+    fn mobile_order_is_a_bounded_integer() {
+        let mut a = block("a", "text", 0, 0, 6, 4, json!({"body": "x"}));
+        a["m_order"] = json!(1);
+        let mut b = block("b", "text", 6, 0, 6, 4, json!({"body": "y"}));
+        b["m_order"] = json!(0);
+        validate_page(&doc(vec![a.clone(), b])).expect("m_order sah");
+        a["m_order"] = json!(-1);
+        assert!(codes(&doc(vec![a])).contains(&("blocks[0].m_order".into(), "out_of_range")));
     }
 
     #[test]

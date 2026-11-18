@@ -19,7 +19,7 @@ import { type StudioCell, isEmbed, SINGLE, IMAGE_KEY, takesPhoto } from "@/studi
 import { BackgroundFields } from "@/studio/BackgroundFields";
 import { ImageFields } from "@/studio/ImageFields";
 
-export function Inspector({ c, onBack, onChange, onWidth, onMove, onLayout, onDuplicate, onRemove, onFull, onPhoto, onCrop, onCoverPage, aiHref, businessHref, chatReady, upgradeHref }: {
+export function Inspector({ c, onBack, onChange, onWidth, onMove, onLayout, onDuplicate, onRemove, onFull, onPhoto, onCrop, onCoverPage, aiHref, businessHref, chatReady, upgradeHref, mobile }: {
   c: StudioCell;
   onBack: () => void;
   onChange: (patch: Partial<StudioCell>, key?: string) => void;
@@ -31,6 +31,8 @@ export function Inspector({ c, onBack, onChange, onWidth, onMove, onLayout, onDu
   onFull: () => void;
   onPhoto: (f: File) => void;
   onCrop?: () => void;
+  /** Pratinjau ponsel: tombol atas/bawah mengubah urutan ponsel saja. */
+  mobile?: boolean;
   /** Plugin Latar: bentangkan ke seluruh halaman. */
   onCoverPage?: () => void;
   aiHref: string;
@@ -65,11 +67,12 @@ export function Inspector({ c, onBack, onChange, onWidth, onMove, onLayout, onDu
           <input type="checkbox" checked={!!c.locked} onChange={(e) => onChange({ locked: e.target.checked }, "")} />
           <span><strong><LockSimple weight="bold" aria-hidden="true" className="u-va-icon" />{" "}{tx("Kunci posisi")}</strong><span className="d-muted">{tx("Blok ini tidak bisa diseret, dan blok lain tidak akan menggesernya.")}</span></span>
         </label>
-        <h3>{tx("Posisi")}</h3>
+        <h3>{mobile && !layer ? tx("Urutan di ponsel") : tx("Posisi")}</h3>
+        {mobile && !layer && <p className="d-hint u-mt-0">{tx("Atas/bawah hanya mengubah urutan di ponsel; susunan desktop tetap.")}</p>}
         {/* WCAG 2.5.7 (P9-6): semua yang bisa diseret juga bisa lewat tombol. */}
         <div className="d-seg u-w-full u-mb-3" role="group" aria-label={tx("Pindahkan")}>
           {([["up", tx("Pindah ke atas"), ArrowUp], ["down", tx("Pindah ke bawah"), ArrowDown], ["left", tx("Geser ke kiri"), ArrowLeft], ["right", tx("Geser ke kanan"), ArrowRight]] as const).map(([d, l, Icon]) => (
-            <button key={d} type="button" style={{ flex: 1, minHeight: 32 }} aria-label={l} title={l} disabled={!!c.locked} onClick={() => onMove(d)}><Icon weight="bold" aria-hidden="true" /></button>
+            <button key={d} type="button" style={{ flex: 1, minHeight: 32 }} aria-label={l} title={l} disabled={!!c.locked || (mobile && !layer && (d === "left" || d === "right"))} onClick={() => onMove(d)}><Icon weight="bold" aria-hidden="true" /></button>
           ))}
         </div>
         <h3>{tx("Ukuran")}</h3>

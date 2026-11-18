@@ -16,6 +16,8 @@ export interface TplCell extends Cell {
   chatOpen?: boolean;
   /** Sembunyikan blok di perangkat tertentu (G-LAY-02, didukung skema v2). */
   hideOn?: "mobile" | "desktop";
+  /** Urutan khusus ponsel (diisi saat blok disusun ulang di pratinjau ponsel). */
+  mOrder?: number;
 }
 export interface TplResult {
   primary: string;

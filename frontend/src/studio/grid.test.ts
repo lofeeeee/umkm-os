@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { clamp, collides, compact, height, insert, mobileOrder, moveBy, place, type Cell } from "./grid";
+import { clamp, collides, compact, height, insert, mobileIndex, mobileOrder, moveBy, place, reorderMobile, type Cell } from "./grid";
 
 const c = (id: string, x: number, y: number, w: number, h: number): Cell => ({ id, x, y, w, h });
 const noOverlap = (cells: Cell[]) => cells.every((a) => cells.every((b) => !collides(a, b)));
@@ -141,5 +141,21 @@ describe("lapisan tembus (plugin Latar)", () => {
     const moved = moveBy([...blocks, { ...bg, w: 6 }], "bg", "down");
     expect(moved.find((c) => c.id === "bg")).toMatchObject({ x: 0, y: 1 });
     expect(moveBy([...blocks, { ...bg, w: 6 }], "bg", "right").find((c) => c.id === "bg")!.x).toBe(1);
+  });
+});
+
+describe("urutan ponsel", () => {
+  const cells = [
+    { id: "a", x: 0, y: 0, w: 6, h: 4 },
+    { id: "b", x: 6, y: 0, w: 6, h: 4 },
+    { id: "c", x: 0, y: 4, w: 12, h: 4 },
+    { id: "bg", x: 0, y: 0, w: 12, h: 8, layer: true },
+  ];
+  it("memindah blok di urutan ponsel tanpa mengubah x/y; lapisan tidak ikut diberi urutan", () => {
+    const out = reorderMobile(cells, "c", 0);
+    expect(out.map((c) => [c.id, c.mOrder])).toEqual([["a", 1], ["b", 2], ["c", 0], ["bg", undefined]]);
+    for (const c of cells) expect(out.find((o) => o.id === c.id)).toMatchObject({ x: c.x, y: c.y });
+    expect(mobileIndex(out, "c")).toBe(0);
+    expect(mobileIndex(reorderMobile(out, "a", 2), "a")).toBe(2);
   });
 });

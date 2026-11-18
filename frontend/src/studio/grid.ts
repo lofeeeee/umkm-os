@@ -115,3 +115,24 @@ export const COL_W = (DESIGN_WIDTH - GAP * (COLS - 1)) / COLS;
 export const spanWidth = (w: number) => w * COL_W + (w - 1) * GAP;
 /** px tinggi isi → jumlah baris grid. */
 export const rowsFor = (px: number) => Math.max(2, Math.ceil((px + GAP) / (ROW + GAP)));
+
+/* ---------------------------------------------------------------- urutan ponsel */
+/** Pindahkan blok `id` ke posisi `to` di urutan ponsel; semua blok grid (bukan lapisan) diberi `mOrder`
+ *  berurutan sehingga susunan ponsel tersimpan utuh. Susunan desktop (x/y) tidak berubah. */
+export function reorderMobile<T extends Cell & { mOrder?: number }>(cells: T[], id: string, to: number): T[] {
+  const natural = [...cells].filter((c) => !c.layer).sort(byPos);
+  const order = natural.sort((a, b) => (a.mOrder ?? 1000 + natural.indexOf(a)) - (b.mOrder ?? 1000 + natural.indexOf(b)));
+  const from = order.findIndex((c) => c.id === id);
+  if (from < 0) return cells;
+  const next = [...order];
+  const [moved] = next.splice(from, 1);
+  next.splice(Math.max(0, Math.min(next.length, to)), 0, moved!);
+  const rank = new Map(next.map((c, i) => [c.id, i]));
+  return cells.map((c) => (rank.has(c.id) ? { ...c, mOrder: rank.get(c.id) } : c));
+}
+
+/** Posisi blok di urutan ponsel saat ini. */
+export function mobileIndex<T extends Cell & { mOrder?: number }>(cells: T[], id: string): number {
+  const natural = [...cells].filter((c) => !c.layer).sort(byPos);
+  return natural.sort((a, b) => (a.mOrder ?? 1000 + natural.indexOf(a)) - (b.mOrder ?? 1000 + natural.indexOf(b))).findIndex((c) => c.id === id);
+}

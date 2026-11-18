@@ -25,7 +25,7 @@ import { fontStack, primaryVars, safeColor } from "@/renderer/safe";
 import { FONT_PRESETS } from "@/renderer/sections";
 import type { Business,PageContent,SectionType } from "@/renderer/types";
 import { DEVICE_LABEL, DEVICE_WIDTH, type DeviceViewport } from "@/studio/DeviceFrame";
-import { COLS, height, insert, moveBy, place } from "@/studio/grid";
+import { COLS, height, insert, mobileIndex, moveBy, place, reorderMobile } from "@/studio/grid";
 import { commit, redo, start, undo, type History } from "@/studio/history";
 import { PLUGINS, needsUpgrade, pluginDef, pluginPlan, type PluginKind } from "@/studio/plugins";
 import { PluginIcon } from "@/studio/PluginIcon";
@@ -385,6 +385,20 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
     }, "");
     setSel(c.id);
   }
+  /** Pindah blok. Di pratinjau ponsel: atas/bawah mengubah URUTAN PONSEL saja (susunan desktop tetap). */
+  function moveCell(id: string, d: "up" | "down" | "left" | "right") {
+    if (device === "mobile") {
+      if (d === "left" || d === "right") return;
+      update((s) => {
+        const grid = s.cells.filter((x) => !isEmbed(x));
+        const i = mobileIndex(grid, id);
+        if (i < 0) return s;
+        return { ...s, cells: [...reorderMobile(grid, id, d === "up" ? i - 1 : i + 1) as StudioCell[], ...s.cells.filter(isEmbed)] };
+      }, `mmove:${id}`);
+      return;
+    }
+    update((s) => ({ ...s, cells: [...moveBy(s.cells.filter((x) => !isEmbed(x)), id, d) as StudioCell[], ...s.cells.filter(isEmbed)] }), `move:${id}`);
+  }
   function remove(id: string) {
     update((s) => ({ ...s, cells: s.cells.filter((c) => c.id !== id) }), "");
     setSel(null);
@@ -482,7 +496,7 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
       const dir = ({ ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right" } as const)[e.key as "ArrowUp"];
       if (dir) {
         e.preventDefault();
-        update((s) => ({ ...s, cells: [...moveBy(s.cells.filter((x) => !isEmbed(x)), sel, dir) as StudioCell[], ...s.cells.filter(isEmbed)] }), `move:${sel}`);
+        moveCell(sel, dir);
       } else if (e.key === "Delete" || e.key === "Backspace") {
         e.preventDefault();
         remove(sel);
@@ -636,7 +650,8 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
               onBack={() => setSel(null)}
               onChange={(patch, key) => setCell(selected.id, patch, key)}
               onWidth={(w) => update((s) => ({ ...s, cells: place(s.cells, { ...selected, w }) as StudioCell[] }), "")}
-              onMove={(d) => update((s) => ({ ...s, cells: [...moveBy(s.cells.filter((x) => !isEmbed(x)), selected.id, d) as StudioCell[], ...s.cells.filter(isEmbed)] }), `move:${selected.id}`)}
+              onMove={(d) => moveCell(selected.id, d)}
+              mobile={device === "mobile"}
               onLayout={(l) => {
                 // Gambar: popup ada di luar grid, mode lain adalah lapisan bebas di grid (posisi x/y tetap).
                 if (selected.kind === "image") { setCell(selected.id, { layout: l, layer: l !== "popup", autoH: false }, ""); return; }
@@ -753,6 +768,7 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
             onEditBlock={onEditBlock}
             onCellsChange={(cells) => update((s) => ({ ...s, cells: [...cells, ...s.cells.filter(isEmbed)] }), "drag")}
             onDropPlugin={(k, at) => add(k as PluginKind, at)}
+            onMobileReorder={(id, to) => update((s) => ({ ...s, cells: [...reorderMobile(s.cells.filter((x) => !isEmbed(x)), id, to) as StudioCell[], ...s.cells.filter(isEmbed)] }), "")}
             acceptsFile={(id) => { const c = st.cells.find((x) => x.id === id); return !!c && takesPhoto(c.kind); }}
             onDropFile={(id, f) => void putPhoto(id, f)}
             chatReady={chatReady}

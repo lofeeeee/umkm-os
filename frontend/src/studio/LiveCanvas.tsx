@@ -79,6 +79,8 @@ export interface LiveCanvasProps {
   /** Susunan baru dari seret/ubah ukuran (satu seret = satu langkah urungkan). */
   onCellsChange: (cells: TplCell[]) => void;
   onDropPlugin: (kind: string, at: { x: number; y: number }) => void;
+  /** Ponsel: blok `id` dipindah ke posisi `to` di urutan ponsel. */
+  onMobileReorder?: (id: string, to: number) => void;
   acceptsFile: (id: string) => boolean;
   onDropFile: (id: string, file: File) => void;
   chatReady: boolean | null;
@@ -296,6 +298,47 @@ export function LiveCanvas(p: LiveCanvasProps) {
   const stopGesture = useRef<() => void>(() => {});
   useEffect(() => () => stopGesture.current(), []);
 
+  /* ------------------------------------------------------------ susun ulang di ponsel */
+  /** Ponsel: seret blok naik/turun untuk mengubah URUTAN PONSEL (susunan desktop tidak berubah). */
+  const startMobileDrag = useCallback((id: string, e: React.PointerEvent<HTMLElement>, g: HTMLElement, el: HTMLElement) => {
+    e.preventDefault();
+    stopGesture.current();
+    const outer = el.closest<HTMLElement>(".sv2-block") ?? el;
+    const zoom = zoomOf(g);
+    const sy = e.clientY;
+    let started = false;
+    let target = -1;
+    const others = () => [...g.querySelectorAll<HTMLElement>(":scope > .sv2-block:not([data-layer])")]
+      .filter((x) => x !== outer && x.offsetParent !== null)
+      .map((x) => ({ el: x, r: x.getBoundingClientRect() }))
+      .sort((a, b) => a.r.top - b.r.top);
+    const move = (ev: PointerEvent) => {
+      if (!started && Math.abs(ev.clientY - sy) < THRESHOLD) return;
+      if (!started) { started = true; setActiveId(id); document.documentElement.classList.add("lc-grabbing"); }
+      outer.style.transform = `translateY(${(ev.clientY - sy) / zoom}px)`;
+      const list = others();
+      target = list.filter((o) => o.r.top + o.r.height / 2 < ev.clientY).length;
+      const gr = g.getBoundingClientRect();
+      const line = target < list.length ? list[target]!.r.top - 6 : (list.at(-1)?.r.bottom ?? gr.top) + 6;
+      setInsert({ left: 0, top: (line - gr.top) / zoom, width: gr.width / zoom });
+    };
+    const up = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", up);
+      outer.style.transform = "";
+      setActiveId(null);
+      setInsert(null);
+      document.documentElement.classList.remove("lc-grabbing");
+      if (started && target >= 0) latest.current.onMobileReorder?.(id, target);
+    };
+    stopGesture.current = up;
+    window.addEventListener("pointermove", move, { passive: false });
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", up);
+  }, []);
+
+
   const startGesture = useCallback((id: string, mode: GestureMode, e: React.PointerEvent<HTMLElement>) => {
     const P = latest.current;
     if (P.draw.tool) return;
@@ -304,8 +347,11 @@ export function LiveCanvas(p: LiveCanvasProps) {
     const el = blockEl(id);
     if (!c || !g || !el || c.locked) return;
     if (isStacked(g)) {
-      if (mode !== "move") P.onHint(tx("Ubah ukuran di tampilan Desktop atau Tablet — di ponsel blok selalu selebar layar."));
-      else P.onHint(tx("Di ponsel blok ditumpuk otomatis. Geser blok di tampilan Desktop atau Tablet."));
+      if (mode !== "move" || c.layer || !P.onMobileReorder) {
+        P.onHint(mode !== "move" ? tx("Ubah ukuran di tampilan Desktop atau Tablet — di ponsel blok selalu selebar layar.") : tx("Latar diatur di tampilan Desktop atau Tablet."));
+        return;
+      }
+      startMobileDrag(id, e, g, el);
       return;
     }
     // Cegah seleksi teks & seret gambar bawaan browser selama gerakan.
@@ -349,7 +395,7 @@ export function LiveCanvas(p: LiveCanvasProps) {
     window.addEventListener("pointermove", onMove, { passive: false });
     window.addEventListener("pointerup", up);
     window.addEventListener("pointercancel", up);
-  }, [onMove, snapshot]);
+  }, [onMove, snapshot, startMobileDrag]);
 
   /* ------------------------------------------------------------ plugin dari panel */
   const dropTarget = (clientX: number, clientY: number): { x: number; y: number; ins: Insert } | null => {

@@ -13,7 +13,7 @@ import { t as tx } from "@/i18n";
 import { onImgError, safeHref } from "./safe";
 
 export interface LayerBlock {
-  id: string; kind: string; x: number; y: number; w: number; h: number; layout?: string;
+  id: string; kind: string; x: number; y: number; w: number; h: number; layout?: string; m_order?: number;
   hide_on?: "mobile" | "desktop";
   /** Gaya blok: `plain`/`flat` = sudut tegas, lainnya = sudut membulat. */
   style?: string;
@@ -133,15 +133,21 @@ export function mobileRows(blocks: LayerBlock[]): Map<string, string> {
   const items = visible.filter((b) => !isLayer(b));
   const overlaps = (a: LayerBlock, b: LayerBlock) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
   const covering = new Map<string, LayerBlock[]>();
+  // Blok biasa mengikuti urutan masukan (urutan ponsel, termasuk `m_order`); lapisan berbaris sendiri
+  // disisipkan sebelum blok pertama yang letaknya di desktop lebih bawah.
   const seq: LayerBlock[] = [...items];
+  const own: LayerBlock[] = [];
   for (const l of visible.filter(isLayer)) {
     // Hanya lapisan di BELAKANG yang membentang di belakang blok di ponsel. Gambar di depan/menggantung
     // mendapat barisnya sendiri supaya tidak menutupi isi di layar sempit.
     const under = isBehind(l) ? items.filter((b) => overlaps(l, b)) : [];
     if (under.length) covering.set(l.id, under);
-    else seq.push(l);
+    else own.push(l);
   }
-  seq.sort((a, b) => a.y - b.y || a.x - b.x || a.id.localeCompare(b.id));
+  for (const l of own.sort((a, b) => a.y - b.y || a.x - b.x)) {
+    const at = seq.findIndex((it) => !isLayer(it) && (it.y > l.y || (it.y === l.y && it.x > l.x)));
+    seq.splice(at < 0 ? seq.length : at, 0, l);
+  }
   const out = new Map<string, string>();
   seq.forEach((b, i) => out.set(b.id, String(i + 1)));
   for (const [id, under] of covering) {

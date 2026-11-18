@@ -430,3 +430,14 @@ describe("Latar selebar layar & pemisah", () => {
     expect(html).not.toMatch(/id="pita"[\s\S]*?data-round/);
   });
 });
+
+describe("urutan ponsel (m_order)", () => {
+  it("m_order didahulukan; blok tanpa m_order menyusul urut atas→bawah", () => {
+    const blocks = [
+      { id: "a", kind: "text", x: 0, y: 0, w: 6, h: 4, style: "plain", data: {} },
+      { id: "b", kind: "text", x: 6, y: 0, w: 6, h: 4, style: "plain", data: {}, m_order: 1 },
+      { id: "c", kind: "text", x: 0, y: 4, w: 12, h: 4, style: "plain", data: {}, m_order: 0 },
+    ] as PageV2["blocks"];
+    expect(mobileSorted(blocks).map((b) => b.id)).toEqual(["c", "b", "a"]);
+  });
+});

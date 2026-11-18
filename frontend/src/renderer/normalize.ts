@@ -73,6 +73,7 @@ function block(raw: unknown, index: number, taken: Set<string>): BlockV2 | null 
   if (layout && LAYOUTS[kind]?.includes(layout)) out.layout = layout;
   const hideOn = oneOf(raw.hide_on, HIDE_ON);
   if (hideOn) out.hide_on = hideOn as BlockV2["hide_on"];
+  if (typeof raw.m_order === "number" && Number.isInteger(raw.m_order) && raw.m_order >= 0 && raw.m_order <= 40) out.m_order = raw.m_order;
   if (raw.locked === true) out.locked = true;
   if (raw.auto_height === false) out.auto_height = false;
   if (typeof raw.chat_open === "boolean") out.chat_open = raw.chat_open;

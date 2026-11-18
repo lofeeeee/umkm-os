@@ -71,8 +71,12 @@ function titleCase(s: string): string {
 }
 
 /** Urutan tumpukan ponsel: y lalu x (sama dengan mobileOrder di editor). */
+/** Urutan tampil di ponsel: `m_order` (disusun di pratinjau ponsel Studio) lebih dulu; blok tanpa
+ *  `m_order` (mis. ditambahkan kemudian) menyusul dengan urutan atas→bawah, kiri→kanan. */
 export function mobileSorted(blocks: BlockV2[]): BlockV2[] {
-  return [...blocks].sort((a, b) => a.y - b.y || a.x - b.x || a.id.localeCompare(b.id));
+  const natural = [...blocks].sort((a, b) => a.y - b.y || a.x - b.x || a.id.localeCompare(b.id));
+  const key = (b: BlockV2) => (typeof b.m_order === "number" ? b.m_order : 1000 + natural.indexOf(b));
+  return natural.sort((a, b) => key(a) - key(b));
 }
 
 /** Tautan wa.me dengan pesan terisi (nomor dari profil bisnis; tanpa nomor → null). */
