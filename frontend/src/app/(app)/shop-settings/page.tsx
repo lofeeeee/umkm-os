@@ -11,8 +11,9 @@ import { Assets, ImagePicker } from "@/dashboard/editor/fields";
 import { Alert, WithTenant, type TenantCtx } from "@/dashboard/shell";
 import { Badge, BusyButton, Card, PageHeader, PageSkeleton } from "@/ui/page";
 import { toast } from "@/ui/toast";
-import { api, describe } from "@/lib/api";
+import { api, describe, ERROR_TEXT } from "@/lib/api";
 import { confirm } from "@/ui/dialog";
+import { ContactField } from "@/ui/contact-field";
 import { t } from "@/i18n";
 import { relatif, waktu } from "@/lib/labels";
 
@@ -257,10 +258,9 @@ function GopayCard({ tenantId, can, refreshKey }: { tenantId: string; can: boole
           <Alert kind="info">
             <strong>{t("Cara termudah (tanpa menyalin token):")}</strong>{" "}{t("pasang ekstensi")}{" "}<em>{t("\"UMKM OS — Penghubung GoPay\"")}</em>{t(", login GoBiz di browser, lalu klik")}{" "}<em>{t("Hubungkan")}</em>{" "}{t("di ekstensi — kolom di bawah terisi sendiri. Login GoPay dilindungi reCAPTCHA sehingga harus di browser; ekstensi hanya menangkap sesinya. Tak punya ekstensi? Isi manual di bawah.")}
           </Alert>
-          <label className="d-field"><span>{t("Nomor HP GoBiz/GoPay Merchant")}</span>
-            <input disabled={!can} inputMode="tel" placeholder={t("mis. 0812xxxxxxx")} value={phone} onChange={(e) => setPhone(e.target.value)} />
-            <span className="d-hint">{t("Nomor akun merchant (dipakai untuk memperbarui sesi).")}</span>
-          </label>
+          <ContactField label={t("Nomor HP GoBiz/GoPay Merchant")} kind="phone" value={phone} disabled={!can}
+            errorText={ERROR_TEXT} hint={t("Nomor akun merchant (dipakai untuk memperbarui sesi).")}
+            placeholder={t("mis. 0812xxxxxxx")} autoComplete="tel" maxLength={20} onChange={setPhone} />
           <label className="d-field"><span>{t("Token sesi GoBiz")}</span>
             <textarea disabled={!can} rows={4} placeholder={t("Tempel cookie sesi (memuat access_token dan refresh_token)")} value={session} onChange={(e) => setSession(e.target.value)} />
             <span className="d-hint">

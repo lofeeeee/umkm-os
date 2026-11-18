@@ -24,11 +24,12 @@ import { t as tx, tmap, intlLocale } from "@/i18n";
 import { Tr } from "@/i18n/react";
 import { ShopFrame, useShopTexts } from "./frame";
 import { serverMessage } from "@/i18n/server";
+import { ContactField } from "@/ui/contact-field";
 
 const ERR: Record<string, string> = tmap({
   required: "wajib diisi",
   invalid_email: "email tidak valid",
-  invalid_phone: "nomor telepon tidak valid",
+  invalid_phone: "nomor tidak valid (hanya angka, awalan 0 atau 62)",
   email_or_phone_required: "isi email atau nomor telepon",
   invalid_quantity: "jumlah tidak valid",
   product_unavailable: "produk sudah tidak tersedia",
@@ -97,12 +98,12 @@ export function ProductPage({ slug }: { slug: string }) {
   const [added, setAdded] = useState(false);
   useEffect(() => {
     const inline = inlineProduct(slug);
-    if (inline) { document.title = inline.name; return; }
+    if (inline) { document.title = `${inline.name} - UMKM OS`; return; }
     shopApi<PublicProduct>("GET", `/products/${encodeURIComponent(slug)}`)
       .then((x) => {
         setP(x);
         setPick(x.variants[0]?.option_values ?? []);
-        document.title = x.name;
+        document.title = `${x.name} - UMKM OS`;
       })
       .catch((e) => setErr(e instanceof ApiError && e.status === 404 ? tx("Produk tidak ditemukan.") : explain(e)));
   }, [slug]);
@@ -355,9 +356,13 @@ export function CartPage() {
               <h2><span className="shop-step-num" aria-hidden="true">3</span>{tx("Data pemesan")}</h2>
               <div className="shop-grid2">
                 <label className="shop-field">{tx("Nama")}<input required maxLength={120} value={form.name} onChange={(e) => set("name", e.target.value)} autoComplete="name" /></label>
-                <label className="shop-field">{tx("Nomor WhatsApp/telepon")}<input type="tel" maxLength={20} value={form.phone} onChange={(e) => set("phone", e.target.value)} autoComplete="tel" /></label>
+                <ContactField label={tx("Nomor WhatsApp/telepon")} kind="phone" value={form.phone} errorText={ERR}
+                  className="shop-field" errorClassName="shop-field-error"
+                  maxLength={20} autoComplete="tel" onChange={(v) => set("phone", v)} />
               </div>
-              <label className="shop-field">{tx("Email")}<input type="email" maxLength={254} value={form.email} onChange={(e) => set("email", e.target.value)} autoComplete="email" /></label>
+              <ContactField label={tx("Email")} kind="email" value={form.email} errorText={ERR}
+                className="shop-field" errorClassName="shop-field-error"
+                maxLength={254} autoComplete="email" onChange={(v) => set("email", v)} />
               {form.fulfillment === "delivery" && (
                 <label className="shop-field">{tx("Alamat pengiriman")}<textarea required maxLength={500} value={form.delivery_address} onChange={(e) => set("delivery_address", e.target.value)} autoComplete="street-address" /></label>
               )}

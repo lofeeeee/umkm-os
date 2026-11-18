@@ -473,7 +473,6 @@ export const APP_4: Record<string, string> = {
   // Toko & checkout
   "Menunggu persetujuan toko": "Awaiting shop approval",
   "Ditolak toko": "Rejected by shop",
-  "nomor telepon tidak valid": "invalid phone number",
   "isi email atau nomor telepon": "enter an email or phone number",
   "produk sudah tidak tersedia": "product no longer available",
   "metode pengambilan tidak tersedia": "fulfillment method unavailable",
