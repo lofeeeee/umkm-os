@@ -251,7 +251,9 @@ export function StudioSite(props: StudioSiteProps) {
   const navStyle = doc.theme.navbar_style === "side" ? "side" : "top";
   const isSideNav = navStyle === "side";
   // Situs publik: blok tanpa data toko (jam/alamat/kontak/galeri kosong, WhatsApp tanpa nomor) tidak dirender.
-  const visible = mobileSorted(doc.blocks.filter((b) => !isEmbed(b) && (editing || publicBlock(b, props))));
+  const visible = mobileSorted(doc.blocks.filter((b) => !isEmbed(b) && (editing || publicBlock(b, props)) && !(editing && b.hidden === true)));
+  // `hidden` (panel Layer, gaya Photoshop): blok tidak dirender di kanvas editor MAUPUN situs publik.
+  // Berbeda dengan `hide_on` (sembunyi di satu perangkat) — ini disembunyikan di semua tempat.
   // Latar dirender lebih dulu (dan z-index di bawah blok): tidak pernah menimpa plugin lain.
   const layers = visible.filter(isLayer);
   const grid = visible.filter((b) => !isLayer(b));

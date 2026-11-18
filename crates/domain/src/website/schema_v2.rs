@@ -581,6 +581,7 @@ fn blocks(v: &mut V, items: &[Value]) {
                 "layout",
                 "chat_open",
                 "hide_on",
+                "hidden",
                 "m_order",
                 "data",
             ],
@@ -613,7 +614,7 @@ fn blocks(v: &mut V, items: &[Value]) {
         if *n > max_per_page(kind) {
             v.err(&join(&p, "kind"), "too_many_of_kind");
         }
-        for k in ["locked", "auto_height", "chat_open"] {
+        for k in ["locked", "auto_height", "chat_open", "hidden"] {
             v.boolean(m, &p, k);
         }
         if m.contains_key("chat_open") && kind != "chatbot" {

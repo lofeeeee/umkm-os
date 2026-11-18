@@ -18,6 +18,8 @@ export interface TplCell extends Cell {
   chatOpen?: boolean;
   /** Sembunyikan blok di perangkat tertentu (G-LAY-02, didukung skema v2). */
   hideOn?: "mobile" | "desktop";
+  /** Disembunyikan di semua perangkat (panel Layer Studio, gaya Photoshop). */
+  hidden?: boolean;
   /** Urutan khusus ponsel (diisi saat blok disusun ulang di pratinjau ponsel). */
   mOrder?: number;
 }
