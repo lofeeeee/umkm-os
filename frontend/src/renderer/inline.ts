@@ -56,3 +56,6 @@ export function storeBrand(): StoreBrand | null {
     } as CSSProperties,
   };
 }
+
+/** Situs beranda tertanam (tema situs, profil, halaman) untuk bingkai halaman toko. */
+export const storeSite = (): PublicSite | null => INLINE?.site ?? null;

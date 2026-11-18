@@ -27,7 +27,7 @@ pub const ROOT_KEYS: [&str; 6] = [
     "blocks",
     "drawings",
 ];
-pub const THEME_KEYS: [&str; 19] = [
+pub const THEME_KEYS: [&str; 20] = [
     "primary",
     "font",
     "surface",
@@ -47,9 +47,10 @@ pub const THEME_KEYS: [&str; 19] = [
     "motion",
     "texture",
     "page_transition",
+    "shop",
 ];
 /// Kunci tema yang berlaku untuk SELURUH situs (brand kit). Gambar latar tema lama tetap per halaman.
-pub const SITE_THEME_KEYS: [&str; 15] = [
+pub const SITE_THEME_KEYS: [&str; 16] = [
     "primary",
     "font",
     "surface",
@@ -65,6 +66,7 @@ pub const SITE_THEME_KEYS: [&str; 15] = [
     "motion",
     "texture",
     "page_transition",
+    "shop",
 ];
 pub const HEADING_WEIGHTS: [i64; 4] = [500, 600, 700, 800];
 /// Sudut global: tegas / lembut / bulat.
@@ -342,7 +344,25 @@ fn theme_extras(v: &mut V, m: &Map<String, Value>) {
     enum_opt(v, m, "theme", "radius", &RADII);
     enum_opt(v, m, "theme", "motion", &MOTIONS);
     enum_opt(v, m, "theme", "texture", &TEXTURES);
+    // Teks halaman sistem (keranjang, pesanan, akun) yang bisa diubah pemilik di Studio.
+    if let Some(shop) = m.get("shop")
+        && let Some(sm) = v.object(shop, "theme.shop", &SHOP_TEXT_KEYS.map(|(k, _)| k))
+    {
+        for (k, max) in SHOP_TEXT_KEYS {
+            v.text(sm, "theme.shop", k, max, false);
+        }
+    }
 }
+
+/// Teks halaman sistem + batas panjangnya.
+pub const SHOP_TEXT_KEYS: [(&str, usize); 6] = [
+    ("cart_title", 60),
+    ("cart_note", 300),
+    ("empty_cart", 160),
+    ("checkout_button", 40),
+    ("thanks", 300),
+    ("account_note", 300),
+];
 
 /// Tema situs (brand kit, `PUT /website/theme`): hanya kunci situs; aturan nilai sama dengan tema halaman.
 pub fn validate_site_theme(t: &Value) -> Result<(), Vec<FieldError>> {

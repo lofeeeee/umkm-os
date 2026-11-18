@@ -29,6 +29,7 @@ export interface StudioState {
   motion?: "none" | "subtle" | "lively";
   texture?: "none" | "grain" | "paper" | "dots";
   pageTransition?: boolean;
+  shopTexts?: PageV2["theme"]["shop"];
   backgroundImage?: string;
   backgroundSize?: "cover" | "contain" | "repeat";
   backgroundPosition?: string;
@@ -67,6 +68,8 @@ export interface PageV2 {
     motion?: "none" | "subtle" | "lively";
     texture?: "none" | "grain" | "paper" | "dots";
     page_transition?: boolean;
+    /** Teks halaman sistem (keranjang, pesanan, akun). */
+    shop?: Partial<Record<"cart_title" | "cart_note" | "empty_cart" | "checkout_button" | "thanks" | "account_note", string>>;
     background_image?: string;
     background_size?: "cover" | "contain" | "repeat";
     background_position?: string;
@@ -218,13 +221,15 @@ export function brandToTheme(st: Partial<StudioState>): Partial<Theme> {
   if (st.motion && st.motion !== "none") t.motion = st.motion;
   if (st.texture && st.texture !== "none") t.texture = st.texture;
   if (st.pageTransition) t.page_transition = true;
+  const shop = Object.fromEntries(Object.entries(st.shopTexts ?? {}).map(([k, v]) => [k, v?.trim()]).filter(([, v]) => v));
+  if (Object.keys(shop).length) t.shop = shop;
   return t;
 }
 
 export function themeToBrand(t: Partial<Theme>): Partial<StudioState> {
   return {
     headingFont: t.heading_font, headingWeight: t.heading_weight, accent: t.accent, gradient: t.gradient,
-    radius: t.radius, motion: t.motion, texture: t.texture, pageTransition: t.page_transition,
+    radius: t.radius, motion: t.motion, texture: t.texture, pageTransition: t.page_transition, shopTexts: t.shop,
   };
 }
 
@@ -243,7 +248,7 @@ export function withSiteTheme(st: StudioState, t: Partial<Theme> | null | undefi
   return {
     ...st, primary: t.primary, onPrimary: onPrimaryOf(t.primary), font: t.font, surface: t.surface ?? "light", textScale: t.text_scale ?? 1,
     navbarStyle: t.navbar_style, navbarSticky: t.navbar_sticky, hideBadge: t.hide_badge,
-    headingFont: undefined, headingWeight: undefined, accent: undefined, gradient: undefined, radius: undefined, motion: undefined, texture: undefined, pageTransition: undefined,
+    headingFont: undefined, headingWeight: undefined, accent: undefined, gradient: undefined, radius: undefined, motion: undefined, texture: undefined, pageTransition: undefined, shopTexts: undefined,
     ...themeToBrand(t),
   };
 }

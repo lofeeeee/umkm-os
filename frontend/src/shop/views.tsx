@@ -6,14 +6,14 @@
 // Halaman toko (P3): produk, keranjang + checkout, status pesanan + pembayaran QRIS statis
 // (ADR-0004), akun customer opsional (ADR-0005). Semua teks dirender sebagai teks (React).
 
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore, type FormEvent, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, useSyncExternalStore, type FormEvent, type ReactNode } from "react";
 
 import { prepareImage } from "@/lib/image";
 import { ApiError } from "@/lib/api";
 import { PRIVACY, TERMS } from "@/legal/content";
 import { LegalDoc } from "@/legal/LegalDoc";
-import { inlineProduct, storeBrand } from "@/renderer/inline";
-import { sized, srcSet } from "@/renderer/safe";
+import { inlineProduct } from "@/renderer/inline";
+import { onImgError, sized, srcSet } from "@/renderer/safe";
 
 import {
   STATUS_TEXT, fileUrl, loadCustomer, rupiah, setCustomerCsrf, shopApi,
@@ -22,7 +22,7 @@ import {
 import { addToCart, cartCount, clearCart, displaySubtotalSen, getCart, saveOrder, savedOrders, setQuantity, type CartItem } from "./cart";
 import { t as tx, tmap, intlLocale } from "@/i18n";
 import { Tr } from "@/i18n/react";
-import { LanguageSwitch } from "@/i18n/react";
+import { ShopFrame, useShopTexts } from "./frame";
 import { serverMessage } from "@/i18n/server";
 
 const ERR: Record<string, string> = tmap({
@@ -57,53 +57,12 @@ function explain(e: unknown): string {
   return tx("Tidak dapat menghubungi toko. Periksa koneksi Anda.");
 }
 
-/** Jumlah barang di keranjang, ikut berubah saat keranjang diperbarui (tab ini atau tab lain). */
-function useCartCount(): number {
-  return useSyncExternalStore(
-    (f) => {
-      window.addEventListener("umkm-cart", f);
-      window.addEventListener("storage", f);
-      return () => { window.removeEventListener("umkm-cart", f); window.removeEventListener("storage", f); };
-    },
-    cartCount,
-    () => 0,
-  );
-}
+/** Kerangka halaman toko = bingkai situs (navigasi, footer, brand kit) — lihat `./frame`. */
+const Shell = ShopFrame;
 
-/**
- * Kerangka halaman toko (produk, keranjang, pesanan, akun). Memakai identitas toko — nama, logo,
- * warna utama & font tema beranda (data tertanam di dokumen) — supaya pembeli tetap merasa di toko
- * yang sama, bukan di halaman generik platform.
- */
-function Shell({ title, children, heading = true }: { title: string; children: ReactNode; heading?: boolean }) {
-  const brand = useMemo(() => storeBrand(), []);
-  const n = useCartCount();
-  return (
-    <div className="shop" style={brand?.style}>
-      <nav className="shop-nav" aria-label={tx("Navigasi toko")}>
-        <a href="/" className="shop-brand" aria-label={brand?.name ?? tx("Beranda toko")}>
-          {brand?.logoUrl
-            // eslint-disable-next-line @next/next/no-img-element -- static export, logo bertanda tangan
-            ? <img src={brand.logoUrl} alt="" width={32} height={32} />
-            : <span className="shop-brand-mark" aria-hidden="true">{(brand?.name ?? "T").charAt(0).toUpperCase()}</span>}
-          <span className="shop-brand-name">{brand?.name ?? tx("Beranda toko")}</span>
-        </a>
-        <span className="shop-nav-links">
-          <a href="/keranjang" aria-label={n > 0 ? tx("Keranjang, {0} barang", n) : undefined}>
-            {tx("Keranjang")}{n > 0 && <span className="shop-badge" aria-hidden="true">{n}</span>}
-          </a>
-          <a href="/pesanan">{tx("Pesanan")}</a>
-          <a href="/akun">{tx("Akun")}</a>
-          <LanguageSwitch className="s-lang" />
-        </span>
-      </nav>
-      <main className="shop-main">
-        {heading && <h1>{title}</h1>}
-        {children}
-      </main>
-    </div>
-  );
-}
+/** Pratinjau Studio: data contoh (tanpa API, tanpa localStorage). */
+export interface ShopPreview { cart: CartItem[]; cfg: CheckoutConfig; order: PublicOrder; orders: OrderSummary[] }
+export const ShopPreviewCtx = createContext<ShopPreview | null>(null);
 
 function Msg({ kind, children }: { kind: "error" | "ok"; children: ReactNode }) {
   if (!children) return null;
@@ -157,7 +116,7 @@ export function ProductPage({ slug }: { slug: string }) {
   const clampQty = (n: number) => Math.max(1, Math.min(999, n));
   const add = () => {
     if (!variant) return;
-    addToCart({ variant_id: variant.id, slug: p.slug, name: p.name, variant_name: variant.name, price: variant.promo_price ?? variant.price }, qty);
+    addToCart({ variant_id: variant.id, slug: p.slug, name: p.name, variant_name: variant.name, price: variant.promo_price ?? variant.price, image: p.images[0] }, qty);
     setAdded(true);
   };
   const price = variant && (
@@ -214,30 +173,59 @@ export function ProductPage({ slug }: { slug: string }) {
 
 const DRAFT_KEY = "umkm-checkout-draft";
 
+/** Langkah belanja (keranjang → data → bayar): pembeli tahu di mana posisinya. */
+function Steps({ at }: { at: 1 | 2 | 3 }) {
+  const steps = [tx("Keranjang"), tx("Data & pengambilan"), tx("Pembayaran")];
+  return (
+    <ol className="shop-steps" aria-label={tx("Langkah pemesanan")}>
+      {steps.map((l, i) => (
+        <li key={l} data-state={i + 1 < at ? "done" : i + 1 === at ? "now" : undefined} aria-current={i + 1 === at ? "step" : undefined}>
+          <span aria-hidden="true">{i + 1 < at ? "✓" : i + 1}</span>{l}
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+function BagIcon() {
+  return (
+    <svg className="shop-empty-art" viewBox="0 0 120 120" aria-hidden="true">
+      <circle cx="60" cy="60" r="56" fill="var(--s-tint, #eef2ff)" />
+      <path d="M36 46h48l-4 44a6 6 0 0 1-6 5H46a6 6 0 0 1-6-5Z" fill="var(--s-primary)" opacity=".9" />
+      <path d="M48 52V42a12 12 0 0 1 24 0v10" fill="none" stroke="var(--s-ink, #0f172a)" strokeWidth="4" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export function CartPage() {
-  const [cart, setCart] = useState<CartItem[]>([]);
-  const [cfg, setCfg] = useState<CheckoutConfig | null>(null);
+  const pv = useContext(ShopPreviewCtx);
+  const texts = useShopTexts();
+  const [cart, setCart] = useState<CartItem[]>(() => pv?.cart ?? []);
+  const [cfg, setCfg] = useState<CheckoutConfig | null>(() => pv?.cfg ?? null);
   const [customer, setCustomer] = useState<CustomerSession | null>(null);
   // Draf isian bertahan saat halaman dimuat ulang (UAT customer #10). sessionStorage: hilang saat tab
   // ditutup — data pribadi tidak tertinggal di perangkat bersama. Persetujuan tidak ikut disimpan.
   // (CartPage hanya dirender di browser: path diketahui setelah hidrasi.)
   const [form, setForm] = useState(() => {
     const base = { fulfillment: "pickup", name: "", email: "", phone: "", delivery_address: "", note: "", accept: false };
+    if (pv) return base;
     try {
       const d = JSON.parse(sessionStorage.getItem(DRAFT_KEY) ?? "null") as Partial<typeof base> | null;
       return d ? { ...base, name: d.name ?? "", email: d.email ?? "", phone: d.phone ?? "", delivery_address: d.delivery_address ?? "", note: d.note ?? "" } : base;
     } catch { return base; }
   });
   useEffect(() => {
+    if (pv) return;
     try {
       const { name, email, phone, delivery_address, note } = form;
       if (name || email || phone || delivery_address || note) sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ name, email, phone, delivery_address, note }));
     } catch { /* opsional */ }
-  }, [form]);
+  }, [form, pv]);
   const [key, setKey] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   useEffect(() => {
+    if (pv) return;
     const f = () => setCart(getCart());
     f();
     window.addEventListener("umkm-cart", f);
@@ -252,13 +240,20 @@ export function CartPage() {
       if (s) setForm((x) => ({ ...x, email: x.email || s.email }));
     });
     return () => window.removeEventListener("umkm-cart", f);
-  }, []);
+  }, [pv]);
   const set = (k: keyof typeof form, v: string | boolean) => {
     setForm((x) => ({ ...x, [k]: v }));
     setKey(null); // isi berubah → pesanan baru (kunci idempotensi baru)
   };
+  const qty = (variant: string, q: number) => {
+    const n = Math.max(0, Math.min(999, q));
+    if (pv) setCart((c) => c.map((x) => (x.variant_id === variant ? { ...x, quantity: n } : x)).filter((x) => x.quantity > 0));
+    else setQuantity(variant, n);
+    setKey(null);
+  };
   async function submit(e: FormEvent) {
     e.preventDefault();
+    if (pv) return;
     setErr(null);
     setBusy(true);
     try {
@@ -296,63 +291,104 @@ export function CartPage() {
   const subtotal = displaySubtotalSen(cart);
   const fee = cfg && form.fulfillment === "delivery" ? Math.round(Number(cfg.delivery_fee) * 100) : 0;
   const sen = (n: number) => rupiah(`${Math.floor(n / 100)}.${String(n % 100).padStart(2, "0")}`);
+  const count = cart.reduce((n, c) => n + c.quantity, 0);
+  const canCheckout = !!cfg?.checkout_enabled && (cfg.pickup_available || cfg.delivery_available);
+  const title = texts.cart_title?.trim() || tx("Keranjang");
+  if (cart.length === 0) {
+    return (
+      <Shell title={title}>
+        <div className="shop-empty">
+          <BagIcon />
+          <p>{texts.empty_cart?.trim() || tx("Keranjang masih kosong. Yuk lihat produk kami!")}</p>
+          <a className="s-btn" href="/">{tx("Lihat produk")}</a>
+        </div>
+      </Shell>
+    );
+  }
   return (
-    <Shell title={tx("Keranjang")}>
-      {cart.length === 0 ? (
-        <p className="s-muted">{tx("Keranjang masih kosong.")}{" "}<a href="/">{tx("Lihat produk")}</a></p>
-      ) : (
-        <>
-          <table className="shop-table">
-            <thead><tr><th>{tx("Produk")}</th><th>{tx("Jumlah")}</th><th>{tx("Harga")}</th></tr></thead>
-            <tbody>
+    <Shell title={title} wide>
+      <Steps at={1} />
+      <div className="shop-cart">
+        <div className="shop-cart-main">
+          <section className="shop-card" aria-label={tx("Isi keranjang")}>
+            <h2>{tx("Isi keranjang")} <span className="s-muted">({tx("{0} barang", count)})</span></h2>
+            <ul className="shop-items">
               {cart.map((c) => (
-                <tr key={c.variant_id}>
-                  <td><a href={`/produk/${c.slug}`}>{c.name}</a>{c.variant_name !== "Default" && <div className="s-muted">{c.variant_name}</div>}</td>
-                  <td>
-                    <input aria-label={tx("Jumlah {0}", c.name)} type="number" min={0} max={999} value={c.quantity}
-                      onChange={(e) => { setQuantity(c.variant_id, Math.max(0, Number(e.target.value) || 0)); setKey(null); }} />
-                  </td>
-                  <td>{rupiah(c.price)}</td>
-                </tr>
+                <li key={c.variant_id} className="shop-item">
+                  {c.image
+                    // eslint-disable-next-line @next/next/no-img-element -- foto produk bertanda tangan
+                    ? <img src={pv ? c.image : fileUrl(c.image)} alt="" width={72} height={72} loading="lazy" onError={onImgError} />
+                    : <span className="shop-item-noimg" aria-hidden="true" />}
+                  <div className="shop-item-info">
+                    <a href={`/produk/${c.slug}`}>{c.name}</a>
+                    {c.variant_name !== "Default" && <span className="s-muted">{c.variant_name}</span>}
+                    <span className="s-muted">{rupiah(c.price)}</span>
+                  </div>
+                  <div className="shop-qty" role="group" aria-label={tx("Jumlah {0}", c.name)}>
+                    <button type="button" aria-label={tx("Kurangi")} onClick={() => qty(c.variant_id, c.quantity - 1)}>−</button>
+                    <input aria-label={tx("Jumlah {0}", c.name)} type="number" min={0} max={999} value={c.quantity} onChange={(e) => qty(c.variant_id, Number(e.target.value) || 0)} />
+                    <button type="button" aria-label={tx("Tambah")} onClick={() => qty(c.variant_id, c.quantity + 1)}>+</button>
+                  </div>
+                  <strong className="shop-item-total">{sen(Math.round(Number(c.price) * 100) * c.quantity)}</strong>
+                  <button type="button" className="shop-item-del" aria-label={tx("Hapus {0} dari keranjang", c.name)} onClick={() => qty(c.variant_id, 0)}>×</button>
+                </li>
               ))}
-            </tbody>
-          </table>
-          <p className="shop-total">{tx("Perkiraan total:")}{" "}<strong>{sen(subtotal + fee)}</strong>{fee > 0 && <span className="s-muted">{" "}<Tr s="(termasuk ongkir {0})" a={[sen(fee)]} /></span>}</p>
-          <p className="s-muted">{tx("Total resmi dihitung toko saat pesanan dibuat.")}</p>
+            </ul>
+          </section>
           {cfg && !cfg.checkout_enabled && <Msg kind="error">{tx("Toko belum menerima pesanan online.")}</Msg>}
           {cfg?.checkout_enabled && !cfg.pickup_available && !cfg.delivery_available && (
             <Msg kind="error">{tx("Toko belum mengatur cara pengambilan atau pengiriman, jadi pesanan online belum bisa dibuat. Silakan hubungi toko secara langsung.")}</Msg>
           )}
-          {cfg?.checkout_enabled && (cfg.pickup_available || cfg.delivery_available) && (
-            <form className="shop-form" onSubmit={submit}>
-              <fieldset>
-                <legend>{tx("Pengambilan")}</legend>
+          {cfg && canCheckout && (
+            <form id="checkout-form" className="shop-card shop-form" onSubmit={submit}>
+              <h2><span className="shop-step-num" aria-hidden="true">2</span>{tx("Cara pengambilan")}</h2>
+              <div className="shop-choices" role="radiogroup" aria-label={tx("Pengambilan")}>
                 {cfg.pickup_available && (
-                  <label className="shop-check"><input type="radio" name="f" checked={form.fulfillment === "pickup"} onChange={() => set("fulfillment", "pickup")} />{" "}{tx("Ambil di toko")}</label>
+                  <label className="shop-choice"><input type="radio" name="f" checked={form.fulfillment === "pickup"} onChange={() => set("fulfillment", "pickup")} />
+                    <span><strong>{tx("Ambil di toko")}</strong><span className="s-muted">{tx("Gratis")}</span></span></label>
                 )}
                 {cfg.delivery_available && (
-                  <label className="shop-check"><input type="radio" name="f" checked={form.fulfillment === "delivery"} onChange={() => set("fulfillment", "delivery")} />{" "}<Tr s="Dikirim ({0})" a={[rupiah(cfg.delivery_fee)]} /></label>
+                  <label className="shop-choice"><input type="radio" name="f" checked={form.fulfillment === "delivery"} onChange={() => set("fulfillment", "delivery")} />
+                    <span><strong>{tx("Dikirim")}</strong><span className="s-muted">{rupiah(cfg.delivery_fee)}</span></span></label>
                 )}
-              </fieldset>
-              <label className="shop-field">{tx("Nama")}<input required maxLength={120} value={form.name} onChange={(e) => set("name", e.target.value)} autoComplete="name" /></label>
+              </div>
+              <h2><span className="shop-step-num" aria-hidden="true">3</span>{tx("Data pemesan")}</h2>
+              <div className="shop-grid2">
+                <label className="shop-field">{tx("Nama")}<input required maxLength={120} value={form.name} onChange={(e) => set("name", e.target.value)} autoComplete="name" /></label>
+                <label className="shop-field">{tx("Nomor WhatsApp/telepon")}<input type="tel" maxLength={20} value={form.phone} onChange={(e) => set("phone", e.target.value)} autoComplete="tel" /></label>
+              </div>
               <label className="shop-field">{tx("Email")}<input type="email" maxLength={254} value={form.email} onChange={(e) => set("email", e.target.value)} autoComplete="email" /></label>
-              <label className="shop-field">{tx("Nomor WhatsApp/telepon")}<input type="tel" maxLength={20} value={form.phone} onChange={(e) => set("phone", e.target.value)} autoComplete="tel" /></label>
               {form.fulfillment === "delivery" && (
                 <label className="shop-field">{tx("Alamat pengiriman")}<textarea required maxLength={500} value={form.delivery_address} onChange={(e) => set("delivery_address", e.target.value)} autoComplete="street-address" /></label>
               )}
               <label className="shop-field">{tx("Catatan (opsional)")}<textarea maxLength={500} value={form.note} onChange={(e) => set("note", e.target.value)} /></label>
               <label className="shop-check">
                 <input type="checkbox" checked={form.accept} onChange={(e) => set("accept", e.target.checked)} required />
-                {tx("Saya menyetujui")}{" "}<a href="/kebijakan-privasi" target="_blank" rel="noopener">{tx("kebijakan privasi")}</a> dan <a href="/syarat-transaksi" target="_blank" rel="noopener">{tx("syarat transaksi")}</a>.
+                <span>{tx("Saya menyetujui")}{" "}<a href="/kebijakan-privasi" target="_blank" rel="noopener">{tx("kebijakan privasi")}</a> dan <a href="/syarat-transaksi" target="_blank" rel="noopener">{tx("syarat transaksi")}</a>.</span>
               </label>
               {customer && <p className="s-muted"><Tr s="Masuk sebagai {0}." a={[customer.email]} /></p>}
               <Msg kind="error">{err}</Msg>
-              <button type="submit" className="s-btn" disabled={busy || !form.accept}>{busy ? tx("Memproses…") : tx("Buat pesanan")}</button>
             </form>
           )}
           {!cfg && <Msg kind="error">{err}</Msg>}
-        </>
-      )}
+        </div>
+        <aside className="shop-summary" aria-label={tx("Ringkasan pesanan")}>
+          <h2>{tx("Ringkasan")}</h2>
+          <dl>
+            <div><dt>{tx("Subtotal ({0} barang)", count)}</dt><dd>{sen(subtotal)}</dd></div>
+            <div><dt>{tx("Ongkir")}</dt><dd>{fee > 0 ? sen(fee) : form.fulfillment === "pickup" ? tx("Gratis") : "—"}</dd></div>
+            <div className="shop-summary-total"><dt>{tx("Perkiraan total")}</dt><dd>{sen(subtotal + fee)}</dd></div>
+          </dl>
+          {texts.cart_note?.trim() && <p className="shop-summary-note">{texts.cart_note}</p>}
+          {canCheckout && (
+            <button type="submit" form="checkout-form" className="s-btn shop-summary-cta" disabled={busy || !form.accept}>
+              {busy ? tx("Memproses…") : texts.checkout_button?.trim() || tx("Buat pesanan")}
+            </button>
+          )}
+          {canCheckout && !form.accept && <p className="s-muted shop-summary-hint">{tx("Centang persetujuan di formulir untuk melanjutkan.")}</p>}
+          <p className="s-muted shop-summary-hint">{tx("Total resmi dihitung toko saat pesanan dibuat.")}</p>
+        </aside>
+      </div>
     </Shell>
   );
 }
@@ -381,9 +417,33 @@ function useHashToken(): string | null | undefined {
   return useSyncExternalStore(onHash, tokenFromHash, () => undefined);
 }
 
+/** Perjalanan pesanan: dipesan → dibayar → diproses → siap diambil/dikirim → selesai. */
+function OrderTimeline({ status, fulfillment }: { status: string; fulfillment: string }) {
+  const steps = [tx("Dipesan"), tx("Dibayar"), tx("Diproses"), fulfillment === "delivery" ? tx("Dikirim") : tx("Siap diambil"), tx("Selesai")];
+  const at: Record<string, number> = {
+    PENDING: 1, AWAITING_PAYMENT: 1, APPROVAL_PENDING: 1, PAID: 2, APPROVED: 2, PROCESSING: 2,
+    READY_FOR_PICKUP: 3, SHIPPED: 3, COMPLETED: 5,
+  };
+  const stopped = ["CANCELLED", "EXPIRED", "REJECTED"].includes(status);
+  const now = at[status] ?? 0;
+  return (
+    <ol className="shop-timeline" data-stopped={stopped || undefined} aria-label={tx("Status pesanan")}>
+      {steps.map((l, i) => (
+        <li key={l} data-state={stopped ? undefined : i < now ? "done" : i === now ? "now" : undefined} aria-current={!stopped && i === now ? "step" : undefined}>
+          <span className="shop-timeline-dot" aria-hidden="true" />
+          <span>{l}</span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
 export function OrderPage() {
-  const token = useHashToken();
-  const [order, setOrder] = useState<PublicOrder | null>(null);
+  const pv = useContext(ShopPreviewCtx);
+  const texts = useShopTexts();
+  const hashToken = useHashToken();
+  const token = pv ? "preview" : hashToken;
+  const [order, setOrder] = useState<PublicOrder | null>(() => pv?.order ?? null);
   const [err, setErr] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
   const [ref, setRef] = useState("");
@@ -402,31 +462,35 @@ export function OrderPage() {
     [],
   );
   useEffect(() => {
-    if (token) void load(token);
-  }, [load, token]);
+    if (token && !pv) void load(token);
+  }, [load, token, pv]);
   // Ambil QRIS dinamis GoPay bila order menunggu bayar (idempoten; available=false bila tak dipakai).
   useEffect(() => {
-    if (!token || order?.status !== "AWAITING_PAYMENT") return;
+    if (!token || pv || order?.status !== "AWAITING_PAYMENT") return;
     shopApi<{ available: boolean; total_rupiah: number | null; qr_svg: string | null }>(
       "POST", "/orders/current/gopay-qris", undefined, { "x-order-token": token },
     ).then(setGopay, () => setGopay(null));
-  }, [token, order?.status]);
+  }, [token, order?.status, pv]);
   // P10: selama menunggu bayar, periksa status berkala agar auto-konfirmasi (GoPay) atau verifikasi
   // staf langsung terlihat pembeli tanpa menekan "Perbarui status". Berhenti saat status berubah.
   useEffect(() => {
-    if (!token || order?.status !== "AWAITING_PAYMENT") return;
+    if (!token || pv || order?.status !== "AWAITING_PAYMENT") return;
     const id = setInterval(() => { void load(token); }, 5000);
     return () => clearInterval(id);
-  }, [token, order?.status, load]);
+  }, [token, order?.status, load, pv]);
   if (token === undefined) return <Shell title={tx("Pesanan")}><p className="s-muted" aria-busy="true">{tx("Memuat…")}</p></Shell>;
   if (!token) {
     const saved = savedOrders();
     return (
       <Shell title={tx("Pesanan saya")}>
-        {saved.length === 0 && <p className="s-muted">{tx("Belum ada pesanan di perangkat ini.")}</p>}
-        <ul className="shop-list">
+        {saved.length === 0 && (
+          <div className="shop-empty"><BagIcon /><p>{tx("Belum ada pesanan di perangkat ini.")}</p><a className="s-btn" href="/">{tx("Mulai belanja")}</a></div>
+        )}
+        <ul className="shop-order-list">
           {saved.map((o) => (
-            <li key={o.code}><a href={`/pesanan#token=${encodeURIComponent(o.token)}`}>{o.code}</a> <span className="s-muted">{o.created_at.slice(0, 10)}</span></li>
+            <li key={o.code}><a className="shop-card shop-order-row" href={`/pesanan#token=${encodeURIComponent(o.token)}`}>
+              <strong>{o.code}</strong><span className="s-muted">{new Date(o.created_at).toLocaleDateString(intlLocale())}</span><span aria-hidden="true">→</span>
+            </a></li>
           ))}
         </ul>
         <p className="s-muted">{tx("Punya akun?")}{" "}<a href="/akun">{tx("Lihat riwayat di akun")}</a>.</p>
@@ -465,7 +529,14 @@ export function OrderPage() {
   const waiting = order.status === "AWAITING_PAYMENT" && p && (p.status === "pending" || p.status === "claimed");
   return (
     <Shell title={tx("Pesanan {0}", order.code)}>
-      <p className="shop-status" data-status={order.status}>{STATUS_TEXT[order.status] ?? order.status}</p>
+      <section className="shop-card shop-order-head">
+        <div className="shop-order-meta">
+          <p className="shop-status" data-status={order.status}>{STATUS_TEXT[order.status] ?? order.status}</p>
+          <span className="s-muted">{new Date(order.created_at).toLocaleString(intlLocale())}</span>
+        </div>
+        <OrderTimeline status={order.status} fulfillment={order.fulfillment} />
+        {texts.thanks?.trim() && <p className="shop-thanks">{texts.thanks}</p>}
+      </section>
       <Msg kind="ok">{ok}</Msg>
       <Msg kind="error">{err}</Msg>
       {waiting && (
@@ -504,19 +575,24 @@ export function OrderPage() {
         </section>
       )}
       {p?.status === "rejected" && <Msg kind="error">{tx("Pembayaran ditolak toko:")}{" "}{p.rejection_reason}</Msg>}
-      <table className="shop-table">
-        <thead><tr><th>{tx("Produk")}</th><th>{tx("Jumlah")}</th><th>{tx("Subtotal")}</th></tr></thead>
-        <tbody>
+      <section className="shop-card" aria-label={tx("Rincian pesanan")}>
+        <h2>{tx("Rincian pesanan")}</h2>
+        <ul className="shop-items shop-items-static">
           {order.items.map((i, k) => (
-            <tr key={k}><td>{i.product_name}{i.variant_name !== "Default" && <div className="s-muted">{i.variant_name}</div>}</td><td>{i.quantity}</td><td>{rupiah(i.line_total)}</td></tr>
+            <li key={k} className="shop-item">
+              <div className="shop-item-info"><strong>{i.product_name}</strong>{i.variant_name !== "Default" && <span className="s-muted">{i.variant_name}</span>}<span className="s-muted">{i.quantity} × {rupiah(i.unit_price)}</span></div>
+              <strong className="shop-item-total">{rupiah(i.line_total)}</strong>
+            </li>
           ))}
-        </tbody>
-      </table>
-      {order.delivery_fee !== "0.00" && <p>{tx("Ongkir:")}{" "}{rupiah(order.delivery_fee)}</p>}
-      <p className="shop-total">{tx("Total:")}{" "}<strong>{rupiah(order.total)}</strong></p>
-      <p className="s-muted">{order.fulfillment === "delivery" ? tx("Dikirim ke: {0}", order.delivery_address ?? "") : tx("Ambil di toko")}</p>
-      <button type="button" className="d-link" onClick={() => token && load(token)}>{tx("Perbarui status")}</button>
-      <OrderTickets token={token} />
+        </ul>
+        <dl className="shop-sum">
+          {order.delivery_fee !== "0.00" && <div><dt>{tx("Ongkir")}</dt><dd>{rupiah(order.delivery_fee)}</dd></div>}
+          <div className="shop-summary-total"><dt>{tx("Total")}</dt><dd>{rupiah(order.total)}</dd></div>
+        </dl>
+        <p className="s-muted">{order.fulfillment === "delivery" ? tx("Dikirim ke: {0}", order.delivery_address ?? "") : tx("Ambil di toko")}</p>
+        {!pv && <button type="button" className="d-link" onClick={() => token && load(token)}>{tx("Perbarui status")}</button>}
+      </section>
+      {!pv && <OrderTickets token={token} />}
     </Shell>
   );
 }
@@ -574,8 +650,10 @@ function OrderTickets({ token }: { token: string }) {
 // ------------------------------------------------------------------ akun customer
 
 export function AccountPage() {
+  const pv = useContext(ShopPreviewCtx);
+  const texts = useShopTexts();
   const [me, setMe] = useState<CustomerSession | null>(null);
-  const [ready, setReady] = useState(false);
+  const [ready, setReady] = useState(!!pv);
   const [orders, setOrders] = useState<OrderSummary[]>([]);
   const [mode, setMode] = useState<"login" | "register">("login");
   const [f, setF] = useState({ email: "", password: "", accept: false });
@@ -592,10 +670,12 @@ export function AccountPage() {
     [],
   );
   useEffect(() => {
+    if (pv) return;
     refresh().catch(() => setReady(true));
-  }, [refresh]);
+  }, [refresh, pv]);
   async function submit(e: FormEvent) {
     e.preventDefault();
+    if (pv) return;
     setErr(null);
     setOk(null);
     try {
@@ -616,21 +696,39 @@ export function AccountPage() {
   if (me) {
     return (
       <Shell title={tx("Akun saya")}>
-        <p>{me.email} {me.email_verified ? tx("(terverifikasi)") : tx("(belum terverifikasi)")}</p>
+        <section className="shop-card shop-profile">
+          <span className="shop-avatar" aria-hidden="true">{me.email.charAt(0).toUpperCase()}</span>
+          <div><strong>{me.email}</strong><span className={`shop-verify${me.email_verified ? " is-ok" : ""}`}>{me.email_verified ? tx("Email terverifikasi") : tx("Belum terverifikasi")}</span></div>
+          <button type="button" className="d-link shop-logout" onClick={async () => { await shopApi("POST", "/customer/logout").catch(() => null); setCustomerCsrf(null); setMe(null); }}>{tx("Keluar")}</button>
+        </section>
         {!me.email_verified && <p className="s-muted">{tx("Verifikasi email untuk melihat pesanan yang dibuat dengan email ini sebelum Anda mendaftar.")}</p>}
         <h2>{tx("Riwayat pesanan")}</h2>
         {orders.length === 0 && <p className="s-muted">{tx("Belum ada pesanan.")}</p>}
-        <ul className="shop-list">
-          {orders.map((o) => <li key={o.id}>{o.code} — {STATUS_TEXT[o.status] ?? o.status} — {rupiah(o.total)}</li>)}
+        <ul className="shop-order-list">
+          {orders.map((o) => (
+            <li key={o.id} className="shop-card shop-order-row">
+              <strong>{o.code}</strong>
+              <span className="shop-status" data-status={o.status}>{STATUS_TEXT[o.status] ?? o.status}</span>
+              <strong>{rupiah(o.total)}</strong>
+            </li>
+          ))}
         </ul>
-        <button type="button" className="s-btn" onClick={async () => { await shopApi("POST", "/customer/logout").catch(() => null); setCustomerCsrf(null); setMe(null); }}>{tx("Keluar")}</button>
       </Shell>
     );
   }
   return (
     <Shell title={mode === "login" ? tx("Masuk") : tx("Daftar akun")}>
-      <p className="s-muted">{tx("Akun bersifat opsional: Anda tetap bisa memesan tanpa akun.")}</p>
-      <form className="shop-form" onSubmit={submit}>
+      <div className="shop-account">
+      <div className="shop-card shop-account-why">
+        <h2>{tx("Kenapa punya akun?")}</h2>
+        <ul>
+          <li>{tx("Lihat semua riwayat pesanan di satu tempat")}</li>
+          <li>{tx("Isi data pemesanan lebih cepat")}</li>
+          <li>{tx("Tetap opsional — Anda bisa memesan tanpa akun")}</li>
+        </ul>
+        {texts.account_note?.trim() && <p className="shop-summary-note">{texts.account_note}</p>}
+      </div>
+      <form className="shop-card shop-form" onSubmit={submit}>
         <label className="shop-field">{tx("Email")}<input type="email" required value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} autoComplete="email" /></label>
         <label className="shop-field">{tx("Password")}<input type="password" required minLength={8} value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} autoComplete={mode === "login" ? "current-password" : "new-password"} /></label>
         {mode === "register" && (
@@ -642,10 +740,11 @@ export function AccountPage() {
         <Msg kind="error">{err}</Msg>
         <Msg kind="ok">{ok}</Msg>
         <button type="submit" className="s-btn">{mode === "login" ? tx("Masuk") : tx("Daftar")}</button>
+        <button type="button" className="d-link" onClick={() => setMode(mode === "login" ? "register" : "login")}>
+          {mode === "login" ? tx("Belum punya akun? Daftar") : tx("Sudah punya akun? Masuk")}
+        </button>
       </form>
-      <button type="button" className="d-link" onClick={() => setMode(mode === "login" ? "register" : "login")}>
-        {mode === "login" ? tx("Belum punya akun? Daftar") : tx("Sudah punya akun? Masuk")}
-      </button>
+      </div>
     </Shell>
   );
 }

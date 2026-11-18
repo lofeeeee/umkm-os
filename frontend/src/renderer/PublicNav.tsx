@@ -18,6 +18,8 @@ export interface PublicNavProps {
   hideLogo?: boolean;
   hideName?: boolean;
   links: NavLink[];
+  /** Tombol tambahan di ujung navigasi (halaman toko: keranjang, pesanan, akun). */
+  actions?: ReactNode;
   /** Alt logo kosong = hiasan (nama toko sudah ada sebagai teks). */
   ariaLabel?: string;
 }
@@ -41,12 +43,13 @@ function Links({ links }: { links: NavLink[] }) {
 }
 
 /** Navigasi situs publik. `side` = kolom kiri menetap (desktop) / bilah atas (ponsel). */
-export function PublicNav({ style, sticky = false, brand, logoUrl, hideLogo, hideName, links, ariaLabel }: PublicNavProps) {
+export function PublicNav({ style, sticky = false, brand, logoUrl, hideLogo, hideName, links, actions, ariaLabel }: PublicNavProps) {
   if (style === "side") {
     return (
       <aside className="s-nav-side" aria-label={ariaLabel ?? t("Navigasi samping")}>
         <Brand brand={brand} logoUrl={logoUrl} hideLogo={hideLogo} hideName={hideName} />
         <Links links={links} />
+        {actions && <div className="s-nav-actions">{actions}</div>}
       </aside>
     );
   }
@@ -54,6 +57,7 @@ export function PublicNav({ style, sticky = false, brand, logoUrl, hideLogo, hid
     <header className={`s-headbar${sticky ? " s-sticky" : ""}`} aria-label={ariaLabel ?? t("Navigasi atas")}>
       <Brand brand={brand} logoUrl={logoUrl} hideLogo={hideLogo} hideName={hideName} />
       <Links links={links} />
+      {actions && <div className="s-nav-actions">{actions}</div>}
     </header>
   );
 }

@@ -11,6 +11,7 @@ import {
 } from "@phosphor-icons/react/ssr";
 
 import { confirm } from "@/ui/dialog";
+import { SYSTEM_PAGES, type SystemPage } from "./SystemPreview";
 import { t } from "@/i18n";
 
 export interface PageItem {
@@ -29,6 +30,9 @@ export interface PagesPanelProps {
   isPro: boolean;
   onUpgradeClick: () => void;
   defaultOpenAdd?: boolean;
+  /** Halaman sistem (keranjang, pesanan, akun) yang sedang dipratinjau; null = halaman website. */
+  systemPage?: SystemPage | null;
+  onSelectSystem?: (kind: SystemPage) => void;
   className?: string;
   onClose?: () => void;
 }
@@ -99,6 +103,8 @@ export function PagesPanel({
   isPro,
   onUpgradeClick,
   defaultOpenAdd = false,
+  systemPage = null,
+  onSelectSystem,
   className = "",
   onClose,
 }: PagesPanelProps) {
@@ -275,6 +281,23 @@ export function PagesPanel({
             </button>
           </div>
         </form>
+      )}
+      {onSelectSystem && (
+        <div className="st-add-sec u-mt-3">
+          <span className="st-add-label">{t("Halaman sistem")}</span>
+          <p className="d-hint u-m-0">{t("Keranjang, pesanan, dan akun dibuat otomatis dan mengikuti brand kit. Pratinjau & ubah teksnya di sini.")}</p>
+          <ul className="st-page-list" aria-label={t("Halaman sistem")}>
+            {SYSTEM_PAGES().map((p) => (
+              <li key={p.kind} className="st-page" data-active={systemPage === p.kind ? "true" : "false"}>
+                <button type="button" className="st-page-main" onClick={() => onSelectSystem(p.kind)} aria-current={systemPage === p.kind ? "page" : undefined}>
+                  <span className="st-page-icon" aria-hidden="true"><Files weight={systemPage === p.kind ? "fill" : "duotone"} /></span>
+                  <span className="st-page-text"><strong>{p.title}</strong><code>{p.path}</code></span>
+                  <span className="st-page-badge">{t("Sistem")}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
     </div>
   );

@@ -25,6 +25,7 @@ import { PublicNav, type NavLink } from "./PublicNav";
 import { BackgroundLayer, FreeImage, ShapeLayer, isBehind, isLayer, isPopupImage, layerVisible, mobileRows } from "./layers";
 import { LogoLayer } from "./LogoLayer";
 import { PopupImage } from "./PopupImage";
+import { frameAttrs, frameStyle } from "./frame";
 import { SiteFooter } from "./SiteFooter";
 import { fontStack, onColor, primaryVars, safeColor, text, waLink } from "./safe";
 import { Site, type GridProduct, hasPublicContent } from "./Site";
@@ -278,15 +279,8 @@ export function StudioSite(props: StudioSiteProps) {
               );
             };
   const style = {
-    ...primaryVars(doc.theme.primary),
-    "--s-font": fontStack(doc.theme.font),
-    // Brand kit: font & ketebalan judul, warna aksen, sudut global.
-    "--s-head-font": fontStack(doc.theme.heading_font ?? doc.theme.font),
-    "--s-head-weight": doc.theme.heading_weight ?? 800,
-    "--s-accent": safeColor(doc.theme.accent ?? doc.theme.primary),
-    "--s-on-accent": onColor(safeColor(doc.theme.accent ?? doc.theme.primary)),
-    "--s-radius-kit": doc.theme.radius === "sharp" ? "4px" : doc.theme.radius === "round" ? "24px" : "14px",
-    "--s-size": doc.theme.text_scale ?? 1,
+    // Brand kit: warna, font & ketebalan judul, aksen, sudut global (sama dengan halaman toko).
+    ...frameStyle(doc.theme),
     ...(bgUrl ? { "--s-bg-img": `url("${bgUrl}")` } : {}),
     "--s-bg-size": doc.theme.background_size ?? "cover",
     "--s-bg-pos": doc.theme.background_position ?? "center",
@@ -295,11 +289,7 @@ export function StudioSite(props: StudioSiteProps) {
   return (
     <div
       className={`sv2 site${isSideNav ? " s-has-side-nav" : ""}${editing ? " sf-editing" : ""}${layerSelected ? " sf-layer-sel" : ""}${chat?.layout === "bar" ? " s-dock-bar" : chat || wa ? " s-dock-float" : ""}`}
-      data-surface={doc.theme.surface ?? "light"}
-      data-motion={doc.theme.motion && doc.theme.motion !== "none" ? doc.theme.motion : undefined}
-      data-texture={doc.theme.texture && doc.theme.texture !== "none" ? doc.theme.texture : undefined}
-      data-gradient={doc.theme.gradient ? "" : undefined}
-      data-radius={doc.theme.radius}
+      {...frameAttrs(doc.theme)}
       data-mode={mode}
       style={style}
     >

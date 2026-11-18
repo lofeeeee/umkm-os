@@ -10,6 +10,8 @@ export interface CartItem {
   /** Harga tampilan (desimal string) — bukan sumber kebenaran */
   price: string;
   quantity: number;
+  /** Foto produk (rujukan berkas publik) untuk kartu keranjang; opsional (keranjang lama tidak punya). */
+  image?: string;
 }
 
 export interface SavedOrder { code: string; token: string; created_at: string }

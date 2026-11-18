@@ -36,6 +36,7 @@ import { fromDoc, isV2, siteThemeOf, toDoc, withSiteTheme, type PageV2 } from "@
 import { IconRail, type StudioTab } from "@/studio/IconRail";
 import { PagesPanel, type PageItem } from "@/studio/PagesPanel";
 import { ThemePanel, type ThemeConfig } from "@/studio/ThemePanel";
+import { ShopTextsPanel, SystemPreview, type SystemPage } from "@/studio/SystemPreview";
 import { DrawPanel, type DrawConfig, type DrawTool, type DrawTarget } from "@/studio/DrawPanel";
 import type { DrawingStroke } from "@/studio/DrawingLayer";
 import { ImageCropModal } from "@/ui/ImageCropModal";
@@ -84,6 +85,8 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
   // Sinkronisasi server: template website, revisi draf terakhir, versi terbit.
   /** Tema situs dari server (draf) & JSON terakhir yang tersimpan. */
   const siteTheme = useRef<PageV2["theme"] | null>(null);
+  /** Halaman sistem yang dipratinjau (keranjang/pesanan/akun); null = halaman website biasa. */
+  const [systemPage, setSystemPage] = useState<SystemPage | null>(null);
   const siteThemeSaved = useRef<string | null>(null);
   const [srv, setSrv] = useState<{ template: string; revision: number; published: number | null; savedDoc: string } | null>(null);
   const [saveState, setSaveState] = useState<SaveState>("idle");
@@ -644,7 +647,10 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
       <div className="sx-body" data-panel={panelOpen ? "open" : "closed"}>
         <IconRail activeTab={selected ? null : activeTab} onSelectTab={selectTab} />
         <aside className="st-panel sx-panel" aria-label={selected ? tx("Pengaturan blok") : activeTab === "pages" ? tx("Halaman") : activeTab === "theme" ? tx("Desain") : activeTab === "draw" ? tx("Coretan") : tx("Blok")} hidden={!panelOpen}>
-          {selected ? (
+          {systemPage ? (
+            <ShopTextsPanel kind={systemPage} texts={st.shopTexts} onBack={() => setSystemPage(null)}
+              onChange={(next) => update((x) => ({ ...x, shopTexts: next }), "shop-texts")} />
+          ) : selected ? (
             <Inspector
               c={selected}
               onBack={() => setSel(null)}
@@ -674,7 +680,9 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
             <PagesPanel
               pages={pages}
               activeSlug={activeSlug}
-              onSelectPage={(slug) => void switchPage(slug)}
+              onSelectPage={(slug) => { setSystemPage(null); void switchPage(slug); }}
+              systemPage={systemPage}
+              onSelectSystem={(k) => { setSel(null); setSystemPage(k); }}
               onCreatePage={createPage}
               onDeletePage={deletePage}
               isPro={planCode === "pro"}
@@ -755,7 +763,10 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
               <button type="button" className="d-btn d-btn-sm" onClick={() => setDrawTool(null)}>{tx("Selesai")}{" "}<kbd>{tx("Esc")}</kbd></button>
             </div>
           )}
-          <LiveCanvas
+          {systemPage ? (
+            <SystemPreview kind={systemPage} device={device} theme={previewDoc.theme} business={business}
+              pages={pages.map((p) => ({ slug: p.slug, title: p.title }))} assetUrl={assets.url} products={products} onZoom={setZoom} />
+          ) : <LiveCanvas
             device={device}
             doc={previewDoc}
             business={business}
@@ -780,8 +791,8 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
             onEraseStroke={eraseStroke}
             onHint={(m) => toast.info(m)}
             onZoom={setZoom}
-          />
-          {st.cells.length === 0 && (
+          />}
+          {!systemPage && st.cells.length === 0 && (
             <div className="sx-empty">
               <strong>{tx("Halaman ini masih kosong")}</strong>
               <span>{tx("Tambahkan blok dari panel kiri, atau pilih templat siap pakai.")}</span>
