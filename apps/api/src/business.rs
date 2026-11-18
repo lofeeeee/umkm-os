@@ -206,11 +206,14 @@ fn validate_profile(d: ProfileDto) -> Result<Profile, ApiError> {
     let cover = parse_asset(&mut e, "cover", d.cover.as_deref());
     let mut phone_of = |path: &str, v: Option<String>| {
         let v = opt_trim(v)?;
-        let n = business::normalize_phone(&v);
-        if n.is_none() {
-            business::push(&mut e, path, "invalid_phone");
+        // Nomor HP: hanya angka, diawali `0` (lokal) atau `62` (internasional).
+        match business::normalize_phone_id(&v) {
+            Some(n) => Some(n),
+            None => {
+                business::push(&mut e, path, "invalid_phone");
+                None
+            }
         }
-        n
     };
     let phone = phone_of("phone", d.phone);
     let whatsapp = phone_of("whatsapp", d.whatsapp);
