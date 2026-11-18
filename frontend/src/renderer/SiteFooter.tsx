@@ -3,6 +3,7 @@
 // Semua isi berasal dari Profil bisnis & halaman terbit — pemilik tidak perlu mengisi apa pun lagi, dan
 // kolom yang datanya kosong tidak dirender (tidak ada judul tanpa isi).
 
+import { LogoMark } from "./LogoMark";
 import type { ReactNode } from "react";
 
 import { t as tx } from "@/i18n";
@@ -74,10 +75,7 @@ export function SiteFooter({ business, status, logoUrl, pages, editing, badge = 
         <div className="sf-top">
           <div className="sf-brand">
             <div className="sf-id">
-              {logoUrl
-                // eslint-disable-next-line @next/next/no-img-element
-                ? <img src={logoUrl} alt="" className="sf-logo" width={44} height={44} loading="lazy" decoding="async" />
-                : <span className="sf-logo sf-logo-fallback" aria-hidden="true">{(name[0] ?? "T").toUpperCase()}</span>}
+              <LogoMark url={logoUrl} name={name} className="sf-logo" size={44} lazy />
               <span className="sf-name">{name}</span>
             </div>
             {description && <p className="sf-desc">{description}</p>}

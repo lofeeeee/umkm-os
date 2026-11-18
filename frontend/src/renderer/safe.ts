@@ -107,3 +107,13 @@ export function sized(url: string | undefined, w: (typeof IMAGE_WIDTHS)[number])
 /** `sizes`: di desktop gambar menempati `px` (lebar slot × porsi), di ponsel selebar layar × `mobile`. */
 export const sizesFor = (px: number, mobile = 1) => `(min-width: 720px) ${Math.max(160, Math.round(px))}px, ${Math.round(mobile * 100)}vw`;
 
+
+/** Gambar gagal dimuat (aset terhapus/kedaluwarsa): ganti ikon rusak bawaan browser dengan placeholder rapi
+ *  (CSS `img[data-broken]`). Dipasang sebagai `onError` pada `<img>`. */
+export function onImgError(e: { currentTarget: HTMLImageElement }) {
+  const img = e.currentTarget;
+  if (img.dataset.broken !== undefined) return;
+  img.dataset.broken = "";
+  img.removeAttribute("srcset");
+  img.src = "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
+}

@@ -65,6 +65,22 @@ export function ImageFields({ c, onChange, onLayout, onPhoto }: {
           </div>
         </div>
       )}
+      <div className="d-field u-mt-2">
+        <span>{tx("Bentuk")}</span>
+        <div className="d-seg u-w-full" role="group" aria-label={tx("Bentuk gambar")}>
+          {([["none", tx("Asli")], ["circle", tx("Lingkaran")], ["arch", tx("Lengkung atas")], ["blob", tx("Organik")], ["squircle", tx("Kotak bulat")]] as const).map(([v, l]) => (
+            <button key={v} type="button" className="u-grow" aria-pressed={str(c.data.shape, "none") === v} onClick={() => set("shape", v)}>{l}</button>
+          ))}
+        </div>
+      </div>
+      <div className="d-field u-mt-2">
+        <span>{tx("Filter warna")}</span>
+        <div className="d-seg u-w-full st-seg-wrap" role="group" aria-label={tx("Filter warna")}>
+          {([["none", tx("Asli")], ["mono", tx("Hitam-putih")], ["warm", tx("Hangat")], ["cool", tx("Sejuk")], ["vivid", tx("Cerah")], ["duotone", tx("Duotone merek")]] as const).map(([v, l]) => (
+            <button key={v} type="button" className="u-grow" aria-pressed={str(c.data.filter, "none") === v} onClick={() => set("filter", v)}>{l}</button>
+          ))}
+        </div>
+      </div>
       <label className="d-field u-mt-2">
         <span className="st-row-between"><span>{tx("Kepekatan")}</span><strong>{typeof c.data.opacity === "number" ? c.data.opacity : 100}%</strong></span>
         <input type="range" min={10} max={100} step={5} aria-label={tx("Kepekatan gambar")} value={typeof c.data.opacity === "number" ? c.data.opacity : 100}

@@ -2,6 +2,7 @@
 // halaman terbit — sebelumnya `s-nav-side` dirender tanpa CSS dan gaya "top" tidak dirender sama sekali,
 // sehingga navigasi yang terlihat di Studio hilang setelah diterbitkan.
 
+import { LogoMark } from "./LogoMark";
 import type { ReactNode } from "react";
 import { t } from "@/i18n";
 
@@ -21,10 +22,7 @@ export interface PublicNavProps {
 function Brand({ brand, logoUrl }: { brand: string; logoUrl?: string }): ReactNode {
   return (
     <div className="s-brand">
-      {logoUrl
-        // eslint-disable-next-line @next/next/no-img-element
-        ? <img src={logoUrl} alt="" className="s-logo" width={36} height={36} decoding="async" />
-        : <span className="s-logo s-logo-fallback" aria-hidden="true">{(brand[0] ?? "T").toUpperCase()}</span>}
+      <LogoMark url={logoUrl} name={brand} className="s-logo" size={36} />
       <span className="s-brand-name">{brand}</span>
     </div>
   );

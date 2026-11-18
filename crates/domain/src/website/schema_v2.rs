@@ -114,6 +114,9 @@ pub const IMAGE_FITS: [&str; 2] = ["cover", "contain"];
 pub const FREE_IMAGE_FITS: [&str; 3] = ["contain", "crop", "stretch"];
 /// Pojok layar untuk Gambar mode `popup`.
 pub const CORNERS: [&str; 4] = ["bottom-right", "bottom-left", "top-right", "top-left"];
+/// Bentuk potongan & filter warna plugin Gambar.
+pub const IMAGE_SHAPES: [&str; 5] = ["none", "circle", "arch", "blob", "squircle"];
+pub const IMAGE_FILTERS: [&str; 6] = ["none", "mono", "warm", "cool", "duotone", "vivid"];
 
 /// Lapisan bebas: boleh menumpuk blok lain (tidak ikut cek tumpang tindih). Latar selalu di belakang;
 /// Gambar di depan (`above`), di belakang (`below`), atau menggantung mengikuti gulir (`sticky`).
@@ -626,7 +629,8 @@ fn data(v: &mut V, kind: &str, d: &Value, p: &str) {
                 d,
                 p,
                 &[
-                    "image", "alt", "fit", "position", "opacity", "href", "corner",
+                    "image", "alt", "fit", "position", "opacity", "href", "corner", "shape",
+                    "filter",
                 ],
             ) {
                 v.asset(m, p, "image", false);
@@ -634,6 +638,8 @@ fn data(v: &mut V, kind: &str, d: &Value, p: &str) {
                 enum_opt(v, m, p, "fit", &FREE_IMAGE_FITS);
                 enum_opt(v, m, p, "position", &IMAGE_POSITIONS);
                 enum_opt(v, m, p, "corner", &CORNERS);
+                enum_opt(v, m, p, "shape", &IMAGE_SHAPES);
+                enum_opt(v, m, p, "filter", &IMAGE_FILTERS);
                 v.href(m, p, "href", false);
                 if m.contains_key("opacity") {
                     v.int(m, p, "opacity", 0, 100);
@@ -1054,7 +1060,7 @@ mod tests {
             1,
             4,
             4,
-            json!({"image": format!("asset:{img}"), "alt": "Stiker promo", "fit": "contain", "href": "/produk", "opacity": 90}),
+            json!({"image": format!("asset:{img}"), "alt": "Stiker promo", "fit": "contain", "href": "/produk", "opacity": 90, "shape": "blob", "filter": "duotone"}),
         );
         above["layout"] = json!("above");
         let mut sticky = block("gambar-2", "image", 0, 0, 3, 12, json!({"fit": "crop"}));
@@ -1084,13 +1090,14 @@ mod tests {
             0,
             4,
             4,
-            json!({"fit": "cover", "corner": "middle", "href": "javascript:alert(1)"}),
+            json!({"fit": "cover", "corner": "middle", "href": "javascript:alert(1)", "shape": "star"}),
         );
         bad["layout"] = json!("floating");
         let c = codes(&doc(vec![bad]));
         assert!(c.contains(&("blocks[0].layout".into(), "invalid_layout")));
         assert!(c.contains(&("blocks[0].data.fit".into(), "invalid_value")));
         assert!(c.contains(&("blocks[0].data.corner".into(), "invalid_value")));
+        assert!(c.contains(&("blocks[0].data.shape".into(), "invalid_value")));
         assert!(c.iter().any(|(p, _)| p == "blocks[0].data.href"));
     }
 

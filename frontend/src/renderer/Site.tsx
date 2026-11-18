@@ -6,7 +6,7 @@ import { createContext, useContext, type CSSProperties, type ReactNode } from "r
 
 import { T, useEditing } from "./edit";
 import { PublicNav } from "./PublicNav";
-import { fontStack, primaryVars, safeColor, safeHref, sizesFor, srcSet, text, waLink } from "./safe";
+import { fontStack, onImgError, primaryVars, safeColor, safeHref, sizesFor, srcSet, text, waLink } from "./safe";
 import type { Business, Json, OpenStatus, PageContent, Section } from "./types";
 import { t as tx, m } from "@/i18n";
 import { rupiah } from "@/lib/labels";
@@ -87,7 +87,7 @@ export function Img({ r, alt, assetUrl, className, priority, share = () => 1, mo
     // eslint-disable-next-line @next/next/no-img-element -- static export, gambar dari API bertanda tangan
     <img className={className} src={src} srcSet={set} sizes={set ? sizesFor(slot * share(slot), mobile) : undefined} alt={alt}
       decoding="async" loading={priority ? "eager" : "lazy"} fetchPriority={priority ? "high" : undefined}
-      style={{ objectFit: fit ?? "cover", objectPosition: position ?? "center", ...style }} />
+      style={{ objectFit: fit ?? "cover", objectPosition: position ?? "center", ...style }} onError={onImgError} />
   ) : null;
 }
 
@@ -225,7 +225,7 @@ function SectionBody({ s, props }: { s: Section; props: SiteProps }) {
                   // Dua baris pertama (grid 2 kolom ponsel) sering menjadi LCP (audit 17 Nov): jangan lazy; baris pertama prioritas tinggi.
                   // eslint-disable-next-line @next/next/no-img-element -- static export, gambar bertanda tangan
                   <img src={p.image} srcSet={srcSet(p.image)} sizes={srcSet(p.image) ? sizesFor(slot * gridShare(slot), 0.5) : undefined} alt="" width={480} height={480}
-                    loading={i < 4 ? "eager" : "lazy"} fetchPriority={i < 2 ? "high" : undefined} decoding="async" />
+                    loading={i < 4 ? "eager" : "lazy"} fetchPriority={i < 2 ? "high" : undefined} decoding="async"  onError={onImgError} />
                 ) : (
                   <span className="s-product-noimg" aria-hidden="true" />
                 )}

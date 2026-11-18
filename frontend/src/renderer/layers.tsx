@@ -10,7 +10,7 @@ import type { CSSProperties } from "react";
 
 import { t as tx } from "@/i18n";
 
-import { safeHref } from "./safe";
+import { onImgError, safeHref } from "./safe";
 
 export interface LayerBlock {
   id: string; kind: string; x: number; y: number; w: number; h: number; layout?: string;
@@ -115,11 +115,13 @@ export function FreeImage({ b, assetUrl, editing }: { b: LayerBlock; assetUrl: (
   const op = typeof b.data.opacity === "number" && Number.isFinite(b.data.opacity) ? Math.min(100, Math.max(0, b.data.opacity)) : 100;
   const alt = typeof b.data.alt === "string" ? b.data.alt : "";
   const round = b.style !== undefined && b.style !== "plain" && b.style !== "flat";
+  const shape = typeof b.data.shape === "string" && b.data.shape !== "none" ? b.data.shape : undefined;
+  const filter = typeof b.data.filter === "string" && b.data.filter !== "none" ? b.data.filter : undefined;
   // eslint-disable-next-line @next/next/no-img-element -- aset tenant bertanda tangan; ukuran bebas
-  const img = <img src={url} alt={alt} loading="lazy" decoding="async" draggable={false} style={{ objectFit: fit, objectPosition: pos, opacity: op / 100 }} data-round={round || undefined} />;
+  const img = <img src={url} alt={alt} loading="lazy" decoding="async" draggable={false} style={{ objectFit: fit, objectPosition: pos, opacity: op / 100 }} data-round={round && !shape ? true : undefined} onError={onImgError} />;
   const href = editing ? undefined : safeHref(b.data.href);
   return (
-    <div className="sv2-img" data-mode={b.layout ?? "above"}>
+    <div className="sv2-img" data-mode={b.layout ?? "above"} data-shape={shape} data-filter={filter}>
       {href ? <a href={href} className="sv2-img-link" aria-label={alt || tx("Buka tautan gambar")}>{img}</a> : img}
     </div>
   );
