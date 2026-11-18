@@ -43,6 +43,14 @@ export interface BusinessProfile {
 }
 
 export interface Address { label?: string | null; address: string; latitude?: number | null; longitude?: number | null }
+/**
+ * Alamat saat diedit di dasbor: koordinat boleh berupa teks sementara (mis. "-" atau "-6.")
+ * selagi pengguna mengetik, lalu angka setelah selesai. Backend hanya menerima angka.
+ */
+export interface EditableAddress extends Omit<Address, "latitude" | "longitude"> {
+  latitude?: number | string | null;
+  longitude?: number | string | null;
+}
 export interface Hours { day_of_week: number; open: string; close: string }
 export interface HourException { date: string; is_closed: boolean; open?: string | null; close?: string | null; note?: string | null }
 
