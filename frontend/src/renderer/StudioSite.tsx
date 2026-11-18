@@ -22,7 +22,7 @@ import { pluginDef } from "@/studio/plugins";
 import { bandSpans } from "./bands";
 import { InkLayer } from "./ink";
 import { PublicNav, type NavLink } from "./PublicNav";
-import { BackgroundLayer, FreeImage, isBehind, isLayer, isPopupImage, layerImage, mobileRows } from "./layers";
+import { BackgroundLayer, FreeImage, isBehind, isLayer, isPopupImage, layerVisible, mobileRows } from "./layers";
 import { PopupImage } from "./PopupImage";
 import { SiteFooter } from "./SiteFooter";
 import { fontStack, onColor, primaryVars, safeColor, text, waLink } from "./safe";
@@ -143,7 +143,7 @@ function hiddenReason(b: BlockV2): string {
 }
 
 function publicBlock(b: BlockV2, props: StudioSiteProps): boolean {
-  if (b.kind === "background" || b.kind === "image") return !!layerImage(b, props.assetUrl);
+  if (b.kind === "background" || b.kind === "image") return layerVisible(b, props.assetUrl);
   if (b.kind === "whatsapp") return !!whatsappHref(props.business.profile.whatsapp ?? props.business.profile.phone, text(b.data.message));
   return hasPublicContent(b.kind, b.data, props.business, props.assetUrl);
 }

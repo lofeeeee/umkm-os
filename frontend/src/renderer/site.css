@@ -705,3 +705,9 @@
 }
 @keyframes sv2-reveal { from { opacity: 0; transform: translateY(14px); } }
 @keyframes sv2-reveal-lively { from { opacity: 0; transform: translateY(28px) scale(0.97); } }
+
+/* Latar selebar layar: tepi yang menyentuh tepi grid diperpanjang ke tepi halaman (.sv2 = container).
+   Lebar grid = min(1080px, lebar halaman − padding 2×16px). Bilah samping: tidak diperpanjang. */
+.sv2 { overflow-x: clip; --sv2-bleed: calc((min(1080px, 100cqi - 32px) - 100cqi) / 2); }
+.sv2:not(.s-has-side-nav) .sv2-bg[data-bleed="l"], .sv2:not(.s-has-side-nav) .sv2-bg[data-bleed="lr"] { margin-left: var(--sv2-bleed); }
+.sv2:not(.s-has-side-nav) .sv2-bg[data-bleed="r"], .sv2:not(.s-has-side-nav) .sv2-bg[data-bleed="lr"] { margin-right: var(--sv2-bleed); }

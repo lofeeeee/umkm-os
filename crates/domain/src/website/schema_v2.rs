@@ -104,6 +104,8 @@ pub const HIDE_ON: [&str; 2] = ["mobile", "desktop"];
 /// Plugin Latar: cara gambar mengisi kotak. `crop` = selalu penuh, sisi yang lebih dipotong saat lebar layar
 /// berubah; `stretch` = gambar utuh ikut melar/menyusut mengikuti kotak.
 pub const BACKGROUND_FITS: [&str; 2] = ["crop", "stretch"];
+/// Bentuk pemisah di tepi atas/bawah plugin Latar.
+pub const EDGES: [&str; 5] = ["none", "wave", "curve", "slant", "zigzag"];
 pub const IMAGE_POSITIONS: [&str; 5] = ["center", "top", "bottom", "left", "right"];
 /// Foto plugin (Banner/Tentang/Promo/Galeri): penuhi kotak vs tampil utuh.
 pub const IMAGE_FITS: [&str; 2] = ["cover", "contain"];
@@ -639,8 +641,30 @@ fn data(v: &mut V, kind: &str, d: &Value, p: &str) {
             }
         }
         "background" => {
-            if let Some(m) = v.object(d, p, &["image", "fit", "position", "opacity"]) {
+            if let Some(m) = v.object(
+                d,
+                p,
+                &[
+                    "image",
+                    "fit",
+                    "position",
+                    "opacity",
+                    "bleed",
+                    "color",
+                    "edge_top",
+                    "edge_bottom",
+                ],
+            ) {
                 v.asset(m, p, "image", false);
+                v.boolean(m, p, "bleed");
+                enum_opt(v, m, p, "edge_top", &EDGES);
+                enum_opt(v, m, p, "edge_bottom", &EDGES);
+                match m.get("color") {
+                    None => {}
+                    Some(Value::String(s))
+                        if is_hex_color(s) || s == "primary" || s == "accent" => {}
+                    Some(_) => v.err(&join(p, "color"), "invalid_color"),
+                }
                 enum_opt(v, m, p, "fit", &BACKGROUND_FITS);
                 enum_opt(v, m, p, "position", &IMAGE_POSITIONS);
                 if m.contains_key("opacity") {
@@ -971,7 +995,8 @@ mod tests {
             0,
             12,
             20,
-            json!({"image": format!("asset:{img}"), "fit": "stretch", "position": "top", "opacity": 80}),
+            json!({"image": format!("asset:{img}"), "fit": "stretch", "position": "top", "opacity": 80,
+                   "bleed": true, "color": "accent", "edge_top": "wave", "edge_bottom": "zigzag"}),
         );
         bg["auto_height"] = json!(false);
         let d = doc(vec![
@@ -998,7 +1023,7 @@ mod tests {
                 0,
                 12,
                 4,
-                json!({"fit": "tile", "opacity": 101, "x": 1}),
+                json!({"fit": "tile", "opacity": 101, "x": 1, "edge_top": "spiky", "color": "red"}),
             ),
             block(
                 "h",
@@ -1014,6 +1039,8 @@ mod tests {
         assert!(c.contains(&("blocks[0].data.fit".into(), "invalid_value")));
         assert!(c.contains(&("blocks[0].data.opacity".into(), "out_of_range")));
         assert!(c.contains(&("blocks[0].data.x".into(), "unknown_field")));
+        assert!(c.contains(&("blocks[0].data.edge_top".into(), "invalid_value")));
+        assert!(c.contains(&("blocks[0].data.color".into(), "invalid_color")));
         assert!(c.contains(&("blocks[1].data.image_fit".into(), "invalid_value")));
     }
 

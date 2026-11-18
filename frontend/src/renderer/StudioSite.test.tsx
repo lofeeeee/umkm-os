@@ -415,3 +415,18 @@ describe("brand kit di renderer", () => {
     expect(edit).not.toContain("@view-transition");
   });
 });
+
+describe("Latar selebar layar & pemisah", () => {
+  const page: PageV2 = { schema_version: 2, template: "t", theme: { primary: "#0F766E", font: "inter", accent: "#F59E0B" }, blocks: [
+    { id: "pita", kind: "background", x: 0, y: 0, w: 12, h: 8, style: "card", data: { color: "accent", bleed: true, edge_top: "wave", edge_bottom: "zigzag" } },
+    { id: "setengah", kind: "background", x: 6, y: 10, w: 6, h: 4, style: "plain", data: { color: "#112233", bleed: true } },
+  ] };
+  const html = renderToStaticMarkup(<StudioSite doc={page} business={biz} assetUrl={() => undefined} />);
+  it("pita warna tampil tanpa gambar, memanjang ke tepi yang menyentuh grid, dengan topeng tepi", () => {
+    expect(html).toMatch(/id="pita"[\s\S]*?data-bleed="lr"/);
+    expect(html).toMatch(/id="setengah"[\s\S]*?data-bleed="r"/);
+    expect(html).toContain("background-color:var(--s-accent, var(--s-primary))");
+    expect(html).toContain("mask-image:linear-gradient(#000,#000), url(");
+    expect(html).not.toMatch(/id="pita"[\s\S]*?data-round/);
+  });
+});
