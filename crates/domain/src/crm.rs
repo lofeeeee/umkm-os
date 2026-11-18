@@ -2,19 +2,19 @@
 
 use std::collections::BTreeSet;
 
-use crate::business::{FieldError, is_valid_email, normalize_phone, plain_text, push};
+use crate::business::{FieldError, is_valid_email, normalize_phone_id, plain_text, push};
 
 /// E.164; nomor lokal Indonesia `08…` / `62…` menjadi `+62…`.
+///
+/// Nomor dari luar Indonesia (`+65…`, `+1…`) **ditolak**: platform ini khusus UMKM
+/// Indonesia, jadi hanya `0…` (lokal) dan `62…` (internasional) yang sah.
 pub fn normalize_phone_e164(s: &str) -> Option<String> {
-    let n = normalize_phone(s)?;
-    let e = if let Some(rest) = n.strip_prefix('+') {
-        format!("+{rest}")
-    } else if let Some(rest) = n.strip_prefix('0') {
+    // `normalize_phone_id` menegakkan "hanya angka" + awalan `0`/`62` + panjang 9–15 digit.
+    let n = normalize_phone_id(s)?;
+    let e = if let Some(rest) = n.strip_prefix('0') {
         format!("+62{rest}")
-    } else if n.starts_with("62") {
-        format!("+{n}")
     } else {
-        return None;
+        format!("+{n}")
     };
     let d = &e[1..];
     (!d.starts_with('0') && (7..=15).contains(&d.len())).then_some(e)
@@ -63,6 +63,7 @@ pub fn validate_contact(
     }
     let phone = match opt(phone) {
         Some(p) => {
+            // Nomor HP hanya angka, diawali `0` (lokal) atau `62` (internasional); disimpan E.164.
             let n = normalize_phone_e164(&p);
             if n.is_none() {
                 push(e, "phone", "invalid_phone");
@@ -179,11 +180,13 @@ mod tests {
             normalize_phone_e164("6281234567890").as_deref(),
             Some("+6281234567890")
         );
-        assert_eq!(
-            normalize_phone_e164("+65 9123 4567").as_deref(),
-            Some("+6591234567")
-        );
+        // Nomor luar Indonesia ditolak (khusus UMKM Indonesia).
+        assert!(normalize_phone_e164("+65 9123 4567").is_none());
+        // Awalan selain `0`/`62` ditolak.
         assert!(normalize_phone_e164("12345678").is_none());
+        assert!(normalize_phone_e164("81234567890").is_none());
+        // Huruf/simbol di luar pemisah yang diizinkan ditolak.
+        assert!(normalize_phone_e164("0812#4567890").is_none());
     }
 
     #[test]

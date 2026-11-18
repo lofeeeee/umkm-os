@@ -13,9 +13,22 @@
   --shop-card: var(--s-bg, #fff);
   --shop-r: var(--s-radius-kit, 14px);
   --shop-ease: cubic-bezier(0.23, 1, 0.32, 1);
+  /* Galat validasi: merah yang tetap terbaca di terang & gelap. */
+  --shop-danger: var(--s-danger, #b91c1c);
 }
 .shop .s-muted { color: var(--shop-muted); }
 .shop a { color: var(--shop-primary); text-underline-offset: 3px; }
+
+/* Halaman cadangan (404 / toko tidak aktif / gangguan) & halaman legal — DI LUAR bingkai
+   brand kit, jadi --s-* belum terpasang. Warna teks tetap harus mengikuti tema situs
+   (--s-ink/--s-muted) dan BUKAN token dasbor: di mode gelap OS, --ink-2 = #d4d4d8 di atas
+   latar putih hanya 1.48:1 → tidak terbaca. Fallback ke token dasbor hanya untuk
+   pemakaian dasbor (halaman /legal/*). */
+.site-fallback {
+  color: var(--s-ink, var(--ink));
+}
+.site-fallback h1 { color: var(--s-ink, var(--ink)); }
+.site-fallback-muted { color: var(--s-muted, var(--muted)); }
 .shop .s-btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   background: var(--shop-primary); color: var(--shop-on-primary) !important; border: 0; cursor: pointer;
@@ -109,6 +122,9 @@
   outline: none; border-color: var(--shop-primary); box-shadow: 0 0 0 4px color-mix(in srgb, var(--shop-primary) 18%, transparent);
 }
 .shop-field textarea { min-height: 96px; }
+/* Galat validasi kontak (lihat `ContactField`): warna galat ikut brand kit toko. */
+.shop-field-error { display: block; font-size: 0.8125rem; font-weight: 500; color: var(--shop-danger, #b91c1c); }
+.shop-field input[aria-invalid="true"] { border-color: var(--shop-danger, #b91c1c); }
 .shop-check { display: flex; gap: 10px; align-items: flex-start; margin: 0 0 12px; font-size: 0.9375rem; cursor: pointer; }
 .shop-check input { margin-top: 4px; width: 18px; height: 18px; flex: none; accent-color: var(--shop-primary); }
 

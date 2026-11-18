@@ -9,11 +9,12 @@ import { useCallback, useEffect, useState } from "react";
 import { DownloadSimple, Trash, Users } from "@phosphor-icons/react/ssr";
 
 import { Alert, WithTenant, type TenantCtx } from "@/dashboard/shell";
-import { api, describe } from "@/lib/api";
+import { api, describe, ERROR_TEXT } from "@/lib/api";
 import { ORDER_STATUS, relatif, rupiah, status, tanggal } from "@/lib/labels";
 import { confirm } from "@/ui/dialog";
 import { Badge, BusyButton, Card, EmptyState, PageHeader, PageSkeleton, SearchInput, Skeleton } from "@/ui/page";
 import { toast } from "@/ui/toast";
+import { ContactField } from "@/ui/contact-field";
 import { t as tx } from "@/i18n";
 
 interface Summary { id: string; name: string; email: string | null; phone: string | null; tags: string[]; has_account: boolean; created_at: string; deletion_requested: boolean }
@@ -149,8 +150,10 @@ function Detail({ ctx, url, onBack }: { ctx: TenantCtx; url: string; onBack: () 
             }}>
               <div className="d-grid">
                 <label className="d-field"><span>{tx("Nama")}</span><input disabled={!can} value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></label>
-                <label className="d-field"><span>{tx("Email")}</span><input type="email" disabled={!can} value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></label>
-                <label className="d-field"><span>{tx("Telepon")}</span><input type="tel" disabled={!can} value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} /></label>
+                <ContactField label={tx("Email")} kind="email" value={f.email} disabled={!can} errorText={ERROR_TEXT}
+                  autoComplete="email" maxLength={254} onChange={(v) => setF({ ...f, email: v })} />
+                <ContactField label={tx("Telepon")} kind="phone" value={f.phone} disabled={!can} errorText={ERROR_TEXT}
+                  autoComplete="tel" maxLength={20} onChange={(v) => setF({ ...f, phone: v })} />
                 <label className="d-field"><span>{tx("Tag")}{" "}<span className="d-opt">{tx("(pisahkan koma)")}</span></span><input disabled={!can} placeholder={tx("mis. langganan, grosir")} value={f.tags} onChange={(e) => setF({ ...f, tags: e.target.value })} /></label>
               </div>
               <label className="d-field"><span>{tx("Catatan internal")}</span>

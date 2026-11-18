@@ -38,7 +38,7 @@ function WebsitePage({ slug }: { slug: string }) {
   useEffect(() => {
     const inline = inlinePage(slug);
     if (inline) {
-      document.title = inline.site.business.profile.name;
+      document.title = `${inline.site.business.profile.name} - UMKM OS`;
       return;
     }
     fetch(`/_api/public/site?page=${encodeURIComponent(slug)}`, { credentials: "omit" })
@@ -50,7 +50,7 @@ function WebsitePage({ slug }: { slug: string }) {
         if (!r.ok || !body?.success) return setState("error");
         const data = body.data as PublicSite;
         setSite(data);
-        document.title = data.business.profile.name;
+        document.title = `${data.business.profile.name} - UMKM OS`;
         // v1: section product_grid aktif; v2 (Studio): blok product_grid (ambil limit terbesar).
         const content = data.page.content as unknown;
         const grid = isV2(content)
@@ -117,10 +117,13 @@ function SiteSkeleton() {
 function Fallback({ state }: { state: "loading" | "missing" | "inactive" | "error" }) {
   if (state === "loading") return <SiteSkeleton />;
   return (
-    <main className="d-narrow">
-      {state === "missing" && <><h1>{t("Halaman tidak ditemukan")}</h1><p className="d-muted">{t("Situs ini belum tersedia.")}</p></>}
-      {state === "inactive" && <><h1>{t("Toko sedang tidak aktif")}</h1><p className="d-muted">{t("Silakan kembali lagi nanti.")}</p></>}
-      {state === "error" && <><h1>{t("Terjadi gangguan")}</h1><p className="d-muted">{t("Coba muat ulang beberapa saat lagi.")}</p></>}
+    // `site-fallback` memakai token situs (--s-*) dengan fallback ke token dasbor: halaman ini
+    // berada DI LUAR bingkai brand kit, jadi --s-* tidak terpasang. Tanpa itu, di mode gelap OS
+    // teks ikut --muted terang di atas latar putih = tidak terbaca.
+    <main className="d-narrow site-fallback">
+      {state === "missing" && <><h1>{t("Halaman tidak ditemukan")}</h1><p className="site-fallback-muted">{t("Situs ini belum tersedia.")}</p></>}
+      {state === "inactive" && <><h1>{t("Toko sedang tidak aktif")}</h1><p className="site-fallback-muted">{t("Silakan kembali lagi nanti.")}</p></>}
+      {state === "error" && <><h1>{t("Terjadi gangguan")}</h1><p className="site-fallback-muted">{t("Coba muat ulang beberapa saat lagi.")}</p></>}
     </main>
   );
 }

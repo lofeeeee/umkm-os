@@ -5,6 +5,8 @@
 
 use std::{fmt, time::Duration};
 
+use crate::business::is_valid_email;
+
 /// Panjang password (karakter Unicode). Batas atas mencegah DoS pada Argon2id.
 /// Mengikuti NIST SP 800-63B: minimal 8, tanpa aturan komposisi paksa.
 pub const PASSWORD_MIN_CHARS: usize = 8;
@@ -32,22 +34,22 @@ pub enum AuthError {
 pub struct Email(String);
 
 impl Email {
+    /// Validasi email memakai **satu aturan baku** (`business::is_valid_email`).
+    ///
+    /// Sebelumnya `Email::parse` punya cek sendiri yang lebih longgar (mis. menerima
+    /// TLD 1 huruf atau angka, `..` di bagian lokal). Akibatnya aturan berbeda antara
+    /// akun customer, profil bisnis, dan CRM — dan CHECK constraint di DB bisa
+    /// menolak nilai yang API baru saja diterima. Sekarang semuanya memakai
+    /// `is_valid_email`, yang juga sama dengan `frontend/src/lib/contact.ts`
+    /// dan CHECK constraint di migrasi 0042.
+    ///
+    /// Whitespace di tepi tetap di-trim (form bisa mengirim `a@x.id\n`).
     pub fn parse(raw: &str) -> Result<Self, AuthError> {
         let s = raw.trim();
-        let (local, domain) = s.split_once('@').ok_or(AuthError::InvalidEmail)?;
-        let valid = (3..=254).contains(&s.len())
-            && !local.is_empty()
-            && local.len() <= 64
-            && domain.contains('.')
-            && !domain.starts_with('.')
-            && !domain.ends_with('.')
-            && !domain.contains('@')
-            && !s.chars().any(|c| c.is_whitespace() || c.is_control());
-        if valid {
-            Ok(Self(s.to_owned()))
-        } else {
-            Err(AuthError::InvalidEmail)
+        if !is_valid_email(s) {
+            return Err(AuthError::InvalidEmail);
         }
+        Ok(Self(s.to_owned()))
     }
 
     pub fn as_str(&self) -> &str {
@@ -263,6 +265,35 @@ mod tests {
         // Whitespace di tepi (mis. newline dari form) di-trim, bukan ditolak.
         assert_eq!(Email::parse("a@x.id\n").unwrap().as_str(), "a@x.id");
         assert!(Email::parse(&format!("{}@x.id", "a".repeat(65))).is_err());
+    }
+
+    /// `Email::parse` dan `business::is_valid_email` harus كوبlan: satu aturan email
+    /// untuk seluruh platform (akun, profil bisnis, CRM, dan CHECK constraint di DB).
+    #[test]
+    fn email_parse_matches_canonical_rule() {
+        for ok in [
+            "a@toko.id",
+            "budi.santoso@umkm.co.id",
+            "budi+tag@umkm.co.id",
+            "budi@x-y.id",
+        ] {
+            assert!(Email::parse(ok).is_ok(), "{ok}");
+            assert!(is_valid_email(ok), "{ok}");
+        }
+        // Dulu diterima `Email::parse` tapi ditolak `is_valid_email` → kini konsisten.
+        for bad in [
+            "a@b.c",     // TLD 1 huruf
+            "a@b.1id",   // TLD bukan huruf
+            "a..b@x.id", // titik ganda di lokal
+            ".a@x.id",   // titik di tepi lokal
+            "a.@x.id",   // titik di tepi lokal
+            "a@b..id",   // label domain kosong
+            "a@-b.id",   // label domain diawali strip
+            "a@b-.id",   // label domain diakhiri strip
+        ] {
+            assert_eq!(Email::parse(bad), Err(AuthError::InvalidEmail), "{bad:?}");
+            assert!(!is_valid_email(bad), "{bad:?}");
+        }
     }
 
     #[test]

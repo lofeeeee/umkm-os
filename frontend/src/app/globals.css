@@ -1308,11 +1308,16 @@ details.d-details[open] > summary { margin-bottom: var(--sp-3); }
 .d-password .d-icon-btn { position: absolute; right: 2px; top: 50%; translate: 0 -50%; width: 32px; height: 32px; }
 .d-otp { font-size: var(--fs-xl) !important; letter-spacing: 0.3em; text-align: center; font-variant-numeric: tabular-nums; }
 
-/* Dokumen legal */
-.legal-doc { font-size: var(--fs-base); line-height: 1.7; }
-.legal-doc h2 { font-size: var(--fs-md); margin: var(--sp-6) 0 var(--sp-2); }
-.legal-doc p { color: var(--ink-2); }
-.legal-meta { color: var(--muted); font-size: var(--fs-xs); }
+/* Dokumen legal — dipakai dua konteks:
+   1. Dashboard (/legal/syarat, /legal/privasi) → token dasbor.
+   2. Situs toko (/syarat-transaksi, /kebijakan-privasi) → sits DI DALAM bingkai brand kit
+      (latar toko, mis. putih). Kalau ikut token dasbor, teks ikut tema OS: di mode gelap
+      --ink-2 = #d4d4d8 → kontras 1.48:1 di atas putih = tidak terbaca.
+   Karena itu: pakai token situs dulu (--s-*), lalu jatuh ke token dasbor. */
+.legal-doc { font-size: var(--fs-base); line-height: 1.7; color: var(--s-ink, var(--ink)); }
+.legal-doc h2 { font-size: var(--fs-md); margin: var(--sp-6) 0 var(--sp-2); color: var(--s-ink, var(--ink)); }
+.legal-doc p { color: var(--s-ink-2, var(--ink-2)); }
+.legal-meta { color: var(--s-muted, var(--muted)); font-size: var(--fs-xs); }
 main.d-legal { max-width: 720px; }
 
 /* ============================================================
@@ -1326,6 +1331,57 @@ main.d-legal { max-width: 720px; }
 @media (min-width: 1100px) { .st-shell { grid-template-columns: 280px minmax(0, 1fr); } }
 .st-panel { position: sticky; top: calc(var(--topbar-h) + 12px); display: grid; gap: var(--sp-3); padding: var(--sp-3); background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-lg); max-height: calc(100vh - var(--topbar-h) - 24px); overflow-y: auto; }
 @media (max-width: 1099px) { .st-panel { position: static; max-height: none; } }
+/* Panel layer kanan Studio: seperti panel kiri (sx-panel) tetapi di sisi kanan kanvas. */
+.sx-layers { position: static; height: 100%; overflow-y: auto; border: 0; border-left: 1px solid var(--line); border-radius: 0; background: var(--card); display: grid; gap: var(--sp-2); padding: var(--sp-3); align-content: start; }
+.sx-layers[hidden] { display: none; }
+@media (max-width: 900px) {
+  .sx-layers { position: fixed; z-index: var(--z-float); top: 52px; bottom: 0; right: 0; width: min(300px, calc(100vw - 56px)); box-shadow: var(--shadow-dialog); }
+}
+/* Baris layer: ikon + nama + tombol mata/kunci. */
+.sx-layers-items { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.sx-layer-item { display: flex; align-items: center; gap: 2px; border-radius: var(--radius-sm); padding-right: 4px; }
+.sx-layer-item[aria-current="true"] { background: var(--brand-soft); }
+.sx-layer-select {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: 0; border-radius: var(--radius-sm);
+  background: transparent; font: inherit; color: var(--ink); cursor: pointer; text-align: left;
+  transition: background-color var(--dur-fast) ease;
+}
+@media (hover: hover){ .sx-layer-select:hover { background: var(--surface-hover); } }
+.sx-layer-item[aria-current="true"] .sx-layer-select { color: var(--brand-ink-soft); }
+.sx-layer-icon { display: grid; place-items: center; flex: none; width: 24px; height: 24px; border-radius: 6px; background: var(--brand-soft); color: var(--brand-ink-soft); }
+.sx-layer-icon svg { width: 14px; height: 14px; }
+.sx-layer-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-sm); font-weight: 550; }
+.sx-layer-kind { flex: none; font-size: var(--fs-2xs); color: var(--subtle); }
+.sx-layer-item.sx-layer-hidden .sx-layer-name, .sx-layer-item.sx-layer-hidden .sx-layer-kind { opacity: 0.45; text-decoration: line-through; text-decoration-color: var(--line-strong); }
+.sx-layer-eye { display: inline-grid; place-items: center; width: 28px; height: 28px; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--muted); cursor: pointer; padding: 0; flex: none; }
+@media (hover: hover){ .sx-layer-eye:hover { background: var(--surface-active); color: var(--ink); } }
+.sx-layer-eye svg { width: 15px; height: 15px; }
+.sx-layer-eye[aria-pressed="true"] { color: var(--brand-ink-soft); }
+.sx-layer-eye-off { opacity: 0.6; }
+/* Badge jumlah blok tersembunyi di tombol Layer (F4) — pola yang sama dengan lonceng dasbor. */
+.d-icon-btn { position: relative; }
+.sx-layer-badge {
+  position: absolute; top: 2px; right: 2px; min-width: 15px; height: 15px; padding: 0 4px;
+  display: inline-grid; place-items: center; border-radius: 999px;
+  background: var(--warn); color: #fff; font: 700 var(--fs-3xs)/1 inherit; pointer-events: none;
+}
+/* U1: grup baris — label kecil di atas tiap kelompok (melayang / blok halaman / lapisan bebas). */
+.sx-layers-group { display: grid; gap: 2px; }
+.sx-layers-group + .sx-layers-group { margin-top: var(--sp-2); border-top: 1px solid var(--line-soft); padding-top: var(--sp-2); }
+.sx-layers-group-label { margin: 0 0 2px; padding: 0 8px; font: 600 var(--fs-2xs)/1.4 inherit; color: var(--subtle); text-transform: uppercase; letter-spacing: 0.04em; }
+/* F4: tanda "ada blok tersembunyi" + tautan tampilkan semua. */
+.sx-layers-unhide {
+  display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--warn-line);
+  border-radius: var(--radius); background: var(--warn-bg); color: var(--warn);
+  font: inherit; font-size: var(--fs-xs); cursor: pointer; text-align: left;
+}
+.sx-layers-unhide svg { width: 14px; height: 14px; flex: none; }
+@media (hover: hover){ .sx-layers-unhide:hover { border-color: var(--warn); } }
+/* F3: kotak cari di dalam panel layer. */
+.sx-layers-search { margin: 0; }
+/* U3: keadaan kosong dengan aksi. */
+.sx-layers-empty { display: grid; gap: var(--sp-2); justify-items: start; }
+.sx-layers-empty p { margin: 0; }
 .st-section { border-top: 1px solid var(--line); padding-top: var(--sp-3); }
 .st-section h3 { margin: 0 0 8px; font-size: var(--fs-xs); color: var(--muted); font-weight: 600; }
 .st-plugin-icon { display: grid; place-items: center; width: 32px; height: 32px; flex: none; border-radius: var(--radius-sm); background: var(--brand-soft); color: var(--brand-ink-soft); }
@@ -1472,8 +1528,10 @@ main.d-legal { max-width: 720px; }
 .sx-brand em::before { content: "/"; margin: 0 6px; color: var(--line-strong); }
 .sx-spacer { flex: 1 1 auto; }
 .sx-top .d-seg svg { width: 13px; height: 13px; vertical-align: -2px; }
-.sx-body { display: grid; grid-template-columns: 56px 320px minmax(0, 1fr); min-height: 0; }
-.sx-body[data-panel="closed"] { grid-template-columns: 56px minmax(0, 1fr); }
+.sx-body { display: grid; grid-template-columns: 56px 320px minmax(0, 1fr) 260px; min-height: 0; }
+.sx-body[data-panel="closed"] { grid-template-columns: 56px minmax(0, 1fr) 260px; }
+.sx-body[data-layers="closed"] { grid-template-columns: 56px 320px minmax(0, 1fr); }
+.sx-body[data-panel="closed"][data-layers="closed"] { grid-template-columns: 56px minmax(0, 1fr); }
 .sx-panel { position: static; max-height: none; height: 100%; overflow-y: auto; border: 0; border-right: 1px solid var(--line); border-radius: 0; align-content: start; }
 .sx-scroll { overflow: auto; min-height: 0; }
 .sx-canvas { padding: 28px 32px 80px; background: var(--bg-subtle); background-image: radial-gradient(var(--line) 1px, transparent 1px); background-size: 18px 18px; }

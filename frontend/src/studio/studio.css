@@ -46,15 +46,17 @@
 }
 
 /* ---------- Tata letak badan ---------- */
-.sx-body { grid-template-columns: 64px 320px minmax(0, 1fr); }
-.sx-body[data-panel="closed"] { grid-template-columns: 64px minmax(0, 1fr); }
+.sx-body { grid-template-columns: 64px 320px minmax(0, 1fr) 260px; }
+.sx-body[data-panel="closed"] { grid-template-columns: 64px minmax(0, 1fr) 260px; }
+.sx-body[data-layers="closed"] { grid-template-columns: 64px 320px minmax(0, 1fr); }
+.sx-body[data-panel="closed"][data-layers="closed"] { grid-template-columns: 64px minmax(0, 1fr); }
 .st-rail { width: 64px; padding: 10px 0; gap: 6px; }
 .st-rail-btn { width: 52px; height: 52px; border-radius: 12px; font-size: var(--fs-2xs); gap: 4px; transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease; }
 .st-rail-btn svg { width: 22px; height: 22px; }
 .st-rail-btn[aria-pressed="true"] { background: var(--brand-soft); color: var(--brand-ink-soft); }
 .sx-panel { padding: 16px; gap: 16px; background: var(--card); }
 @media (max-width: 900px) {
-  .sx-body, .sx-body[data-panel="closed"] { grid-template-columns: 64px minmax(0, 1fr); }
+  .sx-body, .sx-body[data-panel="closed"], .sx-body[data-layers="closed"], .sx-body[data-panel="closed"][data-layers="closed"] { grid-template-columns: 64px minmax(0, 1fr); }
   .sx-panel { left: 64px; top: 56px; width: min(340px, calc(100vw - 64px)); }
 }
 

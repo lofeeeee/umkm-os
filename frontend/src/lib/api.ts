@@ -133,7 +133,7 @@ export const ERROR_TEXT: Record<string, string> = tmap({
   out_of_range: "di luar rentang",
   invalid_length: "jumlah butir tidak valid",
   invalid_email: "email tidak valid",
-  invalid_phone: "nomor tidak valid (8–15 digit)",
+  invalid_phone: "nomor tidak valid (hanya angka, awalan 0 atau 62)",
   invalid_timezone: "timezone tidak dikenal",
   invalid_time: "format jam HH:MM",
   open_equals_close: "jam buka sama dengan jam tutup",

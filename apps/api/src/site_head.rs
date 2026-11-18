@@ -614,7 +614,7 @@ async fn build_meta(
                 "availability": if v.available { "https://schema.org/InStock" } else { "https://schema.org/OutOfStock" }});
         }
         return Ok(Some(HeadMeta {
-            title: format!("{} — {name}", v.name),
+            title: format!("{} - {name} - UMKM OS", v.name),
             description: clip(v.description.as_deref().unwrap_or(&store_desc), 160),
             url,
             site_name: name,
@@ -680,7 +680,7 @@ async fn build_meta(
             )
         };
         return Ok(Some(HeadMeta {
-            title: format!("{headline} — {name}"),
+            title: format!("{headline} - {name} - UMKM OS"),
             description: clip(&desc, 160),
             url,
             site_name: name,
@@ -691,7 +691,7 @@ async fn build_meta(
         }));
     }
 
-    let title = seo_str("title").unwrap_or_else(|| name.clone());
+    let title = seo_str("title").unwrap_or_else(|| format!("{name} - UMKM OS"));
     Ok(Some(HeadMeta {
         json_ld: Some(local_business(&biz, &site_url, store_image.as_deref())),
         title,
