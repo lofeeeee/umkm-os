@@ -10,7 +10,7 @@ import Link from "@/ui/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
-  LockSimple, LockSimpleOpen, ArrowSquareOut, ClockCounterClockwise, WarningCircle, ArrowClockwise, ArrowCounterClockwise, ArrowLeft, Check, Copy, Desktop, DeviceMobile, DeviceTablet, ImageSquare, MagnifyingGlass, Plus, SidebarSimple, SquaresFour, Trash, X, Crop, CaretDown, Files,
+  LockSimple, LockSimpleOpen, ArrowSquareOut, ClockCounterClockwise, WarningCircle, ArrowClockwise, ArrowCounterClockwise, ArrowLeft, Check, Copy, Desktop, DeviceMobile, DeviceTablet, ImageSquare, MagnifyingGlass, Plus, SidebarSimple, SquaresFour, Stack, Trash, X, Crop, CaretDown, Files,
 } from "@phosphor-icons/react/ssr";
 
 import { useUploads } from "@/dashboard/assets";
@@ -34,6 +34,7 @@ import { readiness, type Issue } from "@/studio/readiness";
 import { TEMPLATES } from "@/studio/templates";
 import { fromDoc, isV2, siteThemeOf, toDoc, withSiteTheme, type PageV2 } from "@/studio/doc";
 import { IconRail, type StudioTab } from "@/studio/IconRail";
+import { LayersPanel } from "@/studio/LayersPanel";
 import { PagesPanel, maxPages, type PageItem, type PageKind } from "@/studio/PagesPanel";
 import { ThemePanel, type ThemeConfig } from "@/studio/ThemePanel";
 import { ShopTextsPanel, SystemPreview, type SystemPage } from "@/studio/SystemPreview";
@@ -98,6 +99,8 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
   const [publishing, setPublishing] = useState(false);
   // Ponsel: kanvas lebih dulu (panel tertutup) dengan pratinjau ponsel — banyak pemilik UMKM hanya punya HP.
   const [panelOpen, setPanelOpen] = useState(() => !narrowScreen());
+  /** Panel Layer kanan (gaya Photoshop): terbuka di desktop, tertutup di ponsel. */
+  const [layersOpen, setLayersOpen] = useState(() => !narrowScreen());
   const [activeTab, setActiveTab] = useState<StudioTab>("elements");
   const [pages, setPages] = useState<PageItem[]>([]);
   const [activeSlug, setActiveSlug] = useState("home");
@@ -377,6 +380,22 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
     update((s) => ({ ...s, cells: s.cells.map((c) => (c.id === id ? { ...c, ...patch } : c)) }), key);
   }, [update]);
   const setChatOpen = useCallback((id: string, open: boolean) => setCell(id, { chatOpen: open }, ""), [setCell]);
+  /** Panel Layer: sembunyikan/tampilkan blok (field `hidden`, skema v2). */
+  const toggleHidden = useCallback((id: string) => {
+    setCell(id, { hidden: !st?.cells.find((c) => c.id === id)?.hidden }, `hide:${id}`);
+  }, [setCell, st]);
+  /** Panel Layer: kunci/buka kunci posisi blok (field `locked`). */
+  const toggleLock = useCallback((id: string) => {
+    setCell(id, { locked: !st?.cells.find((c) => c.id === id)?.locked }, "");
+  }, [setCell, st]);
+  /** Panel Layer (F1): pindahkan blok satu langkah — mesin yang sama dengan tombol atas/bawah Inspector. */
+  function moveLayer(id: string, dir: "up" | "down") {
+    moveCell(id, dir);
+  }
+  /** Panel Layer (F4): tampilkan lagi semua blok yang disembunyikan (satu langkah urungkan). */
+  const showAllHidden = useCallback(() => {
+    update((s) => ({ ...s, cells: s.cells.map((c) => (c.hidden ? { ...c, hidden: undefined } : c)) }), "unhide-all");
+  }, [update]);
 
   function add(kind: PluginKind, at?: { x: number; y: number }) {
     if (SINGLE.includes(kind) && st?.cells.some((c) => c.kind === kind)) { toast.info(tx("{0} sudah ada di halaman.", pluginDef(kind).name)); return; }
@@ -586,6 +605,9 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
 
   const selected = st.cells.find((c) => c.id === sel) ?? null;
   const gridCells = st.cells.filter((c) => !isEmbed(c));
+  /** Blok yang disembunyikan lewat panel Layer — badge di tombol Layer supaya tidak ada terbitan
+   *  yang tanpa sengaja kehilangan blok (pemilik bisa lupa menyembunyikan). */
+  const hiddenCount = st.cells.filter((c) => c.hidden).length;
   const activePage = pages.find((p) => p.slug === activeSlug);
 
   const cropOf = (c: StudioCell) => {
@@ -644,6 +666,10 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
         <button type="button" className="d-icon-btn sx-hide-sm" onClick={() => setPanelOpen(!panelOpen)} aria-pressed={panelOpen} aria-label={panelOpen ? tx("Sembunyikan panel") : tx("Tampilkan panel")} title={panelOpen ? tx("Sembunyikan panel") : tx("Tampilkan panel")}>
           <SidebarSimple weight={panelOpen ? "fill" : "bold"} />
         </button>
+        <button type="button" className="d-icon-btn" onClick={() => setLayersOpen(!layersOpen)} aria-pressed={layersOpen} aria-label={layersOpen ? tx("Sembunyikan panel Layer") : tx("Tampilkan panel Layer")} title={layersOpen ? tx("Sembunyikan panel Layer") : tx("Tampilkan panel Layer")}>
+          <Stack weight={layersOpen ? "fill" : "bold"} />
+          {hiddenCount > 0 && <span className="sx-layer-badge" aria-hidden="true">{hiddenCount}</span>}
+        </button>
         <span className="sx-sep" aria-hidden="true" />
         <button type="button" className="sx-page" onClick={() => selectTab("pages")} title={tx("Ganti atau tambah halaman")}>
           <Files weight="duotone" aria-hidden="true" />
@@ -685,7 +711,7 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
         </button>
       </header>
 
-      <div className="sx-body" data-panel={panelOpen ? "open" : "closed"}>
+      <div className="sx-body" data-panel={panelOpen ? "open" : "closed"} data-layers={layersOpen ? "open" : "closed"}>
         <IconRail activeTab={selected ? null : activeTab} onSelectTab={selectTab} />
         <aside className="st-panel sx-panel" aria-label={selected ? tx("Pengaturan blok") : activeTab === "pages" ? tx("Halaman") : activeTab === "theme" ? tx("Desain") : activeTab === "draw" ? tx("Coretan") : tx("Blok")} hidden={!panelOpen}>
           {systemPage ? (
@@ -852,6 +878,21 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
             </div>
           )}
         </main>
+
+        {/* Panel Layer (kanan, gaya Photoshop/Canva): alat tetap di kiri, layer di kanan. */}
+        <aside className="sx-layers" aria-label={tx("Layer halaman")} hidden={!layersOpen}
+          style={layersOpen ? undefined : { display: "none" }}>
+          <LayersPanel
+            cells={st.cells}
+            selectedId={sel}
+            onSelect={setSel}
+            onToggleHidden={toggleHidden}
+            onToggleLock={toggleLock}
+            onMove={moveLayer}
+            onAddBlocks={() => selectTab("elements")}
+            onShowAll={showAllHidden}
+          />
+        </aside>
       </div>
       </div>
 

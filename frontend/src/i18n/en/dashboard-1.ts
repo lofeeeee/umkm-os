@@ -379,6 +379,8 @@ export const DASHBOARD_1: Record<string, string> = {
   "Alamat *": "Address *",
   "Latitude": "Latitude",
   "Longitude": "Longitude",
+  "Boleh negatif. Latitude -90..90, bujur -180..180.": "Negative values are allowed. Latitude -90..90, longitude -180..180.",
+  "{0} harus antara {1} dan {2}.": "{0} must be between {1} and {2}.",
   "Hapus alamat": "Remove address",
   "Tambah alamat": "Add address",
   "Jam tutup lebih kecil dari jam buka berarti tutup lewat tengah malam.": "A closing time earlier than the opening time means closing after midnight.",
