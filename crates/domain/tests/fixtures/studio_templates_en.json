@@ -6,11 +6,31 @@
       "primary": "#C2410C",
       "font": "poppins",
       "surface": "cream",
-      "text_scale": 1
+      "text_scale": 1,
+      "heading_font": "fraunces",
+      "accent": "#B45309",
+      "radius": "round",
+      "motion": "subtle",
+      "texture": "paper"
     },
     "blocks": [
       {
-        "id": "hero-1",
+        "id": "background-1",
+        "kind": "background",
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 10,
+        "style": "plain",
+        "data": {
+          "color": "#FFF1E6",
+          "bleed": true,
+          "edge_bottom": "wave"
+        },
+        "auto_height": false
+      },
+      {
+        "id": "hero-2",
         "kind": "hero",
         "x": 0,
         "y": 0,
@@ -28,7 +48,7 @@
         "auto_height": true
       },
       {
-        "id": "chatbot-2",
+        "id": "chatbot-3",
         "kind": "chatbot",
         "x": 8,
         "y": 0,
@@ -44,7 +64,7 @@
         "chat_open": true
       },
       {
-        "id": "promotion-3",
+        "id": "promotion-4",
         "kind": "promotion",
         "x": 0,
         "y": 10,
@@ -62,7 +82,7 @@
         "auto_height": true
       },
       {
-        "id": "product-grid-4",
+        "id": "product-grid-5",
         "kind": "product_grid",
         "x": 0,
         "y": 15,
@@ -77,7 +97,7 @@
         "layout": "grid"
       },
       {
-        "id": "business-hours-5",
+        "id": "business-hours-6",
         "kind": "business_hours",
         "x": 0,
         "y": 27,
@@ -90,7 +110,7 @@
         "auto_height": true
       },
       {
-        "id": "location-6",
+        "id": "location-7",
         "kind": "location",
         "x": 4,
         "y": 27,
@@ -104,7 +124,7 @@
         "auto_height": true
       },
       {
-        "id": "contact-7",
+        "id": "contact-8",
         "kind": "contact",
         "x": 8,
         "y": 27,
@@ -121,7 +141,7 @@
         "auto_height": true
       },
       {
-        "id": "testimonials-8",
+        "id": "testimonials-9",
         "kind": "testimonials",
         "x": 0,
         "y": 36,
@@ -149,6 +169,309 @@
       }
     ]
   },
+  "hangat/menu": {
+    "schema_version": 2,
+    "template": "modern_store",
+    "theme": {
+      "primary": "#C2410C",
+      "font": "poppins",
+      "surface": "cream",
+      "text_scale": 1,
+      "heading_font": "fraunces",
+      "accent": "#B45309",
+      "radius": "round",
+      "motion": "subtle",
+      "texture": "paper"
+    },
+    "blocks": [
+      {
+        "id": "background-1",
+        "kind": "background",
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 7,
+        "style": "plain",
+        "data": {
+          "color": "#FFF1E6",
+          "bleed": true,
+          "edge_bottom": "wave"
+        },
+        "auto_height": false
+      },
+      {
+        "id": "text-2",
+        "kind": "text",
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 6,
+        "style": "plain",
+        "data": {
+          "title": "Menu",
+          "body": "All our menu are here — choose, order online, then pick up or have it delivered."
+        },
+        "auto_height": true
+      },
+      {
+        "id": "product-grid-3",
+        "kind": "product_grid",
+        "x": 0,
+        "y": 6,
+        "w": 12,
+        "h": 14,
+        "style": "plain",
+        "data": {
+          "title": "All menu",
+          "limit": 24
+        },
+        "auto_height": true,
+        "layout": "grid"
+      },
+      {
+        "id": "promotion-4",
+        "kind": "promotion",
+        "x": 0,
+        "y": 20,
+        "w": 7,
+        "h": 6,
+        "style": "tint",
+        "data": {
+          "title": "Not sure what to choose?",
+          "body": "Ask for our recommendations via chat or WhatsApp.",
+          "cta": {
+            "label": "Ask now",
+            "href": "#kontak"
+          }
+        },
+        "auto_height": true
+      },
+      {
+        "id": "contact-5",
+        "kind": "contact",
+        "x": 7,
+        "y": 20,
+        "w": 5,
+        "h": 6,
+        "style": "card",
+        "data": {
+          "title": "Quick order",
+          "show_whatsapp": true,
+          "show_phone": true,
+          "show_email": false,
+          "socials": []
+        },
+        "auto_height": true
+      }
+    ]
+  },
+  "hangat/tentang": {
+    "schema_version": 2,
+    "template": "modern_store",
+    "theme": {
+      "primary": "#C2410C",
+      "font": "poppins",
+      "surface": "cream",
+      "text_scale": 1,
+      "heading_font": "fraunces",
+      "accent": "#B45309",
+      "radius": "round",
+      "motion": "subtle",
+      "texture": "paper"
+    },
+    "blocks": [
+      {
+        "id": "about-1",
+        "kind": "about",
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 9,
+        "style": "plain",
+        "data": {
+          "title": "The Kopi Senja Bandung story",
+          "body": "Kedai kopi rumahan dengan biji pilihan."
+        },
+        "auto_height": true
+      },
+      {
+        "id": "shape-2",
+        "kind": "shape",
+        "x": 10,
+        "y": 0,
+        "w": 2,
+        "h": 3,
+        "style": "plain",
+        "data": {
+          "shape": "sparkle",
+          "color": "accent",
+          "opacity": 80,
+          "rotate": 12
+        },
+        "auto_height": false,
+        "layout": "below"
+      },
+      {
+        "id": "gallery-3",
+        "kind": "gallery",
+        "x": 0,
+        "y": 9,
+        "w": 12,
+        "h": 8,
+        "style": "plain",
+        "data": {
+          "title": "Behind the scenes",
+          "images": []
+        },
+        "auto_height": true
+      },
+      {
+        "id": "business-hours-4",
+        "kind": "business_hours",
+        "x": 0,
+        "y": 17,
+        "w": 4,
+        "h": 9,
+        "style": "card",
+        "data": {
+          "title": "Opening hours"
+        },
+        "auto_height": true
+      },
+      {
+        "id": "location-5",
+        "kind": "location",
+        "x": 4,
+        "y": 17,
+        "w": 4,
+        "h": 6,
+        "style": "card",
+        "data": {
+          "title": "Location",
+          "show_map": true
+        },
+        "auto_height": true
+      },
+      {
+        "id": "contact-6",
+        "kind": "contact",
+        "x": 8,
+        "y": 17,
+        "w": 4,
+        "h": 6,
+        "style": "card",
+        "data": {
+          "title": "Contact",
+          "show_whatsapp": true,
+          "show_phone": true,
+          "show_email": true,
+          "socials": []
+        },
+        "auto_height": true
+      }
+    ]
+  },
+  "hangat/blog": {
+    "schema_version": 2,
+    "template": "modern_store",
+    "theme": {
+      "primary": "#C2410C",
+      "font": "poppins",
+      "surface": "cream",
+      "text_scale": 1,
+      "heading_font": "fraunces",
+      "accent": "#B45309",
+      "radius": "round",
+      "motion": "subtle",
+      "texture": "paper"
+    },
+    "blocks": [
+      {
+        "id": "text-1",
+        "kind": "text",
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 5,
+        "style": "plain",
+        "data": {
+          "title": "Blog & tips",
+          "body": "News, stories and tips from Kopi Senja Bandung."
+        },
+        "auto_height": true
+      },
+      {
+        "id": "blog-list-2",
+        "kind": "blog_list",
+        "x": 0,
+        "y": 5,
+        "w": 12,
+        "h": 12,
+        "style": "plain",
+        "data": {
+          "title": "Latest articles",
+          "limit": 9
+        },
+        "auto_height": true,
+        "layout": "grid"
+      }
+    ]
+  },
+  "hangat/tips-pesanan-tetap-enak": {
+    "schema_version": 2,
+    "template": "modern_store",
+    "theme": {
+      "primary": "#C2410C",
+      "font": "poppins",
+      "surface": "cream",
+      "text_scale": 1,
+      "heading_font": "fraunces",
+      "accent": "#B45309",
+      "radius": "round",
+      "motion": "subtle",
+      "texture": "paper"
+    },
+    "blocks": [
+      {
+        "id": "article-body-1",
+        "kind": "article_body",
+        "x": 2,
+        "y": 0,
+        "w": 8,
+        "h": 24,
+        "style": "plain",
+        "data": {
+          "body": "## Store it properly\nAs soon as your order arrives, keep soupy and dry dishes apart. Use a covered container if you won't eat right away.\n\n## Reheat without ruining the taste\n- Soupy dishes: warm in a pot over low heat.\n- Fried food: use an oven or a dry pan to keep it crispy.\n- Avoid reheating more than once.\n\n## How long is it safe?\n1. Room temperature: up to 4 hours.\n2. Fridge: 1–2 days in a covered container.\n\n> Questions about the menu? Ask us via chat — we're happy to help.",
+          "toc": true
+        },
+        "auto_height": true
+      },
+      {
+        "id": "blog-list-2",
+        "kind": "blog_list",
+        "x": 0,
+        "y": 24,
+        "w": 12,
+        "h": 10,
+        "style": "plain",
+        "data": {
+          "title": "More articles",
+          "limit": 3
+        },
+        "auto_height": true,
+        "layout": "grid"
+      }
+    ],
+    "article": {
+      "excerpt": "How to store and reheat your order so it tastes freshly cooked.",
+      "author": "Kopi Senja Bandung",
+      "published_at": "2026-01-01",
+      "tags": [
+        "tips",
+        "food"
+      ]
+    }
+  },
   "butik": {
     "schema_version": 2,
     "template": "modern_store",
@@ -156,11 +479,30 @@
       "primary": "#BE185D",
       "font": "fraunces",
       "surface": "light",
-      "text_scale": 1
+      "text_scale": 1,
+      "heading_font": "playfair",
+      "accent": "#9D174D",
+      "radius": "sharp",
+      "motion": "subtle"
     },
     "blocks": [
       {
-        "id": "hero-1",
+        "id": "background-1",
+        "kind": "background",
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 10,
+        "style": "plain",
+        "data": {
+          "color": "#FDF2F8",
+          "bleed": true,
+          "edge_bottom": "curve"
+        },
+        "auto_height": false
+      },
+      {
+        "id": "hero-2",
         "kind": "hero",
         "x": 0,
         "y": 0,
@@ -178,7 +520,7 @@
         "auto_height": true
       },
       {
-        "id": "product-grid-2",
+        "id": "product-grid-3",
         "kind": "product_grid",
         "x": 0,
         "y": 10,
@@ -193,7 +535,7 @@
         "layout": "carousel"
       },
       {
-        "id": "about-3",
+        "id": "about-4",
         "kind": "about",
         "x": 0,
         "y": 22,
@@ -207,7 +549,7 @@
         "auto_height": true
       },
       {
-        "id": "gallery-4",
+        "id": "gallery-5",
         "kind": "gallery",
         "x": 6,
         "y": 22,
@@ -221,7 +563,7 @@
         "auto_height": true
       },
       {
-        "id": "testimonials-5",
+        "id": "testimonials-6",
         "kind": "testimonials",
         "x": 0,
         "y": 30,
@@ -248,7 +590,7 @@
         "auto_height": true
       },
       {
-        "id": "chatbot-6",
+        "id": "chatbot-7",
         "kind": "chatbot",
         "x": 8,
         "y": 38,
@@ -265,6 +607,305 @@
       }
     ]
   },
+  "butik/koleksi": {
+    "schema_version": 2,
+    "template": "modern_store",
+    "theme": {
+      "primary": "#BE185D",
+      "font": "fraunces",
+      "surface": "light",
+      "text_scale": 1,
+      "heading_font": "playfair",
+      "accent": "#9D174D",
+      "radius": "sharp",
+      "motion": "subtle"
+    },
+    "blocks": [
+      {
+        "id": "background-1",
+        "kind": "background",
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 7,
+        "style": "plain",
+        "data": {
+          "color": "#FDF2F8",
+          "bleed": true,
+          "edge_bottom": "curve"
+        },
+        "auto_height": false
+      },
+      {
+        "id": "text-2",
+        "kind": "text",
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 6,
+        "style": "plain",
+        "data": {
+          "title": "Collection",
+          "body": "All our collection are here — choose, order online, then pick up or have it delivered."
+        },
+        "auto_height": true
+      },
+      {
+        "id": "product-grid-3",
+        "kind": "product_grid",
+        "x": 0,
+        "y": 6,
+        "w": 12,
+        "h": 14,
+        "style": "plain",
+        "data": {
+          "title": "All collection",
+          "limit": 24
+        },
+        "auto_height": true,
+        "layout": "grid"
+      },
+      {
+        "id": "promotion-4",
+        "kind": "promotion",
+        "x": 0,
+        "y": 20,
+        "w": 7,
+        "h": 6,
+        "style": "tint",
+        "data": {
+          "title": "Not sure what to choose?",
+          "body": "Ask for our recommendations via chat or WhatsApp.",
+          "cta": {
+            "label": "Ask now",
+            "href": "#kontak"
+          }
+        },
+        "auto_height": true
+      },
+      {
+        "id": "contact-5",
+        "kind": "contact",
+        "x": 7,
+        "y": 20,
+        "w": 5,
+        "h": 6,
+        "style": "card",
+        "data": {
+          "title": "Quick order",
+          "show_whatsapp": true,
+          "show_phone": true,
+          "show_email": false,
+          "socials": []
+        },
+        "auto_height": true
+      }
+    ]
+  },
+  "butik/tentang": {
+    "schema_version": 2,
+    "template": "modern_store",
+    "theme": {
+      "primary": "#BE185D",
+      "font": "fraunces",
+      "surface": "light",
+      "text_scale": 1,
+      "heading_font": "playfair",
+      "accent": "#9D174D",
+      "radius": "sharp",
+      "motion": "subtle"
+    },
+    "blocks": [
+      {
+        "id": "about-1",
+        "kind": "about",
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 9,
+        "style": "plain",
+        "data": {
+          "title": "The Kopi Senja Bandung story",
+          "body": "Kedai kopi rumahan dengan biji pilihan."
+        },
+        "auto_height": true
+      },
+      {
+        "id": "shape-2",
+        "kind": "shape",
+        "x": 10,
+        "y": 0,
+        "w": 2,
+        "h": 3,
+        "style": "plain",
+        "data": {
+          "shape": "sparkle",
+          "color": "accent",
+          "opacity": 80,
+          "rotate": 12
+        },
+        "auto_height": false,
+        "layout": "below"
+      },
+      {
+        "id": "gallery-3",
+        "kind": "gallery",
+        "x": 0,
+        "y": 9,
+        "w": 12,
+        "h": 8,
+        "style": "plain",
+        "data": {
+          "title": "Behind the scenes",
+          "images": []
+        },
+        "auto_height": true
+      },
+      {
+        "id": "business-hours-4",
+        "kind": "business_hours",
+        "x": 0,
+        "y": 17,
+        "w": 4,
+        "h": 9,
+        "style": "card",
+        "data": {
+          "title": "Opening hours"
+        },
+        "auto_height": true
+      },
+      {
+        "id": "location-5",
+        "kind": "location",
+        "x": 4,
+        "y": 17,
+        "w": 4,
+        "h": 6,
+        "style": "card",
+        "data": {
+          "title": "Location",
+          "show_map": true
+        },
+        "auto_height": true
+      },
+      {
+        "id": "contact-6",
+        "kind": "contact",
+        "x": 8,
+        "y": 17,
+        "w": 4,
+        "h": 6,
+        "style": "card",
+        "data": {
+          "title": "Contact",
+          "show_whatsapp": true,
+          "show_phone": true,
+          "show_email": true,
+          "socials": []
+        },
+        "auto_height": true
+      }
+    ]
+  },
+  "butik/blog": {
+    "schema_version": 2,
+    "template": "modern_store",
+    "theme": {
+      "primary": "#BE185D",
+      "font": "fraunces",
+      "surface": "light",
+      "text_scale": 1,
+      "heading_font": "playfair",
+      "accent": "#9D174D",
+      "radius": "sharp",
+      "motion": "subtle"
+    },
+    "blocks": [
+      {
+        "id": "text-1",
+        "kind": "text",
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 5,
+        "style": "plain",
+        "data": {
+          "title": "Blog & tips",
+          "body": "News, stories and tips from Kopi Senja Bandung."
+        },
+        "auto_height": true
+      },
+      {
+        "id": "blog-list-2",
+        "kind": "blog_list",
+        "x": 0,
+        "y": 5,
+        "w": 12,
+        "h": 12,
+        "style": "plain",
+        "data": {
+          "title": "Latest articles",
+          "limit": 9
+        },
+        "auto_height": true,
+        "layout": "grid"
+      }
+    ]
+  },
+  "butik/cara-memilih-produk": {
+    "schema_version": 2,
+    "template": "modern_store",
+    "theme": {
+      "primary": "#BE185D",
+      "font": "fraunces",
+      "surface": "light",
+      "text_scale": 1,
+      "heading_font": "playfair",
+      "accent": "#9D174D",
+      "radius": "sharp",
+      "motion": "subtle"
+    },
+    "blocks": [
+      {
+        "id": "article-body-1",
+        "kind": "article_body",
+        "x": 2,
+        "y": 0,
+        "w": 8,
+        "h": 24,
+        "style": "plain",
+        "data": {
+          "body": "## Know what you need\nBefore buying, decide what the product is for and what budget feels comfortable.\n\n## Check the details\n- Read the description and sizes carefully.\n- Look at photos from several angles.\n- Check other buyers' reviews.\n\n## Still unsure?\nAsk us directly via chat or WhatsApp. We'll help you choose the best fit.\n\n> Buying right saves money — no exchanges or repeat purchases.",
+          "toc": true
+        },
+        "auto_height": true
+      },
+      {
+        "id": "blog-list-2",
+        "kind": "blog_list",
+        "x": 0,
+        "y": 24,
+        "w": 12,
+        "h": 10,
+        "style": "plain",
+        "data": {
+          "title": "More articles",
+          "limit": 3
+        },
+        "auto_height": true,
+        "layout": "grid"
+      }
+    ],
+    "article": {
+      "excerpt": "A short guide to choosing well: know your needs, check the details and use our Q&A.",
+      "author": "Kopi Senja Bandung",
+      "published_at": "2026-01-01",
+      "tags": [
+        "guide",
+        "shopping"
+      ]
+    }
+  },
   "profesional": {
     "schema_version": 2,
     "template": "modern_store",
@@ -272,11 +913,29 @@
       "primary": "#0369A1",
       "font": "jakarta",
       "surface": "light",
-      "text_scale": 1
+      "text_scale": 1,
+      "heading_font": "grotesk",
+      "accent": "#0E7490",
+      "motion": "subtle"
     },
     "blocks": [
       {
-        "id": "hero-1",
+        "id": "background-1",
+        "kind": "background",
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 10,
+        "style": "plain",
+        "data": {
+          "color": "#EFF6FF",
+          "bleed": true,
+          "edge_bottom": "slant"
+        },
+        "auto_height": false
+      },
+      {
+        "id": "hero-2",
         "kind": "hero",
         "x": 0,
         "y": 0,
@@ -294,7 +953,7 @@
         "auto_height": true
       },
       {
-        "id": "contact-2",
+        "id": "contact-3",
         "kind": "contact",
         "x": 7,
         "y": 0,
@@ -311,7 +970,7 @@
         "auto_height": true
       },
       {
-        "id": "about-3",
+        "id": "about-4",
         "kind": "about",
         "x": 0,
         "y": 10,
@@ -325,7 +984,7 @@
         "auto_height": true
       },
       {
-        "id": "product-grid-4",
+        "id": "product-grid-5",
         "kind": "product_grid",
         "x": 0,
         "y": 17,
@@ -340,7 +999,7 @@
         "layout": "list"
       },
       {
-        "id": "testimonials-5",
+        "id": "testimonials-6",
         "kind": "testimonials",
         "x": 0,
         "y": 27,
@@ -367,7 +1026,7 @@
         "auto_height": true
       },
       {
-        "id": "business-hours-6",
+        "id": "business-hours-7",
         "kind": "business_hours",
         "x": 0,
         "y": 35,
@@ -380,7 +1039,7 @@
         "auto_height": true
       },
       {
-        "id": "location-7",
+        "id": "location-8",
         "kind": "location",
         "x": 6,
         "y": 35,
@@ -394,7 +1053,7 @@
         "auto_height": true
       },
       {
-        "id": "chatbot-8",
+        "id": "chatbot-9",
         "kind": "chatbot",
         "x": 8,
         "y": 41,
@@ -411,6 +1070,301 @@
       }
     ]
   },
+  "profesional/layanan": {
+    "schema_version": 2,
+    "template": "modern_store",
+    "theme": {
+      "primary": "#0369A1",
+      "font": "jakarta",
+      "surface": "light",
+      "text_scale": 1,
+      "heading_font": "grotesk",
+      "accent": "#0E7490",
+      "motion": "subtle"
+    },
+    "blocks": [
+      {
+        "id": "background-1",
+        "kind": "background",
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 7,
+        "style": "plain",
+        "data": {
+          "color": "#EFF6FF",
+          "bleed": true,
+          "edge_bottom": "slant"
+        },
+        "auto_height": false
+      },
+      {
+        "id": "text-2",
+        "kind": "text",
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 6,
+        "style": "plain",
+        "data": {
+          "title": "Service",
+          "body": "All our services are here — choose, order online, then pick up or have it delivered."
+        },
+        "auto_height": true
+      },
+      {
+        "id": "product-grid-3",
+        "kind": "product_grid",
+        "x": 0,
+        "y": 6,
+        "w": 12,
+        "h": 14,
+        "style": "plain",
+        "data": {
+          "title": "All services",
+          "limit": 24
+        },
+        "auto_height": true,
+        "layout": "grid"
+      },
+      {
+        "id": "promotion-4",
+        "kind": "promotion",
+        "x": 0,
+        "y": 20,
+        "w": 7,
+        "h": 6,
+        "style": "tint",
+        "data": {
+          "title": "Not sure what to choose?",
+          "body": "Ask for our recommendations via chat or WhatsApp.",
+          "cta": {
+            "label": "Ask now",
+            "href": "#kontak"
+          }
+        },
+        "auto_height": true
+      },
+      {
+        "id": "contact-5",
+        "kind": "contact",
+        "x": 7,
+        "y": 20,
+        "w": 5,
+        "h": 6,
+        "style": "card",
+        "data": {
+          "title": "Quick order",
+          "show_whatsapp": true,
+          "show_phone": true,
+          "show_email": false,
+          "socials": []
+        },
+        "auto_height": true
+      }
+    ]
+  },
+  "profesional/tentang": {
+    "schema_version": 2,
+    "template": "modern_store",
+    "theme": {
+      "primary": "#0369A1",
+      "font": "jakarta",
+      "surface": "light",
+      "text_scale": 1,
+      "heading_font": "grotesk",
+      "accent": "#0E7490",
+      "motion": "subtle"
+    },
+    "blocks": [
+      {
+        "id": "about-1",
+        "kind": "about",
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 9,
+        "style": "plain",
+        "data": {
+          "title": "The Kopi Senja Bandung story",
+          "body": "Kedai kopi rumahan dengan biji pilihan."
+        },
+        "auto_height": true
+      },
+      {
+        "id": "shape-2",
+        "kind": "shape",
+        "x": 10,
+        "y": 0,
+        "w": 2,
+        "h": 3,
+        "style": "plain",
+        "data": {
+          "shape": "sparkle",
+          "color": "accent",
+          "opacity": 80,
+          "rotate": 12
+        },
+        "auto_height": false,
+        "layout": "below"
+      },
+      {
+        "id": "gallery-3",
+        "kind": "gallery",
+        "x": 0,
+        "y": 9,
+        "w": 12,
+        "h": 8,
+        "style": "plain",
+        "data": {
+          "title": "Behind the scenes",
+          "images": []
+        },
+        "auto_height": true
+      },
+      {
+        "id": "business-hours-4",
+        "kind": "business_hours",
+        "x": 0,
+        "y": 17,
+        "w": 4,
+        "h": 9,
+        "style": "card",
+        "data": {
+          "title": "Opening hours"
+        },
+        "auto_height": true
+      },
+      {
+        "id": "location-5",
+        "kind": "location",
+        "x": 4,
+        "y": 17,
+        "w": 4,
+        "h": 6,
+        "style": "card",
+        "data": {
+          "title": "Location",
+          "show_map": true
+        },
+        "auto_height": true
+      },
+      {
+        "id": "contact-6",
+        "kind": "contact",
+        "x": 8,
+        "y": 17,
+        "w": 4,
+        "h": 6,
+        "style": "card",
+        "data": {
+          "title": "Contact",
+          "show_whatsapp": true,
+          "show_phone": true,
+          "show_email": true,
+          "socials": []
+        },
+        "auto_height": true
+      }
+    ]
+  },
+  "profesional/blog": {
+    "schema_version": 2,
+    "template": "modern_store",
+    "theme": {
+      "primary": "#0369A1",
+      "font": "jakarta",
+      "surface": "light",
+      "text_scale": 1,
+      "heading_font": "grotesk",
+      "accent": "#0E7490",
+      "motion": "subtle"
+    },
+    "blocks": [
+      {
+        "id": "text-1",
+        "kind": "text",
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 5,
+        "style": "plain",
+        "data": {
+          "title": "Blog & tips",
+          "body": "News, stories and tips from Kopi Senja Bandung."
+        },
+        "auto_height": true
+      },
+      {
+        "id": "blog-list-2",
+        "kind": "blog_list",
+        "x": 0,
+        "y": 5,
+        "w": 12,
+        "h": 12,
+        "style": "plain",
+        "data": {
+          "title": "Latest articles",
+          "limit": 9
+        },
+        "auto_height": true,
+        "layout": "grid"
+      }
+    ]
+  },
+  "profesional/persiapan-sebelum-datang": {
+    "schema_version": 2,
+    "template": "modern_store",
+    "theme": {
+      "primary": "#0369A1",
+      "font": "jakarta",
+      "surface": "light",
+      "text_scale": 1,
+      "heading_font": "grotesk",
+      "accent": "#0E7490",
+      "motion": "subtle"
+    },
+    "blocks": [
+      {
+        "id": "article-body-1",
+        "kind": "article_body",
+        "x": 2,
+        "y": 0,
+        "w": 8,
+        "h": 24,
+        "style": "plain",
+        "data": {
+          "body": "## Book ahead\nSchedule through chat or WhatsApp so you don't have to wait long.\n\n## Prepare the key details\n- Describe what you need clearly.\n- Bring a photo or example of the result you want, if you have one.\n\n## After the service\n1. Check the result together with us.\n2. Keep your receipt and your next appointment date.\n\n> Your satisfaction is our priority — share feedback any time.",
+          "toc": true
+        },
+        "auto_height": true
+      },
+      {
+        "id": "blog-list-2",
+        "kind": "blog_list",
+        "x": 0,
+        "y": 24,
+        "w": 12,
+        "h": 10,
+        "style": "plain",
+        "data": {
+          "title": "More articles",
+          "limit": 3
+        },
+        "auto_height": true,
+        "layout": "grid"
+      }
+    ],
+    "article": {
+      "excerpt": "Simple things that make the service faster, more comfortable and closer to what you expect.",
+      "author": "Kopi Senja Bandung",
+      "published_at": "2026-01-01",
+      "tags": [
+        "guide",
+        "services"
+      ]
+    }
+  },
   "galeri": {
     "schema_version": 2,
     "template": "modern_store",
@@ -418,11 +1372,30 @@
       "primary": "#92400E",
       "font": "merriweather",
       "surface": "cream",
-      "text_scale": 1
+      "text_scale": 1,
+      "heading_font": "dmserif",
+      "accent": "#92400E",
+      "motion": "subtle",
+      "texture": "paper"
     },
     "blocks": [
       {
-        "id": "hero-1",
+        "id": "background-1",
+        "kind": "background",
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 9,
+        "style": "plain",
+        "data": {
+          "color": "#FBF3E4",
+          "bleed": true,
+          "edge_bottom": "wave"
+        },
+        "auto_height": false
+      },
+      {
+        "id": "hero-2",
         "kind": "hero",
         "x": 0,
         "y": 0,
@@ -440,7 +1413,7 @@
         "auto_height": true
       },
       {
-        "id": "gallery-2",
+        "id": "gallery-3",
         "kind": "gallery",
         "x": 0,
         "y": 9,
@@ -454,7 +1427,7 @@
         "auto_height": true
       },
       {
-        "id": "product-grid-3",
+        "id": "product-grid-4",
         "kind": "product_grid",
         "x": 0,
         "y": 17,
@@ -469,7 +1442,7 @@
         "layout": "grid"
       },
       {
-        "id": "about-4",
+        "id": "about-5",
         "kind": "about",
         "x": 0,
         "y": 29,
@@ -483,7 +1456,7 @@
         "auto_height": true
       },
       {
-        "id": "testimonials-5",
+        "id": "testimonials-6",
         "kind": "testimonials",
         "x": 6,
         "y": 29,
@@ -506,7 +1479,7 @@
         "auto_height": true
       },
       {
-        "id": "chatbot-6",
+        "id": "chatbot-7",
         "kind": "chatbot",
         "x": 0,
         "y": 37,
@@ -522,7 +1495,7 @@
         "chat_open": true
       },
       {
-        "id": "contact-7",
+        "id": "contact-8",
         "kind": "contact",
         "x": 4,
         "y": 37,
@@ -539,7 +1512,7 @@
         "auto_height": true
       },
       {
-        "id": "location-8",
+        "id": "location-9",
         "kind": "location",
         "x": 8,
         "y": 37,
@@ -554,6 +1527,305 @@
       }
     ]
   },
+  "galeri/karya": {
+    "schema_version": 2,
+    "template": "modern_store",
+    "theme": {
+      "primary": "#92400E",
+      "font": "merriweather",
+      "surface": "cream",
+      "text_scale": 1,
+      "heading_font": "dmserif",
+      "accent": "#92400E",
+      "motion": "subtle",
+      "texture": "paper"
+    },
+    "blocks": [
+      {
+        "id": "background-1",
+        "kind": "background",
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 7,
+        "style": "plain",
+        "data": {
+          "color": "#FBF3E4",
+          "bleed": true,
+          "edge_bottom": "wave"
+        },
+        "auto_height": false
+      },
+      {
+        "id": "text-2",
+        "kind": "text",
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 6,
+        "style": "plain",
+        "data": {
+          "title": "Our work",
+          "body": "All our works are here — choose, order online, then pick up or have it delivered."
+        },
+        "auto_height": true
+      },
+      {
+        "id": "product-grid-3",
+        "kind": "product_grid",
+        "x": 0,
+        "y": 6,
+        "w": 12,
+        "h": 14,
+        "style": "plain",
+        "data": {
+          "title": "All works",
+          "limit": 24
+        },
+        "auto_height": true,
+        "layout": "grid"
+      },
+      {
+        "id": "promotion-4",
+        "kind": "promotion",
+        "x": 0,
+        "y": 20,
+        "w": 7,
+        "h": 6,
+        "style": "tint",
+        "data": {
+          "title": "Not sure what to choose?",
+          "body": "Ask for our recommendations via chat or WhatsApp.",
+          "cta": {
+            "label": "Ask now",
+            "href": "#kontak"
+          }
+        },
+        "auto_height": true
+      },
+      {
+        "id": "contact-5",
+        "kind": "contact",
+        "x": 7,
+        "y": 20,
+        "w": 5,
+        "h": 6,
+        "style": "card",
+        "data": {
+          "title": "Quick order",
+          "show_whatsapp": true,
+          "show_phone": true,
+          "show_email": false,
+          "socials": []
+        },
+        "auto_height": true
+      }
+    ]
+  },
+  "galeri/tentang": {
+    "schema_version": 2,
+    "template": "modern_store",
+    "theme": {
+      "primary": "#92400E",
+      "font": "merriweather",
+      "surface": "cream",
+      "text_scale": 1,
+      "heading_font": "dmserif",
+      "accent": "#92400E",
+      "motion": "subtle",
+      "texture": "paper"
+    },
+    "blocks": [
+      {
+        "id": "about-1",
+        "kind": "about",
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 9,
+        "style": "plain",
+        "data": {
+          "title": "The Kopi Senja Bandung story",
+          "body": "Kedai kopi rumahan dengan biji pilihan."
+        },
+        "auto_height": true
+      },
+      {
+        "id": "shape-2",
+        "kind": "shape",
+        "x": 10,
+        "y": 0,
+        "w": 2,
+        "h": 3,
+        "style": "plain",
+        "data": {
+          "shape": "sparkle",
+          "color": "accent",
+          "opacity": 80,
+          "rotate": 12
+        },
+        "auto_height": false,
+        "layout": "below"
+      },
+      {
+        "id": "gallery-3",
+        "kind": "gallery",
+        "x": 0,
+        "y": 9,
+        "w": 12,
+        "h": 8,
+        "style": "plain",
+        "data": {
+          "title": "Behind the scenes",
+          "images": []
+        },
+        "auto_height": true
+      },
+      {
+        "id": "business-hours-4",
+        "kind": "business_hours",
+        "x": 0,
+        "y": 17,
+        "w": 4,
+        "h": 9,
+        "style": "card",
+        "data": {
+          "title": "Opening hours"
+        },
+        "auto_height": true
+      },
+      {
+        "id": "location-5",
+        "kind": "location",
+        "x": 4,
+        "y": 17,
+        "w": 4,
+        "h": 6,
+        "style": "card",
+        "data": {
+          "title": "Location",
+          "show_map": true
+        },
+        "auto_height": true
+      },
+      {
+        "id": "contact-6",
+        "kind": "contact",
+        "x": 8,
+        "y": 17,
+        "w": 4,
+        "h": 6,
+        "style": "card",
+        "data": {
+          "title": "Contact",
+          "show_whatsapp": true,
+          "show_phone": true,
+          "show_email": true,
+          "socials": []
+        },
+        "auto_height": true
+      }
+    ]
+  },
+  "galeri/blog": {
+    "schema_version": 2,
+    "template": "modern_store",
+    "theme": {
+      "primary": "#92400E",
+      "font": "merriweather",
+      "surface": "cream",
+      "text_scale": 1,
+      "heading_font": "dmserif",
+      "accent": "#92400E",
+      "motion": "subtle",
+      "texture": "paper"
+    },
+    "blocks": [
+      {
+        "id": "text-1",
+        "kind": "text",
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 5,
+        "style": "plain",
+        "data": {
+          "title": "Blog & tips",
+          "body": "News, stories and tips from Kopi Senja Bandung."
+        },
+        "auto_height": true
+      },
+      {
+        "id": "blog-list-2",
+        "kind": "blog_list",
+        "x": 0,
+        "y": 5,
+        "w": 12,
+        "h": 12,
+        "style": "plain",
+        "data": {
+          "title": "Latest articles",
+          "limit": 9
+        },
+        "auto_height": true,
+        "layout": "grid"
+      }
+    ]
+  },
+  "galeri/cara-memilih-produk": {
+    "schema_version": 2,
+    "template": "modern_store",
+    "theme": {
+      "primary": "#92400E",
+      "font": "merriweather",
+      "surface": "cream",
+      "text_scale": 1,
+      "heading_font": "dmserif",
+      "accent": "#92400E",
+      "motion": "subtle",
+      "texture": "paper"
+    },
+    "blocks": [
+      {
+        "id": "article-body-1",
+        "kind": "article_body",
+        "x": 2,
+        "y": 0,
+        "w": 8,
+        "h": 24,
+        "style": "plain",
+        "data": {
+          "body": "## Know what you need\nBefore buying, decide what the product is for and what budget feels comfortable.\n\n## Check the details\n- Read the description and sizes carefully.\n- Look at photos from several angles.\n- Check other buyers' reviews.\n\n## Still unsure?\nAsk us directly via chat or WhatsApp. We'll help you choose the best fit.\n\n> Buying right saves money — no exchanges or repeat purchases.",
+          "toc": true
+        },
+        "auto_height": true
+      },
+      {
+        "id": "blog-list-2",
+        "kind": "blog_list",
+        "x": 0,
+        "y": 24,
+        "w": 12,
+        "h": 10,
+        "style": "plain",
+        "data": {
+          "title": "More articles",
+          "limit": 3
+        },
+        "auto_height": true,
+        "layout": "grid"
+      }
+    ],
+    "article": {
+      "excerpt": "A short guide to choosing well: know your needs, check the details and use our Q&A.",
+      "author": "Kopi Senja Bandung",
+      "published_at": "2026-01-01",
+      "tags": [
+        "guide",
+        "shopping"
+      ]
+    }
+  },
   "malam": {
     "schema_version": 2,
     "template": "modern_store",
@@ -561,11 +1833,32 @@
       "primary": "#A78BFA",
       "font": "poppins",
       "surface": "dark",
-      "text_scale": 1
+      "text_scale": 1,
+      "heading_font": "grotesk",
+      "accent": "#F472B6",
+      "gradient": true,
+      "radius": "round",
+      "motion": "lively",
+      "texture": "grain"
     },
     "blocks": [
       {
-        "id": "hero-1",
+        "id": "background-1",
+        "kind": "background",
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 9,
+        "style": "plain",
+        "data": {
+          "color": "#1E1B2E",
+          "bleed": true,
+          "edge_bottom": "zigzag"
+        },
+        "auto_height": false
+      },
+      {
+        "id": "hero-2",
         "kind": "hero",
         "x": 0,
         "y": 0,
@@ -583,7 +1876,7 @@
         "auto_height": true
       },
       {
-        "id": "product-grid-2",
+        "id": "product-grid-3",
         "kind": "product_grid",
         "x": 0,
         "y": 9,
@@ -598,7 +1891,7 @@
         "layout": "list"
       },
       {
-        "id": "chatbot-3",
+        "id": "chatbot-4",
         "kind": "chatbot",
         "x": 7,
         "y": 9,
@@ -614,7 +1907,7 @@
         "chat_open": true
       },
       {
-        "id": "business-hours-4",
+        "id": "business-hours-5",
         "kind": "business_hours",
         "x": 0,
         "y": 23,
@@ -627,7 +1920,7 @@
         "auto_height": true
       },
       {
-        "id": "location-5",
+        "id": "location-6",
         "kind": "location",
         "x": 6,
         "y": 23,
@@ -641,7 +1934,7 @@
         "auto_height": true
       },
       {
-        "id": "testimonials-6",
+        "id": "testimonials-7",
         "kind": "testimonials",
         "x": 0,
         "y": 32,
@@ -665,6 +1958,313 @@
       }
     ]
   },
+  "malam/menu": {
+    "schema_version": 2,
+    "template": "modern_store",
+    "theme": {
+      "primary": "#A78BFA",
+      "font": "poppins",
+      "surface": "dark",
+      "text_scale": 1,
+      "heading_font": "grotesk",
+      "accent": "#F472B6",
+      "gradient": true,
+      "radius": "round",
+      "motion": "lively",
+      "texture": "grain"
+    },
+    "blocks": [
+      {
+        "id": "background-1",
+        "kind": "background",
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 7,
+        "style": "plain",
+        "data": {
+          "color": "#1E1B2E",
+          "bleed": true,
+          "edge_bottom": "zigzag"
+        },
+        "auto_height": false
+      },
+      {
+        "id": "text-2",
+        "kind": "text",
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 6,
+        "style": "plain",
+        "data": {
+          "title": "Menu",
+          "body": "All our menu are here — choose, order online, then pick up or have it delivered."
+        },
+        "auto_height": true
+      },
+      {
+        "id": "product-grid-3",
+        "kind": "product_grid",
+        "x": 0,
+        "y": 6,
+        "w": 12,
+        "h": 14,
+        "style": "plain",
+        "data": {
+          "title": "All menu",
+          "limit": 24
+        },
+        "auto_height": true,
+        "layout": "grid"
+      },
+      {
+        "id": "promotion-4",
+        "kind": "promotion",
+        "x": 0,
+        "y": 20,
+        "w": 7,
+        "h": 6,
+        "style": "tint",
+        "data": {
+          "title": "Not sure what to choose?",
+          "body": "Ask for our recommendations via chat or WhatsApp.",
+          "cta": {
+            "label": "Ask now",
+            "href": "#kontak"
+          }
+        },
+        "auto_height": true
+      },
+      {
+        "id": "contact-5",
+        "kind": "contact",
+        "x": 7,
+        "y": 20,
+        "w": 5,
+        "h": 6,
+        "style": "card",
+        "data": {
+          "title": "Quick order",
+          "show_whatsapp": true,
+          "show_phone": true,
+          "show_email": false,
+          "socials": []
+        },
+        "auto_height": true
+      }
+    ]
+  },
+  "malam/tentang": {
+    "schema_version": 2,
+    "template": "modern_store",
+    "theme": {
+      "primary": "#A78BFA",
+      "font": "poppins",
+      "surface": "dark",
+      "text_scale": 1,
+      "heading_font": "grotesk",
+      "accent": "#F472B6",
+      "gradient": true,
+      "radius": "round",
+      "motion": "lively",
+      "texture": "grain"
+    },
+    "blocks": [
+      {
+        "id": "about-1",
+        "kind": "about",
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 9,
+        "style": "plain",
+        "data": {
+          "title": "The Kopi Senja Bandung story",
+          "body": "Kedai kopi rumahan dengan biji pilihan."
+        },
+        "auto_height": true
+      },
+      {
+        "id": "shape-2",
+        "kind": "shape",
+        "x": 10,
+        "y": 0,
+        "w": 2,
+        "h": 3,
+        "style": "plain",
+        "data": {
+          "shape": "sparkle",
+          "color": "accent",
+          "opacity": 80,
+          "rotate": 12
+        },
+        "auto_height": false,
+        "layout": "below"
+      },
+      {
+        "id": "gallery-3",
+        "kind": "gallery",
+        "x": 0,
+        "y": 9,
+        "w": 12,
+        "h": 8,
+        "style": "plain",
+        "data": {
+          "title": "Behind the scenes",
+          "images": []
+        },
+        "auto_height": true
+      },
+      {
+        "id": "business-hours-4",
+        "kind": "business_hours",
+        "x": 0,
+        "y": 17,
+        "w": 4,
+        "h": 9,
+        "style": "card",
+        "data": {
+          "title": "Opening hours"
+        },
+        "auto_height": true
+      },
+      {
+        "id": "location-5",
+        "kind": "location",
+        "x": 4,
+        "y": 17,
+        "w": 4,
+        "h": 6,
+        "style": "card",
+        "data": {
+          "title": "Location",
+          "show_map": true
+        },
+        "auto_height": true
+      },
+      {
+        "id": "contact-6",
+        "kind": "contact",
+        "x": 8,
+        "y": 17,
+        "w": 4,
+        "h": 6,
+        "style": "card",
+        "data": {
+          "title": "Contact",
+          "show_whatsapp": true,
+          "show_phone": true,
+          "show_email": true,
+          "socials": []
+        },
+        "auto_height": true
+      }
+    ]
+  },
+  "malam/blog": {
+    "schema_version": 2,
+    "template": "modern_store",
+    "theme": {
+      "primary": "#A78BFA",
+      "font": "poppins",
+      "surface": "dark",
+      "text_scale": 1,
+      "heading_font": "grotesk",
+      "accent": "#F472B6",
+      "gradient": true,
+      "radius": "round",
+      "motion": "lively",
+      "texture": "grain"
+    },
+    "blocks": [
+      {
+        "id": "text-1",
+        "kind": "text",
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 5,
+        "style": "plain",
+        "data": {
+          "title": "Blog & tips",
+          "body": "News, stories and tips from Kopi Senja Bandung."
+        },
+        "auto_height": true
+      },
+      {
+        "id": "blog-list-2",
+        "kind": "blog_list",
+        "x": 0,
+        "y": 5,
+        "w": 12,
+        "h": 12,
+        "style": "plain",
+        "data": {
+          "title": "Latest articles",
+          "limit": 9
+        },
+        "auto_height": true,
+        "layout": "grid"
+      }
+    ]
+  },
+  "malam/tips-pesanan-tetap-enak": {
+    "schema_version": 2,
+    "template": "modern_store",
+    "theme": {
+      "primary": "#A78BFA",
+      "font": "poppins",
+      "surface": "dark",
+      "text_scale": 1,
+      "heading_font": "grotesk",
+      "accent": "#F472B6",
+      "gradient": true,
+      "radius": "round",
+      "motion": "lively",
+      "texture": "grain"
+    },
+    "blocks": [
+      {
+        "id": "article-body-1",
+        "kind": "article_body",
+        "x": 2,
+        "y": 0,
+        "w": 8,
+        "h": 24,
+        "style": "plain",
+        "data": {
+          "body": "## Store it properly\nAs soon as your order arrives, keep soupy and dry dishes apart. Use a covered container if you won't eat right away.\n\n## Reheat without ruining the taste\n- Soupy dishes: warm in a pot over low heat.\n- Fried food: use an oven or a dry pan to keep it crispy.\n- Avoid reheating more than once.\n\n## How long is it safe?\n1. Room temperature: up to 4 hours.\n2. Fridge: 1–2 days in a covered container.\n\n> Questions about the menu? Ask us via chat — we're happy to help.",
+          "toc": true
+        },
+        "auto_height": true
+      },
+      {
+        "id": "blog-list-2",
+        "kind": "blog_list",
+        "x": 0,
+        "y": 24,
+        "w": 12,
+        "h": 10,
+        "style": "plain",
+        "data": {
+          "title": "More articles",
+          "limit": 3
+        },
+        "auto_height": true,
+        "layout": "grid"
+      }
+    ],
+    "article": {
+      "excerpt": "How to store and reheat your order so it tastes freshly cooked.",
+      "author": "Kopi Senja Bandung",
+      "published_at": "2026-01-01",
+      "tags": [
+        "tips",
+        "food"
+      ]
+    }
+  },
   "segar": {
     "schema_version": 2,
     "template": "modern_store",
@@ -672,11 +2272,30 @@
       "primary": "#15803D",
       "font": "nunito",
       "surface": "light",
-      "text_scale": 1
+      "text_scale": 1,
+      "heading_font": "poppins",
+      "accent": "#CA8A04",
+      "radius": "round",
+      "motion": "lively"
     },
     "blocks": [
       {
-        "id": "promotion-1",
+        "id": "background-1",
+        "kind": "background",
+        "x": 0,
+        "y": 5,
+        "w": 12,
+        "h": 8,
+        "style": "plain",
+        "data": {
+          "color": "#ECFDF5",
+          "bleed": true,
+          "edge_bottom": "wave"
+        },
+        "auto_height": false
+      },
+      {
+        "id": "promotion-2",
         "kind": "promotion",
         "x": 0,
         "y": 0,
@@ -694,7 +2313,7 @@
         "auto_height": true
       },
       {
-        "id": "hero-2",
+        "id": "hero-3",
         "kind": "hero",
         "x": 0,
         "y": 5,
@@ -712,7 +2331,7 @@
         "auto_height": true
       },
       {
-        "id": "product-grid-3",
+        "id": "product-grid-4",
         "kind": "product_grid",
         "x": 0,
         "y": 13,
@@ -727,7 +2346,7 @@
         "layout": "grid"
       },
       {
-        "id": "contact-4",
+        "id": "contact-5",
         "kind": "contact",
         "x": 0,
         "y": 25,
@@ -744,7 +2363,7 @@
         "auto_height": true
       },
       {
-        "id": "business-hours-5",
+        "id": "business-hours-6",
         "kind": "business_hours",
         "x": 6,
         "y": 25,
@@ -757,7 +2376,7 @@
         "auto_height": true
       },
       {
-        "id": "chatbot-6",
+        "id": "chatbot-7",
         "kind": "chatbot",
         "x": 8,
         "y": 34,
@@ -773,6 +2392,2141 @@
         "chat_open": false
       }
     ]
+  },
+  "segar/produk": {
+    "schema_version": 2,
+    "template": "modern_store",
+    "theme": {
+      "primary": "#15803D",
+      "font": "nunito",
+      "surface": "light",
+      "text_scale": 1,
+      "heading_font": "poppins",
+      "accent": "#CA8A04",
+      "radius": "round",
+      "motion": "lively"
+    },
+    "blocks": [
+      {
+        "id": "background-1",
+        "kind": "background",
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 7,
+        "style": "plain",
+        "data": {
+          "color": "#ECFDF5",
+          "bleed": true,
+          "edge_bottom": "wave"
+        },
+        "auto_height": false
+      },
+      {
+        "id": "text-2",
+        "kind": "text",
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 6,
+        "style": "plain",
+        "data": {
+          "title": "Products",
+          "body": "All our products are here — choose, order online, then pick up or have it delivered."
+        },
+        "auto_height": true
+      },
+      {
+        "id": "product-grid-3",
+        "kind": "product_grid",
+        "x": 0,
+        "y": 6,
+        "w": 12,
+        "h": 14,
+        "style": "plain",
+        "data": {
+          "title": "All products",
+          "limit": 24
+        },
+        "auto_height": true,
+        "layout": "grid"
+      },
+      {
+        "id": "promotion-4",
+        "kind": "promotion",
+        "x": 0,
+        "y": 20,
+        "w": 7,
+        "h": 6,
+        "style": "tint",
+        "data": {
+          "title": "Not sure what to choose?",
+          "body": "Ask for our recommendations via chat or WhatsApp.",
+          "cta": {
+            "label": "Ask now",
+            "href": "#kontak"
+          }
+        },
+        "auto_height": true
+      },
+      {
+        "id": "contact-5",
+        "kind": "contact",
+        "x": 7,
+        "y": 20,
+        "w": 5,
+        "h": 6,
+        "style": "card",
+        "data": {
+          "title": "Quick order",
+          "show_whatsapp": true,
+          "show_phone": true,
+          "show_email": false,
+          "socials": []
+        },
+        "auto_height": true
+      }
+    ]
+  },
+  "segar/tentang": {
+    "schema_version": 2,
+    "template": "modern_store",
+    "theme": {
+      "primary": "#15803D",
+      "font": "nunito",
+      "surface": "light",
+      "text_scale": 1,
+      "heading_font": "poppins",
+      "accent": "#CA8A04",
+      "radius": "round",
+      "motion": "lively"
+    },
+    "blocks": [
+      {
+        "id": "about-1",
+        "kind": "about",
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 9,
+        "style": "plain",
+        "data": {
+          "title": "The Kopi Senja Bandung story",
+          "body": "Kedai kopi rumahan dengan biji pilihan."
+        },
+        "auto_height": true
+      },
+      {
+        "id": "shape-2",
+        "kind": "shape",
+        "x": 10,
+        "y": 0,
+        "w": 2,
+        "h": 3,
+        "style": "plain",
+        "data": {
+          "shape": "sparkle",
+          "color": "accent",
+          "opacity": 80,
+          "rotate": 12
+        },
+        "auto_height": false,
+        "layout": "below"
+      },
+      {
+        "id": "gallery-3",
+        "kind": "gallery",
+        "x": 0,
+        "y": 9,
+        "w": 12,
+        "h": 8,
+        "style": "plain",
+        "data": {
+          "title": "Behind the scenes",
+          "images": []
+        },
+        "auto_height": true
+      },
+      {
+        "id": "business-hours-4",
+        "kind": "business_hours",
+        "x": 0,
+        "y": 17,
+        "w": 4,
+        "h": 9,
+        "style": "card",
+        "data": {
+          "title": "Opening hours"
+        },
+        "auto_height": true
+      },
+      {
+        "id": "location-5",
+        "kind": "location",
+        "x": 4,
+        "y": 17,
+        "w": 4,
+        "h": 6,
+        "style": "card",
+        "data": {
+          "title": "Location",
+          "show_map": true
+        },
+        "auto_height": true
+      },
+      {
+        "id": "contact-6",
+        "kind": "contact",
+        "x": 8,
+        "y": 17,
+        "w": 4,
+        "h": 6,
+        "style": "card",
+        "data": {
+          "title": "Contact",
+          "show_whatsapp": true,
+          "show_phone": true,
+          "show_email": true,
+          "socials": []
+        },
+        "auto_height": true
+      }
+    ]
+  },
+  "segar/blog": {
+    "schema_version": 2,
+    "template": "modern_store",
+    "theme": {
+      "primary": "#15803D",
+      "font": "nunito",
+      "surface": "light",
+      "text_scale": 1,
+      "heading_font": "poppins",
+      "accent": "#CA8A04",
+      "radius": "round",
+      "motion": "lively"
+    },
+    "blocks": [
+      {
+        "id": "text-1",
+        "kind": "text",
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 5,
+        "style": "plain",
+        "data": {
+          "title": "Blog & tips",
+          "body": "News, stories and tips from Kopi Senja Bandung."
+        },
+        "auto_height": true
+      },
+      {
+        "id": "blog-list-2",
+        "kind": "blog_list",
+        "x": 0,
+        "y": 5,
+        "w": 12,
+        "h": 12,
+        "style": "plain",
+        "data": {
+          "title": "Latest articles",
+          "limit": 9
+        },
+        "auto_height": true,
+        "layout": "grid"
+      }
+    ]
+  },
+  "segar/cara-memilih-produk": {
+    "schema_version": 2,
+    "template": "modern_store",
+    "theme": {
+      "primary": "#15803D",
+      "font": "nunito",
+      "surface": "light",
+      "text_scale": 1,
+      "heading_font": "poppins",
+      "accent": "#CA8A04",
+      "radius": "round",
+      "motion": "lively"
+    },
+    "blocks": [
+      {
+        "id": "article-body-1",
+        "kind": "article_body",
+        "x": 2,
+        "y": 0,
+        "w": 8,
+        "h": 24,
+        "style": "plain",
+        "data": {
+          "body": "## Know what you need\nBefore buying, decide what the product is for and what budget feels comfortable.\n\n## Check the details\n- Read the description and sizes carefully.\n- Look at photos from several angles.\n- Check other buyers' reviews.\n\n## Still unsure?\nAsk us directly via chat or WhatsApp. We'll help you choose the best fit.\n\n> Buying right saves money — no exchanges or repeat purchases.",
+          "toc": true
+        },
+        "auto_height": true
+      },
+      {
+        "id": "blog-list-2",
+        "kind": "blog_list",
+        "x": 0,
+        "y": 24,
+        "w": 12,
+        "h": 10,
+        "style": "plain",
+        "data": {
+          "title": "More articles",
+          "limit": 3
+        },
+        "auto_height": true,
+        "layout": "grid"
+      }
+    ],
+    "article": {
+      "excerpt": "A short guide to choosing well: know your needs, check the details and use our Q&A.",
+      "author": "Kopi Senja Bandung",
+      "published_at": "2026-01-01",
+      "tags": [
+        "guide",
+        "shopping"
+      ]
+    }
+  },
+  "ayu": {
+    "schema_version": 2,
+    "template": "modern_store",
+    "theme": {
+      "primary": "#9D174D",
+      "font": "nunito",
+      "surface": "cream",
+      "text_scale": 1,
+      "heading_font": "playfair",
+      "accent": "#DB2777",
+      "radius": "round",
+      "motion": "subtle"
+    },
+    "blocks": [
+      {
+        "id": "background-1",
+        "kind": "background",
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 10,
+        "style": "plain",
+        "data": {
+          "color": "#FCE7F3",
+          "bleed": true,
+          "edge_bottom": "curve"
+        },
+        "auto_height": false
+      },
+      {
+        "id": "hero-2",
+        "kind": "hero",
+        "x": 0,
+        "y": 0,
+        "w": 7,
+        "h": 10,
+        "style": "plain",
+        "data": {
+          "title": "Kopi Senja Bandung",
+          "subtitle": "Kedai kopi rumahan dengan biji pilihan.",
+          "cta": {
+            "label": "Book now",
+            "href": "#kontak"
+          }
+        },
+        "auto_height": true
+      },
+      {
+        "id": "chatbot-3",
+        "kind": "chatbot",
+        "x": 7,
+        "y": 0,
+        "w": 5,
+        "h": 10,
+        "style": "card",
+        "data": {
+          "title": "Book a slot",
+          "welcome": "Hi! Which treatment would you like, and when?"
+        },
+        "auto_height": true,
+        "layout": "inline",
+        "chat_open": true
+      },
+      {
+        "id": "product-grid-4",
+        "kind": "product_grid",
+        "x": 0,
+        "y": 10,
+        "w": 12,
+        "h": 11,
+        "style": "plain",
+        "data": {
+          "title": "Popular treatments",
+          "limit": 8
+        },
+        "auto_height": true,
+        "layout": "grid"
+      },
+      {
+        "id": "promotion-5",
+        "kind": "promotion",
+        "x": 0,
+        "y": 21,
+        "w": 12,
+        "h": 5,
+        "style": "tint",
+        "data": {
+          "title": "New members get 15% off",
+          "body": "Valid for your first treatment — just show this page.",
+          "cta": {
+            "label": "Claim discount",
+            "href": "#kontak"
+          }
+        },
+        "auto_height": true
+      },
+      {
+        "id": "testimonials-6",
+        "kind": "testimonials",
+        "x": 0,
+        "y": 26,
+        "w": 12,
+        "h": 8,
+        "style": "plain",
+        "data": {
+          "title": "Customer stories",
+          "items": [
+            {
+              "name": "Anisa",
+              "quote": "Natural results, careful therapists."
+            },
+            {
+              "name": "Fitri",
+              "quote": "Clean and fragrant place."
+            },
+            {
+              "name": "Lusi",
+              "quote": "Easy booking, no queueing."
+            }
+          ]
+        },
+        "auto_height": true
+      },
+      {
+        "id": "business-hours-7",
+        "kind": "business_hours",
+        "x": 0,
+        "y": 34,
+        "w": 4,
+        "h": 9,
+        "style": "card",
+        "data": {
+          "title": "Opening hours"
+        },
+        "auto_height": true
+      },
+      {
+        "id": "location-8",
+        "kind": "location",
+        "x": 4,
+        "y": 34,
+        "w": 4,
+        "h": 6,
+        "style": "card",
+        "data": {
+          "title": "Location",
+          "show_map": true
+        },
+        "auto_height": true
+      },
+      {
+        "id": "contact-9",
+        "kind": "contact",
+        "x": 8,
+        "y": 34,
+        "w": 4,
+        "h": 6,
+        "style": "card",
+        "data": {
+          "title": "Contact us",
+          "show_whatsapp": true,
+          "show_phone": true,
+          "show_email": false,
+          "socials": []
+        },
+        "auto_height": true
+      }
+    ]
+  },
+  "ayu/perawatan": {
+    "schema_version": 2,
+    "template": "modern_store",
+    "theme": {
+      "primary": "#9D174D",
+      "font": "nunito",
+      "surface": "cream",
+      "text_scale": 1,
+      "heading_font": "playfair",
+      "accent": "#DB2777",
+      "radius": "round",
+      "motion": "subtle"
+    },
+    "blocks": [
+      {
+        "id": "background-1",
+        "kind": "background",
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 7,
+        "style": "plain",
+        "data": {
+          "color": "#FCE7F3",
+          "bleed": true,
+          "edge_bottom": "curve"
+        },
+        "auto_height": false
+      },
+      {
+        "id": "text-2",
+        "kind": "text",
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 6,
+        "style": "plain",
+        "data": {
+          "title": "Treatments",
+          "body": "All our treatments are here — choose, order online, then pick up or have it delivered."
+        },
+        "auto_height": true
+      },
+      {
+        "id": "product-grid-3",
+        "kind": "product_grid",
+        "x": 0,
+        "y": 6,
+        "w": 12,
+        "h": 14,
+        "style": "plain",
+        "data": {
+          "title": "All treatments",
+          "limit": 24
+        },
+        "auto_height": true,
+        "layout": "grid"
+      },
+      {
+        "id": "promotion-4",
+        "kind": "promotion",
+        "x": 0,
+        "y": 20,
+        "w": 7,
+        "h": 6,
+        "style": "tint",
+        "data": {
+          "title": "Not sure what to choose?",
+          "body": "Ask for our recommendations via chat or WhatsApp.",
+          "cta": {
+            "label": "Ask now",
+            "href": "#kontak"
+          }
+        },
+        "auto_height": true
+      },
+      {
+        "id": "contact-5",
+        "kind": "contact",
+        "x": 7,
+        "y": 20,
+        "w": 5,
+        "h": 6,
+        "style": "card",
+        "data": {
+          "title": "Quick order",
+          "show_whatsapp": true,
+          "show_phone": true,
+          "show_email": false,
+          "socials": []
+        },
+        "auto_height": true
+      }
+    ]
+  },
+  "ayu/tentang": {
+    "schema_version": 2,
+    "template": "modern_store",
+    "theme": {
+      "primary": "#9D174D",
+      "font": "nunito",
+      "surface": "cream",
+      "text_scale": 1,
+      "heading_font": "playfair",
+      "accent": "#DB2777",
+      "radius": "round",
+      "motion": "subtle"
+    },
+    "blocks": [
+      {
+        "id": "about-1",
+        "kind": "about",
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 9,
+        "style": "plain",
+        "data": {
+          "title": "The Kopi Senja Bandung story",
+          "body": "Kedai kopi rumahan dengan biji pilihan."
+        },
+        "auto_height": true
+      },
+      {
+        "id": "shape-2",
+        "kind": "shape",
+        "x": 10,
+        "y": 0,
+        "w": 2,
+        "h": 3,
+        "style": "plain",
+        "data": {
+          "shape": "sparkle",
+          "color": "accent",
+          "opacity": 80,
+          "rotate": 12
+        },
+        "auto_height": false,
+        "layout": "below"
+      },
+      {
+        "id": "gallery-3",
+        "kind": "gallery",
+        "x": 0,
+        "y": 9,
+        "w": 12,
+        "h": 8,
+        "style": "plain",
+        "data": {
+          "title": "Behind the scenes",
+          "images": []
+        },
+        "auto_height": true
+      },
+      {
+        "id": "business-hours-4",
+        "kind": "business_hours",
+        "x": 0,
+        "y": 17,
+        "w": 4,
+        "h": 9,
+        "style": "card",
+        "data": {
+          "title": "Opening hours"
+        },
+        "auto_height": true
+      },
+      {
+        "id": "location-5",
+        "kind": "location",
+        "x": 4,
+        "y": 17,
+        "w": 4,
+        "h": 6,
+        "style": "card",
+        "data": {
+          "title": "Location",
+          "show_map": true
+        },
+        "auto_height": true
+      },
+      {
+        "id": "contact-6",
+        "kind": "contact",
+        "x": 8,
+        "y": 17,
+        "w": 4,
+        "h": 6,
+        "style": "card",
+        "data": {
+          "title": "Contact",
+          "show_whatsapp": true,
+          "show_phone": true,
+          "show_email": true,
+          "socials": []
+        },
+        "auto_height": true
+      }
+    ]
+  },
+  "ayu/blog": {
+    "schema_version": 2,
+    "template": "modern_store",
+    "theme": {
+      "primary": "#9D174D",
+      "font": "nunito",
+      "surface": "cream",
+      "text_scale": 1,
+      "heading_font": "playfair",
+      "accent": "#DB2777",
+      "radius": "round",
+      "motion": "subtle"
+    },
+    "blocks": [
+      {
+        "id": "text-1",
+        "kind": "text",
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 5,
+        "style": "plain",
+        "data": {
+          "title": "Blog & tips",
+          "body": "News, stories and tips from Kopi Senja Bandung."
+        },
+        "auto_height": true
+      },
+      {
+        "id": "blog-list-2",
+        "kind": "blog_list",
+        "x": 0,
+        "y": 5,
+        "w": 12,
+        "h": 12,
+        "style": "plain",
+        "data": {
+          "title": "Latest articles",
+          "limit": 9
+        },
+        "auto_height": true,
+        "layout": "grid"
+      }
+    ]
+  },
+  "ayu/persiapan-sebelum-datang": {
+    "schema_version": 2,
+    "template": "modern_store",
+    "theme": {
+      "primary": "#9D174D",
+      "font": "nunito",
+      "surface": "cream",
+      "text_scale": 1,
+      "heading_font": "playfair",
+      "accent": "#DB2777",
+      "radius": "round",
+      "motion": "subtle"
+    },
+    "blocks": [
+      {
+        "id": "article-body-1",
+        "kind": "article_body",
+        "x": 2,
+        "y": 0,
+        "w": 8,
+        "h": 24,
+        "style": "plain",
+        "data": {
+          "body": "## Book ahead\nSchedule through chat or WhatsApp so you don't have to wait long.\n\n## Prepare the key details\n- Describe what you need clearly.\n- Bring a photo or example of the result you want, if you have one.\n\n## After the service\n1. Check the result together with us.\n2. Keep your receipt and your next appointment date.\n\n> Your satisfaction is our priority — share feedback any time.",
+          "toc": true
+        },
+        "auto_height": true
+      },
+      {
+        "id": "blog-list-2",
+        "kind": "blog_list",
+        "x": 0,
+        "y": 24,
+        "w": 12,
+        "h": 10,
+        "style": "plain",
+        "data": {
+          "title": "More articles",
+          "limit": 3
+        },
+        "auto_height": true,
+        "layout": "grid"
+      }
+    ],
+    "article": {
+      "excerpt": "Simple things that make the service faster, more comfortable and closer to what you expect.",
+      "author": "Kopi Senja Bandung",
+      "published_at": "2026-01-01",
+      "tags": [
+        "guide",
+        "services"
+      ]
+    }
+  },
+  "cerdas": {
+    "schema_version": 2,
+    "template": "modern_store",
+    "theme": {
+      "primary": "#1D4ED8",
+      "font": "jakarta",
+      "surface": "light",
+      "text_scale": 1,
+      "heading_font": "grotesk",
+      "accent": "#F59E0B",
+      "gradient": true,
+      "radius": "round",
+      "motion": "subtle"
+    },
+    "blocks": [
+      {
+        "id": "background-1",
+        "kind": "background",
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 9,
+        "style": "plain",
+        "data": {
+          "color": "#EEF2FF",
+          "bleed": true,
+          "edge_bottom": "slant"
+        },
+        "auto_height": false
+      },
+      {
+        "id": "hero-2",
+        "kind": "hero",
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 9,
+        "style": "plain",
+        "data": {
+          "title": "Kopi Senja Bandung",
+          "subtitle": "Kedai kopi rumahan dengan biji pilihan.",
+          "cta": {
+            "label": "See programmes",
+            "href": "#produk"
+          }
+        },
+        "auto_height": true
+      },
+      {
+        "id": "about-3",
+        "kind": "about",
+        "x": 0,
+        "y": 9,
+        "w": 12,
+        "h": 7,
+        "style": "tint",
+        "data": {
+          "title": "Why learn with us",
+          "body": "Practical lessons, classes of up to 10, and monthly progress reports."
+        },
+        "auto_height": true
+      },
+      {
+        "id": "product-grid-4",
+        "kind": "product_grid",
+        "x": 0,
+        "y": 16,
+        "w": 12,
+        "h": 11,
+        "style": "plain",
+        "data": {
+          "title": "Programmes & classes",
+          "limit": 8
+        },
+        "auto_height": true,
+        "layout": "list"
+      },
+      {
+        "id": "testimonials-5",
+        "kind": "testimonials",
+        "x": 0,
+        "y": 27,
+        "w": 12,
+        "h": 8,
+        "style": "plain",
+        "data": {
+          "title": "What alumni say",
+          "items": [
+            {
+              "name": "Raka",
+              "quote": "My grades went up a lot in 3 months."
+            },
+            {
+              "name": "Salsa",
+              "quote": "Patient, clear teachers."
+            },
+            {
+              "name": "Bima",
+              "quote": "The schedule fits around school."
+            }
+          ]
+        },
+        "auto_height": true
+      },
+      {
+        "id": "contact-6",
+        "kind": "contact",
+        "x": 0,
+        "y": 35,
+        "w": 6,
+        "h": 6,
+        "style": "card",
+        "data": {
+          "title": "Sign up now",
+          "show_whatsapp": true,
+          "show_phone": true,
+          "show_email": true,
+          "socials": []
+        },
+        "auto_height": true
+      },
+      {
+        "id": "location-7",
+        "kind": "location",
+        "x": 6,
+        "y": 35,
+        "w": 6,
+        "h": 6,
+        "style": "card",
+        "data": {
+          "title": "Where we teach",
+          "show_map": true
+        },
+        "auto_height": true
+      },
+      {
+        "id": "chatbot-8",
+        "kind": "chatbot",
+        "x": 8,
+        "y": 41,
+        "w": 4,
+        "h": 10,
+        "style": "card",
+        "data": {
+          "title": "Ask about programmes",
+          "welcome": "Hi! Which age group are you asking about?"
+        },
+        "auto_height": true,
+        "layout": "floating",
+        "chat_open": false
+      }
+    ]
+  },
+  "cerdas/program": {
+    "schema_version": 2,
+    "template": "modern_store",
+    "theme": {
+      "primary": "#1D4ED8",
+      "font": "jakarta",
+      "surface": "light",
+      "text_scale": 1,
+      "heading_font": "grotesk",
+      "accent": "#F59E0B",
+      "gradient": true,
+      "radius": "round",
+      "motion": "subtle"
+    },
+    "blocks": [
+      {
+        "id": "background-1",
+        "kind": "background",
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 7,
+        "style": "plain",
+        "data": {
+          "color": "#EEF2FF",
+          "bleed": true,
+          "edge_bottom": "slant"
+        },
+        "auto_height": false
+      },
+      {
+        "id": "text-2",
+        "kind": "text",
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 6,
+        "style": "plain",
+        "data": {
+          "title": "Programmes",
+          "body": "All our programmes are here — choose, order online, then pick up or have it delivered."
+        },
+        "auto_height": true
+      },
+      {
+        "id": "product-grid-3",
+        "kind": "product_grid",
+        "x": 0,
+        "y": 6,
+        "w": 12,
+        "h": 14,
+        "style": "plain",
+        "data": {
+          "title": "All programmes",
+          "limit": 24
+        },
+        "auto_height": true,
+        "layout": "grid"
+      },
+      {
+        "id": "promotion-4",
+        "kind": "promotion",
+        "x": 0,
+        "y": 20,
+        "w": 7,
+        "h": 6,
+        "style": "tint",
+        "data": {
+          "title": "Not sure what to choose?",
+          "body": "Ask for our recommendations via chat or WhatsApp.",
+          "cta": {
+            "label": "Ask now",
+            "href": "#kontak"
+          }
+        },
+        "auto_height": true
+      },
+      {
+        "id": "contact-5",
+        "kind": "contact",
+        "x": 7,
+        "y": 20,
+        "w": 5,
+        "h": 6,
+        "style": "card",
+        "data": {
+          "title": "Quick order",
+          "show_whatsapp": true,
+          "show_phone": true,
+          "show_email": false,
+          "socials": []
+        },
+        "auto_height": true
+      }
+    ]
+  },
+  "cerdas/tentang": {
+    "schema_version": 2,
+    "template": "modern_store",
+    "theme": {
+      "primary": "#1D4ED8",
+      "font": "jakarta",
+      "surface": "light",
+      "text_scale": 1,
+      "heading_font": "grotesk",
+      "accent": "#F59E0B",
+      "gradient": true,
+      "radius": "round",
+      "motion": "subtle"
+    },
+    "blocks": [
+      {
+        "id": "about-1",
+        "kind": "about",
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 9,
+        "style": "plain",
+        "data": {
+          "title": "The Kopi Senja Bandung story",
+          "body": "Kedai kopi rumahan dengan biji pilihan."
+        },
+        "auto_height": true
+      },
+      {
+        "id": "shape-2",
+        "kind": "shape",
+        "x": 10,
+        "y": 0,
+        "w": 2,
+        "h": 3,
+        "style": "plain",
+        "data": {
+          "shape": "sparkle",
+          "color": "accent",
+          "opacity": 80,
+          "rotate": 12
+        },
+        "auto_height": false,
+        "layout": "below"
+      },
+      {
+        "id": "gallery-3",
+        "kind": "gallery",
+        "x": 0,
+        "y": 9,
+        "w": 12,
+        "h": 8,
+        "style": "plain",
+        "data": {
+          "title": "Behind the scenes",
+          "images": []
+        },
+        "auto_height": true
+      },
+      {
+        "id": "business-hours-4",
+        "kind": "business_hours",
+        "x": 0,
+        "y": 17,
+        "w": 4,
+        "h": 9,
+        "style": "card",
+        "data": {
+          "title": "Opening hours"
+        },
+        "auto_height": true
+      },
+      {
+        "id": "location-5",
+        "kind": "location",
+        "x": 4,
+        "y": 17,
+        "w": 4,
+        "h": 6,
+        "style": "card",
+        "data": {
+          "title": "Location",
+          "show_map": true
+        },
+        "auto_height": true
+      },
+      {
+        "id": "contact-6",
+        "kind": "contact",
+        "x": 8,
+        "y": 17,
+        "w": 4,
+        "h": 6,
+        "style": "card",
+        "data": {
+          "title": "Contact",
+          "show_whatsapp": true,
+          "show_phone": true,
+          "show_email": true,
+          "socials": []
+        },
+        "auto_height": true
+      }
+    ]
+  },
+  "cerdas/blog": {
+    "schema_version": 2,
+    "template": "modern_store",
+    "theme": {
+      "primary": "#1D4ED8",
+      "font": "jakarta",
+      "surface": "light",
+      "text_scale": 1,
+      "heading_font": "grotesk",
+      "accent": "#F59E0B",
+      "gradient": true,
+      "radius": "round",
+      "motion": "subtle"
+    },
+    "blocks": [
+      {
+        "id": "text-1",
+        "kind": "text",
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 5,
+        "style": "plain",
+        "data": {
+          "title": "Blog & tips",
+          "body": "News, stories and tips from Kopi Senja Bandung."
+        },
+        "auto_height": true
+      },
+      {
+        "id": "blog-list-2",
+        "kind": "blog_list",
+        "x": 0,
+        "y": 5,
+        "w": 12,
+        "h": 12,
+        "style": "plain",
+        "data": {
+          "title": "Latest articles",
+          "limit": 9
+        },
+        "auto_height": true,
+        "layout": "grid"
+      }
+    ]
+  },
+  "cerdas/persiapan-sebelum-datang": {
+    "schema_version": 2,
+    "template": "modern_store",
+    "theme": {
+      "primary": "#1D4ED8",
+      "font": "jakarta",
+      "surface": "light",
+      "text_scale": 1,
+      "heading_font": "grotesk",
+      "accent": "#F59E0B",
+      "gradient": true,
+      "radius": "round",
+      "motion": "subtle"
+    },
+    "blocks": [
+      {
+        "id": "article-body-1",
+        "kind": "article_body",
+        "x": 2,
+        "y": 0,
+        "w": 8,
+        "h": 24,
+        "style": "plain",
+        "data": {
+          "body": "## Book ahead\nSchedule through chat or WhatsApp so you don't have to wait long.\n\n## Prepare the key details\n- Describe what you need clearly.\n- Bring a photo or example of the result you want, if you have one.\n\n## After the service\n1. Check the result together with us.\n2. Keep your receipt and your next appointment date.\n\n> Your satisfaction is our priority — share feedback any time.",
+          "toc": true
+        },
+        "auto_height": true
+      },
+      {
+        "id": "blog-list-2",
+        "kind": "blog_list",
+        "x": 0,
+        "y": 24,
+        "w": 12,
+        "h": 10,
+        "style": "plain",
+        "data": {
+          "title": "More articles",
+          "limit": 3
+        },
+        "auto_height": true,
+        "layout": "grid"
+      }
+    ],
+    "article": {
+      "excerpt": "Simple things that make the service faster, more comfortable and closer to what you expect.",
+      "author": "Kopi Senja Bandung",
+      "published_at": "2026-01-01",
+      "tags": [
+        "guide",
+        "services"
+      ]
+    }
+  },
+  "hajatan": {
+    "schema_version": 2,
+    "template": "modern_store",
+    "theme": {
+      "primary": "#B45309",
+      "font": "nunito",
+      "surface": "cream",
+      "text_scale": 1,
+      "heading_font": "fraunces",
+      "accent": "#15803D",
+      "radius": "round",
+      "motion": "subtle",
+      "texture": "paper"
+    },
+    "blocks": [
+      {
+        "id": "background-1",
+        "kind": "background",
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 10,
+        "style": "plain",
+        "data": {
+          "color": "#FEF3C7",
+          "bleed": true,
+          "edge_bottom": "wave"
+        },
+        "auto_height": false
+      },
+      {
+        "id": "hero-2",
+        "kind": "hero",
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 10,
+        "style": "plain",
+        "data": {
+          "title": "Kopi Senja Bandung",
+          "subtitle": "Kedai kopi rumahan dengan biji pilihan.",
+          "cta": {
+            "label": "See plans",
+            "href": "#menu"
+          }
+        },
+        "auto_height": true
+      },
+      {
+        "id": "promotion-3",
+        "kind": "promotion",
+        "x": 0,
+        "y": 10,
+        "w": 6,
+        "h": 6,
+        "style": "tint",
+        "data": {
+          "title": "Order 3 days ahead, save 10%",
+          "body": "Order at least 3 days before your event for a special price.",
+          "cta": {
+            "label": "Order now",
+            "href": "#menu"
+          }
+        },
+        "auto_height": true
+      },
+      {
+        "id": "about-4",
+        "kind": "about",
+        "x": 6,
+        "y": 10,
+        "w": 6,
+        "h": 6,
+        "style": "card",
+        "data": {
+          "title": "Cooked on the day",
+          "body": "Every dish is cooked fresh on the day, packed hygienically and delivered on time."
+        },
+        "auto_height": true
+      },
+      {
+        "id": "product-grid-5",
+        "kind": "product_grid",
+        "x": 0,
+        "y": 16,
+        "w": 12,
+        "h": 12,
+        "style": "plain",
+        "data": {
+          "title": "Packages & menu",
+          "limit": 12
+        },
+        "auto_height": true,
+        "layout": "grid"
+      },
+      {
+        "id": "gallery-6",
+        "kind": "gallery",
+        "x": 0,
+        "y": 28,
+        "w": 12,
+        "h": 8,
+        "style": "plain",
+        "data": {
+          "title": "Event photos",
+          "images": []
+        },
+        "auto_height": true
+      },
+      {
+        "id": "testimonials-7",
+        "kind": "testimonials",
+        "x": 0,
+        "y": 36,
+        "w": 12,
+        "h": 8,
+        "style": "plain",
+        "data": {
+          "title": "What customers say",
+          "items": [
+            {
+              "name": "Bu Ratna",
+              "quote": "Our guests loved the taste."
+            },
+            {
+              "name": "Pak Joko",
+              "quote": "Arrived on time, perfect portions."
+            }
+          ]
+        },
+        "auto_height": true
+      },
+      {
+        "id": "contact-8",
+        "kind": "contact",
+        "x": 0,
+        "y": 44,
+        "w": 6,
+        "h": 6,
+        "style": "card",
+        "data": {
+          "title": "Menu consultation",
+          "show_whatsapp": true,
+          "show_phone": true,
+          "show_email": false,
+          "socials": []
+        },
+        "auto_height": true
+      },
+      {
+        "id": "business-hours-9",
+        "kind": "business_hours",
+        "x": 6,
+        "y": 44,
+        "w": 6,
+        "h": 9,
+        "style": "card",
+        "data": {
+          "title": "Ordering hours"
+        },
+        "auto_height": true
+      }
+    ]
+  },
+  "hajatan/paket": {
+    "schema_version": 2,
+    "template": "modern_store",
+    "theme": {
+      "primary": "#B45309",
+      "font": "nunito",
+      "surface": "cream",
+      "text_scale": 1,
+      "heading_font": "fraunces",
+      "accent": "#15803D",
+      "radius": "round",
+      "motion": "subtle",
+      "texture": "paper"
+    },
+    "blocks": [
+      {
+        "id": "background-1",
+        "kind": "background",
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 7,
+        "style": "plain",
+        "data": {
+          "color": "#FEF3C7",
+          "bleed": true,
+          "edge_bottom": "wave"
+        },
+        "auto_height": false
+      },
+      {
+        "id": "text-2",
+        "kind": "text",
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 6,
+        "style": "plain",
+        "data": {
+          "title": "Plan",
+          "body": "All our packages are here — choose, order online, then pick up or have it delivered."
+        },
+        "auto_height": true
+      },
+      {
+        "id": "product-grid-3",
+        "kind": "product_grid",
+        "x": 0,
+        "y": 6,
+        "w": 12,
+        "h": 14,
+        "style": "plain",
+        "data": {
+          "title": "All packages",
+          "limit": 24
+        },
+        "auto_height": true,
+        "layout": "grid"
+      },
+      {
+        "id": "promotion-4",
+        "kind": "promotion",
+        "x": 0,
+        "y": 20,
+        "w": 7,
+        "h": 6,
+        "style": "tint",
+        "data": {
+          "title": "Not sure what to choose?",
+          "body": "Ask for our recommendations via chat or WhatsApp.",
+          "cta": {
+            "label": "Ask now",
+            "href": "#kontak"
+          }
+        },
+        "auto_height": true
+      },
+      {
+        "id": "contact-5",
+        "kind": "contact",
+        "x": 7,
+        "y": 20,
+        "w": 5,
+        "h": 6,
+        "style": "card",
+        "data": {
+          "title": "Quick order",
+          "show_whatsapp": true,
+          "show_phone": true,
+          "show_email": false,
+          "socials": []
+        },
+        "auto_height": true
+      }
+    ]
+  },
+  "hajatan/tentang": {
+    "schema_version": 2,
+    "template": "modern_store",
+    "theme": {
+      "primary": "#B45309",
+      "font": "nunito",
+      "surface": "cream",
+      "text_scale": 1,
+      "heading_font": "fraunces",
+      "accent": "#15803D",
+      "radius": "round",
+      "motion": "subtle",
+      "texture": "paper"
+    },
+    "blocks": [
+      {
+        "id": "about-1",
+        "kind": "about",
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 9,
+        "style": "plain",
+        "data": {
+          "title": "The Kopi Senja Bandung story",
+          "body": "Kedai kopi rumahan dengan biji pilihan."
+        },
+        "auto_height": true
+      },
+      {
+        "id": "shape-2",
+        "kind": "shape",
+        "x": 10,
+        "y": 0,
+        "w": 2,
+        "h": 3,
+        "style": "plain",
+        "data": {
+          "shape": "sparkle",
+          "color": "accent",
+          "opacity": 80,
+          "rotate": 12
+        },
+        "auto_height": false,
+        "layout": "below"
+      },
+      {
+        "id": "gallery-3",
+        "kind": "gallery",
+        "x": 0,
+        "y": 9,
+        "w": 12,
+        "h": 8,
+        "style": "plain",
+        "data": {
+          "title": "Behind the scenes",
+          "images": []
+        },
+        "auto_height": true
+      },
+      {
+        "id": "business-hours-4",
+        "kind": "business_hours",
+        "x": 0,
+        "y": 17,
+        "w": 4,
+        "h": 9,
+        "style": "card",
+        "data": {
+          "title": "Opening hours"
+        },
+        "auto_height": true
+      },
+      {
+        "id": "location-5",
+        "kind": "location",
+        "x": 4,
+        "y": 17,
+        "w": 4,
+        "h": 6,
+        "style": "card",
+        "data": {
+          "title": "Location",
+          "show_map": true
+        },
+        "auto_height": true
+      },
+      {
+        "id": "contact-6",
+        "kind": "contact",
+        "x": 8,
+        "y": 17,
+        "w": 4,
+        "h": 6,
+        "style": "card",
+        "data": {
+          "title": "Contact",
+          "show_whatsapp": true,
+          "show_phone": true,
+          "show_email": true,
+          "socials": []
+        },
+        "auto_height": true
+      }
+    ]
+  },
+  "hajatan/blog": {
+    "schema_version": 2,
+    "template": "modern_store",
+    "theme": {
+      "primary": "#B45309",
+      "font": "nunito",
+      "surface": "cream",
+      "text_scale": 1,
+      "heading_font": "fraunces",
+      "accent": "#15803D",
+      "radius": "round",
+      "motion": "subtle",
+      "texture": "paper"
+    },
+    "blocks": [
+      {
+        "id": "text-1",
+        "kind": "text",
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 5,
+        "style": "plain",
+        "data": {
+          "title": "Blog & tips",
+          "body": "News, stories and tips from Kopi Senja Bandung."
+        },
+        "auto_height": true
+      },
+      {
+        "id": "blog-list-2",
+        "kind": "blog_list",
+        "x": 0,
+        "y": 5,
+        "w": 12,
+        "h": 12,
+        "style": "plain",
+        "data": {
+          "title": "Latest articles",
+          "limit": 9
+        },
+        "auto_height": true,
+        "layout": "grid"
+      }
+    ]
+  },
+  "hajatan/tips-pesanan-tetap-enak": {
+    "schema_version": 2,
+    "template": "modern_store",
+    "theme": {
+      "primary": "#B45309",
+      "font": "nunito",
+      "surface": "cream",
+      "text_scale": 1,
+      "heading_font": "fraunces",
+      "accent": "#15803D",
+      "radius": "round",
+      "motion": "subtle",
+      "texture": "paper"
+    },
+    "blocks": [
+      {
+        "id": "article-body-1",
+        "kind": "article_body",
+        "x": 2,
+        "y": 0,
+        "w": 8,
+        "h": 24,
+        "style": "plain",
+        "data": {
+          "body": "## Store it properly\nAs soon as your order arrives, keep soupy and dry dishes apart. Use a covered container if you won't eat right away.\n\n## Reheat without ruining the taste\n- Soupy dishes: warm in a pot over low heat.\n- Fried food: use an oven or a dry pan to keep it crispy.\n- Avoid reheating more than once.\n\n## How long is it safe?\n1. Room temperature: up to 4 hours.\n2. Fridge: 1–2 days in a covered container.\n\n> Questions about the menu? Ask us via chat — we're happy to help.",
+          "toc": true
+        },
+        "auto_height": true
+      },
+      {
+        "id": "blog-list-2",
+        "kind": "blog_list",
+        "x": 0,
+        "y": 24,
+        "w": 12,
+        "h": 10,
+        "style": "plain",
+        "data": {
+          "title": "More articles",
+          "limit": 3
+        },
+        "auto_height": true,
+        "layout": "grid"
+      }
+    ],
+    "article": {
+      "excerpt": "How to store and reheat your order so it tastes freshly cooked.",
+      "author": "Kopi Senja Bandung",
+      "published_at": "2026-01-01",
+      "tags": [
+        "tips",
+        "food"
+      ]
+    }
+  },
+  "tani": {
+    "schema_version": 2,
+    "template": "modern_store",
+    "theme": {
+      "primary": "#3F6212",
+      "font": "merriweather",
+      "surface": "cream",
+      "text_scale": 1,
+      "heading_font": "dmserif",
+      "accent": "#CA8A04",
+      "motion": "subtle",
+      "texture": "paper"
+    },
+    "blocks": [
+      {
+        "id": "background-1",
+        "kind": "background",
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 10,
+        "style": "plain",
+        "data": {
+          "color": "#F7FEE7",
+          "bleed": true,
+          "edge_bottom": "wave"
+        },
+        "auto_height": false
+      },
+      {
+        "id": "hero-2",
+        "kind": "hero",
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 10,
+        "style": "plain",
+        "data": {
+          "title": "Kopi Senja Bandung",
+          "subtitle": "Kedai kopi rumahan dengan biji pilihan.",
+          "cta": {
+            "label": "Shop the harvest",
+            "href": "#produk"
+          }
+        },
+        "auto_height": true
+      },
+      {
+        "id": "product-grid-3",
+        "kind": "product_grid",
+        "x": 0,
+        "y": 10,
+        "w": 12,
+        "h": 12,
+        "style": "plain",
+        "data": {
+          "title": "This week's harvest",
+          "limit": 8
+        },
+        "auto_height": true,
+        "layout": "grid"
+      },
+      {
+        "id": "about-4",
+        "kind": "about",
+        "x": 0,
+        "y": 22,
+        "w": 7,
+        "h": 8,
+        "style": "card",
+        "data": {
+          "title": "From our farm",
+          "body": "We grow without excessive chemicals and harvest at perfect ripeness."
+        },
+        "auto_height": true
+      },
+      {
+        "id": "gallery-5",
+        "kind": "gallery",
+        "x": 7,
+        "y": 22,
+        "w": 5,
+        "h": 8,
+        "style": "plain",
+        "data": {
+          "title": "Around the farm",
+          "images": []
+        },
+        "auto_height": true
+      },
+      {
+        "id": "testimonials-6",
+        "kind": "testimonials",
+        "x": 0,
+        "y": 30,
+        "w": 12,
+        "h": 8,
+        "style": "plain",
+        "data": {
+          "title": "What buyers say",
+          "items": [
+            {
+              "name": "Wulan",
+              "quote": "The vegetables were still crisp on arrival."
+            },
+            {
+              "name": "Doni",
+              "quote": "Real honey, you can taste the difference."
+            }
+          ]
+        },
+        "auto_height": true
+      },
+      {
+        "id": "contact-7",
+        "kind": "contact",
+        "x": 0,
+        "y": 38,
+        "w": 6,
+        "h": 6,
+        "style": "card",
+        "data": {
+          "title": "Order directly",
+          "show_whatsapp": true,
+          "show_phone": true,
+          "show_email": false,
+          "socials": []
+        },
+        "auto_height": true
+      },
+      {
+        "id": "location-8",
+        "kind": "location",
+        "x": 6,
+        "y": 38,
+        "w": 6,
+        "h": 6,
+        "style": "card",
+        "data": {
+          "title": "Farm & shop",
+          "show_map": true
+        },
+        "auto_height": true
+      }
+    ]
+  },
+  "tani/produk": {
+    "schema_version": 2,
+    "template": "modern_store",
+    "theme": {
+      "primary": "#3F6212",
+      "font": "merriweather",
+      "surface": "cream",
+      "text_scale": 1,
+      "heading_font": "dmserif",
+      "accent": "#CA8A04",
+      "motion": "subtle",
+      "texture": "paper"
+    },
+    "blocks": [
+      {
+        "id": "background-1",
+        "kind": "background",
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 7,
+        "style": "plain",
+        "data": {
+          "color": "#F7FEE7",
+          "bleed": true,
+          "edge_bottom": "wave"
+        },
+        "auto_height": false
+      },
+      {
+        "id": "text-2",
+        "kind": "text",
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 6,
+        "style": "plain",
+        "data": {
+          "title": "Products",
+          "body": "All our farm produce are here — choose, order online, then pick up or have it delivered."
+        },
+        "auto_height": true
+      },
+      {
+        "id": "product-grid-3",
+        "kind": "product_grid",
+        "x": 0,
+        "y": 6,
+        "w": 12,
+        "h": 14,
+        "style": "plain",
+        "data": {
+          "title": "All farm produce",
+          "limit": 24
+        },
+        "auto_height": true,
+        "layout": "grid"
+      },
+      {
+        "id": "promotion-4",
+        "kind": "promotion",
+        "x": 0,
+        "y": 20,
+        "w": 7,
+        "h": 6,
+        "style": "tint",
+        "data": {
+          "title": "Not sure what to choose?",
+          "body": "Ask for our recommendations via chat or WhatsApp.",
+          "cta": {
+            "label": "Ask now",
+            "href": "#kontak"
+          }
+        },
+        "auto_height": true
+      },
+      {
+        "id": "contact-5",
+        "kind": "contact",
+        "x": 7,
+        "y": 20,
+        "w": 5,
+        "h": 6,
+        "style": "card",
+        "data": {
+          "title": "Quick order",
+          "show_whatsapp": true,
+          "show_phone": true,
+          "show_email": false,
+          "socials": []
+        },
+        "auto_height": true
+      }
+    ]
+  },
+  "tani/tentang": {
+    "schema_version": 2,
+    "template": "modern_store",
+    "theme": {
+      "primary": "#3F6212",
+      "font": "merriweather",
+      "surface": "cream",
+      "text_scale": 1,
+      "heading_font": "dmserif",
+      "accent": "#CA8A04",
+      "motion": "subtle",
+      "texture": "paper"
+    },
+    "blocks": [
+      {
+        "id": "about-1",
+        "kind": "about",
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 9,
+        "style": "plain",
+        "data": {
+          "title": "The Kopi Senja Bandung story",
+          "body": "Kedai kopi rumahan dengan biji pilihan."
+        },
+        "auto_height": true
+      },
+      {
+        "id": "shape-2",
+        "kind": "shape",
+        "x": 10,
+        "y": 0,
+        "w": 2,
+        "h": 3,
+        "style": "plain",
+        "data": {
+          "shape": "sparkle",
+          "color": "accent",
+          "opacity": 80,
+          "rotate": 12
+        },
+        "auto_height": false,
+        "layout": "below"
+      },
+      {
+        "id": "gallery-3",
+        "kind": "gallery",
+        "x": 0,
+        "y": 9,
+        "w": 12,
+        "h": 8,
+        "style": "plain",
+        "data": {
+          "title": "Behind the scenes",
+          "images": []
+        },
+        "auto_height": true
+      },
+      {
+        "id": "business-hours-4",
+        "kind": "business_hours",
+        "x": 0,
+        "y": 17,
+        "w": 4,
+        "h": 9,
+        "style": "card",
+        "data": {
+          "title": "Opening hours"
+        },
+        "auto_height": true
+      },
+      {
+        "id": "location-5",
+        "kind": "location",
+        "x": 4,
+        "y": 17,
+        "w": 4,
+        "h": 6,
+        "style": "card",
+        "data": {
+          "title": "Location",
+          "show_map": true
+        },
+        "auto_height": true
+      },
+      {
+        "id": "contact-6",
+        "kind": "contact",
+        "x": 8,
+        "y": 17,
+        "w": 4,
+        "h": 6,
+        "style": "card",
+        "data": {
+          "title": "Contact",
+          "show_whatsapp": true,
+          "show_phone": true,
+          "show_email": true,
+          "socials": []
+        },
+        "auto_height": true
+      }
+    ]
+  },
+  "tani/blog": {
+    "schema_version": 2,
+    "template": "modern_store",
+    "theme": {
+      "primary": "#3F6212",
+      "font": "merriweather",
+      "surface": "cream",
+      "text_scale": 1,
+      "heading_font": "dmserif",
+      "accent": "#CA8A04",
+      "motion": "subtle",
+      "texture": "paper"
+    },
+    "blocks": [
+      {
+        "id": "text-1",
+        "kind": "text",
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 5,
+        "style": "plain",
+        "data": {
+          "title": "Blog & tips",
+          "body": "News, stories and tips from Kopi Senja Bandung."
+        },
+        "auto_height": true
+      },
+      {
+        "id": "blog-list-2",
+        "kind": "blog_list",
+        "x": 0,
+        "y": 5,
+        "w": 12,
+        "h": 12,
+        "style": "plain",
+        "data": {
+          "title": "Latest articles",
+          "limit": 9
+        },
+        "auto_height": true,
+        "layout": "grid"
+      }
+    ]
+  },
+  "tani/cara-memilih-produk": {
+    "schema_version": 2,
+    "template": "modern_store",
+    "theme": {
+      "primary": "#3F6212",
+      "font": "merriweather",
+      "surface": "cream",
+      "text_scale": 1,
+      "heading_font": "dmserif",
+      "accent": "#CA8A04",
+      "motion": "subtle",
+      "texture": "paper"
+    },
+    "blocks": [
+      {
+        "id": "article-body-1",
+        "kind": "article_body",
+        "x": 2,
+        "y": 0,
+        "w": 8,
+        "h": 24,
+        "style": "plain",
+        "data": {
+          "body": "## Know what you need\nBefore buying, decide what the product is for and what budget feels comfortable.\n\n## Check the details\n- Read the description and sizes carefully.\n- Look at photos from several angles.\n- Check other buyers' reviews.\n\n## Still unsure?\nAsk us directly via chat or WhatsApp. We'll help you choose the best fit.\n\n> Buying right saves money — no exchanges or repeat purchases.",
+          "toc": true
+        },
+        "auto_height": true
+      },
+      {
+        "id": "blog-list-2",
+        "kind": "blog_list",
+        "x": 0,
+        "y": 24,
+        "w": 12,
+        "h": 10,
+        "style": "plain",
+        "data": {
+          "title": "More articles",
+          "limit": 3
+        },
+        "auto_height": true,
+        "layout": "grid"
+      }
+    ],
+    "article": {
+      "excerpt": "A short guide to choosing well: know your needs, check the details and use our Q&A.",
+      "author": "Kopi Senja Bandung",
+      "published_at": "2026-01-01",
+      "tags": [
+        "guide",
+        "shopping"
+      ]
+    }
   },
   "plugin-teks-wa": {
     "schema_version": 2,

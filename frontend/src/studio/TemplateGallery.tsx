@@ -43,6 +43,7 @@ export function TemplateGallery({ first, business, renderCell, onPick, onCurrent
                   <strong>{t.name}</strong>
                   <button type="button" className="d-btn d-btn-sm d-btn-primary" onClick={(e) => { e.stopPropagation(); onPick(t.key); }}>{tx("Pakai")}{" "}{t.name}</button>
                 </span>
+                <span className="st-tpl-cat">{t.category}{t.pack ? ` · ${tx("Paket {0} halaman", 1 + (t.pack({ name: business.profile.name, description: null }).length))}` : ""}</span>
                 <span>{t.desc}</span>
               </span>
             </div>

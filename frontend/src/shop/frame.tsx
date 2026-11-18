@@ -23,7 +23,7 @@ export interface ShopSite {
   theme: Partial<PageV2["theme"]> & { shop?: ShopTexts };
   business: Business;
   status?: OpenStatus | null;
-  pages: { slug: string; title: string }[];
+  pages: { slug: string; title: string; article?: unknown }[];
   platformUrl?: string | null;
   assetUrl: (ref: string) => string | undefined;
   /** Pratinjau Studio: tanpa tautan aktif & tanpa panggilan API. */
@@ -84,7 +84,7 @@ export function ShopFrame({ title, heading = true, wide, children }: { title: st
   const name = site?.business.profile.name ?? tx("Beranda toko");
   const logoUrl = site?.business.profile.logo ? site.assetUrl(site.business.profile.logo) : undefined;
   const pages = site?.pages ?? [];
-  const links: NavLink[] = pages.map((p) => ({ href: p.slug === "home" ? "/" : `/${p.slug}`, label: p.title }));
+  const links: NavLink[] = pages.filter((p) => !p.article).map((p) => ({ href: p.slug === "home" ? "/" : `/${p.slug}`, label: p.title }));
   const side = theme.navbar_style === "side";
   const actions = (
     <nav className="shop-actions" aria-label={tx("Navigasi toko")}>

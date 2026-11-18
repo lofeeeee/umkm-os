@@ -36,12 +36,19 @@ function extraDoc(floatingWa: boolean) {
 }
 
 function docs() {
-  return Object.fromEntries([...TEMPLATES.map((t) => {
-    const r = t.build({ name: "Kopi Senja Bandung", description: "Kedai kopi rumahan dengan biji pilihan." });
-    const d = toDoc({ ...r, installed: [] }, "modern_store");
-    // id acak → deterministik untuk fixture
+  const input = { name: "Kopi Senja Bandung", description: "Kedai kopi rumahan dengan biji pilihan." };
+  // id acak → deterministik untuk fixture; tanggal artikel (hari ini) → tetap.
+  const fix = (d: ReturnType<typeof toDoc>) => {
     d.blocks = d.blocks.map((b, i) => ({ ...b, id: `${b.kind.replace(/_/g, "-")}-${i + 1}` }));
-    return [t.key, d] as const;
+    if (d.article?.published_at) d.article = { ...d.article, published_at: "2026-01-01" };
+    return d;
+  };
+  return Object.fromEntries([...TEMPLATES.flatMap((t) => {
+    const r = t.build(input);
+    const home = fix(toDoc({ ...r, installed: [] }, "modern_store"));
+    // Paket situs: halaman katalog, tentang, blog, artikel — dengan brand kit yang sama.
+    const pages = (t.pack?.(input) ?? []).map((p) => [`${t.key}/${p.slug}`, fix(toDoc({ ...r, cells: p.cells, article: p.article, installed: [] }, "modern_store"))] as const);
+    return [[t.key, home] as const, ...pages];
   }), ["plugin-teks-wa", extraDoc(false)] as const, ["plugin-wa-melayang", extraDoc(true)] as const]);
 }
 

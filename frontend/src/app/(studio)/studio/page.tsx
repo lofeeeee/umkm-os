@@ -34,11 +34,10 @@ import { readiness, type Issue } from "@/studio/readiness";
 import { TEMPLATES } from "@/studio/templates";
 import { fromDoc, isV2, siteThemeOf, toDoc, withSiteTheme, type PageV2 } from "@/studio/doc";
 import { IconRail, type StudioTab } from "@/studio/IconRail";
-import { PagesPanel, type PageItem } from "@/studio/PagesPanel";
+import { PagesPanel, maxPages, type PageItem, type PageKind } from "@/studio/PagesPanel";
 import { ThemePanel, type ThemeConfig } from "@/studio/ThemePanel";
 import { ShopTextsPanel, SystemPreview, type SystemPage } from "@/studio/SystemPreview";
 import { PageSettings } from "@/studio/PageSettings";
-import type { PageKind } from "@/studio/PagesPanel";
 import { DrawPanel, type DrawConfig, type DrawTool, type DrawTarget } from "@/studio/DrawPanel";
 import type { DrawingStroke } from "@/studio/DrawingLayer";
 import { ImageCropModal } from "@/ui/ImageCropModal";
@@ -440,13 +439,43 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
   }
   function applyTemplate(key: string) {
     const t = TEMPLATES.find((x) => x.key === key)!;
-    const r = t.build({ name: business.profile.name, description: business.profile.description ?? null });
+    const input = { name: business.profile.name, description: business.profile.description ?? null };
+    const r = t.build(input);
     const next = withInstalled({ ...r, installed: st?.installed ?? [] });
     if (picking === "first") setHist(start(next));
     else update(() => next, "");
     setPicking(null);
     setSel(null);
     toast.ok(tx("Templat {0} dipakai. Klik teks mana saja untuk mengubahnya.", t.name));
+    void installPack(t, next, input);
+  }
+
+  /** Paket situs: buat halaman katalog/tentang/blog/artikel bila belum ada (tidak menimpa halaman yang
+   *  sudah ada), dalam batas jumlah halaman paket. Draf saja — pemilik menerbitkan sendiri. */
+  async function installPack(t: (typeof TEMPLATES)[number], home: Studio, input: { name: string; description: string | null }) {
+    const extra = t.pack?.(input) ?? [];
+    if (!extra.length || !srv || !canEdit) return;
+    const max = maxPages(planCode === "pro");
+    let list = [...pages];
+    let made = 0;
+    let skipped = 0;
+    for (const pg of extra) {
+      if (list.some((p) => p.slug === pg.slug) || list.length >= max) { skipped++; continue; }
+      try {
+        const r = await api<PageItem>("POST", `${base}/website/pages`, { json: { slug: pg.slug, title: pg.title } });
+        const d = await api<{ revision: number }>("GET", `${base}/website/pages/${pg.slug}/draft`);
+        const state: Studio = { ...home, cells: pg.cells, article: pg.article, installed: [] };
+        await api("PUT", `${base}/website/pages/${pg.slug}/draft`, { json: { content: toDoc(state, srv.template), base_revision: d.revision } });
+        list = [...list, r];
+        made++;
+      } catch (e) {
+        toast.error(describe(e));
+        break;
+      }
+    }
+    setPages(list);
+    if (made) toast.ok(tx("{0} halaman paket dibuat (draf): katalog, tentang, blog, dan contoh artikel. Terbitkan masing-masing di panel Halaman.", made));
+    if (skipped) toast.info(tx("{0} halaman paket dilewati karena sudah ada atau batas halaman paket tercapai.", skipped));
   }
 
   /* ---------------- Render plugin (galeri template & pratinjau penuh) ---------------- */

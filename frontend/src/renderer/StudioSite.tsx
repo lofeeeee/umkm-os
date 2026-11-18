@@ -271,7 +271,8 @@ export function StudioSite(props: StudioSiteProps) {
   // Tautan navigasi: halaman terbit dari server. Tanpa daftar halaman (mis. pratinjau) tautan jatuh ke
   // anchor bagian di halaman ini supaya navigasi tidak kosong.
   const navLinks: NavLink[] = (props.pages ?? []).filter((p) => !p.current).length > 0
-    ? (props.pages ?? []).map((p) => ({ href: p.slug === "home" ? "/" : `/${p.slug}`, label: p.title }))
+    // Halaman artikel tidak masuk menu (dijangkau lewat halaman Blog / Daftar artikel), kecuali yang sedang dibuka.
+    ? (props.pages ?? []).filter((p) => !p.article || p.current).map((p) => ({ href: p.slug === "home" ? "/" : `/${p.slug}`, label: p.title }))
     : Array.from(anchors.entries()).map(([id, names]) => ({ href: `#${names[0] ?? id}`, label: titleCase(names[0] ?? id) }));
   const logoUrl = props.business.profile.logo ? props.assetUrl(props.business.profile.logo) : undefined;
   /** Satu lapisan bebas (Latar / Gambar) di grid. */
