@@ -14,16 +14,19 @@ export interface PublicNavProps {
   /** Nama toko; dipakai bila tidak ada logo. */
   brand: string;
   logoUrl?: string;
+  /** Plugin Logo ada di halaman: logo (dan nama bila plugin menampilkannya) tidak diulang di navigasi. */
+  hideLogo?: boolean;
+  hideName?: boolean;
   links: NavLink[];
   /** Alt logo kosong = hiasan (nama toko sudah ada sebagai teks). */
   ariaLabel?: string;
 }
 
-function Brand({ brand, logoUrl }: { brand: string; logoUrl?: string }): ReactNode {
+function Brand({ brand, logoUrl, hideLogo, hideName }: { brand: string; logoUrl?: string; hideLogo?: boolean; hideName?: boolean }): ReactNode {
   return (
     <div className="s-brand">
-      <LogoMark url={logoUrl} name={brand} className="s-logo" size={36} />
-      <span className="s-brand-name">{brand}</span>
+      {!hideLogo && <LogoMark url={logoUrl} name={brand} className="s-logo" size={36} />}
+      {hideName ? <span className="s-sr-only">{brand}</span> : <span className="s-brand-name">{brand}</span>}
     </div>
   );
 }
@@ -38,18 +41,18 @@ function Links({ links }: { links: NavLink[] }) {
 }
 
 /** Navigasi situs publik. `side` = kolom kiri menetap (desktop) / bilah atas (ponsel). */
-export function PublicNav({ style, sticky = false, brand, logoUrl, links, ariaLabel }: PublicNavProps) {
+export function PublicNav({ style, sticky = false, brand, logoUrl, hideLogo, hideName, links, ariaLabel }: PublicNavProps) {
   if (style === "side") {
     return (
       <aside className="s-nav-side" aria-label={ariaLabel ?? t("Navigasi samping")}>
-        <Brand brand={brand} logoUrl={logoUrl} />
+        <Brand brand={brand} logoUrl={logoUrl} hideLogo={hideLogo} hideName={hideName} />
         <Links links={links} />
       </aside>
     );
   }
   return (
     <header className={`s-headbar${sticky ? " s-sticky" : ""}`} aria-label={ariaLabel ?? t("Navigasi atas")}>
-      <Brand brand={brand} logoUrl={logoUrl} />
+      <Brand brand={brand} logoUrl={logoUrl} hideLogo={hideLogo} hideName={hideName} />
       <Links links={links} />
     </header>
   );

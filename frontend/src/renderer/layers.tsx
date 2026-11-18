@@ -21,9 +21,11 @@ export interface LayerBlock {
 }
 
 /** Lapisan bebas di grid (boleh menumpuk blok). Gambar popup bukan lapisan grid — ia menempel di layar. */
-export const isLayer = (b: { kind: string; layout?: string }) => b.kind === "background" || (b.kind === "image" && b.layout !== "popup");
+export const isLayer = (b: { kind: string; layout?: string }) =>
+  b.kind === "background" || b.kind === "shape" || b.kind === "logo" || (b.kind === "image" && b.layout !== "popup");
 /** Lapisan yang dirender DI BELAKANG blok (Latar, Gambar "di belakang blok"). Sisanya di depan. */
-export const isBehind = (b: { kind: string; layout?: string }) => b.kind === "background" || (b.kind === "image" && b.layout === "below");
+export const isBehind = (b: { kind: string; layout?: string }) =>
+  b.kind === "background" || ((b.kind === "image" || b.kind === "shape") && b.layout === "below");
 export const isPopupImage = (b: { kind: string; layout?: string }) => b.kind === "image" && b.layout === "popup";
 
 const POSITIONS = ["center", "top", "bottom", "left", "right"];
@@ -155,4 +157,59 @@ export function mobileRows(blocks: LayerBlock[]): Map<string, string> {
     out.set(id, `${Math.min(...rows)} / ${Math.max(...rows) + 1}`);
   }
   return out;
+}
+
+/* ------------------------------------------------------------ plugin Bentuk */
+function starPath(points: number, outer: number, inner: number): string {
+  const pts: string[] = [];
+  for (let i = 0; i < points * 2; i++) {
+    const r = i % 2 === 0 ? outer : inner;
+    const a = (Math.PI * i) / points - Math.PI / 2;
+    pts.push(`${(50 + r * Math.cos(a)).toFixed(2)} ${(50 + r * Math.sin(a)).toFixed(2)}`);
+  }
+  return `M${pts.join("L")}Z`;
+}
+function scallopPath(bumps: number): string {
+  let d = "";
+  for (let i = 0; i <= bumps * 8; i++) {
+    const a = (2 * Math.PI * i) / (bumps * 8);
+    const r = 44 + 6 * Math.cos(bumps * a);
+    d += `${i ? "L" : "M"}${(50 + r * Math.cos(a)).toFixed(2)} ${(50 + r * Math.sin(a)).toFixed(2)}`;
+  }
+  return d + "Z";
+}
+/** Bentuk vektor (viewBox 100×100). `stretch` = ikut melar mengikuti kotak (gelombang, panah, coretan). */
+export const SHAPE_DEFS: Record<string, { d: string; stroke?: boolean; stretch?: boolean; evenodd?: boolean }> = {
+  circle: { d: "M50 0a50 50 0 1 0 0 100A50 50 0 1 0 50 0Z" },
+  blob: { d: "M23 12C38-1 66-3 82 10s21 40 14 60-27 34-50 30S4 89 1 66 8 25 23 12Z", stretch: true },
+  star: { d: starPath(5, 50, 21) },
+  sparkle: { d: "M50 0C53 30 70 47 100 50 70 53 53 70 50 100 47 70 30 53 0 50 30 47 47 30 50 0Z" },
+  ring: { d: "M50 0a50 50 0 1 0 0 100A50 50 0 1 0 50 0Zm0 20a30 30 0 1 1 0 60 30 30 0 0 1 0-60Z", evenodd: true },
+  arrow: { d: "M0 38h62V12l38 38-38 38V62H0Z", stretch: true },
+  wave: { d: "M0 40c12-16 25-16 37 0s25 16 37 0 19-12 26-8v28c-7-4-14 0-26 8-12 16-25 16-37 0S12 52 0 68Z", stretch: true },
+  burst: { d: starPath(14, 50, 38) },
+  squiggle: { d: "M6 55Q19 20 32 55T58 55T84 55", stroke: true, stretch: true },
+  badge: { d: scallopPath(14) },
+};
+
+function brandFill(c: unknown): string {
+  if (c === "accent") return "var(--s-accent, var(--s-primary))";
+  if (typeof c === "string" && /^#[0-9a-fA-F]{6}$/.test(c)) return c;
+  return "var(--s-primary)";
+}
+
+export function ShapeLayer({ b }: { b: LayerBlock }) {
+  const def = SHAPE_DEFS[typeof b.data.shape === "string" ? b.data.shape : "blob"] ?? SHAPE_DEFS.blob!;
+  const fill = brandFill(b.data.color);
+  const op = typeof b.data.opacity === "number" ? Math.min(100, Math.max(0, b.data.opacity)) / 100 : 1;
+  const rot = typeof b.data.rotate === "number" ? Math.max(-180, Math.min(180, b.data.rotate)) : 0;
+  return (
+    <div className="sv2-shape" data-mode={b.layout ?? "above"}>
+      <svg viewBox="0 0 100 100" preserveAspectRatio={def.stretch ? "none" : "xMidYMid meet"} aria-hidden="true" focusable="false"
+        style={{ opacity: op, transform: rot ? `rotate(${rot}deg)` : undefined }}>
+        <path d={def.d} fill={def.stroke ? "none" : fill} stroke={def.stroke ? fill : undefined} strokeWidth={def.stroke ? 9 : undefined}
+          strokeLinecap="round" fillRule={def.evenodd ? "evenodd" : undefined} vectorEffect={def.stroke ? "non-scaling-stroke" : undefined} />
+      </svg>
+    </div>
+  );
 }

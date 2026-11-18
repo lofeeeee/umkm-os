@@ -8,7 +8,7 @@ import type { Json } from "@/renderer/types";
 import manifest from "./plugin-manifest.json";
 import { t, m } from "@/i18n";
 
-export type PluginKind = SectionType | "chatbot" | "text" | "whatsapp" | "background" | "image";
+export type PluginKind = SectionType | "chatbot" | "text" | "whatsapp" | "background" | "image" | "shape" | "logo";
 export type PluginCategory = "Konten" | "Jualan" | "Layanan" | "Info toko";
 
 export interface PluginDef {
@@ -41,6 +41,9 @@ export const PLUGINS: PluginDef[] = [
   { kind: "background", get name() { return t("Latar"); }, get desc() { return t("Gambar latar tembus: selalu di belakang blok lain. Seret, pindah, dan ubah ukurannya bebas."); }, category: "Konten", w: 12, h: 12, minW: 2, minH: 2, keywords: m("background latar belakang wallpaper gambar tembus") },
   { kind: "image", get name() { return t("Gambar"); }, get desc() { return t("Gambar bebas (PNG transparan, stiker, logo): taruh di mana saja — di atas atau di belakang blok, menggantung saat digulir, atau popup di layar."); }, category: "Konten", w: 3, h: 6, minW: 1, minH: 2,
     layouts: [{ value: "above", get label() { return t("Di atas blok"); } }, { value: "below", get label() { return t("Di belakang blok"); } }, { value: "sticky", get label() { return t("Menggantung"); } }, { value: "popup", get label() { return t("Popup"); } }], keywords: m("gambar foto stiker png logo popup menggantung hiasan ilustrasi") },
+  { kind: "shape", get name() { return t("Bentuk"); }, get desc() { return t("Hiasan vektor berwarna merek: blob, bintang, kilau, cincin, panah, gelombang, dan lainnya."); }, category: "Konten", w: 2, h: 4, minW: 1, minH: 1,
+    layouts: [{ value: "above", get label() { return t("Di atas blok"); } }, { value: "below", get label() { return t("Di belakang blok"); } }, { value: "sticky", get label() { return t("Menggantung"); } }], keywords: m("bentuk hiasan dekorasi stiker bintang blob ornamen") },
+  { kind: "logo", get name() { return t("Logo"); }, get desc() { return t("Logo toko dari Profil bisnis — taruh di mana saja. Logo di menu navigasi otomatis disembunyikan agar tidak dobel."); }, category: "Info toko", w: 3, h: 3, minW: 1, minH: 1, keywords: m("logo merek brand identitas") },
   { kind: "contact", get name() { return t("Kontak"); }, get desc() { return t("Tombol WhatsApp, telepon, dan media sosial."); }, category: "Info toko", w: 4, h: 5, minW: 3, minH: 2, keywords: m("whatsapp telepon sosial") },
 ];
 
@@ -60,6 +63,8 @@ export const EXTRA_DATA: Partial<Record<PluginKind, { [k: string]: Json }>> = {
   text: { get title() { return t("Pengumuman"); }, get body() { return t("Tulis informasi penting untuk pembeli di sini."); } },
   background: { fit: "crop", position: "center", opacity: 100 },
   image: { fit: "contain", position: "center", opacity: 100, corner: "bottom-right" },
+  shape: { shape: "blob", color: "primary", opacity: 100 },
+  logo: { show_name: true },
   whatsapp: { get label() { return t("Pesan via WhatsApp"); }, get message() { return t("Halo, saya mau tanya produk di toko Anda."); } },
 };
 

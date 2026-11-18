@@ -145,7 +145,7 @@ describe("lapisan tembus (plugin Latar)", () => {
 });
 
 describe("urutan ponsel", () => {
-  const cells = [
+  const cells: (Cell & { mOrder?: number })[] = [
     { id: "a", x: 0, y: 0, w: 6, h: 4 },
     { id: "b", x: 6, y: 0, w: 6, h: 4 },
     { id: "c", x: 0, y: 4, w: 12, h: 4 },

@@ -79,7 +79,7 @@ pub const MAX_DRAWING_STROKES: usize = 200;
 pub const MAX_STROKE_POINTS: usize = 1000;
 
 /// Plugin resmi (ADR-0019). Data 9 jenis pertama memakai aturan section v1.
-pub const PLUGIN_KINDS: [&str; 14] = [
+pub const PLUGIN_KINDS: [&str; 16] = [
     "hero",
     "about",
     "product_grid",
@@ -94,6 +94,8 @@ pub const PLUGIN_KINDS: [&str; 14] = [
     "whatsapp",
     "background",
     "image",
+    "shape",
+    "logo",
 ];
 /// Gaya kotak blok. `soft` = 3D lembut (neumorphism), `flat` = 2D datar tanpa bayangan.
 pub const STYLES: [&str; 6] = ["plain", "card", "tint", "dark", "soft", "flat"];
@@ -121,8 +123,13 @@ pub const IMAGE_FILTERS: [&str; 6] = ["none", "mono", "warm", "cool", "duotone",
 /// Lapisan bebas: boleh menumpuk blok lain (tidak ikut cek tumpang tindih). Latar selalu di belakang;
 /// Gambar di depan (`above`), di belakang (`below`), atau menggantung mengikuti gulir (`sticky`).
 pub fn is_layer(kind: &str) -> bool {
-    matches!(kind, "background" | "image")
+    matches!(kind, "background" | "image" | "shape" | "logo")
 }
+
+/// Plugin Bentuk: hiasan vektor berwarna merek.
+pub const SHAPES: [&str; 10] = [
+    "circle", "blob", "star", "sparkle", "ring", "arrow", "wave", "burst", "squiggle", "badge",
+];
 
 /// Varian tata letak per plugin; plugin tanpa varian tidak boleh mengirim `layout`.
 pub fn layouts(kind: &str) -> &'static [&'static str] {
@@ -131,6 +138,7 @@ pub fn layouts(kind: &str) -> &'static [&'static str] {
         "chatbot" => &["inline", "floating", "bar"],
         "whatsapp" => &["floating", "inline"],
         "image" => &["above", "below", "sticky", "popup"],
+        "shape" => &["above", "below", "sticky"],
         _ => &[],
     }
 }
@@ -651,6 +659,28 @@ fn data(v: &mut V, kind: &str, d: &Value, p: &str) {
                 }
             }
         }
+        "shape" => {
+            if let Some(m) = v.object(d, p, &["shape", "color", "opacity", "rotate"]) {
+                match m.get("shape") {
+                    Some(Value::String(s)) if SHAPES.contains(&s.as_str()) => {}
+                    _ => v.err(&join(p, "shape"), "invalid_value"),
+                }
+                brand_color(v, m, p, "color");
+                if m.contains_key("opacity") {
+                    v.int(m, p, "opacity", 0, 100);
+                }
+                if m.contains_key("rotate") {
+                    v.int(m, p, "rotate", -180, 180);
+                }
+            }
+        }
+        "logo" => {
+            // Logo dari Profil bisnis (bukan unggahan di blok): satu sumber, tidak bisa berbeda antarhalaman.
+            if let Some(m) = v.object(d, p, &["show_name", "href"]) {
+                v.boolean(m, p, "show_name");
+                v.href(m, p, "href", false);
+            }
+        }
         "background" => {
             if let Some(m) = v.object(
                 d,
@@ -670,12 +700,7 @@ fn data(v: &mut V, kind: &str, d: &Value, p: &str) {
                 v.boolean(m, p, "bleed");
                 enum_opt(v, m, p, "edge_top", &EDGES);
                 enum_opt(v, m, p, "edge_bottom", &EDGES);
-                match m.get("color") {
-                    None => {}
-                    Some(Value::String(s))
-                        if is_hex_color(s) || s == "primary" || s == "accent" => {}
-                    Some(_) => v.err(&join(p, "color"), "invalid_color"),
-                }
+                brand_color(v, m, p, "color");
                 enum_opt(v, m, p, "fit", &BACKGROUND_FITS);
                 enum_opt(v, m, p, "position", &IMAGE_POSITIONS);
                 if m.contains_key("opacity") {
@@ -714,6 +739,15 @@ fn data(v: &mut V, kind: &str, d: &Value, p: &str) {
             v.section_data(kind, &Value::Object(base), p);
         }
         _ => v.section_data(kind, d, p),
+    }
+}
+
+/// Warna opsional: heks, atau `primary`/`accent` (mengikuti brand kit).
+fn brand_color(v: &mut V, m: &Map<String, Value>, p: &str, key: &str) {
+    match m.get(key) {
+        None => {}
+        Some(Value::String(s)) if is_hex_color(s) || s == "primary" || s == "accent" => {}
+        Some(_) => v.err(&join(p, key), "invalid_color"),
     }
 }
 
@@ -1150,6 +1184,48 @@ mod tests {
         validate_page(&doc(vec![a.clone(), b])).expect("m_order sah");
         a["m_order"] = json!(-1);
         assert!(codes(&doc(vec![a])).contains(&("blocks[0].m_order".into(), "out_of_range")));
+    }
+
+    #[test]
+    fn shape_and_logo_layers_validate() {
+        let mut star = block(
+            "bentuk-1",
+            "shape",
+            0,
+            0,
+            2,
+            3,
+            json!({"shape": "star", "color": "accent", "opacity": 80, "rotate": -15}),
+        );
+        star["layout"] = json!("below");
+        let logo = block(
+            "logo-1",
+            "logo",
+            0,
+            0,
+            3,
+            3,
+            json!({"show_name": true, "href": "/"}),
+        );
+        validate_page(&doc(vec![
+            block("a", "text", 0, 0, 12, 4, json!({"body": "x"})),
+            star,
+            logo,
+        ]))
+        .expect("bentuk & logo boleh menumpuk blok");
+        let bad = block(
+            "bentuk-1",
+            "shape",
+            0,
+            0,
+            2,
+            2,
+            json!({"shape": "heart", "rotate": 270, "color": "red"}),
+        );
+        let c = codes(&doc(vec![bad]));
+        assert!(c.contains(&("blocks[0].data.shape".into(), "invalid_value")));
+        assert!(c.contains(&("blocks[0].data.rotate".into(), "out_of_range")));
+        assert!(c.contains(&("blocks[0].data.color".into(), "invalid_color")));
     }
 
     #[test]

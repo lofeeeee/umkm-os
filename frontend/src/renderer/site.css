@@ -741,3 +741,20 @@
 .sv2-img[data-filter="duotone"][data-shape="circle"]::after { clip-path: circle(closest-side); }
 .sv2-img[data-filter="duotone"][data-shape="arch"]::after { clip-path: inset(0 round 50% 50% 0 0 / 34% 34% 0 0); }
 .sv2-img[data-filter="duotone"][data-shape="squircle"]::after { clip-path: inset(0 round 28%); }
+
+/* Plugin Bentuk & Logo (lapisan bebas). */
+.sv2-shape { flex: 1 1 auto; min-height: 0; display: flex; }
+.sv2-shape > svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.sv2-shape[data-mode="sticky"] { display: block; }
+.sv2-shape[data-mode="sticky"] > svg { position: sticky; top: 88px; height: auto; aspect-ratio: 1; max-height: calc(100vh - 120px); }
+.sv2-logo { flex: 1 1 auto; min-height: 0; display: flex; align-items: center; gap: 12px; color: var(--s-ink, #18181b); text-decoration: none; pointer-events: auto; }
+.sv2-logo-mark { height: min(100%, 96px); width: auto; max-width: 100%; aspect-ratio: 1; object-fit: contain; border-radius: 12px; flex: none; }
+.sv2-logo-mark-fallback { display: grid; place-items: center; background: var(--s-primary); color: var(--s-on-primary); font-weight: 800; font-size: 1.5rem; height: min(100%, 72px); }
+.sv2-logo-name { font-family: var(--s-head-font, var(--s-font)); font-weight: var(--s-head-weight, 800); font-size: 1.25rem; letter-spacing: -0.01em; overflow-wrap: anywhere; }
+@container (max-width: 719px) {
+  .sv2-block[data-layer="front"] .sv2-shape > svg { height: auto; aspect-ratio: 1; }
+  .sv2-block[data-kind="logo"] > * { width: auto; }
+}
+.s-sr-only { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.sv2-block[data-layer] > .sv2-logo, .sv2-block[data-layer] .sf-block > .sv2-logo { flex-direction: row; justify-content: flex-start; }
+.sv2 a.sv2-logo, .sv2 a.sv2-logo:hover { color: var(--s-ink, #18181b); text-decoration: none; }

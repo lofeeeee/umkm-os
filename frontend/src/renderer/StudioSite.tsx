@@ -22,7 +22,8 @@ import { pluginDef } from "@/studio/plugins";
 import { bandSpans } from "./bands";
 import { InkLayer } from "./ink";
 import { PublicNav, type NavLink } from "./PublicNav";
-import { BackgroundLayer, FreeImage, isBehind, isLayer, isPopupImage, layerVisible, mobileRows } from "./layers";
+import { BackgroundLayer, FreeImage, ShapeLayer, isBehind, isLayer, isPopupImage, layerVisible, mobileRows } from "./layers";
+import { LogoLayer } from "./LogoLayer";
 import { PopupImage } from "./PopupImage";
 import { SiteFooter } from "./SiteFooter";
 import { fontStack, onColor, primaryVars, safeColor, text, waLink } from "./safe";
@@ -148,12 +149,18 @@ function hiddenReason(b: BlockV2): string {
 
 function publicBlock(b: BlockV2, props: StudioSiteProps): boolean {
   if (b.kind === "background" || b.kind === "image") return layerVisible(b, props.assetUrl);
+  if (b.kind === "shape" || b.kind === "logo") return true;
   if (b.kind === "whatsapp") return !!whatsappHref(props.business.profile.whatsapp ?? props.business.profile.phone, text(b.data.message));
   return hasPublicContent(b.kind, b.data, props.business, props.assetUrl);
 }
 
 function Block({ b, props }: { b: BlockV2; props: StudioSiteProps }) {
   let body: ReactNode;
+  if (b.kind === "shape") return <ShapeLayer b={b} />;
+  if (b.kind === "logo") {
+    const logo = props.business.profile.logo ? props.assetUrl(props.business.profile.logo) : undefined;
+    return <LogoLayer b={b} name={props.business.profile.name} logoUrl={logo} editing={props.mode === "studio-edit"} />;
+  }
   if (b.kind === "image") return <FreeImage b={b} assetUrl={props.assetUrl} editing={props.mode === "studio-edit"} />;
   if (b.kind === "background") return <BackgroundLayer b={b} assetUrl={props.assetUrl} editing={props.mode === "studio-edit"} />;
   if (b.kind === "text") body = <div className="site s-solo"><section className="s"><div className="s-inner"><TextBlock b={b} /></div></section></div>;
@@ -233,6 +240,8 @@ export function StudioSite(props: StudioSiteProps) {
   const anchors = anchorsFor(grid);
   const spans = bandSpans(grid);
   const mrows = mobileRows(visible);
+  // Plugin Logo di halaman → navigasi tidak mengulang logo/nama (tidak dobel).
+  const logoPlugin = layers.find((b) => b.kind === "logo");
   const behind = layers.filter(isBehind);
   const front = layers.filter((b) => !isBehind(b));
   const popups = doc.blocks.filter((b) => isPopupImage(b) && (editing || publicBlock(b, props)));
@@ -323,6 +332,8 @@ export function StudioSite(props: StudioSiteProps) {
           sticky={doc.theme.navbar_sticky === true}
           brand={props.business.profile.name}
           logoUrl={logoUrl}
+          hideLogo={!!logoPlugin}
+          hideName={logoPlugin?.data.show_name !== false && !!logoPlugin}
           links={navLinks}
         />
         <div className="sv2-main">

@@ -18,6 +18,7 @@ import { Tr } from "@/i18n/react";
 import { type StudioCell, isEmbed, SINGLE, IMAGE_KEY, takesPhoto } from "@/studio/editor-model";
 import { BackgroundFields } from "@/studio/BackgroundFields";
 import { ImageFields } from "@/studio/ImageFields";
+import { LogoFields, ShapeFields } from "@/studio/ShapeFields";
 
 export function Inspector({ c, onBack, onChange, onWidth, onMove, onLayout, onDuplicate, onRemove, onFull, onPhoto, onCrop, onCoverPage, aiHref, businessHref, chatReady, upgradeHref, mobile }: {
   c: StudioCell;
@@ -120,7 +121,9 @@ export function Inspector({ c, onBack, onChange, onWidth, onMove, onLayout, onDu
           </div>
         )}
       </div>}
-      {c.kind === "image" ? <ImageFields c={c} onChange={onChange} onLayout={onLayout} onPhoto={onPhoto} />
+      {c.kind === "shape" ? <ShapeFields c={c} onChange={onChange} onLayout={onLayout} />
+        : c.kind === "logo" ? <LogoFields c={c} onChange={onChange} businessHref={businessHref} />
+        : c.kind === "image" ? <ImageFields c={c} onChange={onChange} onLayout={onLayout} onPhoto={onPhoto} />
         : layer ? <BackgroundFields c={c} onChange={onChange} /> : <>
       <div className="st-section">
         <h3>{tx("Gaya")}</h3>

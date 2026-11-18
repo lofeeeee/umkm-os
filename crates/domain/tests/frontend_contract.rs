@@ -87,6 +87,8 @@ fn studio_document_from_defaults_validates() {
             "image" => {
                 json!({"fit": "contain", "position": "center", "opacity": 100, "corner": "bottom-right"})
             }
+            "shape" => json!({"shape": "blob", "color": "primary", "opacity": 100}),
+            "logo" => json!({"show_name": true}),
             k => map[k].clone(),
         };
         blocks.push(json!({"id": format!("{}-1", kind.replace('_', "-")), "kind": kind, "x": 0, "y": y, "w": 12, "h": 4, "style": "plain", "data": data}));

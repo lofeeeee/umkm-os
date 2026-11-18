@@ -441,3 +441,27 @@ describe("urutan ponsel (m_order)", () => {
     expect(mobileSorted(blocks).map((b) => b.id)).toEqual(["c", "b", "a"]);
   });
 });
+
+describe("plugin Bentuk & Logo", () => {
+  const withLogo: Business = { ...biz, profile: { ...biz.profile, name: "Kopi Senja", logo: "asset:55555555-5555-5555-5555-555555555555" } };
+  const page: PageV2 = { schema_version: 2, template: "t", theme: { primary: "#0F766E", font: "inter", accent: "#F59E0B" }, blocks: [
+    { id: "a", kind: "text", x: 0, y: 0, w: 12, h: 4, style: "plain", data: { body: "A" } },
+    { id: "bintang", kind: "shape", layout: "below", x: 0, y: 0, w: 2, h: 3, style: "plain", data: { shape: "star", color: "accent", rotate: -15 } },
+    { id: "logo", kind: "logo", x: 9, y: 0, w: 3, h: 3, style: "plain", data: { show_name: true } },
+  ] };
+  const html = renderToStaticMarkup(<StudioSite doc={page} business={withLogo} assetUrl={() => "/files/logo.png"} />);
+  it("bentuk di belakang blok dengan warna aksen & putaran; logo bebas bertaut ke beranda", () => {
+    const grid = html.slice(html.indexOf('class="sv2-grid"'));
+    expect(grid.indexOf('id="bintang"')).toBeLessThan(grid.indexOf('id="a"'));
+    expect(html).toContain('fill="var(--s-accent, var(--s-primary))"');
+    expect(html).toContain("transform:rotate(-15deg)");
+    expect(html).toMatch(/<a class="sv2-logo" href="\/" aria-label="Kopi Senja"><img src="\/files\/logo.png"/);
+  });
+  it("logo tidak dobel: navigasi tidak menampilkan logo/nama bila plugin Logo ada", () => {
+    const nav = html.slice(html.indexOf("s-brand"), html.indexOf("sv2-main"));
+    expect(nav).not.toContain('class="s-logo"');
+    expect(nav).toContain('<span class="s-sr-only">Kopi Senja</span>');
+    const without = renderToStaticMarkup(<StudioSite doc={{ ...page, blocks: page.blocks.filter((b) => b.kind !== "logo") }} business={withLogo} assetUrl={() => "/files/logo.png"} />);
+    expect(without).toContain('class="s-logo"');
+  });
+});

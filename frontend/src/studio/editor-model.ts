@@ -37,13 +37,15 @@ export const EXTRA_LIMITS: Partial<Record<PluginKind, Record<string, { max: numb
   whatsapp: { label: { max: 40, required: true }, message: { max: 300 } },
   background: {},
   image: { alt: { max: 160 } },
+  shape: {},
+  logo: {},
 };
 /** Satu per halaman (ADR-0019 max_per_page). */
 export const SINGLE: PluginKind[] = ["chatbot", "whatsapp"];
 /** Plugin yang punya satu foto utama (diganti saat foto dijatuhkan). Galeri: foto ditambahkan. */
 export const IMAGE_KEY: Partial<Record<PluginKind, string>> = { hero: "image", about: "image", promotion: "image", background: "image", image: "image" };
 /** Lapisan bebas yang boleh menumpuk blok lain (server: `is_layer`). Gambar mode popup ada di luar grid. */
-export const isLayerKind = (k: PluginKind, layout?: string) => k === "background" || (k === "image" && layout !== "popup");
+export const isLayerKind = (k: PluginKind, layout?: string) => k === "background" || k === "shape" || k === "logo" || (k === "image" && layout !== "popup");
 export const takesPhoto = (k: PluginKind) => k in IMAGE_KEY || k === "gallery";
 
 export function cellFor(kind: PluginKind, data?: { [k: string]: Json }): StudioCell {
