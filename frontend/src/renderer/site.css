@@ -3,6 +3,10 @@
 @import "@fontsource-variable/nunito/wght.css";
 @import "@fontsource-variable/merriweather/wght.css";
 @import "@fontsource-variable/fraunces/wght.css";
+@import "@fontsource-variable/playfair-display/wght.css";
+@import "@fontsource-variable/space-grotesk/wght.css";
+@import "@fontsource-variable/caveat/wght.css";
+@import "@fontsource/dm-serif-display/400.css";
 @import "@fontsource/poppins/400.css";
 @import "@fontsource/poppins/600.css";
 @import "@fontsource/poppins/700.css";
@@ -20,7 +24,7 @@
   --s-bg: #ffffff;
   --s-soft: #f8fafc;
   --s-line: #e2e8f0;
-  --s-radius: 14px;
+  --s-radius: var(--s-radius-kit, 14px);
   --s-tint: color-mix(in srgb, var(--s-primary) 8%, #fff);
   --s-ease: cubic-bezier(0.23, 1, 0.32, 1);
   font-family: var(--s-font);
@@ -653,3 +657,51 @@
   background: #fef3c7; color: #92400e; font: 600 12px/1.4 var(--s-font, system-ui); letter-spacing: 0;
 }
 
+
+/* ============================================================
+   Brand kit (tema situs): judul, aksen, gradasi, sudut, gerak, tekstur.
+   ============================================================ */
+.sv2 :is(.s-title, .s-hero h1, .s-text h2, .s-text h3, .sf-name, .s-brand, .s-card h3) {
+  font-family: var(--s-head-font, var(--s-font)); font-weight: var(--s-head-weight, 800);
+}
+.sv2 .s-product-price { color: var(--s-accent, var(--s-primary)); }
+.sv2[data-gradient] .s-btn:not(.s-promo .s-btn), .sv2[data-gradient] .sf-wa {
+  background: linear-gradient(135deg, var(--s-primary), var(--s-accent)); color: var(--s-on-primary) !important;
+}
+.sv2[data-gradient] .s-promo { background: linear-gradient(135deg, var(--s-primary), var(--s-accent)); }
+.sv2[data-radius="sharp"] .sv2-foot { border-radius: 6px 6px 0 0; }
+.sv2[data-radius="round"] .sv2-foot { border-radius: 40px 40px 0 0; }
+.sv2[data-radius="sharp"] :is(.sv2-bg[data-round], .sv2-img img[data-round]) { border-radius: 4px; }
+.sv2[data-radius="round"] :is(.sv2-bg[data-round], .sv2-img img[data-round]) { border-radius: 32px; }
+
+/* Tekstur halaman: lapisan latar di elemen halaman itu sendiri (tidak menutupi apa pun). */
+.sv2[data-texture="dots"] {
+  background-image: radial-gradient(color-mix(in srgb, var(--s-ink, #18181b) 14%, transparent) 1px, transparent 1.5px);
+  background-size: 18px 18px;
+}
+.sv2[data-texture="grain"] {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .09 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.sv2[data-texture="paper"] {
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.04 .6' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .45  0 0 0 0 .35  0 0 0 0 .2  0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23p)'/%3E%3C/svg%3E"),
+    linear-gradient(color-mix(in srgb, #c8a96b 6%, transparent), transparent);
+}
+
+/* Gerak: blok muncul saat masuk layar (scroll-driven, tanpa JS). Hanya situs publik & bila pengguna tidak
+   meminta gerak dikurangi. Browser tanpa dukungan: blok langsung tampil (tidak ada yang tersembunyi). */
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .sv2[data-motion]:not(.sf-editing) .sv2-grid > .sv2-block:not([data-layer="cover"]) {
+      animation: sv2-reveal linear both; animation-timeline: view(); animation-range: entry 0% entry 35%;
+    }
+    .sv2[data-motion="lively"]:not(.sf-editing) .sv2-grid > .sv2-block:not([data-layer="cover"]) { animation-name: sv2-reveal-lively; }
+  }
+  .sv2[data-motion="lively"] :is(.s-btn, .sf-wa, .s-product) { transition: transform 0.2s cubic-bezier(0.23, 1, 0.32, 1), box-shadow 0.2s ease; }
+  @media (hover: hover) {
+    .sv2[data-motion="lively"] :is(.s-btn, .sf-wa):hover { transform: translateY(-2px); }
+    .sv2[data-motion="lively"] .s-product:hover { transform: translateY(-4px); box-shadow: 0 16px 32px -16px rgb(15 23 42 / 0.3); }
+  }
+}
+@keyframes sv2-reveal { from { opacity: 0; transform: translateY(14px); } }
+@keyframes sv2-reveal-lively { from { opacity: 0; transform: translateY(28px) scale(0.97); } }

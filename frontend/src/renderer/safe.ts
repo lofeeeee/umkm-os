@@ -64,6 +64,10 @@ export const FONT_STACKS: Record<string, string> = {
   merriweather: "'Merriweather Variable', Merriweather, Georgia, ui-serif, serif",
   fraunces: "'Fraunces Variable', Fraunces, Georgia, ui-serif, serif",
   system: "ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif",
+  playfair: "'Playfair Display Variable', 'Playfair Display', Georgia, ui-serif, serif",
+  grotesk: "'Space Grotesk Variable', 'Space Grotesk', ui-sans-serif, system-ui, sans-serif",
+  caveat: "'Caveat Variable', Caveat, 'Comic Sans MS', cursive",
+  dmserif: "'DM Serif Display', Georgia, ui-serif, serif",
 };
 
 export function fontStack(f: unknown): string {

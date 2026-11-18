@@ -25,7 +25,7 @@ import { PublicNav, type NavLink } from "./PublicNav";
 import { BackgroundLayer, FreeImage, isBehind, isLayer, isPopupImage, layerImage, mobileRows } from "./layers";
 import { PopupImage } from "./PopupImage";
 import { SiteFooter } from "./SiteFooter";
-import { fontStack, primaryVars, safeColor, text, waLink } from "./safe";
+import { fontStack, onColor, primaryVars, safeColor, text, waLink } from "./safe";
 import { Site, type GridProduct, hasPublicContent } from "./Site";
 import type { Business, OpenStatus, SectionType } from "./types";
 import { t as tx, tmap } from "@/i18n";
@@ -267,6 +267,12 @@ export function StudioSite(props: StudioSiteProps) {
   const style = {
     ...primaryVars(doc.theme.primary),
     "--s-font": fontStack(doc.theme.font),
+    // Brand kit: font & ketebalan judul, warna aksen, sudut global.
+    "--s-head-font": fontStack(doc.theme.heading_font ?? doc.theme.font),
+    "--s-head-weight": doc.theme.heading_weight ?? 800,
+    "--s-accent": safeColor(doc.theme.accent ?? doc.theme.primary),
+    "--s-on-accent": onColor(safeColor(doc.theme.accent ?? doc.theme.primary)),
+    "--s-radius-kit": doc.theme.radius === "sharp" ? "4px" : doc.theme.radius === "round" ? "24px" : "14px",
     "--s-size": doc.theme.text_scale ?? 1,
     ...(bgUrl ? { "--s-bg-img": `url("${bgUrl}")` } : {}),
     "--s-bg-size": doc.theme.background_size ?? "cover",
@@ -277,6 +283,10 @@ export function StudioSite(props: StudioSiteProps) {
     <div
       className={`sv2 site${isSideNav ? " s-has-side-nav" : ""}${editing ? " sf-editing" : ""}${layerSelected ? " sf-layer-sel" : ""}${chat?.layout === "bar" ? " s-dock-bar" : chat || wa ? " s-dock-float" : ""}`}
       data-surface={doc.theme.surface ?? "light"}
+      data-motion={doc.theme.motion && doc.theme.motion !== "none" ? doc.theme.motion : undefined}
+      data-texture={doc.theme.texture && doc.theme.texture !== "none" ? doc.theme.texture : undefined}
+      data-gradient={doc.theme.gradient ? "" : undefined}
+      data-radius={doc.theme.radius}
       data-mode={mode}
       style={style}
     >
@@ -298,6 +308,10 @@ export function StudioSite(props: StudioSiteProps) {
             zIndex: 0,
           }}
         />
+      )}
+      {/* Transisi antarhalaman (MPA, View Transitions API): hanya situs publik, hormati reduce-motion. */}
+      {!editing && doc.theme.page_transition && (
+        <style>{"@media (prefers-reduced-motion: no-preference) { @view-transition { navigation: auto; } }"}</style>
       )}
       <div className="sv2-shell">
         <PublicNav

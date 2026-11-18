@@ -108,6 +108,7 @@ use crate::{
         website::get_draft,
         website::save_draft,
         website::publish,
+        website::save_theme,
         website::list_versions,
         website::get_version,
         website::rollback,

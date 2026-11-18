@@ -10356,6 +10356,60 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
       security:
       - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/website/theme:
+    put:
+      tags:
+      - website
+      summary: Simpan draf tema situs (warna, font, sudut, gerak, tekstur, navigasi, lencana).
+      operationId: save_theme
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveTheme'
+        required: true
+      responses:
+        '200':
+          description: Draf tema situs tersimpan
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '422':
+          description: Tema tidak valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
   /files/{object_id}:
     get:
       tags:
@@ -12562,6 +12616,15 @@ components:
           format: int32
           description: Revisi draft yang diedit (optimistic concurrency).
         content:
+          type: object
+      additionalProperties: false
+    SaveTheme:
+      type: object
+      description: 'Tema situs (brand kit): berlaku untuk semua halaman; ikut terbit saat halaman diterbitkan.'
+      required:
+      - theme
+      properties:
+        theme:
           type: object
       additionalProperties: false
     SelectTemplate:
@@ -16134,6 +16197,11 @@ components:
             template_version:
               type: integer
               format: int32
+            theme:
+              type:
+              - object
+              - 'null'
+              description: Draf tema situs (brand kit; `null` = belum diatur).
         meta:
           $ref: '#/components/schemas/Meta'
         success:

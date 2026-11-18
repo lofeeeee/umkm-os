@@ -21,6 +21,14 @@ export interface StudioState {
   navbarStyle?: "top" | "side";
   navbarSticky?: boolean;
   hideBadge?: boolean;
+  headingFont?: string;
+  headingWeight?: number;
+  accent?: string;
+  gradient?: boolean;
+  radius?: "sharp" | "soft" | "round";
+  motion?: "none" | "subtle" | "lively";
+  texture?: "none" | "grain" | "paper" | "dots";
+  pageTransition?: boolean;
   backgroundImage?: string;
   backgroundSize?: "cover" | "contain" | "repeat";
   backgroundPosition?: string;
@@ -49,6 +57,14 @@ export interface PageV2 {
     navbar_sticky?: boolean;
     /** Sembunyikan lencana "Dibuat dengan UMKM OS" (berlaku hanya untuk paket Pro; ditegakkan server). */
     hide_badge?: boolean;
+    heading_font?: string;
+    heading_weight?: number;
+    accent?: string;
+    gradient?: boolean;
+    radius?: "sharp" | "soft" | "round";
+    motion?: "none" | "subtle" | "lively";
+    texture?: "none" | "grain" | "paper" | "dots";
+    page_transition?: boolean;
     background_image?: string;
     background_size?: "cover" | "contain" | "repeat";
     background_position?: string;
@@ -100,6 +116,7 @@ export function toDoc(st: StudioState, template: string): PageV2 {
   if (st.navbarStyle) theme.navbar_style = st.navbarStyle;
   if (st.navbarSticky !== undefined) theme.navbar_sticky = st.navbarSticky;
   if (st.hideBadge) theme.hide_badge = true;
+  Object.assign(theme, brandToTheme(st));
   if (st.backgroundImage?.trim()) theme.background_image = st.backgroundImage.trim();
   if (st.backgroundSize) theme.background_size = st.backgroundSize;
   if (st.backgroundPosition?.trim()) theme.background_position = st.backgroundPosition.trim();
@@ -159,6 +176,7 @@ export function fromDoc(doc: PageV2, minSize: (k: PluginKind) => { minW: number;
     navbarStyle: doc.theme.navbar_style,
     navbarSticky: doc.theme.navbar_sticky,
     hideBadge: doc.theme.hide_badge,
+    ...themeToBrand(doc.theme),
     backgroundImage: doc.theme.background_image,
     backgroundSize: doc.theme.background_size,
     backgroundPosition: doc.theme.background_position,
@@ -182,3 +200,47 @@ function onPrimaryOf(primary: string): string {
 }
 
 export const isV2 = (c: unknown): c is PageV2 => !!c && typeof c === "object" && (c as { schema_version?: unknown }).schema_version === 2;
+
+/* ------------------------------------------------------------ tema situs (brand kit) */
+type Theme = PageV2["theme"];
+
+/** Kunci gaya baru (tipografi, aksen, sudut, gerak, tekstur) → tema dokumen. Nilai bawaan tidak dikirim. */
+export function brandToTheme(st: Partial<StudioState>): Partial<Theme> {
+  const t: Partial<Theme> = {};
+  if (st.headingFont) t.heading_font = st.headingFont;
+  if (st.headingWeight) t.heading_weight = st.headingWeight;
+  if (st.accent) t.accent = st.accent.toUpperCase();
+  if (st.gradient) t.gradient = true;
+  if (st.radius && st.radius !== "soft") t.radius = st.radius;
+  if (st.motion && st.motion !== "none") t.motion = st.motion;
+  if (st.texture && st.texture !== "none") t.texture = st.texture;
+  if (st.pageTransition) t.page_transition = true;
+  return t;
+}
+
+export function themeToBrand(t: Partial<Theme>): Partial<StudioState> {
+  return {
+    headingFont: t.heading_font, headingWeight: t.heading_weight, accent: t.accent, gradient: t.gradient,
+    radius: t.radius, motion: t.motion, texture: t.texture, pageTransition: t.page_transition,
+  };
+}
+
+/** Tema situs (dikirim ke `PUT /website/theme`): hanya kunci yang berlaku untuk seluruh situs. */
+export function siteThemeOf(st: StudioState): Theme {
+  const t: Theme = { primary: st.primary.toUpperCase(), font: st.font, surface: st.surface, text_scale: st.textScale ?? 1 };
+  if (st.navbarStyle) t.navbar_style = st.navbarStyle;
+  if (st.navbarSticky !== undefined) t.navbar_sticky = st.navbarSticky;
+  if (st.hideBadge) t.hide_badge = true;
+  return { ...t, ...brandToTheme(st) };
+}
+
+/** Terapkan tema situs ke keadaan Studio (halaman yang dibuka mengikuti brand kit). */
+export function withSiteTheme(st: StudioState, t: Partial<Theme> | null | undefined): StudioState {
+  if (!t?.primary || !t.font) return st;
+  return {
+    ...st, primary: t.primary, onPrimary: onPrimaryOf(t.primary), font: t.font, surface: t.surface ?? "light", textScale: t.text_scale ?? 1,
+    navbarStyle: t.navbar_style, navbarSticky: t.navbar_sticky, hideBadge: t.hide_badge,
+    headingFont: undefined, headingWeight: undefined, accent: undefined, gradient: undefined, radius: undefined, motion: undefined, texture: undefined, pageTransition: undefined,
+    ...themeToBrand(t),
+  };
+}

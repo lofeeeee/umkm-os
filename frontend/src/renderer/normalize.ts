@@ -111,6 +111,17 @@ export function normalizePageV2(raw: unknown): PageV2 {
   if (nav) theme.navbar_style = nav as PageV2["theme"]["navbar_style"];
   if (typeof t.navbar_sticky === "boolean") theme.navbar_sticky = t.navbar_sticky;
   if (t.hide_badge === true) theme.hide_badge = true;
+  if (typeof t.heading_font === "string") theme.heading_font = t.heading_font;
+  if (typeof t.heading_weight === "number" && [500, 600, 700, 800].includes(t.heading_weight)) theme.heading_weight = t.heading_weight;
+  if (typeof t.accent === "string") theme.accent = t.accent;
+  if (t.gradient === true) theme.gradient = true;
+  const radius = oneOf(t.radius, new Set(["sharp", "soft", "round"]));
+  if (radius) theme.radius = radius as PageV2["theme"]["radius"];
+  const motion = oneOf(t.motion, new Set(["none", "subtle", "lively"]));
+  if (motion) theme.motion = motion as PageV2["theme"]["motion"];
+  const texture = oneOf(t.texture, new Set(["none", "grain", "paper", "dots"]));
+  if (texture) theme.texture = texture as PageV2["theme"]["texture"];
+  if (t.page_transition === true) theme.page_transition = true;
   const bg = str(t.background_image);
   if (bg) theme.background_image = bg;
   const bgSize = oneOf(t.background_size, BACKGROUND_SIZES);

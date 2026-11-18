@@ -11,7 +11,7 @@ use axum::{
     extract::{Path, Query, State},
     http::{HeaderValue, header},
     response::{IntoResponse, Response},
-    routing::{delete, get, post},
+    routing::{delete, get, post, put},
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -90,6 +90,17 @@ pub struct WebsiteView {
     /// `draft` | `published`
     pub status: String,
     pub pages: Vec<PageView>,
+    /// Draf tema situs (brand kit; `null` = belum diatur).
+    #[schema(value_type = Option<Object>)]
+    pub theme: Option<Value>,
+}
+
+/// Tema situs (brand kit): berlaku untuk semua halaman; ikut terbit saat halaman diterbitkan.
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
+pub struct SaveTheme {
+    #[schema(value_type = Object)]
+    pub theme: Value,
 }
 
 #[derive(Debug, Deserialize, ToSchema)]
@@ -307,6 +318,7 @@ async fn template_of(state: &AppState, t: TenantId) -> Result<String, ApiError> 
 
 fn website_view(s: repo::WebsiteState) -> WebsiteView {
     WebsiteView {
+        theme: s.theme,
         template_key: s.template_key,
         template_version: s.template_version,
         status: s.status,
@@ -405,6 +417,36 @@ pub async fn get_website(
         .map_err(internal)?
         .ok_or_else(not_found)?;
     Ok(Json(SuccessEnvelope::new(website_view(s), &id)))
+}
+
+/// Simpan draf tema situs (warna, font, sudut, gerak, tekstur, navigasi, lencana).
+#[utoipa::path(
+    put, path = "/api/v1/tenants/{tenant_id}/website/theme", tag = "website",
+    params(("tenant_id" = Uuid, Path)), request_body = SaveTheme,
+    responses(
+        (status = 200, description = "Draf tema situs tersimpan"),
+        (status = 422, description = "Tema tidak valid", body = umkm_shared::http::ErrorEnvelope)
+    )
+)]
+pub async fn save_theme(
+    State(state): State<AppState>,
+    ReqId(id): ReqId,
+    ClientIp(ip): ClientIp,
+    Member(actor): Member,
+    Json(req): Json<SaveTheme>,
+) -> Result<Json<SuccessEnvelope<()>>, ApiError> {
+    actor.require("website.edit")?;
+    umkm_domain::website::schema_v2::validate_site_theme(&req.theme)
+        .map_err(|e| field_errors(e.iter().map(|f| (f.path.as_str(), f.code))))?;
+    repo::save_theme(
+        pool(&state)?,
+        &actor,
+        &req.theme,
+        (Some(id.as_str()), Some(&ip)),
+    )
+    .await
+    .map_err(repo_err)?;
+    Ok(Json(SuccessEnvelope::new((), &id)))
 }
 
 /// Pilih template. Draft `home` direset ke konten template; versi terbit tidak berubah.
@@ -822,6 +864,10 @@ pub async fn load_public_site(
         .map_err(internal)?
         .ok_or_else(not_found)?;
     let mut content = strip_disabled(content);
+    // Brand kit: tema situs terbit menimpa tema halaman (situs lama tanpa tema situs = tema halaman).
+    if let Some(site) = repo::published_theme(p, t).await.map_err(internal)? {
+        umkm_domain::website::schema_v2::apply_site_theme(&mut content, &site);
+    }
     // ADR-0019 (P9-11): blok plugin Pro tidak dirender untuk toko tanpa Pro (draf & versi tetap utuh).
     let has_pro = umkm_infrastructure::billing_repo::current(p, t)
         .await
@@ -877,6 +923,7 @@ pub fn routes() -> Router<AppState> {
     Router::new()
         .route(t, get(get_website).put(select_template))
         .route(&format!("{t}/templates"), get(list_templates))
+        .route(&format!("{t}/theme"), put(save_theme))
         .route(
             &format!("{t}/templates/{{key}}/preview"),
             get(preview_template),

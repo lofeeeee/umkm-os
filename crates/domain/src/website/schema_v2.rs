@@ -9,7 +9,9 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use serde_json::{Map, Value};
 
-use super::schema::{FieldError, MAX_DOCUMENT_BYTES, V, ValidPage, is_key, join};
+use super::schema::{
+    FONT_PRESETS, FieldError, MAX_DOCUMENT_BYTES, V, ValidPage, is_hex_color, is_key, join,
+};
 
 pub const SCHEMA_VERSION: i64 = 2;
 pub const COLS: i64 = 12;
@@ -25,7 +27,7 @@ pub const ROOT_KEYS: [&str; 6] = [
     "blocks",
     "drawings",
 ];
-pub const THEME_KEYS: [&str; 11] = [
+pub const THEME_KEYS: [&str; 19] = [
     "primary",
     "font",
     "surface",
@@ -37,7 +39,40 @@ pub const THEME_KEYS: [&str; 11] = [
     "background_position",
     "background_opacity",
     "hide_badge",
+    "heading_font",
+    "heading_weight",
+    "accent",
+    "gradient",
+    "radius",
+    "motion",
+    "texture",
+    "page_transition",
 ];
+/// Kunci tema yang berlaku untuk SELURUH situs (brand kit). Gambar latar tema lama tetap per halaman.
+pub const SITE_THEME_KEYS: [&str; 15] = [
+    "primary",
+    "font",
+    "surface",
+    "text_scale",
+    "navbar_style",
+    "navbar_sticky",
+    "hide_badge",
+    "heading_font",
+    "heading_weight",
+    "accent",
+    "gradient",
+    "radius",
+    "motion",
+    "texture",
+    "page_transition",
+];
+pub const HEADING_WEIGHTS: [i64; 4] = [500, 600, 700, 800];
+/// Sudut global: tegas / lembut / bulat.
+pub const RADII: [&str; 3] = ["sharp", "soft", "round"];
+/// Gerak: tanpa / halus (muncul saat digulir) / hidup (muncul + hover lebih terasa).
+pub const MOTIONS: [&str; 3] = ["none", "subtle", "lively"];
+/// Tekstur halaman: bintik film, kertas, titik.
+pub const TEXTURES: [&str; 4] = ["none", "grain", "paper", "dots"];
 pub const NAVBAR_STYLES: [&str; 2] = ["top", "side"];
 pub const BACKGROUND_SIZES: [&str; 3] = ["cover", "contain", "repeat"];
 pub const MAX_DRAWING_STROKES: usize = 200;
@@ -257,6 +292,7 @@ fn theme(v: &mut V, t: &Value) {
     }
     v.boolean(m, "theme", "navbar_sticky");
     v.boolean(m, "theme", "hide_badge");
+    theme_extras(v, m);
     v.asset(m, "theme", "background_image", false);
     match m.get("background_size") {
         None => {}
@@ -268,6 +304,69 @@ fn theme(v: &mut V, t: &Value) {
         None => {}
         Some(Value::Number(n)) if n.as_i64().is_some_and(|i| (0..=100).contains(&i)) => {}
         Some(_) => v.err("theme.background_opacity", "out_of_range"),
+    }
+}
+
+/// Kunci tema baru (tipografi, warna kedua, sudut, gerak, tekstur). Semua opsional.
+fn theme_extras(v: &mut V, m: &Map<String, Value>) {
+    match m.get("heading_font") {
+        None => {}
+        Some(Value::String(s)) if FONT_PRESETS.contains(&s.as_str()) => {}
+        Some(_) => v.err("theme.heading_font", "invalid_font_preset"),
+    }
+    match m.get("heading_weight").map(Value::as_i64) {
+        None => {}
+        Some(Some(n)) if HEADING_WEIGHTS.contains(&n) => {}
+        Some(_) => v.err("theme.heading_weight", "invalid_value"),
+    }
+    match m.get("accent") {
+        None => {}
+        Some(Value::String(s)) if is_hex_color(s) => {}
+        Some(_) => v.err("theme.accent", "invalid_color"),
+    }
+    v.boolean(m, "theme", "gradient");
+    v.boolean(m, "theme", "page_transition");
+    enum_opt(v, m, "theme", "radius", &RADII);
+    enum_opt(v, m, "theme", "motion", &MOTIONS);
+    enum_opt(v, m, "theme", "texture", &TEXTURES);
+}
+
+/// Tema situs (brand kit, `PUT /website/theme`): hanya kunci situs; aturan nilai sama dengan tema halaman.
+pub fn validate_site_theme(t: &Value) -> Result<(), Vec<FieldError>> {
+    let mut v = V::default();
+    if serde_json::to_vec(t).map(|b| b.len()).unwrap_or(usize::MAX) > 4096 {
+        v.err("theme", "document_too_large");
+        return Err(v.errors);
+    }
+    if v.object(t, "theme", &SITE_THEME_KEYS).is_some() {
+        theme(&mut v, t);
+    }
+    if v.errors.is_empty() {
+        Ok(())
+    } else {
+        Err(v.errors)
+    }
+}
+
+/// Situs publik: tema situs terbit menimpa tema halaman (dokumen v2 saja; versi halaman tetap utuh).
+pub fn apply_site_theme(content: &mut Value, site: &Value) {
+    if content.get("schema_version").and_then(Value::as_i64) != Some(SCHEMA_VERSION) {
+        return;
+    }
+    let (Some(Value::Object(src)), Some(Value::Object(dst))) =
+        (Some(site), content.get_mut("theme"))
+    else {
+        return;
+    };
+    for k in SITE_THEME_KEYS {
+        match src.get(k) {
+            Some(x) => {
+                dst.insert(k.into(), x.clone());
+            }
+            None => {
+                dst.remove(k);
+            }
+        }
     }
 }
 
@@ -966,6 +1065,41 @@ mod tests {
         assert!(c.contains(&("blocks[0].data.fit".into(), "invalid_value")));
         assert!(c.contains(&("blocks[0].data.corner".into(), "invalid_value")));
         assert!(c.iter().any(|(p, _)| p == "blocks[0].data.href"));
+    }
+
+    #[test]
+    fn site_theme_validates_extras_and_overrides_page_theme() {
+        let site = json!({"primary": "#0F766E", "font": "inter", "heading_font": "fraunces",
+            "heading_weight": 700, "accent": "#F59E0B", "gradient": true, "radius": "round",
+            "motion": "subtle", "texture": "grain", "page_transition": true, "hide_badge": true});
+        validate_site_theme(&site).expect("tema situs valid");
+        let bad = json!({"primary": "#0F766E", "font": "inter", "heading_weight": 650,
+            "accent": "kuning", "radius": "pill", "background_image": "asset:x"});
+        let e: Vec<_> = validate_site_theme(&bad)
+            .unwrap_err()
+            .into_iter()
+            .map(|e| (e.path, e.code))
+            .collect();
+        assert!(e.contains(&("theme.heading_weight".into(), "invalid_value")));
+        assert!(e.contains(&("theme.accent".into(), "invalid_color")));
+        assert!(e.contains(&("theme.radius".into(), "invalid_value")));
+        assert!(e.contains(&("theme.background_image".into(), "unknown_field")));
+
+        let mut page = doc(vec![]);
+        page["theme"]["navbar_sticky"] = json!(true);
+        page["theme"]["background_image"] = json!("asset:6f9619ff-8b86-d011-b42d-00c04fc964ff");
+        apply_site_theme(&mut page, &site);
+        assert_eq!(page["theme"]["primary"], "#0F766E");
+        assert_eq!(page["theme"]["heading_font"], "fraunces");
+        assert!(
+            page["theme"].get("navbar_sticky").is_none(),
+            "kunci situs yang tidak ada = dihapus"
+        );
+        assert!(
+            page["theme"].get("background_image").is_some(),
+            "latar lama tetap per halaman"
+        );
+        validate_page(&page).expect("hasil timpa tetap valid");
     }
 
     #[test]

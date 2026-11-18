@@ -32,7 +32,7 @@ import { PluginIcon } from "@/studio/PluginIcon";
 import { LiveCanvas, PLUGIN_MIME, setPaletteDrag } from "@/studio/LiveCanvas";
 import { readiness, type Issue } from "@/studio/readiness";
 import { TEMPLATES } from "@/studio/templates";
-import { fromDoc, isV2, toDoc } from "@/studio/doc";
+import { fromDoc, isV2, siteThemeOf, toDoc, withSiteTheme, type PageV2 } from "@/studio/doc";
 import { IconRail, type StudioTab } from "@/studio/IconRail";
 import { PagesPanel, type PageItem } from "@/studio/PagesPanel";
 import { ThemePanel, type ThemeConfig } from "@/studio/ThemePanel";
@@ -82,6 +82,9 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
   const canEdit = ctx.can("website.edit");
   const canPublish = ctx.can("website.publish");
   // Sinkronisasi server: template website, revisi draf terakhir, versi terbit.
+  /** Tema situs dari server (draf) & JSON terakhir yang tersimpan. */
+  const siteTheme = useRef<PageV2["theme"] | null>(null);
+  const siteThemeSaved = useRef<string | null>(null);
   const [srv, setSrv] = useState<{ template: string; revision: number; published: number | null; savedDoc: string } | null>(null);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [saveErr, setSaveErr] = useState<string | null>(null);
@@ -108,9 +111,11 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
     type Draft = { content: PageContent | Record<string, unknown>; revision: number; published_version: number | null; assets: Record<string, string> };
     // Website belum dibuat → pilih template server pertama (Studio menyusun ulang tampilannya sendiri).
     const ensureWebsite = async () => {
-      const w = await api<{ template_key: string; pages?: PageItem[] }>("GET", `${base}/website`).catch((e) => (e instanceof ApiError && e.status === 404 ? null : Promise.reject(e)));
+      const w = await api<{ template_key: string; pages?: PageItem[]; theme?: PageV2["theme"] | null }>("GET", `${base}/website`).catch((e) => (e instanceof ApiError && e.status === 404 ? null : Promise.reject(e)));
       if (w) {
         if (w.pages) setPages(w.pages);
+        siteTheme.current = w.theme ?? null;
+        siteThemeSaved.current = w.theme ? JSON.stringify(w.theme) : null;
         return w.template_key;
       }
       const tpls = await api<{ key: string }[]>("GET", `${base}/website/templates`);
@@ -139,7 +144,7 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
       const minSize = (k: PluginKind) => ({ minW: pluginDef(k).minW, minH: pluginDef(k).minH });
       if (isV2(d.content)) {
         // Dokumen Studio dari server = sumber kebenaran.
-        const st0 = withInstalled(fromDoc(d.content, minSize));
+        const st0 = withInstalled(withSiteTheme(fromDoc(d.content, minSize), siteTheme.current));
         setHist(start(st0));
         setSrv({ template, revision: d.revision, published: d.published_version, savedDoc: JSON.stringify(toDoc(st0, template)) });
       } else {
@@ -160,6 +165,20 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
   }, [base, ctx.tenant.id, canEdit]);
   const products = useMemo<GridProduct[]>(() => rawProducts.map((p) => ({ ...p, image: p.image ? assets.url(p.image) : undefined })), [rawProducts, assets]);
   const noPhoto = rawProducts.filter((p) => !p.image).length;
+
+  /* ---------------- Tema situs (brand kit) ---------------- */
+  // Satu tema untuk semua halaman: setiap perubahan warna/font/sudut/gerak/tekstur disimpan sebagai draf tema
+  // situs (debounce) dan ikut terbit saat halaman mana pun diterbitkan.
+  const themeJson = st ? JSON.stringify(siteThemeOf(st)) : null;
+  useEffect(() => {
+    if (!themeJson || !canEdit || !srv || themeJson === siteThemeSaved.current) return;
+    const id = window.setTimeout(() => {
+      void api("PUT", `${base}/website/theme`, { json: { theme: JSON.parse(themeJson) } })
+        .then(() => { siteThemeSaved.current = themeJson; siteTheme.current = JSON.parse(themeJson); })
+        .catch((e) => toast.error(describe(e)));
+    }, 800);
+    return () => window.clearTimeout(id);
+  }, [themeJson, canEdit, srv, base]);
 
   /* ---------------- Riwayat & simpan otomatis ---------------- */
   const update = useCallback((fn: (s: Studio) => Studio, key = "edit") => {
@@ -210,12 +229,12 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
       setDraftAssetsForUploads(d.assets);
       const minSize = (k: PluginKind) => ({ minW: pluginDef(k).minW, minH: pluginDef(k).minH });
       if (isV2(d.content)) {
-        const st0 = withInstalled(fromDoc(d.content, minSize));
+        const st0 = withInstalled(withSiteTheme(fromDoc(d.content, minSize), siteTheme.current));
         setHist(start(st0));
         setSrv((x) => (x ? { ...x, revision: d.revision, published: d.published_version, savedDoc: JSON.stringify(toDoc(st0, x.template)) } : x));
       } else {
         const v1 = d.content as PageContent;
-        setHist(start(fromDraft(v1)));
+        setHist(start(withSiteTheme(fromDraft(v1), siteTheme.current)));
         setSrv((x) => (x ? { ...x, revision: d.revision, published: d.published_version, savedDoc: "" } : x));
       }
     } catch (e) {
@@ -258,6 +277,8 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
     navbarStyle: st?.navbarStyle ?? "top",
     navbarSticky: st?.navbarSticky ?? false,
     hideBadge: st?.hideBadge ?? false,
+    headingFont: st?.headingFont, headingWeight: st?.headingWeight, accent: st?.accent, gradient: st?.gradient,
+    radius: st?.radius, motion: st?.motion, texture: st?.texture, pageTransition: st?.pageTransition,
     backgroundImage: st?.backgroundImage,
     backgroundSize: st?.backgroundSize,
     backgroundPosition: st?.backgroundPosition,

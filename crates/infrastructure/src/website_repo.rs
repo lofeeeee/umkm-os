@@ -19,6 +19,7 @@ pub mod actions {
     pub const ROLLED_BACK: &str = "website.rollback";
     pub const PAGE_CREATED: &str = "website.page_created";
     pub const PAGE_DELETED: &str = "website.page_deleted";
+    pub const THEME_SAVED: &str = "website.theme_saved";
 }
 
 pub const HOME: &str = "home";
@@ -49,6 +50,8 @@ pub struct WebsiteState {
     pub template_version: i32,
     pub status: String,
     pub pages: Vec<PageSummary>,
+    /// Draf tema situs (brand kit). `None` = belum pernah diatur (tema per halaman dipakai).
+    pub theme: Option<Value>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -163,7 +166,7 @@ async fn state_in(
     t: TenantId,
 ) -> Result<Option<WebsiteState>, sqlx::Error> {
     let Some(w) = sqlx::query(
-        "SELECT w.id, w.status, tpl.key, tpl.version FROM tenant_websites w
+        "SELECT w.id, w.status, w.theme_draft, tpl.key, tpl.version FROM tenant_websites w
          JOIN website_templates tpl ON tpl.id = w.template_id WHERE w.tenant_id = $1",
     )
     .bind(t.as_uuid())
@@ -197,6 +200,9 @@ async fn state_in(
         template_version: w.get("version"),
         status: w.get("status"),
         pages,
+        theme: w
+            .get::<Option<Json<Value>>, _>("theme_draft")
+            .map(|Json(v)| v),
     }))
 }
 
@@ -501,7 +507,8 @@ where
     .bind(ver)
     .execute(&mut *tx)
     .await?;
-    sqlx::query("UPDATE tenant_websites SET status = 'published' WHERE tenant_id = $1 AND id = $2")
+    // Tema situs ikut terbit bersama halaman mana pun (brand kit berlaku untuk seluruh situs).
+    sqlx::query("UPDATE tenant_websites SET status = 'published', theme_published = coalesce(theme_draft, theme_published) WHERE tenant_id = $1 AND id = $2")
         .bind(tid)
         .bind(website)
         .execute(&mut *tx)
@@ -621,6 +628,47 @@ pub async fn rollback(
     .await?;
     tx.commit().await?;
     Ok(())
+}
+
+/// Simpan draf tema situs (sudah divalidasi pemanggil). Diaudit; tidak memengaruhi situs sampai terbit.
+pub async fn save_theme(
+    pool: &PgPool,
+    actor: &Actor,
+    theme: &Value,
+    ctx: Ctx<'_>,
+) -> Result<(), WebsiteError> {
+    let mut tx = tx(pool, actor.tenant_id).await?;
+    let id: Uuid = sqlx::query_scalar(
+        "UPDATE tenant_websites SET theme_draft = $2 WHERE tenant_id = $1 RETURNING id",
+    )
+    .bind(actor.tenant_id.as_uuid())
+    .bind(Json(theme))
+    .fetch_optional(&mut *tx)
+    .await?
+    .ok_or(WebsiteError::NotFound)?;
+    audit(
+        &mut tx,
+        actor,
+        actions::THEME_SAVED,
+        id,
+        serde_json::json!({}),
+        ctx,
+    )
+    .await?;
+    tx.commit().await?;
+    Ok(())
+}
+
+/// Tema situs TERBIT (untuk situs publik).
+pub async fn published_theme(pool: &PgPool, t: TenantId) -> Result<Option<Value>, sqlx::Error> {
+    let mut tx = tx(pool, t).await?;
+    let v: Option<Option<Json<Value>>> =
+        sqlx::query_scalar("SELECT theme_published FROM tenant_websites WHERE tenant_id = $1")
+            .bind(t.as_uuid())
+            .fetch_optional(&mut *tx)
+            .await?;
+    tx.commit().await?;
+    Ok(v.flatten().map(|Json(v)| v))
 }
 
 /// Konten TERBIT untuk situs publik (ADR-0014 #3). Draft tidak pernah dibaca di sini.

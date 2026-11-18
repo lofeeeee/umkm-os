@@ -682,3 +682,62 @@ async fn delete_page_rules(pool: PgPool) {
     let r = delete_page_req(&a, t, &owner, "nonexistent").await;
     assert_eq!(r.status, 404);
 }
+
+#[sqlx::test(migrator = "MIGRATOR")]
+async fn site_theme_is_drafted_then_published_over_every_page(pool: PgPool) {
+    let a = app(&pool).await;
+    let t = tenant(&pool, "toko-a").await;
+    let owner = member(&pool, t, "Owner").await;
+    let viewer = member(&pool, t, "Viewer").await;
+    select(&a, t, &owner, "modern_store").await;
+    let (_, rev) = draft(&a, t, &owner).await;
+    let v2 = json!({"schema_version": 2, "template": "modern_store",
+        "theme": {"primary": "#2563EB", "font": "inter"},
+        "blocks": [{"id": "teks-1", "kind": "text", "x": 0, "y": 0, "w": 12, "h": 4, "style": "plain", "data": {"body": "Halo"}}]});
+    assert_eq!(save(&a, t, &owner, v2, rev).await.status, 200);
+
+    let theme = json!({"primary": "#0F766E", "font": "fraunces", "heading_font": "playfair",
+        "heading_weight": 700, "accent": "#F59E0B", "radius": "round", "motion": "subtle"});
+    let path = format!("{}/theme", w(t));
+    assert_eq!(
+        json(
+            &a.router,
+            Method::PUT,
+            &path,
+            Some(&viewer),
+            Some(json!({"theme": theme}))
+        )
+        .await
+        .status,
+        403
+    );
+    let bad = json(
+        &a.router,
+        Method::PUT,
+        &path,
+        Some(&owner),
+        Some(json!({"theme": {"primary": "biru", "font": "inter"}})),
+    )
+    .await;
+    assert_eq!(bad.status, 422, "{}", bad.json());
+    assert_eq!(paths(&bad), vec!["theme.primary:invalid_color"]);
+    let ok = json(
+        &a.router,
+        Method::PUT,
+        &path,
+        Some(&owner),
+        Some(json!({"theme": theme})),
+    )
+    .await;
+    assert_eq!(ok.status, 200, "{}", ok.json());
+
+    // Draf: terlihat di Studio, belum di situs publik.
+    let s = json(&a.router, Method::GET, &w(t), Some(&owner), None).await;
+    assert_eq!(s.json()["data"]["theme"]["accent"], "#F59E0B");
+    assert_eq!(publish(&a, t, &owner).await.status, 200);
+    let p = public(&a, "toko-a.ryasai.my.id").await;
+    let th = &p.json()["data"]["page"]["content"]["theme"];
+    assert_eq!(th["primary"], "#0F766E");
+    assert_eq!(th["heading_font"], "playfair");
+    assert_eq!(th["radius"], "round");
+}

@@ -400,3 +400,18 @@ describe("plugin Gambar (bebas, PNG transparan)", () => {
     expect(html).toContain('class="sv2-popup-close"');
   });
 });
+
+describe("brand kit di renderer", () => {
+  const page: PageV2 = { schema_version: 2, template: "t", theme: { primary: "#0F766E", font: "inter", heading_font: "fraunces", heading_weight: 600, accent: "#F59E0B", gradient: true, radius: "round", motion: "lively", texture: "paper", page_transition: true }, blocks: [] };
+  it("variabel & atribut gaya situs, transisi halaman hanya di situs publik", () => {
+    const html = renderToStaticMarkup(<StudioSite doc={page} business={biz} assetUrl={() => undefined} />);
+    expect(html).toContain("--s-head-font:&#x27;Fraunces Variable&#x27;");
+    expect(html).toContain("--s-head-weight:600");
+    expect(html).toContain("--s-accent:#F59E0B");
+    expect(html).toContain("--s-radius-kit:24px");
+    expect(html).toMatch(/data-motion="lively" data-texture="paper" data-gradient="" data-radius="round"/);
+    expect(html).toContain("@view-transition");
+    const edit = renderToStaticMarkup(<StudioSite doc={page} business={biz} assetUrl={() => undefined} mode="studio-edit" />);
+    expect(edit).not.toContain("@view-transition");
+  });
+});

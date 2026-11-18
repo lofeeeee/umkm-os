@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { fromDoc, isV2, safeId, toDoc, type StudioState } from "./doc";
+import { fromDoc, isV2, safeId, siteThemeOf, toDoc, withSiteTheme, type StudioState } from "./doc";
 import { pluginDef } from "./plugins";
 
 const st: StudioState = {
@@ -97,5 +97,22 @@ describe("dokumen Studio v2", () => {
     expect(d.theme).not.toHaveProperty("background_position");
     expect(d.theme).not.toHaveProperty("background_opacity");
     expect(d).not.toHaveProperty("drawings");
+  });
+});
+
+describe("tema situs (brand kit)", () => {
+  const base: StudioState = { primary: "#4f46e5", surface: "light", font: "inter", installed: [], cells: [] };
+  it("kunci gaya baru ikut dokumen & tema situs; bawaan tidak dikirim", () => {
+    const st: StudioState = { ...base, headingFont: "playfair", headingWeight: 700, accent: "#f59e0b", gradient: true, radius: "round", motion: "subtle", texture: "grain", pageTransition: true };
+    const d = toDoc(st, "t");
+    expect(d.theme).toMatchObject({ heading_font: "playfair", heading_weight: 700, accent: "#F59E0B", gradient: true, radius: "round", motion: "subtle", texture: "grain", page_transition: true });
+    expect(fromDoc(d, () => ({ minW: 1, minH: 1 }))).toMatchObject({ headingFont: "playfair", radius: "round", pageTransition: true });
+    expect(siteThemeOf({ ...base, radius: "soft", motion: "none", texture: "none" })).toEqual({ primary: "#4F46E5", font: "inter", surface: "light", text_scale: 1 });
+  });
+  it("halaman yang dibuka mengikuti tema situs (gaya lama halaman diganti)", () => {
+    const page: StudioState = { ...base, primary: "#000000", texture: "dots", navbarSticky: true };
+    const out = withSiteTheme(page, { primary: "#0F766E", font: "fraunces", accent: "#F59E0B" });
+    expect(out).toMatchObject({ primary: "#0F766E", font: "fraunces", accent: "#F59E0B", texture: undefined, navbarSticky: undefined });
+    expect(withSiteTheme(page, null)).toBe(page);
   });
 });
