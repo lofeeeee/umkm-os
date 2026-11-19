@@ -47,7 +47,11 @@ function errorText(e: unknown): string {
 
 /** Tampilan widget (plugin Chatbot Studio, ADR-0017): gelembung bulat, bilah bawah, atau menempel di halaman. */
 export type ChatVariant = "bubble" | "bar" | "inline";
-export interface ChatLook { variant?: ChatVariant; title?: string; welcome?: string; startOpen?: boolean; primary?: string }
+export interface ChatLook {
+  variant?: ChatVariant; title?: string; welcome?: string; startOpen?: boolean; primary?: string;
+  /** Gaya blok dari Studio (Polos/Kartu/Warna lembut/Gelap/3D lembut/2D datar) — berlaku di semua varian. */
+  look?: string;
+}
 
 /* ------------------------------------------------------------------ ikon (SVG sebaris, tanpa dependensi) */
 const IconChat = () => (
@@ -85,6 +89,7 @@ interface ShellProps {
   preview?: boolean;
   /** Chatbot dimatikan di Asisten AI (hanya pratinjau Studio). */
   off?: boolean;
+  look?: string;
 }
 
 function themeStyle(primary?: string): CSSProperties | undefined {
@@ -95,10 +100,10 @@ function initial(s: string): string {
   return (s.trim()[0] ?? "C").toUpperCase();
 }
 
-export function ChatShell({ variant, heading, welcome, primary, open, onOpen, onClose, status, children, preview, off }: ShellProps) {
+export function ChatShell({ variant, heading, welcome, primary, open, onOpen, onClose, status, children, preview, off, look }: ShellProps) {
   const cls = `chat chat-v-${variant}${open ? " chat-is-open" : ""}${preview ? " chat-preview" : ""}${off ? " chat-off" : ""}`;
   return (
-    <div className={cls} style={themeStyle(primary)} data-editor-preview={preview ? "" : undefined}>
+    <div className={cls} style={themeStyle(primary)} data-look={look || undefined} data-editor-preview={preview ? "" : undefined}>
       {!open && variant === "bubble" && (
         <button type="button" className="chat-fab" data-interactive onClick={onOpen} aria-expanded="false">
           <IconChat />
@@ -140,7 +145,7 @@ export function ChatShell({ variant, heading, welcome, primary, open, onOpen, on
 }
 
 /* ------------------------------------------------------------------ widget sungguhan (situs publik) */
-export function ChatWidget({ variant = "bubble", title, welcome, startOpen = false, primary }: ChatLook = {}) {
+export function ChatWidget({ variant = "bubble", title, welcome, startOpen = false, primary, look }: ChatLook = {}) {
   const [cfg, setCfg] = useState<Config | null>(null);
   const [open, setOpen] = useState(startOpen);
   const [conv, setConv] = useState<{ id: string; status: string } | null>(null);
@@ -242,7 +247,7 @@ export function ChatWidget({ variant = "bubble", title, welcome, startOpen = fal
   const heading = title?.trim() || t("Chat dengan toko");
   const status = waiting ? t("Menunggu staf toko…") : conv?.status === "HUMAN" ? t("Staf toko membalas") : t("Online · biasanya membalas cepat");
   return (
-    <ChatShell variant={variant} heading={heading} welcome={welcome} primary={primary} open={open} onOpen={() => setOpen(true)} onClose={() => setOpen(false)} status={status}>
+    <ChatShell variant={variant} look={look} heading={heading} welcome={welcome} primary={primary} open={open} onOpen={() => setOpen(true)} onClose={() => setOpen(false)} status={status}>
       {err && <p className="chat-err" role="alert">{err}</p>}
       {!conv ? (
         <div className="chat-consent">
@@ -292,13 +297,13 @@ export interface ChatPreviewProps extends ChatLook {
 }
 
 /** Contoh percakapan dengan markup & CSS yang sama persis dengan widget di situs terbit. */
-export function ChatPreview({ variant = "bubble", title, welcome, primary, open, onOpenChange, ready = null }: ChatPreviewProps) {
+export function ChatPreview({ variant = "bubble", title, welcome, primary, look, open, onOpenChange, ready = null }: ChatPreviewProps) {
   const heading = title?.trim() || t("Chat dengan toko");
   const off = ready === false;
   return (
     <ChatShell
       preview off={off}
-      variant={variant} heading={heading} welcome={welcome} primary={primary}
+      variant={variant} look={look} heading={heading} welcome={welcome} primary={primary}
       open={open} onOpen={() => onOpenChange?.(true)} onClose={() => onOpenChange?.(false)}
       status={off ? t("Nonaktif — tidak tampil di situs") : t("Online · biasanya membalas cepat")}
     >

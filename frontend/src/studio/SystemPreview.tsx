@@ -3,6 +3,8 @@
 // Pratinjau halaman sistem (keranjang, pesanan, akun) di Studio: komponen halaman toko yang ASLI, dengan
 // brand kit yang sedang diedit dan data contoh (tanpa API). Teksnya diubah lewat ShopTextsPanel.
 
+import { ArrowLeft } from "@phosphor-icons/react/ssr";
+
 import { DeviceFrame, type DeviceViewport } from "./DeviceFrame";
 import type { PageV2 } from "./doc";
 import { t as tx } from "@/i18n";
@@ -73,19 +75,30 @@ export function ShopTextsPanel({ kind, texts, onChange, onBack }: {
   kind: SystemPage; texts: PageV2["theme"]["shop"]; onChange: (next: PageV2["theme"]["shop"]) => void; onBack: () => void;
 }) {
   const page = SYSTEM_PAGES().find((p) => p.kind === kind)!;
+  const fields = FIELDS().filter((f) => f.page === kind);
   return (
-    <div className="st-section">
-      <button type="button" className="d-back u-m-0" onClick={onBack}>← {tx("Kembali ke halaman website")}</button>
-      <h2 className="u-fs-md">{page.title} <code className="d-muted">{page.path}</code></h2>
-      <p className="d-hint">{tx("Halaman sistem mengikuti brand kit (warna, font, navigasi, footer) secara otomatis. Teks di bawah ini bisa Anda sesuaikan; kosongkan untuk memakai teks bawaan. Pratinjau memakai data contoh.")}</p>
-      {FIELDS().filter((f) => f.page === kind).map((f) => (
-        <label key={f.key} className="d-field">
-          <span>{f.label}</span>
-          {f.long
-            ? <textarea rows={3} maxLength={f.max} placeholder={f.placeholder} value={texts?.[f.key] ?? ""} onChange={(e) => onChange({ ...texts, [f.key]: e.target.value })} />
-            : <input maxLength={f.max} placeholder={f.placeholder} value={texts?.[f.key] ?? ""} onChange={(e) => onChange({ ...texts, [f.key]: e.target.value })} />}
-        </label>
-      ))}
-    </div>
+    <>
+      <div className="d-row d-row-between">
+        <button type="button" className="d-back u-m-0" onClick={onBack}><ArrowLeft weight="bold" aria-hidden="true" />{tx("Halaman")}</button>
+        <h2 className="u-m-0 u-fs-md u-grow">{page.title}</h2>
+        <span className="st-page-badge">{tx("Sistem")}</span>
+      </div>
+      <div className="st-section">
+        <p className="st-sys-path"><code>{page.path}</code></p>
+        <p className="d-hint u-m-0">{tx("Warna, font, navigasi, dan footer mengikuti brand kit secara otomatis. Pratinjau memakai data contoh.")}</p>
+      </div>
+      <div className="st-section">
+        <h3>{tx("Teks halaman")}</h3>
+        {fields.map((f) => (
+          <label key={f.key} className="d-field">
+            <span>{f.label}</span>
+            {f.long
+              ? <textarea rows={3} maxLength={f.max} placeholder={f.placeholder} value={texts?.[f.key] ?? ""} onChange={(e) => onChange({ ...texts, [f.key]: e.target.value })} />
+              : <input maxLength={f.max} placeholder={f.placeholder} value={texts?.[f.key] ?? ""} onChange={(e) => onChange({ ...texts, [f.key]: e.target.value })} />}
+            <span className="d-hint">{tx("Kosongkan untuk memakai teks bawaan.")}</span>
+          </label>
+        ))}
+      </div>
+    </>
   );
 }

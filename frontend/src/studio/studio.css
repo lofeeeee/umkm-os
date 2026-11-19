@@ -333,3 +333,7 @@
 .st-shape-tile svg { width: 100%; height: 100%; }
 .st-shape-tile[aria-pressed="true"] { border-color: var(--accent, #4f46e5); color: var(--accent, #4f46e5); background: color-mix(in srgb, var(--accent, #4f46e5) 8%, transparent); }
 .st-tpl-cat { font-size: var(--fs-2xs); font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--accent, #4f46e5); }
+
+/* Panel halaman sistem: alamat halaman sebagai chip, bukan teks kode lepas di samping judul. */
+.st-sys-path { margin: 0 0 8px; }
+.st-sys-path code { display: inline-block; padding: 2px 8px; border-radius: 6px; background: var(--surface-2, var(--neutral-badge-bg)); color: var(--ink-2); font-size: var(--fs-xs); }

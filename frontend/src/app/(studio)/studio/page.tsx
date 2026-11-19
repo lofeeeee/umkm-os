@@ -741,7 +741,6 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
               onBack={() => setSel(null)}
               onChange={(patch, key) => setCell(selected.id, patch, key)}
               onWidth={(w) => update((s) => ({ ...s, cells: place(s.cells, { ...selected, w }) as StudioCell[] }), "")}
-              onMove={(d) => moveCell(selected.id, d)}
               mobile={device === "mobile"}
               onLayout={(l) => {
                 // Gambar: popup ada di luar grid, mode lain adalah lapisan bebas di grid (posisi x/y tetap).

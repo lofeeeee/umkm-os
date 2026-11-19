@@ -188,7 +188,7 @@ function Block({ b, props }: { b: BlockV2; props: StudioSiteProps }) {
   else if (b.kind === "chatbot") {
     body = props.mode === "studio-edit"
       ? <EditorChat b={b} variant="inline" open={b.chat_open !== false} primary={safeColor(props.doc.theme.primary)} />
-      : <ChatWidget variant="inline" title={text(b.data.title)} welcome={text(b.data.welcome)} startOpen={b.chat_open !== false} primary={safeColor(props.doc.theme.primary)} />;
+      : <ChatWidget variant="inline" look={b.style} title={text(b.data.title)} welcome={text(b.data.welcome)} startOpen={b.chat_open !== false} primary={safeColor(props.doc.theme.primary)} />;
   } else {
     body = (
       <Site
@@ -215,7 +215,10 @@ function Block({ b, props }: { b: BlockV2; props: StudioSiteProps }) {
       />
     );
   }
-  return <div className={`st-content st-style-${b.style}${b.layout ? ` st-layout-${b.layout}` : ""}`}>{body}</div>;
+  // Chatbot menata gayanya sendiri (`data-look`, juga untuk Gelembung/Bilah) — pembungkus tidak ikut bergaya
+  // supaya tidak ada kotak/bayangan ganda di belakang panel chat.
+  const look = b.kind === "chatbot" ? "" : ` st-style-${b.style}`;
+  return <div className={`st-content${look}${b.layout ? ` st-layout-${b.layout}` : ""}`}>{body}</div>;
 }
 
 /** Anchor berbahasa Indonesia yang dipakai tombol template (`#kontak`, `#menu`, …) → blok pertama
@@ -411,7 +414,7 @@ export function StudioSite(props: StudioSiteProps) {
         // Di editor widget asli tidak dipasang: jangan memulai percakapan/panggilan API hanya karena
         // pratinjau. Markup kelasnya sama supaya bentuknya identik dengan situs terbit.
         ? <EditorChat b={chat} variant={chat.layout === "bar" ? "bar" : "bubble"} open={chat.chat_open === true} primary={safeColor(doc.theme.primary)} floating selected={props.selectedId === chat.id} onSelect={() => props.onSelect?.(chat.id)} />
-        : <ChatWidget variant={chat.layout === "bar" ? "bar" : "bubble"} title={text(chat.data.title)} welcome={text(chat.data.welcome)} startOpen={chat.chat_open === true} primary={safeColor(doc.theme.primary)} />)}
+        : <ChatWidget variant={chat.layout === "bar" ? "bar" : "bubble"} look={chat.style} title={text(chat.data.title)} welcome={text(chat.data.welcome)} startOpen={chat.chat_open === true} primary={safeColor(doc.theme.primary)} />)}
       {wa && (editing
         ? <WaPlaceholder b={wa} business={props.business} selected={props.selectedId === wa.id} onSelect={() => props.onSelect?.(wa.id)} />
         : <WhatsAppButton b={wa} business={props.business} floating />)}
@@ -448,7 +451,7 @@ function EditorChat({ b, variant, open, primary, floating, selected, onSelect }:
 }) {
   const ed = useBlockEditor();
   const preview = (
-    <ChatPreview variant={variant} title={text(b.data.title)} welcome={text(b.data.welcome)} primary={primary}
+    <ChatPreview variant={variant} look={b.style} title={text(b.data.title)} welcome={text(b.data.welcome)} primary={primary}
       open={open} onOpenChange={(o) => ed?.onChatOpen?.(b.id, o)} ready={ed?.chatReady ?? null} />
   );
   if (!floating) return preview;
