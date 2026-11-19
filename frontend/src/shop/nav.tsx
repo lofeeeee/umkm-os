@@ -27,7 +27,7 @@ function usePath(preview: boolean): string | null {
   return useSyncExternalStore(noopSub, () => (preview ? null : window.location.pathname.replace(/\/+$/, "")), () => null);
 }
 
-/** `preview` = kanvas/pratinjau Studio: tampil sama persis, tapi tidak bisa diklik & tanpa localStorage. */
+/** `preview` = kanvas/pratinjau Studio: tampil sama persis, tanpa localStorage (klik ditangani kanvas). */
 export function ShopNavActions({ preview = false }: { preview?: boolean }) {
   const n = useCartCount(preview);
   const path = usePath(preview);
@@ -40,7 +40,8 @@ export function ShopNavActions({ preview = false }: { preview?: boolean }) {
     <nav className="shop-actions" aria-label={tx("Navigasi toko")}>
       {items.map((it) => {
         const body = <>{it.label}{!!it.badge && <span className="shop-badge" aria-hidden="true">{it.badge}</span>}</>;
-        if (preview) return <span key={it.href} className="shop-action" aria-label={it.aria}>{body}</span>;
+        // Pratinjau (kanvas Studio): tetap tautan — kanvas mengubah klik jadi "buka halaman sistem di Studio".
+        if (preview) return <a key={it.href} className="shop-action" href={it.href} aria-label={it.aria}>{body}</a>;
         const current = path === it.href || (it.href === "/akun" && path?.startsWith("/akun/"));
         return (
           <a key={it.href} className="shop-action" href={it.href} aria-label={it.aria} aria-current={current ? "page" : undefined}>{body}</a>

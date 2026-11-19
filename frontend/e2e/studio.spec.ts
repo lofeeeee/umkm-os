@@ -178,6 +178,15 @@ test("studio: urutan menu halaman bisa diseret dan tersimpan", async ({ browser 
   await page.getByRole("button", { name: /^Ubah urutan Blog/ }).press("ArrowDown");
   await expect.poll(async () => (await pos("blog")) > (await pos("menu"))).toBe(true);
   await expect(page.getByRole("status").filter({ hasText: "Dipindah ke posisi" })).toHaveCount(1);
+
+  // Klik menu di kanvas = pindah halaman DI Studio (bukan membuka alamat situs di domain dasbor).
+  const canvasNav = page.getByRole("main", { name: "Kanvas halaman" });
+  await canvasNav.getByLabel("Navigasi atas").getByRole("link", { name: "Menu" }).click();
+  await expect(page).toHaveURL(/\/studio\?tenant=/);
+  await expect(list.locator('[data-page-slug="menu"]')).toHaveAttribute("data-active", "true");
+  await canvasNav.getByRole("navigation", { name: "Navigasi toko" }).getByRole("link", { name: /Keranjang/ }).click();
+  await expect(page).toHaveURL(/\/studio\?tenant=/);
+  await expect(canvasNav.locator('[data-core="shop_cart"]')).toBeVisible();
   await ctx.close();
 });
 

@@ -94,6 +94,8 @@ export interface LiveCanvasProps {
   /** Pesan singkat (mis. "geser di tampilan Desktop"). */
   onHint: (msg: string) => void;
   onZoom?: (zoom: number) => void;
+  /** Klik tautan internal di kanvas (menu, tombol): buka halaman itu DI Studio, bukan pindah situs. */
+  onNavigate?: (slug: string) => void;
   /** Isi blok inti halaman sistem (pratinjau halaman toko). */
   coreBlock?: (kind: string) => ReactNode;
 }
@@ -555,6 +557,21 @@ export function LiveCanvas(p: LiveCanvasProps) {
       onPointerDown={(e) => {
         // Klik di luar blok (latar halaman/bingkai) melepas pilihan.
         if (!drawing && !(e.target as HTMLElement).closest("[data-block-id], [data-interactive], button, a, input, textarea, [contenteditable]")) p.onSelect(null);
+      }}
+      onClickCapture={(e) => {
+        // Kanvas tidak pernah meninggalkan Studio: tautan halaman situs → pindah halaman Studio,
+        // tautan bagian (#…) → gulir di kanvas, lainnya (produk, eksternal) diabaikan.
+        const a = (e.target as HTMLElement).closest("a[href]");
+        if (!a || !wrap.current?.contains(a)) return;
+        e.preventDefault();
+        const href = a.getAttribute("href") ?? "";
+        if (href.startsWith("#")) {
+          const id = href.slice(1);
+          if (id) wrap.current.querySelector(`[id="${CSS.escape(id)}"]`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+          return;
+        }
+        const m = /^\/([a-z0-9-]*)\/?$/.exec(href);
+        if (m) p.onNavigate?.(m[1] || "home");
       }}
       onDragOver={(e) => {
         if (!e.dataTransfer.types.includes(PLUGIN_MIME)) return;

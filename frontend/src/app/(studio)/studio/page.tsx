@@ -916,6 +916,12 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
             onEraseStroke={eraseStroke}
             onHint={(m) => toast.info(m)}
             onZoom={setZoom}
+            onNavigate={(slug) => {
+              const sys = SYSTEM_PAGES().find((x) => x.slug === slug);
+              if (sys) void openSystem(sys.kind);
+              else if (pages.some((x) => x.slug === slug)) void switchPage(slug);
+              else toast.info(tx("Tautan ini bukan halaman website — di situs terbit tautannya berfungsi."));
+            }}
             coreBlock={(kind) => <CorePreview kind={kind} theme={previewDoc.theme} business={business} pages={sitePages} assetUrl={assets.url} products={products} />}
           />
           {!systemPage && st.cells.length === 0 && (

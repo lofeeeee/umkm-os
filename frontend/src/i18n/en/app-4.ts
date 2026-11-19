@@ -790,4 +790,5 @@ export const APP_4: Record<string, string> = {
   "alamat URL ini dipakai halaman toko (pilih alamat lain)": "this URL is used by a shop page (choose another)",
   "blok inti halaman sistem wajib ada tepat satu": "a system page needs exactly one core block",
   "blok inti hanya boleh di halaman sistemnya": "a core block is only allowed on its own system page",
+  "Tautan ini bukan halaman website — di situs terbit tautannya berfungsi.": "This link isn't a website page — it works on the published site.",
 };
