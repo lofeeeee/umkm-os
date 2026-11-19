@@ -44,7 +44,7 @@
 .shop[data-preview] a, .shop[data-preview] button { pointer-events: none; }
 
 .shop-main { width: 100%; max-width: 760px; margin: 0 auto 48px; padding: 8px 0 0; box-sizing: border-box; animation: shop-in 0.24s var(--shop-ease) both; }
-.shop-main-wide { max-width: 1080px; }
+.shop-main-wide { max-width: var(--sv2-max, 1200px); }
 @keyframes shop-in { from { opacity: 0; transform: translateY(6px); } }
 .shop-title { font-family: var(--s-head-font, var(--s-font)); font-weight: var(--s-head-weight, 800); font-size: 1.75rem; line-height: 1.15; margin: 8px 0 20px; letter-spacing: -0.02em; }
 .shop-main h2 { font-family: var(--s-head-font, var(--s-font)); font-size: 1.125rem; margin: 0 0 14px; letter-spacing: -0.01em; display: flex; align-items: center; gap: 10px; }
@@ -194,7 +194,7 @@
 }
 
 /* Kerangka situs toko (sebelum JS/data siap). Netral: warna toko belum diketahui. */
-.s-skel { max-width: 1180px; margin: 0 auto; padding: 16px; box-sizing: border-box; }
+.s-skel { max-width: 1200px; margin: 0 auto; padding: 16px; box-sizing: border-box; }
 .s-skel span { display: block; background: linear-gradient(90deg, #eef0f3 0%, #f7f8fa 50%, #eef0f3 100%); background-size: 200% 100%; border-radius: 10px; animation: s-skel 1.2s ease-in-out infinite; }
 .s-skel-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; }
 .s-skel-logo { width: 36px; height: 36px; flex: none; }

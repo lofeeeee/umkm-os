@@ -105,7 +105,7 @@ export function height(cells: Cell[]): number {
 }
 
 /* ---------------------------------------------------------------- ukuran desain (px) */
-/** Lebar desain grid (sama dengan `max-width` `.sv2-grid`). Koordinat coretan memakai satuan ini. */
+/** Lebar ACUAN grid untuk satuan koordinat coretan (bukan lebar tampil: `.sv2-grid` = --sv2-max; coretan berskala lewat viewBox). */
 export const DESIGN_WIDTH = 1080;
 export const GAP = 12;
 export const ROW = 24;

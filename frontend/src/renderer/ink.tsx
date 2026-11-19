@@ -1,6 +1,6 @@
 // Coretan bebas (kuas) — dirender SAMA di kanvas Studio dan situs terbit.
 //
-// Koordinat disimpan dalam "px desain": lebar grid = 1080 (DESIGN_WIDTH). SVG memakai viewBox persegi
+// Koordinat disimpan dalam "px desain": lebar grid acuan = 1080 (DESIGN_WIDTH; grid nyata boleh lebih lebar/sempit — viewBox ikut berskala). SVG memakai viewBox persegi
 // selebar wadahnya + `overflow: visible`, jadi skala x dan y selalu sama (coretan tidak gepeng) dan
 // coretan di bawah batas viewBox tetap tampil. Target:
 // - "background"   → relatif ke pojok kiri atas grid, di belakang blok.

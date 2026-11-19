@@ -110,6 +110,17 @@ test("studio: template → edit inline → simpan otomatis → terbit → situs 
   await expect(pub.getByRole("heading", { level: 1 })).toHaveText(title);
   await expect(pub.getByText(notice)).toBeVisible();
   await expect(pub.locator(".sv2-ink path")).toHaveCount(1);
+  // Layar lebar: konten 1200 px; isi bilah atas & footer sejajar tepi konten (tidak terlempar ke ujung layar).
+  await pub.setViewportSize({ width: 1760, height: 1000 });
+  const box = async (sel: string) => (await pub.locator(sel).first().boundingBox())!;
+  const content = await box(".sv2-grid");
+  expect(content.width).toBe(1200);
+  expect(Math.abs((await box(".s-headbar .s-brand")).x - content.x)).toBeLessThanOrEqual(1);
+  const actions = await box(".s-headbar .shop-actions");
+  expect(Math.abs(actions.x + actions.width - (content.x + content.width))).toBeLessThanOrEqual(1);
+  expect((await box(".sv2-foot")).width).toBe(1200);
+  if (process.env.SHOT) await pub.screenshot({ path: process.env.SHOT, fullPage: true });
+  await pub.setViewportSize({ width: 1440, height: 900 });
   expect(await pub.locator("script").evaluateAll((s) => s.some((x) => x.textContent?.includes("alert(1)") && !x.getAttribute("type")))).toBe(false);
   // ADR-0018: <head> dari API (crawler tanpa JS melihat nama toko).
   const html = await pub.evaluate(async () => (await fetch(location.href, { cache: "no-store" })).text());
