@@ -518,7 +518,7 @@
 .st-rail-btn.active,
 .st-rail-btn[aria-pressed="true"] {
   background: var(--primary-light, rgba(79, 70, 229, 0.1));
-  color: var(--primary, var(--brand, #4f46e5));
+  color: var(--primary, var(--brand, #147175));
   font-weight: 600;
 }
 
@@ -614,7 +614,7 @@
   display: grid; place-items: center; background: var(--s-ink, #18181b); color: var(--s-bg, #fff); font-size: 18px; line-height: 1;
   box-shadow: 0 4px 12px rgb(0 0 0 / 0.2);
 }
-.sv2-popup.sf-float-selected { outline: 3px solid #4f46e5; outline-offset: 3px; border-radius: 8px; }
+.sv2-popup.sf-float-selected { outline: 3px solid var(--brand, #147175); outline-offset: 3px; border-radius: 8px; }
 .sf-editing .sv2-popup { cursor: pointer; }
 @media (prefers-reduced-motion: no-preference) {
   .sv2:not(.sf-editing) .sv2-popup { animation: sv2-pop-in 0.24s cubic-bezier(0.22, 1, 0.36, 1) both; animation-delay: 0.6s; }
@@ -640,7 +640,7 @@
 .sf-editing .sv2-block:hover { z-index: 5; }
 }
 .sf-editing .sf-block {
-  --sf-accent: #4f46e5;
+  --sf-accent: var(--brand, #147175);
   position: relative; height: 100%; border-radius: 14px; cursor: grab;
   outline: 1.5px dashed transparent; outline-offset: 3px;
   transition: outline-color var(--dur-fast, 120ms) ease, opacity var(--dur, 180ms) ease, box-shadow var(--dur, 180ms) ease;
@@ -669,7 +669,7 @@
 .sf-editing .sf-block-selected > .sf-block-bar { pointer-events: auto; }
 .sf-block-tag {
   display: inline-flex; align-items: center; gap: 4px; height: 26px; padding: 0 10px 0 6px; border-radius: 999px;
-  background: var(--sf-accent, #4f46e5); color: #fff; font: 600 0.75rem/1 "Plus Jakarta Sans Variable", system-ui, sans-serif;
+  background: var(--sf-accent, #147175); color: #fff; font: 600 0.75rem/1 var(--font-ui, system-ui), sans-serif;
   box-shadow: 0 4px 12px -4px rgb(15 23 42 / 0.4); cursor: grab; pointer-events: none; user-select: none; touch-action: none; white-space: nowrap;
 }
 .sf-block-tag svg { width: 14px; height: 14px; }
@@ -681,13 +681,13 @@
 .sf-block-tools {
   margin-left: auto; display: inline-flex; align-items: center; gap: 2px; padding: 3px; border-radius: 999px;
   background: #fff; box-shadow: 0 0 0 1px rgb(15 23 42 / 0.08), 0 8px 20px -8px rgb(15 23 42 / 0.35);
-  font: 500 0.75rem/1 "Plus Jakarta Sans Variable", system-ui, sans-serif; color: #18181b;
+  font: 500 0.75rem/1 var(--font-ui, system-ui), sans-serif; color: #18181b;
 }
 .sf-block-lock { display: none; }
 
 /* Pegangan ubah ukuran (kanan = lebar, bawah = tinggi). */
 .sf-handle {
-  position: absolute; z-index: 7; display: block; background: #fff; border: 2px solid var(--sf-accent, #4f46e5); border-radius: 999px;
+  position: absolute; z-index: 7; display: block; background: #fff; border: 2px solid var(--sf-accent, #147175); border-radius: 999px;
   box-shadow: 0 2px 6px rgb(15 23 42 / 0.25); opacity: 0; touch-action: none; transition: opacity var(--dur-fast, 120ms) ease, transform var(--dur-fast, 120ms) ease;
 }
 .sf-handle-x { top: 50%; right: -7px; width: 10px; height: 36px; margin-top: -18px; cursor: ew-resize; }
@@ -700,12 +700,12 @@
 
 .sf-drop-hint {
   position: absolute; inset: 0; z-index: 9; display: grid; place-items: center; border-radius: 14px; pointer-events: none;
-  background: color-mix(in srgb, var(--sf-accent, #4f46e5) 22%, transparent); color: #fff;
-  font: 700 1rem/1.2 "Plus Jakarta Sans Variable", system-ui, sans-serif; text-shadow: 0 1px 3px rgb(0 0 0 / 0.45);
+  background: color-mix(in srgb, var(--sf-accent, #147175) 22%, transparent); color: #fff;
+  font: 700 1rem/1.2 var(--font-ui, system-ui), sans-serif; text-shadow: 0 1px 3px rgb(0 0 0 / 0.45);
 }
 
 /* Elemen melayang (chatbot gelembung/bilah, WhatsApp) di editor: bisa dipilih. */
-.sf-float-selected .chat-fab, .sf-float-selected .chat-bar, .sf-float-selected .chat-panel, .s-wa-float.sf-float-selected { outline: 3px solid #4f46e5; outline-offset: 3px; }
+.sf-float-selected .chat-fab, .sf-float-selected .chat-bar, .sf-float-selected .chat-panel, .s-wa-float.sf-float-selected { outline: 3px solid var(--brand, #147175); outline-offset: 3px; }
 .sf-editing .s-wa-float { cursor: pointer; }
 .sf-wa-nonum { opacity: 0.55; filter: grayscale(0.6); }
 /* Blok yang sedang diseret melayang di atas yang lain dan mengikuti kursor tanpa jeda. */

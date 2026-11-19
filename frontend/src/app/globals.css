@@ -1,20 +1,23 @@
 /* ============================================================
    UMKM OS — Design System (dashboard)
-   Arah: bersih & profesional. Netral zinc + aksen indigo, radius 8.
-   Font: Plus Jakarta Sans (self-hosted; CSP font-src 'self').
+   Arah: bersih & profesional. Netral zinc + aksen toska (OKLCH), radius 8.
+   Font: Instrument Sans (self-hosted; CSP font-src 'self'). Plus Jakarta Sans tetap
+   tersedia sebagai pilihan font situs toko (renderer/fonts), bukan untuk chrome dasbor.
    Aturan motion: hanya transform/opacity; ≤ 250ms; ease-out kustom;
    tidak ada animasi untuk aksi keyboard berulang (⌘K, navigasi).
    ============================================================ */
 
-@import "@fontsource-variable/plus-jakarta-sans";
+@import "@fontsource-variable/instrument-sans";
 /* Fallback bermetrik sama (rumus next/font, metrik capsize) supaya swap font tidak menggeser
    layout di jaringan lambat (UAT 15 Nov perf #2 — CLS). */
 @font-face {
-  font-family: "Plus Jakarta Sans Fallback";
+  font-family: "Instrument Sans Fallback";
   src: local("Arial");
-  size-adjust: 104.98%;
-  ascent-override: 98.88%;
-  descent-override: 21.15%;
+  /* Dari metrik OS/2 Instrument Sans (upm 1000, asc 970, desc 250, xAvg 564), dikalibrasi
+     ke fallback Jakarta sebelumnya (xAvg 585 → 104.98%). */
+  size-adjust: 101.21%;
+  ascent-override: 95.84%;
+  descent-override: 24.70%;
   line-gap-override: 0%;
 }
 
@@ -35,15 +38,15 @@
   --surface-active: #ececee;
 
   /* --- Aksen --- */
-  --brand: #4f46e5;
-  --brand-hover: #4338ca;
+  --brand: #147175; /* toska: oklch(0.50 0.08 200), 5.8:1 dgn putih */
+  --brand-hover: #0a5e62;
   --brand-ink: #ffffff;
-  /* Latar solid berteks putih (tombol, badge) — tetap indigo-600 di dark (UAT C4). */
-  --brand-solid: #4f46e5;
-  --brand-solid-hover: #4338ca;
-  --brand-soft: #eef2ff;
-  --brand-ink-soft: #4338ca;
-  --ring: rgb(79 70 229 / 0.35);
+  /* Latar solid berteks putih (tombol, badge): tetap toska tua di dark (UAT C4). */
+  --brand-solid: #147175;
+  --brand-solid-hover: #0a5e62;
+  --brand-soft: #e6f7f8;
+  --brand-ink-soft: #0b585c;
+  --ring: rgb(20 113 117 / 0.35);
 
   /* --- Semantik --- */
   --danger: #dc2626;
@@ -68,6 +71,7 @@
   --danger-ink: #b91c1c;
 
   /* --- Bentuk & bayangan --- */
+  --font-ui: "Instrument Sans Variable", "Instrument Sans Fallback", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --radius-sm: 6px;
   --radius: 8px;
   --radius-lg: 10px;
@@ -151,14 +155,14 @@
     --line-strong: #3f3f46;
     --surface-hover: #18181b;
     --surface-active: #202024;
-    --brand: #6366f1;
-    --brand-hover: #818cf8;
+    --brand: #5ac0c6;
+    --brand-hover: #7ad2d6;
     --brand-ink: #ffffff;
-    --brand-solid: #4f46e5;
-    --brand-solid-hover: #4338ca;
-    --brand-soft: rgb(99 102 241 / 0.14);
-    --brand-ink-soft: #a5b4fc;
-    --ring: rgb(129 140 248 / 0.45);
+    --brand-solid: #147175;
+    --brand-solid-hover: #0a5e62;
+    --brand-soft: rgb(90 192 198 / 0.14);
+    --brand-ink-soft: #96dce0;
+    --ring: rgb(122 210 214 / 0.45);
     --danger: #f87171;
     --danger-bg: rgb(248 113 113 / 0.1);
     --danger-line: rgb(248 113 113 / 0.3);
@@ -196,14 +200,14 @@
   --line-strong: #3f3f46;
   --surface-hover: #18181b;
   --surface-active: #202024;
-  --brand: #6366f1;
-  --brand-hover: #818cf8;
+  --brand: #5ac0c6;
+  --brand-hover: #7ad2d6;
   --brand-ink: #ffffff;
-  --brand-solid: #4f46e5;
-  --brand-solid-hover: #4338ca;
-  --brand-soft: rgb(99 102 241 / 0.14);
-  --brand-ink-soft: #a5b4fc;
-  --ring: rgb(129 140 248 / 0.45);
+  --brand-solid: #147175;
+  --brand-solid-hover: #0a5e62;
+  --brand-soft: rgb(90 192 198 / 0.14);
+  --brand-ink-soft: #96dce0;
+  --ring: rgb(122 210 214 / 0.45);
   --danger: #f87171;
   --danger-bg: rgb(248 113 113 / 0.1);
   --danger-line: rgb(248 113 113 / 0.3);
@@ -233,7 +237,7 @@
 html, body { margin: 0; padding: 0; overflow-x: clip; }
 html { -webkit-text-size-adjust: 100%; }
 body {
-  font-family: "Plus Jakarta Sans Variable", "Plus Jakarta Sans Fallback", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: var(--font-ui);
   font-size: var(--fs-base);
   line-height: 1.55;
   color: var(--ink);
@@ -658,7 +662,7 @@ input[aria-invalid="true"]:focus-visible, textarea[aria-invalid="true"]:focus-vi
 }
 .d-btn:active:not(:disabled) { transform: scale(var(--press, 0.97)); }
 .d-btn:disabled, .d-btn[aria-disabled="true"] { opacity: 0.5; cursor: not-allowed; }
-.d-btn-primary { background: var(--brand-solid); border-color: var(--brand-solid); color: var(--brand-ink); box-shadow: 0 1px 2px rgb(79 70 229 / 0.3), inset 0 1px 0 rgb(255 255 255 / 0.12); }
+.d-btn-primary { background: var(--brand-solid); border-color: var(--brand-solid); color: var(--brand-ink); box-shadow: 0 1px 2px color-mix(in srgb, var(--brand-solid) 30%, transparent), inset 0 1px 0 rgb(255 255 255 / 0.12); }
 @media (hover: hover){
 .d-btn-primary:hover { background: var(--brand-solid-hover); border-color: var(--brand-solid-hover); }
 }
@@ -1103,43 +1107,26 @@ dialog.d-cmdk::backdrop { background: rgb(0 0 0 / 0.25); }
 /* ============================================================
    Halaman masuk/daftar (d-auth)
    ============================================================ */
-.d-auth { min-height: 100vh; display: grid; background: var(--bg); }
-.d-auth-brand {
-  display: none; position: relative; overflow: hidden;
-  padding: var(--sp-10); color: #e4e4e7;
-  background: #09090b;
-  flex-direction: column; justify-content: space-between; gap: var(--sp-8);
+.d-auth { min-height: 100vh; display: grid; grid-template-rows: auto 1fr auto; background: var(--bg-subtle); }
+.d-auth-top { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-4); padding: var(--sp-4) var(--sp-6); }
+.d-auth-mark { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; font-size: var(--fs-md); }
+.d-auth-mark span { display: grid; place-items: center; width: 28px; height: 28px; border-radius: var(--radius); background: var(--brand-solid); color: var(--brand-ink); }
+.d-auth-theme { display: flex; align-items: center; gap: 8px; }
+.d-auth-form { display: grid; place-items: center; padding: var(--sp-8) var(--sp-4); }
+.d-auth-form .d-narrow {
+  margin: 0 auto; width: 100%; max-width: 420px; padding: var(--sp-8);
+  background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-xl); box-shadow: var(--shadow-sm);
+  animation: d-page-in var(--dur-slow) var(--ease-out) both;
 }
-.d-auth-brand::before {
-  content: ""; position: absolute; inset: 0;
-  background:
-    radial-gradient(600px 400px at 0% 0%, rgb(99 102 241 / 0.28), transparent 60%),
-    radial-gradient(500px 360px at 100% 100%, rgb(99 102 241 / 0.14), transparent 60%);
-}
-.d-auth-brand > * { position: relative; z-index: var(--z-raised); }
-.d-auth-logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: var(--fs-md); color: #fff; }
-.d-auth-logo span:first-child { display: grid; place-items: center; width: 30px; height: 30px; border-radius: var(--radius); background: #6366f1; color: #fff; }
-.d-auth-pitch h2 { font-size: var(--fs-4xl); line-height: 1.2; margin: 0 0 var(--sp-3); letter-spacing: -0.025em; color: #fff; max-width: 18ch; }
-.d-auth-pitch p { color: #a1a1aa; margin: 0; max-width: 40ch; font-size: var(--fs-md); }
-.d-auth-feats { display: grid; gap: var(--sp-4); margin: 0; padding: 0; list-style: none; }
-.d-auth-feats li { display: flex; gap: var(--sp-3); align-items: flex-start; font-size: var(--fs-base); }
-.d-auth-feats svg { width: 18px; height: 18px; flex: none; margin-top: 2px; color: #a5b4fc; }
-.d-auth-feats strong { display: block; color: #fafafa; font-weight: 600; }
-.d-auth-feats span { display: block; color: #a1a1aa; font-size: var(--fs-sm); }
-.d-auth-foot { font-size: var(--fs-xs); color: #71717a; margin: 0; }
-.d-auth-form { position: relative; display: grid; place-items: center; padding: var(--sp-10) var(--sp-4); }
-.d-auth-form .d-narrow { margin: 0 auto; padding: 0; width: 100%; max-width: 380px; animation: d-page-in var(--dur-slow) var(--ease-out) both; }
-.d-auth-form .d-narrow > h1 { margin: 0 0 6px; font-size: var(--fs-3xl); }
+.d-auth-form .d-narrow > h1 { margin: 0 0 6px; font-size: var(--fs-3xl); text-wrap: balance; }
 .d-auth-form .d-narrow > .d-muted { margin-bottom: var(--sp-6); }
 .d-auth-form form.d-card { padding: 0; border: 0; box-shadow: none; background: transparent; }
-.d-auth-form .d-narrow > p:last-child { color: var(--muted); font-size: var(--fs-sm); margin-top: var(--sp-6); text-align: center; }
-.d-auth-theme { position: absolute; top: var(--sp-4); right: var(--sp-4); }
-.d-auth-mark { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; margin-bottom: var(--sp-8); }
-.d-auth-mark span { display: grid; place-items: center; width: 28px; height: 28px; border-radius: var(--radius); background: var(--brand-solid); color: #fff; }
-@media (min-width: 960px) {
-  .d-auth { grid-template-columns: minmax(420px, 5fr) 6fr; }
-  .d-auth-brand { display: flex; }
-  .d-auth-mark { display: none; }
+.d-auth-form .d-narrow > p:last-child { color: var(--muted); font-size: var(--fs-sm); margin: var(--sp-6) 0 0; text-align: center; }
+.d-auth-foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--sp-2) var(--sp-6); padding: var(--sp-4) var(--sp-6); color: var(--muted); font-size: var(--fs-xs); }
+.d-auth-foot p { margin: 0; }
+@media (max-width: 479px) {
+  .d-auth-form { padding: var(--sp-4) var(--sp-3); }
+  .d-auth-form .d-narrow { padding: var(--sp-6) var(--sp-4); }
 }
 
 /* ============================================================
@@ -1477,7 +1464,7 @@ main.d-legal { max-width: 720px; }
 .st-style-soft .s-btn:active { box-shadow: inset 4px 4px 10px rgb(0 0 0 / 0.18), inset -4px -4px 10px rgb(255 255 255 / 0.25); }
 
 /* 2D datar (flat): warna solid, tanpa bayangan sama sekali, sudut tegas. */
-.st-style-flat { background: color-mix(in srgb, var(--s-primary, #4f46e5) 9%, var(--pg-bg, #fff)); border-radius: 12px; }
+.st-style-flat { background: color-mix(in srgb, var(--s-primary, var(--brand)) 9%, var(--pg-bg, #fff)); border-radius: 12px; }
 .st-style-flat, .st-style-flat * { box-shadow: none !important; text-shadow: none !important; }
 .st-style-flat .s-card, .st-style-flat .s-product { background: var(--pg-bg, #fff); border: 0; border-radius: 10px; }
 .st-style-flat .s-btn { border-radius: 8px; }
@@ -1515,12 +1502,12 @@ main.d-legal { max-width: 720px; }
 .st-save svg { width: 12px; height: 12px; color: var(--ok); }
 .s-edit { outline: 1.5px dashed transparent; outline-offset: 3px; border-radius: 4px; cursor: text !important; transition: outline-color var(--dur-fast, 120ms) ease, background-color var(--dur-fast, 120ms) ease; }
 /* Teks yang bisa diketik baru ditandai saat bloknya disorot/dipilih — kanvas diam tetap bersih. */
-.sf-block-selected .s-edit { outline-color: color-mix(in srgb, var(--s-primary, #4f46e5) 40%, transparent); }
+.sf-block-selected .s-edit { outline-color: color-mix(in srgb, var(--s-primary, var(--brand)) 40%, transparent); }
 @media (hover: hover){
-.sf-block:hover .s-edit { outline-color: color-mix(in srgb, var(--s-primary, #4f46e5) 40%, transparent); }
-.s-edit:hover { outline-color: var(--s-primary, #4f46e5) !important; }
+.sf-block:hover .s-edit { outline-color: color-mix(in srgb, var(--s-primary, var(--brand)) 40%, transparent); }
+.s-edit:hover { outline-color: var(--s-primary, var(--brand)) !important; }
 }
-.s-edit:focus { transition: none; outline: 2px solid var(--s-primary, #4f46e5); background: color-mix(in srgb, var(--s-primary, #4f46e5) 6%, transparent); }
+.s-edit:focus { transition: none; outline: 2px solid var(--s-primary, var(--brand)); background: color-mix(in srgb, var(--s-primary, var(--brand)) 6%, transparent); }
 .s-edit:empty::before { content: attr(data-placeholder); color: var(--s-muted, #94a3b8); font-weight: 400; }
 
 .st-gallery-first { max-width: 1180px; margin: 0 auto; }

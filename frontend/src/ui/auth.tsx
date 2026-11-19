@@ -1,45 +1,33 @@
 "use client";
 
-// Kerangka halaman masuk/daftar/undangan: panel merek di kiri (desktop), form di kanan.
+// Kerangka halaman masuk/daftar/undangan: satu kolom berpusat pada form. Tanpa panel merek
+// setengah layar dan daftar fitur berikon (pola template SaaS; audit anti-slop Nov 2026).
 
 import { useState, type ReactNode } from "react";
 
-import { ChatCircleDots, Eye, EyeSlash, Globe, Storefront, Wallet } from "@phosphor-icons/react/ssr";
+import { Eye, EyeSlash, Storefront } from "@phosphor-icons/react/ssr";
 
 import { ThemeToggle } from "@/dashboard/shell";
 import { t } from "@/i18n";
 import { Tr } from "@/i18n/react";
 import { LanguageSwitch } from "@/i18n/react";
 
-const FEATS = [
-  { icon: Globe, get title() { return t("Website siap pakai"); }, get desc() { return t("Pilih templat, ubah teks & foto, terbitkan dalam menit."); } },
-  { icon: Wallet, get title() { return t("Pesanan & pembayaran QRIS"); }, get desc() { return t("Pembeli bayar langsung ke rekening toko, Anda cukup konfirmasi."); } },
-  { icon: ChatCircleDots, get title() { return t("Asisten AI 24 jam"); }, get desc() { return t("Jawab pertanyaan pelanggan otomatis, serahkan ke staf bila perlu."); } },
-];
-
 export function AuthShell({ pitch, children }: { pitch: string; children: ReactNode }) {
   return (
     <div className="d-auth">
-      <div className="d-auth-brand" aria-hidden="true">
-        <div className="d-auth-logo"><span><Storefront size={18} weight="bold" /></span>{t("UMKM OS")}</div>
-        <div className="d-auth-pitch">
-          <h2>{pitch}</h2>
-          <p>{t("Website, katalog, pesanan, pelanggan, dan asisten AI, dikelola dari satu dasbor.")}</p>
-        </div>
-        <ul className="d-auth-feats">
-          {FEATS.map((f) => (
-            <li key={f.title}><f.icon weight="bold" /><div><strong>{f.title}</strong><span>{f.desc}</span></div></li>
-          ))}
-        </ul>
-        <p className="d-auth-foot"><Tr s="© {0} UMKM OS" a={[new Date().getFullYear()]} /></p>
-      </div>
-      <div className="d-auth-form">
+      <header className="d-auth-top">
+        <div className="d-auth-mark"><span aria-hidden="true"><Storefront size={16} weight="bold" /></span>{t("UMKM OS")}</div>
         <div className="d-auth-theme"><LanguageSwitch /><ThemeToggle /></div>
+      </header>
+      <div className="d-auth-form">
         <main id="main" className="d-narrow" tabIndex={-1}>
-          <div className="d-auth-mark"><span><Storefront size={16} weight="bold" /></span>{t("UMKM OS")}</div>
           {children}
         </main>
       </div>
+      <footer className="d-auth-foot">
+        <p>{pitch}. {t("Website, katalog, pesanan, pelanggan, dan asisten AI, dikelola dari satu dasbor.")}</p>
+        <p><Tr s="© {0} UMKM OS" a={[new Date().getFullYear()]} /></p>
+      </footer>
     </div>
   );
 }
