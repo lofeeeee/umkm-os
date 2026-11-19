@@ -213,7 +213,7 @@ function Detail({ ctx, url, members, onBack }: { ctx: TenantCtx; url: string; me
               <dt>{tx("Target selesai")}</dt><dd>{waktu(t.resolution_due_at)}{t.sla_resolution_breached && <> <Badge tone="danger" plain>{tx("Terlewat")}</Badge></>}</dd>
             </dl>
             {(t.sla_first_response_breached || t.sla_resolution_breached) && (
-              <p className="d-small u-danger u-mt-3"><Warning weight="bold" aria-hidden="true" className="u-va-icon" />{" "}{tx("Tenggat layanan terlewat — prioritaskan tiket ini.")}</p>
+              <p className="d-small u-danger u-mt-3"><Warning weight="bold" aria-hidden="true" className="u-va-icon" />{" "}{tx("Tenggat layanan terlewat. Prioritaskan tiket ini.")}</p>
             )}
           </Card>
         </div>

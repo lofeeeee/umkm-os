@@ -57,7 +57,7 @@ export function LogoFields({ c, onChange, businessHref }: { c: StudioCell; onCha
   return (
     <div className="st-section">
       <h3>{tx("Logo")}</h3>
-      <p className="d-hint u-mt-0">{tx("Logo dan nama diambil dari Profil bisnis — ganti di sana agar semua halaman ikut berubah.")} <a href={businessHref}>{tx("Profil bisnis")}</a></p>
+      <p className="d-hint u-mt-0">{tx("Logo dan nama diambil dari Profil bisnis. Ganti di sana agar semua halaman ikut berubah.")} <a href={businessHref}>{tx("Profil bisnis")}</a></p>
       <label className="d-switch">
         <input type="checkbox" checked={c.data.show_name !== false} onChange={(e) => onChange({ data: { ...c.data, show_name: e.target.checked } }, "logo-name")} />
         <span><strong>{tx("Tampilkan nama toko")}</strong><span className="d-muted">{tx("Saat logo ini ada, logo & nama di menu navigasi disembunyikan agar tidak dobel.")}</span></span>

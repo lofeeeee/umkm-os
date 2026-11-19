@@ -80,7 +80,7 @@ function Form({ ctx }: { ctx: TenantCtx }) {
         </Alert>
       )}
       <form onSubmit={(e) => { e.preventDefault(); void save(); }}>
-        <Card title={t("Pembayaran QRIS")} description={t("Unggah gambar QRIS merchant milik toko — sistem membaca QR-nya secara otomatis. Pembeli membayar langsung ke rekening toko; Anda mengonfirmasi setiap pembayaran di menu Pesanan. Platform tidak memegang dana.")}>
+        <Card title={t("Pembayaran QRIS")} description={t("Unggah gambar QRIS merchant milik toko; sistem membaca QR-nya secara otomatis. Pembeli membayar langsung ke rekening toko; Anda mengonfirmasi setiap pembayaran di menu Pesanan. Platform tidak memegang dana.")}>
           <div className="d-grid">
             <ImagePicker label={t("Gambar QRIS")} value={s.qris ?? undefined} onChange={(v) => setS({ ...s, qris: v ?? null })} />
             <label className="d-field"><span>{t("Nama penerima (tampil di halaman bayar)")}</span>
@@ -93,7 +93,7 @@ function Form({ ctx }: { ctx: TenantCtx }) {
             </Alert>
           )}
           {s.qris && s.qris_static_ready && (
-            <Alert kind="ok">{t("QRIS terbaca — konfirmasi otomatis siap.")}</Alert>
+            <Alert kind="ok">{t("QRIS terbaca. Konfirmasi otomatis siap.")}</Alert>
           )}
           <label className="d-switch">
             <input type="checkbox" disabled={!can} checked={s.checkout_enabled} onChange={(e) => setS({ ...s, checkout_enabled: e.target.checked })} />
@@ -240,12 +240,12 @@ function GopayCard({ tenantId, can, refreshKey }: { tenantId: string; can: boole
     <div id="gopay">
     <Card
       title={t("Konfirmasi otomatis (GoPay Merchant)")}
-      description={t("Opsional. Hubungkan akun GoPay/GoBiz Merchant toko agar pembayaran QRIS dikonfirmasi otomatis — pesanan langsung berstatus Diproses tanpa Anda cek manual. Gratis untuk usaha mikro. Konfirmasi manual tetap tersedia sebagai cadangan.")}
+      description={t("Opsional. Hubungkan akun GoPay/GoBiz Merchant toko agar pembayaran QRIS dikonfirmasi otomatis dan pesanan langsung berstatus Diproses tanpa Anda cek manual. Gratis untuk usaha mikro. Konfirmasi manual tetap tersedia sebagai cadangan.")}
     >
       <Alert kind="error">{err}</Alert>
       {st.connected && st.status === "needs_relogin" && (
         <Alert kind="warn">
-          {t("GoBiz menolak sesi yang tersimpan, jadi pembayaran tidak lagi dikonfirmasi otomatis. Hubungkan ulang di bawah — konfirmasi manual tetap berjalan.")}
+          {t("GoBiz menolak sesi yang tersimpan, jadi pembayaran tidak lagi dikonfirmasi otomatis. Hubungkan ulang di bawah; konfirmasi manual tetap berjalan.")}
           {st.last_error ? " " + t("(kode: {0})", st.last_error) : ""}
           {can && (
             <>
@@ -258,7 +258,7 @@ function GopayCard({ tenantId, can, refreshKey }: { tenantId: string; can: boole
       {!st.connected || st.status === "needs_relogin" ? (
         <div className="gp-stack">
           <Alert kind="info">
-            <strong>{t("Cara termudah (tanpa menyalin token):")}</strong>{" "}{t("pasang ekstensi")}{" "}<em>{t("\"UMKM OS — Penghubung GoPay\"")}</em>{t(", login GoBiz di browser, lalu klik")}{" "}<em>{t("Hubungkan")}</em>{" "}{t("di ekstensi — kolom di bawah terisi sendiri. Login GoPay dilindungi reCAPTCHA sehingga harus di browser; ekstensi hanya menangkap sesinya. Tak punya ekstensi? Isi manual di bawah.")}
+            <strong>{t("Cara termudah (tanpa menyalin token):")}</strong>{" "}{t("pasang ekstensi")}{" "}<em>{t("\"UMKM OS — Penghubung GoPay\"")}</em>{t(", login GoBiz di browser, lalu klik")}{" "}<em>{t("Hubungkan")}</em>{" "}{t("di ekstensi, dan kolom di bawah terisi sendiri. Login GoPay dilindungi reCAPTCHA sehingga harus di browser; ekstensi hanya menangkap sesinya. Tak punya ekstensi? Isi manual di bawah.")}
           </Alert>
           <ContactField label={t("Nomor HP GoBiz/GoPay Merchant")} kind="phone" value={phone} disabled={!can}
             errorText={ERROR_TEXT} hint={t("Nomor akun merchant (dipakai untuk memperbarui sesi).")}
@@ -277,7 +277,7 @@ function GopayCard({ tenantId, can, refreshKey }: { tenantId: string; can: boole
               <li>{t("Tekan")}{" "}<strong>F12</strong>{" "}{t("→ tab")}{" "}<strong>{t("Application")}</strong>{" "}{t("(Chrome) /")}{" "}<strong>{t("Storage")}</strong>{" "}{t("(Firefox) →")}{" "}<strong>{t("Cookies")}</strong>{" "}{t("→ pilih")}{" "}<strong>https://portal.gofoodmerchant.co.id</strong>.</li>
               <li>{t("Salin nilai")}{" "}<strong>access_token</strong> dan <strong>refresh_token</strong>{t(", lalu tempel ke kotak di atas (boleh format")}{" "}<code>{t("access_token=...; refresh_token=...")}</code>).</li>
               <li>{t("Setelah token tersalin, tutup tab GoBiz tanpa keluar (logout). Tab yang dibiarkan terbuka memperbarui sesinya sendiri, sehingga token yang tersimpan di sini menjadi tidak berlaku.")}</li>
-              <li>{t("Selanjutnya sesi diperbarui otomatis oleh server sebelum kedaluwarsa dan minimal tiap 6 jam — tidak perlu login ulang.")}</li>
+              <li>{t("Selanjutnya sesi diperbarui otomatis oleh server sebelum kedaluwarsa dan minimal tiap 6 jam, jadi tidak perlu login ulang.")}</li>
             </ol>
           )}
           {can && (
@@ -305,7 +305,7 @@ function GopayCard({ tenantId, can, refreshKey }: { tenantId: string; can: boole
           {st.status === "active" && st.last_error && (
             <Alert kind="warn">
               {st.last_error.startsWith("refresh_")
-                ? t("GoBiz menolak perpanjangan sesi, tetapi sesi saat ini masih berfungsi sampai {0}. Konfirmasi otomatis tetap berjalan sampai saat itu — hubungkan ulang sebelumnya agar tidak terputus.", waktu((st.expires_at_unix ?? 0) * 1000))
+                ? t("GoBiz menolak perpanjangan sesi, tetapi sesi saat ini masih berfungsi sampai {0}. Konfirmasi otomatis tetap berjalan sampai saat itu. Hubungkan ulang sebelumnya agar tidak terputus.", waktu((st.expires_at_unix ?? 0) * 1000))
                 : t("Pembaruan sesi terakhir gagal ({0}). Sesi tetap aktif dan dicoba lagi otomatis.", gopayErrorText(st.last_error))}
             </Alert>
           )}
@@ -313,7 +313,7 @@ function GopayCard({ tenantId, can, refreshKey }: { tenantId: string; can: boole
             <span>{t("QRIS statis toko")}</span>
             <span className="d-hint">
               {st.has_static_qris
-                ? t("QRIS terbaca — konfirmasi otomatis siap.")
+                ? t("QRIS terbaca. Konfirmasi otomatis siap.")
                 : t("QRIS diambil otomatis dari gambar di kartu Pembayaran QRIS.")}
             </span>
           </div>

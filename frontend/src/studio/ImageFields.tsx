@@ -22,7 +22,7 @@ export function ImageFields({ c, onChange, onLayout, onPhoto }: {
   const set = (k: string, v: string | number, key = `img-${k}`) => onChange({ data: { ...c.data, [k]: v } }, key);
   const hint: Record<string, string> = {
     above: tx("Di depan semua blok. Tanpa tautan, gambar tembus klik sehingga tombol di bawahnya tetap bisa ditekan."),
-    below: tx("Di belakang blok, seperti latar kecil — tidak pernah menutupi isi."),
+    below: tx("Di belakang blok, seperti latar kecil. Tidak pernah menutupi isi."),
     sticky: tx("Menempel di atas layar selama area kotaknya terlihat saat digulir. Tarik kotaknya lebih tinggi untuk jarak gantung yang lebih panjang."),
     popup: tx("Menempel di pojok layar dan ikut saat halaman digulir. Pembeli bisa menutupnya."),
   };
@@ -54,7 +54,7 @@ export function ImageFields({ c, onChange, onLayout, onPhoto }: {
       {mode === "popup" && <label className="d-btn d-btn-sm u-mt-2"><ImageSquare weight="bold" aria-hidden="true" />{c.data.image ? tx("Ganti gambar") : tx("Pasang gambar")}
         <input type="file" accept="image/png,image/webp,image/jpeg" hidden onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) onPhoto(f); }} />
       </label>}
-      <p className="d-hint u-mt-1">{tx("PNG atau WebP transparan tetap transparan — cocok untuk stiker, logo, dan potongan objek.")}</p>
+      <p className="d-hint u-mt-1">{tx("PNG atau WebP transparan tetap transparan, cocok untuk stiker, logo, dan potongan objek.")}</p>
       {mode !== "popup" && (
         <div className="d-field u-mt-2">
           <span>{tx("Isi kotak")}</span>

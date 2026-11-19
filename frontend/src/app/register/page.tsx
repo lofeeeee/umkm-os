@@ -54,7 +54,7 @@ export default function Register() {
       setBusy(false);
     }
   }
-  const strength = password.length === 0 ? null : password.length < 8 ? t("Minimal 8 karakter") : password.length < 12 ? t("Cukup — lebih panjang lebih aman") : t("Kuat");
+  const strength = password.length === 0 ? null : password.length < 8 ? t("Minimal 8 karakter") : password.length < 12 ? t("Cukup. Lebih panjang lebih aman") : t("Kuat");
   return (
     <AuthShell pitch={t("Mulai digitalisasi usaha Anda hari ini")}>
       <h1>{t("Daftarkan usaha")}</h1>

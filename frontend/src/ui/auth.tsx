@@ -24,7 +24,7 @@ export function AuthShell({ pitch, children }: { pitch: string; children: ReactN
         <div className="d-auth-logo"><span><Storefront size={18} weight="bold" /></span>{t("UMKM OS")}</div>
         <div className="d-auth-pitch">
           <h2>{pitch}</h2>
-          <p>{t("Website, katalog, pesanan, pelanggan, dan asisten AI — dikelola dari satu dasbor.")}</p>
+          <p>{t("Website, katalog, pesanan, pelanggan, dan asisten AI, dikelola dari satu dasbor.")}</p>
         </div>
         <ul className="d-auth-feats">
           {FEATS.map((f) => (

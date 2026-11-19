@@ -44,7 +44,7 @@ export function BackgroundFields({ c, onChange }: { c: StudioCell; onChange: (pa
       </label>
       <label className="d-switch u-mb-2">
         <input type="checkbox" checked={c.data.bleed === true} onChange={(e) => onChange({ data: { ...c.data, bleed: e.target.checked } }, "bg-bleed")} />
-        <span><strong>{tx("Selebar layar")}</strong><span className="d-muted">{tx("Latar memanjang sampai tepi kiri-kanan layar (bila menyentuh tepi grid) — cocok untuk pita bagian.")}</span></span>
+        <span><strong>{tx("Selebar layar")}</strong><span className="d-muted">{tx("Latar memanjang sampai tepi kiri-kanan layar (bila menyentuh tepi grid). Cocok untuk pita bagian.")}</span></span>
       </label>
       <div className="d-field u-m-0 u-mb-2">
         <span>{tx("Warna pita")}</span>

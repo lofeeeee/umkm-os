@@ -65,7 +65,7 @@ function Team({ ctx }: { ctx: TenantCtx }) {
             void run(async () => { await api("POST", `${base}/invitations`, { json: inv }); setInv({ email: "", role_id: "" }); }, t("Undangan dibuat.")).finally(() => setBusy(false));
           }}>
             <label className="d-field" style={{ flex: "2 1 240px", margin: 0 }}><span>{t("Email")}</span>
-              <input type="email" placeholder={t("nama@contoh.id")} value={inv.email} onChange={(e) => setInv({ ...inv, email: e.target.value })} />
+              <input type="email" autoComplete="off" placeholder={t("nama@contoh.id")} value={inv.email} onChange={(e) => setInv({ ...inv, email: e.target.value })} />
             </label>
             <label className="d-field" style={{ flex: "1 1 180px", margin: 0 }}><span>{t("Peran")}</span>
               <select value={inv.role_id} onChange={(e) => setInv({ ...inv, role_id: e.target.value })}>
@@ -82,7 +82,9 @@ function Team({ ctx }: { ctx: TenantCtx }) {
                 {invites.map((i) => (
                   <li key={i.id}>
                     <div className="d-list-main"><strong>{i.email}</strong><span className="d-muted">{roleLabel(i.role_name)}{" "}{t("· berlaku s.d.")}{" "}{tanggal(i.expires_at)}</span></div>
-                    <button type="button" className="d-btn d-btn-sm d-btn-ghost" onClick={() => void run(() => api("DELETE", `${base}/invitations/${i.id}`), t("Undangan dicabut."))}>{t("Cabut")}</button>
+                    <button type="button" className="d-btn d-btn-sm d-btn-ghost" onClick={async () => {
+                      if (await confirm({ title: t("Cabut undangan untuk {0}?", i.email), body: t("Tautan undangan yang sudah terkirim tidak bisa dipakai lagi."), confirmLabel: t("Cabut"), danger: true })) void run(() => api("DELETE", `${base}/invitations/${i.id}`), t("Undangan dicabut."));
+                    }}>{t("Cabut")}</button>
                   </li>
                 ))}
               </ul>

@@ -67,7 +67,7 @@ export function readiness({ cells, business, productCount, seo, chatReady }: Rea
   if (chat && chatReady === false) {
     out.push({
       key: "chatbot",
-      message: t("Blok Chatbot ada di halaman, tetapi chatbot belum aktif — blok ini tidak akan tampil di website. Aktifkan di Asisten AI (mode “Hanya staf” tidak butuh penyedia AI)."),
+      message: t("Blok Chatbot ada di halaman, tetapi chatbot belum aktif, jadi blok ini tidak akan tampil di website. Aktifkan di Asisten AI (mode “Hanya staf” tidak butuh penyedia AI)."),
       cellId: chat.id,
       area: "ai",
     });

@@ -36,7 +36,7 @@ const MODES: { value: string; title: string; desc: string }[] = [
   { value: "hybrid", get title() { return tx("Hybrid (disarankan)"); }, get desc() { return tx("AI menjawab pertanyaan yang jelas; sisanya diteruskan ke staf."); } },
   { value: "auto", get title() { return tx("Otomatis"); }, get desc() { return tx("AI menjawab semua pertanyaan langsung."); } },
   { value: "assisted", get title() { return tx("Dibantu"); }, get desc() { return tx("AI menyiapkan draf; staf memeriksa lalu mengirim."); } },
-  { value: "human_only", get title() { return tx("Hanya staf (tanpa AI)"); }, get desc() { return tx("Tanpa penyedia AI. Semua chat masuk antrean staf — cocok untuk mulai menjual."); } },
+  { value: "human_only", get title() { return tx("Hanya staf (tanpa AI)"); }, get desc() { return tx("Tanpa penyedia AI. Semua chat masuk antrean staf. Cocok untuk mulai menjual."); } },
 ];
 const TOOLS: Record<string, string> = tmap({
   search_products: "Cari produk", get_product_detail: "Detail produk", check_stock: "Cek stok",
@@ -216,7 +216,7 @@ function Ai({ ctx }: { ctx: TenantCtx }) {
               <label className="d-field"><span>{tx("Pesan sambutan")}</span><input maxLength={500} value={cfg.welcome_message} onChange={(e) => setCfg({ ...cfg, welcome_message: e.target.value })} /></label>
               <label className="d-field"><span>{tx("Pesan saat dialihkan ke staf")}</span><input maxLength={500} value={cfg.fallback_message} onChange={(e) => setCfg({ ...cfg, fallback_message: e.target.value })} /></label>
               <label className="d-field"><span>{tx("Topik yang dilayani (pisahkan koma)")}</span><input defaultValue={cfg.allowed_topics.join(", ")} placeholder={tx("produk, harga, pengiriman")} onBlur={(e) => setCfg({ ...cfg, allowed_topics: topics(e.target.value) })} /></label>
-              <label className="d-field"><span>{tx("Topik terlarang — langsung ke staf (pisahkan koma)")}</span><input defaultValue={cfg.restricted_topics.join(", ")} placeholder={tx("komplain, pengembalian dana")} onBlur={(e) => setCfg({ ...cfg, restricted_topics: topics(e.target.value) })} /></label>
+              <label className="d-field"><span>{tx("Topik terlarang (langsung ke staf, pisahkan koma)")}</span><input defaultValue={cfg.restricted_topics.join(", ")} placeholder={tx("komplain, pengembalian dana")} onBlur={(e) => setCfg({ ...cfg, restricted_topics: topics(e.target.value) })} /></label>
             </div>
             <h3>{tx("Lanjutan")}</h3>
             <div className="d-grid">
@@ -242,7 +242,7 @@ function Ai({ ctx }: { ctx: TenantCtx }) {
         </div>
       </Card>
 
-      <Card title={tx("Basis pengetahuan")} description={tx("FAQ, kebijakan retur, info pengiriman — dipakai AI untuk menjawab dengan akurat.")} label={tx("Basis pengetahuan")}>
+      <Card title={tx("Basis pengetahuan")} description={tx("FAQ, kebijakan retur, info pengiriman: dipakai AI untuk menjawab dengan akurat.")} label={tx("Basis pengetahuan")}>
         {docs.length === 0 ? (
           <EmptyState icon={BookOpen} title={tx("Belum ada dokumen")}
             action={manage ? <button type="button" className="d-btn" onClick={() => document.getElementById("kb-title")?.focus()}>{tx("Mulai isi basis pengetahuan")}</button> : undefined}>
@@ -328,7 +328,7 @@ function AddProvider({ view, onAdd, first, platformBlocked, subscriptionHref }: 
                 </select>
               </label>
               <label className="d-field"><span>{tx("Model")}</span><input required value={f.model} placeholder="mis. gpt-4o-mini" onChange={(e) => setF({ ...f, model: e.target.value })} /></label>
-              <label className="d-field"><span>{tx("Alamat endpoint (HTTPS)")}</span><input required type="url" value={f.base_url} onChange={(e) => setF({ ...f, base_url: e.target.value })} /></label>
+              <label className="d-field"><span>{tx("Alamat endpoint (HTTPS)")}</span><input required type="url" autoComplete="off" value={f.base_url} onChange={(e) => setF({ ...f, base_url: e.target.value })} /></label>
             </>
           )}
         </div>

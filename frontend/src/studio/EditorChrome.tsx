@@ -21,7 +21,7 @@ export function SaveBadge({ state, saved, err, onRetry }: { state: SaveState; sa
   if (state === "conflict" || state === "error") {
     return (
       <span className="st-save st-save-bad" role="alert" title={err ?? undefined}>
-        <WarningCircle weight="fill" aria-hidden="true" />{state === "conflict" ? tx("Konflik — muat ulang") : tx("Gagal menyimpan")}
+        <WarningCircle weight="fill" aria-hidden="true" />{state === "conflict" ? tx("Konflik: muat ulang") : tx("Gagal menyimpan")}
         {state === "error" && <button type="button" className="d-link d-small" onClick={onRetry}>{tx("Coba lagi")}</button>}
       </span>
     );

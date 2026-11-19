@@ -353,7 +353,7 @@ export function LiveCanvas(p: LiveCanvasProps) {
     if (!c || !g || !el || c.locked) return;
     if (isStacked(g)) {
       if (mode !== "move" || c.layer || !P.onMobileReorder) {
-        P.onHint(mode !== "move" ? tx("Ubah ukuran di tampilan Desktop atau Tablet — di ponsel blok selalu selebar layar.") : tx("Latar diatur di tampilan Desktop atau Tablet."));
+        P.onHint(mode !== "move" ? tx("Ubah ukuran di tampilan Desktop atau Tablet. Di ponsel, blok selalu selebar layar.") : tx("Latar diatur di tampilan Desktop atau Tablet."));
         return;
       }
       startMobileDrag(id, e, g, el);

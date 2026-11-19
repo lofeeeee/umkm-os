@@ -861,7 +861,7 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
                             className="st-card"
                             aria-label={tx("Tambah {0}", p.name)}
                             aria-disabled={single || undefined}
-                            title={single ? tx("{0} sudah ada di halaman ini", p.name) : tx("Tambah {0} — atau seret ke kanvas", p.name)}
+                            title={single ? tx("{0} sudah ada di halaman ini", p.name) : tx("Tambah {0} atau atau seret ke kanvas", p.name)}
                             onClick={() => add(p.kind)}
                             onDragStart={(e) => { e.dataTransfer.setData(PLUGIN_MIME, p.kind); e.dataTransfer.effectAllowed = "copy"; setPaletteDrag({ kind: p.kind, w: p.w }); }}
                             onDragEnd={() => setPaletteDrag(null)}
@@ -920,7 +920,7 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
               const sys = SYSTEM_PAGES().find((x) => x.slug === slug);
               if (sys) void openSystem(sys.kind);
               else if (pages.some((x) => x.slug === slug)) void switchPage(slug);
-              else toast.info(tx("Tautan ini bukan halaman website — di situs terbit tautannya berfungsi."));
+              else toast.info(tx("Tautan ini bukan halaman website. Di situs terbit, tautannya berfungsi."));
             }}
             coreBlock={(kind) => <CorePreview kind={kind} theme={previewDoc.theme} business={business} pages={sitePages} assetUrl={assets.url} products={products} />}
           />

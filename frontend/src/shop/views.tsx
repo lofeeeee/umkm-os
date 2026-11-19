@@ -628,7 +628,7 @@ export function OrderPage() {
               <p>{tx("Pindai kode QRIS berikut, lalu bayar")}{" "}<strong>tepat {rupiah(`${gopay.total_rupiah}.00`)}</strong>{tx(". Pembayaran terkonfirmasi otomatis.")}</p>
               {/* eslint-disable-next-line @next/next/no-img-element -- QR dinamis SVG inline (data URL) */}
               <img className="shop-qris" src={`data:image/svg+xml;utf8,${encodeURIComponent(gopay.qr_svg)}`} alt={tx("QRIS pembayaran")} />
-              <p className="s-muted">{tx("Nominal berakhiran angka unik agar pembayaran Anda dikenali otomatis — jangan dibulatkan. Status pesanan berubah sendiri setelah dibayar.")}</p>
+              <p className="s-muted">{tx("Nominal berakhiran angka unik agar pembayaran Anda dikenali otomatis, jadi jangan dibulatkan. Status pesanan berubah sendiri setelah dibayar.")}</p>
             </>
           ) : (
             <>
@@ -805,7 +805,7 @@ export function AccountPage() {
         <ul>
           <li>{tx("Lihat semua riwayat pesanan di satu tempat")}</li>
           <li>{tx("Isi data pemesanan lebih cepat")}</li>
-          <li>{tx("Tetap opsional — Anda bisa memesan tanpa akun")}</li>
+          <li>{tx("Tetap opsional: Anda bisa memesan tanpa akun")}</li>
         </ul>
         {texts.account_note?.trim() && <p className="shop-summary-note">{texts.account_note}</p>}
       </div>

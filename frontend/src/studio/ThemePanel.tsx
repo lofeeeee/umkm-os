@@ -78,7 +78,7 @@ export function ThemePanel({
   ].map((x) => ({ ...x, r: contrast(safeColor(x.c), pageBg) })).filter((x) => x.r < 4.5);
   return (
     <div className={`st-theme-panel ${className}`.trim()}>
-      <p className="d-hint u-mt-0">{tx("Tema berlaku untuk seluruh situs — semua halaman memakai warna, font, dan gaya yang sama.")}</p>
+      <p className="d-hint u-mt-0">{tx("Tema berlaku untuk seluruh situs: semua halaman memakai warna, font, dan gaya yang sama.")}</p>
       {/* 1. Navigasi Website (Navbar) */}
       <div className="st-section">
         <h3>{tx("Navigasi website")}</h3>
@@ -252,7 +252,7 @@ export function ThemePanel({
         </label>
         {lowContrast.map((x) => (
           <p key={x.label} className="st-contrast-warn" role="status">
-            {tx("{0} kurang kontras di atas latar ({1}:1, minimal 4,5:1) — tautan dan harga sulit dibaca. Pilih warna yang lebih gelap atau ganti latar.", x.label, x.r.toFixed(1))}
+            {tx("{0} kurang kontras di atas latar ({1}:1, minimal 4,5:1), sehingga tautan dan harga sulit dibaca. Pilih warna yang lebih gelap atau ganti latar.", x.label, x.r.toFixed(1))}
           </p>
         ))}
       </div>

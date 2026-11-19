@@ -190,7 +190,7 @@ const BASE: Omit<Template, "category" | "pack">[] = [
     build: (t) => ({
       primary: "#B45309", surface: "cream", font: "nunito",
       cells: compact([
-        b("hero", 0, 0, 12, 10, "plain", { title: t.name, subtitle: lead(t, tx("Hidangan lezat untuk setiap acara — dari nasi kotak kantor sampai kue pernikahan.")), cta: cta(tx("Lihat paket"), "#menu") }),
+        b("hero", 0, 0, 12, 10, "plain", { title: t.name, subtitle: lead(t, tx("Hidangan lezat untuk setiap acara, dari nasi kotak kantor sampai kue pernikahan.")), cta: cta(tx("Lihat paket"), "#menu") }),
         b("promotion", 0, 10, 6, 6, "tint", { title: tx("Pesan H-3 hemat 10%"), body: tx("Pesan minimal 3 hari sebelum acara untuk harga spesial."), cta: cta(tx("Pesan sekarang"), "#menu") }),
         b("about", 6, 10, 6, 6, "card", { title: tx("Dimasak di hari acara"), body: tx("Semua menu dimasak segar di hari yang sama, dikemas higienis, dan diantar tepat waktu.") }),
         b("product_grid", 0, 16, 12, 12, "plain", { title: tx("Paket & menu"), limit: 12 }),
@@ -206,7 +206,7 @@ const BASE: Omit<Template, "category" | "pack">[] = [
     build: (t) => ({
       primary: "#3F6212", surface: "cream", font: "merriweather",
       cells: compact([
-        b("hero", 0, 0, 12, 10, "plain", { title: t.name, subtitle: lead(t, tx("Langsung dari kebun kami ke meja Anda — segar, jujur, dan mendukung petani lokal.")), cta: cta(tx("Belanja hasil kebun"), "#produk") }),
+        b("hero", 0, 0, 12, 10, "plain", { title: t.name, subtitle: lead(t, tx("Langsung dari kebun kami ke meja Anda: segar, jujur, dan mendukung petani lokal.")), cta: cta(tx("Belanja hasil kebun"), "#produk") }),
         b("product_grid", 0, 10, 12, 12, "plain", { title: tx("Panen minggu ini"), limit: 8 }),
         b("about", 0, 22, 7, 8, "card", { title: tx("Dari kebun kami"), body: tx("Kami merawat tanaman tanpa bahan kimia berlebihan dan memanen saat matang sempurna.") }),
         b("gallery", 7, 22, 5, 8, "plain", { title: tx("Suasana kebun"), images: [] }),
@@ -238,7 +238,7 @@ const STYLE: Record<string, Style> = {
   segar: { category: () => tx("Kelontong & kebutuhan harian"), family: "product", band: "#ECFDF5", edge: "wave", brand: { accent: "#CA8A04", headingFont: "poppins", radius: "round", motion: "lively" },
     catalog: { slug: "produk", title: () => tx("Produk"), noun: () => tx("produk") }, story: () => tx("Kami melayani kebutuhan harian tetangga sekitar dengan harga jujur dan antar cepat ke rumah.") },
   ayu: { category: () => tx("Kecantikan & salon"), family: "service", band: "#FCE7F3", edge: "curve", brand: { accent: "#DB2777", headingFont: "playfair", radius: "round", motion: "subtle" },
-    catalog: { slug: "perawatan", title: () => tx("Perawatan"), noun: () => tx("perawatan") }, story: () => tx("Kami percaya setiap orang berhak merasa cantik — dengan perawatan aman, ruang yang bersih, dan pelayanan yang tulus.") },
+    catalog: { slug: "perawatan", title: () => tx("Perawatan"), noun: () => tx("perawatan") }, story: () => tx("Kami percaya setiap orang berhak merasa cantik, dengan perawatan aman, ruang yang bersih, dan pelayanan yang tulus.") },
   cerdas: { category: () => tx("Kursus & edukasi"), family: "service", band: "#EEF2FF", edge: "slant", brand: { accent: "#F59E0B", headingFont: "grotesk", radius: "round", motion: "subtle", gradient: true },
     catalog: { slug: "program", title: () => tx("Program"), noun: () => tx("program") }, story: () => tx("Kami mulai dari kelas kecil di ruang tamu, dan kini telah membantu ratusan murid meraih target belajarnya.") },
   hajatan: { category: () => tx("Katering & kue"), family: "food", band: "#FEF3C7", edge: "wave", brand: { accent: "#15803D", headingFont: "fraunces", radius: "round", motion: "subtle", texture: "paper" },
@@ -289,7 +289,7 @@ function pack(key: string, t: TplInput): PackPage[] {
   return [
     { slug: st.catalog.slug, title: st.catalog.title(), kind: "page", cells: compact([
       b("background", 0, 0, 12, 7, "plain", { color: st.band, bleed: true, edge_bottom: st.edge }),
-      b("text", 0, 0, 12, 6, "plain", { title: st.catalog.title(), body: tx("Semua {0} kami ada di sini — pilih, pesan online, lalu ambil atau kami antar.", noun) }),
+      b("text", 0, 0, 12, 6, "plain", { title: st.catalog.title(), body: tx("Semua {0} kami ada di sini. Pilih, pesan online, lalu ambil atau kami antar.", noun) }),
       b("product_grid", 0, 6, 12, 14, "plain", { title: tx("Semua {0}", noun), limit: 24 }),
       b("promotion", 0, 20, 7, 6, "tint", { title: tx("Bingung memilih?"), body: tx("Tanyakan rekomendasi kami lewat chat atau WhatsApp."), cta: cta(tx("Tanya sekarang"), "#kontak") }),
       b("contact", 7, 20, 5, 6, "card", { title: tx("Pesan cepat"), show_whatsapp: true, show_phone: true, show_email: false, socials: [] }),

@@ -399,7 +399,7 @@ export function ChatPreview({ variant = "bubble", title, welcome, primary, look,
       preview off={off}
       variant={variant} look={look} heading={heading} welcome={welcome} primary={primary}
       open={open} onOpen={() => onOpenChange?.(true)} onClose={() => onOpenChange?.(false)}
-      status={off ? t("Nonaktif — tidak tampil di situs") : t("Online · biasanya membalas cepat")}
+      status={off ? t("Nonaktif: tidak tampil di situs") : t("Online · biasanya membalas cepat")}
     >
       {off && <p className="chat-note chat-note-warn">{t("Aktifkan chatbot di menu Asisten AI agar tampil untuk pembeli.")}</p>}
       <ChatLog

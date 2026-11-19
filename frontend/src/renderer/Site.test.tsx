@@ -92,7 +92,7 @@ describe("renderer perilaku", () => {
     expect(render(s)).not.toContain("Rahasia draft");
     const pv = render(s, true);
     expect(pv).toContain("Rahasia draft");
-    expect(pv).toContain("Nonaktif — tidak tampil di publik");
+    expect(pv).toContain("Nonaktif: tidak tampil di publik");
   });
 
   it("kelas section tidak bertabrakan dengan blok di dalamnya (regresi layout desktop)", () => {

@@ -88,7 +88,8 @@ export function ConversationView({ d, staff }: { d: ConversationDetail; staff?: 
         <div className="d-stack u-content-start u-min-w-0">
           <section className="d-card" aria-label={tx("Timeline")}>
             <header className="d-card-head"><div className="d-card-head-text"><h2>{tx("Percakapan")}</h2><p>{d.timeline.length}{" "}{tx("pesan · dimulai")}{" "}{when(d.created_at)}</p></div></header>
-            <ol className="cv-timeline">
+            {/* role="log" (polite): pesan baru diumumkan pembaca layar; key = ganti percakapan tidak membacakan ulang seluruh riwayat. */}
+            <ol className="cv-timeline" role="log" aria-label={tx("Pesan")} key={d.id}>
               {d.timeline.map((m) => (
                 <li key={m.id} className={`cv-msg cv-${m.sender.toLowerCase()}`}>
                   <div className="cv-head">

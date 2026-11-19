@@ -487,7 +487,7 @@ export function Site(props: SiteProps) {
           className={`s s--${s.type}${s.enabled ? "" : " s-disabled"}${s.type === "header" && isSticky ? " s-sticky" : ""}`}
           data-section-type={s.type}
         >
-          {preview && !s.enabled && <div className="s-disabled-badge">{tx("Nonaktif — tidak tampil di publik")}</div>}
+          {preview && !s.enabled && <div className="s-disabled-badge">{tx("Nonaktif: tidak tampil di publik")}</div>}
           <div className="s-inner">
             <SectionBody s={s} props={props} />
           </div>

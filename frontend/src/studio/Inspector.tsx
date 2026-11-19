@@ -66,7 +66,7 @@ export function Inspector({ c, onBack, onChange, onWidth, onLayout, onDuplicate,
           <Link href={upgradeHref}>{tx("Lihat paket")}</Link>
         </div></div>
       )}
-      {c.kind === "background" && <p className="d-hint u-m-0">{tx("Latar selalu berada di belakang blok lain dan tidak pernah menutupinya. Saat latar dipilih, blok lain dibuat tembus pandang supaya latar mudah diseret dan diubah ukurannya — tekan Esc bila selesai.")}</p>}
+      {c.kind === "background" && <p className="d-hint u-m-0">{tx("Latar selalu berada di belakang blok lain dan tidak pernah menutupinya. Saat latar dipilih, blok lain dibuat tembus pandang supaya latar mudah diseret dan diubah ukurannya. Tekan Esc bila selesai.")}</p>}
       {c.kind !== "chatbot" && !layer && !core && <p className="d-hint u-m-0">{tx("Klik teks di kanvas untuk mengetik langsung.")}{takesPhoto(c.kind) && tx(" Seret foto dari komputer ke blok untuk memasangnya.")}</p>}
       {!isEmbed(c) && <div className="st-section">
         <label className="d-switch">
