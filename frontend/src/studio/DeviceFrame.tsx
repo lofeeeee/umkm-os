@@ -16,15 +16,15 @@ import { t, tmap } from "@/i18n";
 export type DeviceViewport = "mobile" | "tablet" | "desktop";
 
 /**
- * Lebar LAYAR yang disimulasikan per perangkat (px). Desktop = 1280 (laptop umum): pada lebar ini grid
- * situs selebar penuh (--sv2-max = 1200 px), sama seperti di situs terbit — jadi pembungkusan teks, tinggi blok, dan
+ * Lebar LAYAR yang disimulasikan per perangkat (px). Desktop = 1440 (laptop/monitor umum): pada lebar ini grid
+ * situs selebar penuh (--sv2-max = 1360 px), sama seperti di situs terbit — jadi pembungkusan teks, tinggi blok, dan
  * posisi coretan di Studio identik dengan situs. Bila panggung lebih sempit, bingkai diperkecil (zoom)
  * tanpa mengubah tata letaknya.
  */
 export const DEVICE_WIDTH: Record<DeviceViewport, number> = {
   mobile: 390,
   tablet: 768,
-  desktop: 1280,
+  desktop: 1440,
 };
 
 export const DEVICE_LABEL: Record<DeviceViewport, string> = tmap({

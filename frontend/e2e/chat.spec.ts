@@ -55,9 +55,10 @@ test("web chat: persetujuan AI, jawaban AI, realtime, handover, akhiri", async (
   await expect(panel).toContainText("asisten AI");
   await expect(panel).toContainText("bicara dengan admin");
   await expect(panel.getByLabel("Tulis pesan")).toHaveCount(0);
+  if (process.env.SHOT) await a.screenshot({ path: process.env.SHOT.replace(".png", "-intro.png") });
   await panel.getByRole("button", { name: "Setuju & mulai chat" }).click();
   await panel.getByLabel("Tulis pesan").fill("Jam berapa toko buka?");
-  await panel.getByRole("button", { name: "Kirim" }).click();
+  await panel.getByRole("button", { name: "Kirim", exact: true }).click();
   const log = panel.getByRole("list", { name: "Pesan" });
   await expect(log).toContainText("Jam berapa toko buka?");
   await expect(log).toContainText("Halo dari asisten uji. Data jam buka diterima.");
@@ -72,9 +73,16 @@ test("web chat: persetujuan AI, jawaban AI, realtime, handover, akhiri", async (
   await expect(logB).toContainText("Halo dari asisten uji. Data jam buka diterima.");
   await b.waitForTimeout(500); // EventSource tersambung
   // Isi pesan dirender sebagai teks, bukan HTML.
-  await panel.getByLabel("Tulis pesan").fill("<b>tebal</b> ada promo?");
-  await panel.getByRole("button", { name: "Kirim" }).click();
-  await expect(logB).toContainText("<b>tebal</b> ada promo?");
+  // Enter = kirim; Shift+Enter = baris baru (tidak mengirim).
+  const input = panel.getByLabel("Tulis pesan");
+  await input.fill("<b>tebal</b>");
+  await input.press("Shift+Enter");
+  await input.pressSequentially("ada promo?");
+  await expect(input).toHaveValue("<b>tebal</b>\nada promo?");
+  await input.press("Enter");
+  await expect(input).toHaveValue("");
+  if (process.env.SHOT) await a.screenshot({ path: process.env.SHOT });
+  await expect(logB).toContainText("<b>tebal</b>\nada promo?");
   await expect(logB.locator("b")).toHaveCount(0);
 
   // Minta staf → AI berhenti, status menunggu staf (juga di tab kedua lewat SSE).
@@ -83,7 +91,7 @@ test("web chat: persetujuan AI, jawaban AI, realtime, handover, akhiri", async (
   await expect(log).toContainText("Pesan Anda diteruskan ke staf toko");
   await expect(b.getByRole("status")).toContainText("Menunggu staf toko");
   await panel.getByLabel("Tulis pesan").fill("halo?");
-  await panel.getByRole("button", { name: "Kirim" }).click();
+  await panel.getByRole("button", { name: "Kirim", exact: true }).click();
   await expect(log.getByRole("listitem").last()).toContainText("halo?");
   await expect(panel.getByRole("button", { name: "Bicara dengan admin" })).toHaveCount(0);
 
@@ -101,7 +109,7 @@ test("web chat: persetujuan AI, jawaban AI, realtime, handover, akhiri", async (
   await expect(log).toContainText("Staf toko");
   await expect(logB).toContainText("Halo kak, saya pemilik toko.");
   await panel.getByLabel("Tulis pesan").fill("Terima kasih, saya tunggu");
-  await panel.getByRole("button", { name: "Kirim" }).click();
+  await panel.getByRole("button", { name: "Kirim", exact: true }).click();
   await expect(page.getByRole("region", { name: "Timeline" })).toContainText("Terima kasih, saya tunggu");
   await expect(page.getByRole("region", { name: "Status percakapan" })).toContainText("Ditangani staf");
   // Tiket dari percakapan (ticket ≠ conversation).

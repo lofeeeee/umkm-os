@@ -243,7 +243,7 @@
 /* ============================================================
    Situs Studio (schema v2, ADR-0017): grid 12 kolom desktop, tumpuk di ponsel.
    ============================================================ */
-.sv2 { container-type: inline-size; --sv2-max: 1200px; --pg-bg: #ffffff; background: var(--pg-bg); min-height: 100vh; padding: 0; font-family: var(--s-font); display: flex; flex-direction: column; }
+.sv2 { container-type: inline-size; --sv2-max: 1360px; --pg-bg: #ffffff; background: var(--pg-bg); min-height: 100vh; padding: 0; font-family: var(--s-font); display: flex; flex-direction: column; }
 .sv2[data-surface="cream"] { --pg-bg: #fbf6ee; }
 .sv2[data-surface="dark"] { --pg-bg: #0d0d12; color-scheme: dark; }
 .sv2 .site { --s-bg: var(--pg-bg); background: transparent; min-height: 0; }

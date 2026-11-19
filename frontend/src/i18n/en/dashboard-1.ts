@@ -437,7 +437,7 @@ export const DASHBOARD_1: Record<string, string> = {
   "Draf dibuang.": "Draft discarded.",
   "Buang": "Discard",
   "Balas pelanggan": "Reply to customer",
-  "Tulis balasan untuk pelanggan… (Ctrl+Enter untuk kirim)": "Write a reply to the customer… (Ctrl+Enter to send)",
+  "Tulis balasan untuk pelanggan… (Enter kirim, Shift+Enter baris baru)": "Write a reply to the customer… (Enter to send, Shift+Enter for a new line)",
   "Kirim balasan": "Send reply",
   "Buat tiket dari percakapan": "Create a ticket from this conversation",
   "Tiket dibuat.": "Ticket created.",

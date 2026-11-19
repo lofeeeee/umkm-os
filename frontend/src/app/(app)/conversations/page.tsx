@@ -236,8 +236,8 @@ function StaffPanel({ ctx, d, url, onDone }: { ctx: TenantCtx; d: ConversationDe
       {!closed && !byOther && (
         <form className="d-composer u-mt-0" onSubmit={reply}>
           <label className="sr-only" htmlFor="cv-reply">{t("Balas pelanggan")}</label>
-          <textarea id="cv-reply" name="body" rows={3} maxLength={4000} required placeholder={t("Tulis balasan untuk pelanggan… (Ctrl+Enter untuk kirim)")}
-            onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) e.currentTarget.form?.requestSubmit(); }} />
+          <textarea id="cv-reply" name="body" rows={3} maxLength={4000} required placeholder={t("Tulis balasan untuk pelanggan… (Enter kirim, Shift+Enter baris baru)")} enterKeyHint="send"
+            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); e.currentTarget.form?.requestSubmit(); } }} />
           <div className="d-row u-justify-end">
             <BusyButton busy={busy}>{t("Kirim balasan")}</BusyButton>
           </div>
