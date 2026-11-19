@@ -105,9 +105,9 @@ describe("renderer publik Studio (v2)", () => {
     ] };
     const html = renderToStaticMarkup(<StudioSite doc={d} business={biz} assetUrl={() => U} />).replace(/&amp;/g, "&");
     for (const w of [320, 640, 960, 1280]) expect(html).toContain(`${U}&w=${w} ${w}w`);
-    // banner 8/12 × 1180 = 787 px (split 2 kolom → 393 px); about 4/12 = 393 px (< 768 → satu kolom penuh).
-    expect(html).toContain('sizes="(min-width: 720px) 393px, 100vw"');
-    expect(html.match(/sizes="\(min-width: 720px\) 393px, 100vw"/g)?.length).toBe(2);
+    // banner 8/12 × 1360 = 907 px (split 2 kolom → 453 px); about 4/12 = 453 px (< 768 → satu kolom penuh).
+    expect(html).toContain('sizes="(min-width: 720px) 453px, 100vw"');
+    expect(html.match(/sizes="\(min-width: 720px\) 453px, 100vw"/g)?.length).toBe(2);
   });
   it("anchor template (#kontak, #menu, …) menunjuk blok pertama jenis itu", () => {
     const d: PageV2 = { ...doc, blocks: [

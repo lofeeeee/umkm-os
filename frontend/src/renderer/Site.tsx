@@ -98,6 +98,28 @@ function hasImg(r: Json | undefined, assetUrl: SiteProps["assetUrl"]): boolean {
 }
 
 /** Petunjuk arah Google Maps: koordinat bila ada, selain itu alamat teks. */
+/** Nama platform sosial yang benar penulisannya (TikTok, YouTube) — sama dengan footer. */
+const SOCIAL_NAME: Record<string, string> = {
+  instagram: "Instagram", facebook: "Facebook", tiktok: "TikTok", youtube: "YouTube", x: "X", website: "Website", twitter: "X", shopee: "Shopee", tokopedia: "Tokopedia",
+};
+
+/** Hari ISO (1 = Senin … 7 = Minggu) di zona waktu toko. */
+function todayIn(tz: string): number {
+  try {
+    const wd = new Intl.DateTimeFormat("en-US", { weekday: "short", timeZone: tz }).format(new Date());
+    return ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].indexOf(wd) + 1;
+  } catch {
+    return 0;
+  }
+}
+
+const IconPhone = () => (
+  <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2Z" /></svg>
+);
+const IconMail = () => (
+  <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2" /><path d="m22 7-10 6L2 7" /></svg>
+);
+
 function directionsHref(a: { address: string; latitude?: number | null; longitude?: number | null }): string {
   const dest = a.latitude != null && a.longitude != null ? `${a.latitude},${a.longitude}` : a.address;
   return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(dest)}`;
@@ -223,7 +245,7 @@ function SectionBody({ s, props }: { s: Section; props: SiteProps }) {
           {props.products !== undefined && items.length === 0 && <p className="s-muted">{tx("Belum ada produk.")}</p>}
           <div className="s-products">
             {items.map((p, i) => (
-              <a key={p.slug} className="s-product" href={`/produk/${p.slug}`}>
+              <a key={p.slug} className="s-product" href={`/produk/${p.slug}`} data-soldout={p.available ? undefined : ""}>
                 {p.image ? (
                   // Dua baris pertama (grid 2 kolom ponsel) sering menjadi LCP (audit 17 Nov): jangan lazy; baris pertama prioritas tinggi.
                   // eslint-disable-next-line @next/next/no-img-element -- static export, gambar bertanda tangan
@@ -236,7 +258,7 @@ function SectionBody({ s, props }: { s: Section; props: SiteProps }) {
                 <span className="s-product-price">
                   {p.promo_price ? <><s>{rp(p.price)}</s> {rp(p.promo_price)}</> : rp(p.price)}
                 </span>
-                {!p.available && <span className="s-muted">{tx("Stok habis")}</span>}
+                {!p.available && <span className="s-muted s-soldout">{tx("Stok habis")}</span>}
               </a>
             ))}
           </div>
@@ -314,9 +336,10 @@ function SectionBody({ s, props }: { s: Section; props: SiteProps }) {
               <tbody>
                 {[1, 2, 3, 4, 5, 6, 7].map((day) => {
                   const h = b.hours.find((x) => x.day_of_week === day);
+                  const today = day === todayIn(b.profile.timezone);
                   return (
-                    <tr key={day}>
-                      <th scope="row">{tx(DAYS[day] ?? "")}</th>
+                    <tr key={day} className={today ? "s-today" : undefined}>
+                      <th scope="row">{tx(DAYS[day] ?? "")}{today && <span className="s-today-tag">{tx("Hari ini")}</span>}</th>
                       <td>{h ? tx("{0} – {1}", h.open, h.close) : tx("Tutup")}</td>
                     </tr>
                   );
@@ -368,12 +391,12 @@ function SectionBody({ s, props }: { s: Section; props: SiteProps }) {
           {!any && <p className="s-muted">{tx("Kontak belum diatur.")}</p>}
           <div className="s-contact">
             {d.show_whatsapp === true && wa && <Link className="s-btn" href={wa}>{tx("WhatsApp")}</Link>}
-            {d.show_phone === true && p.phone && <Link href={`tel:${p.phone}`}>{p.phone}</Link>}
-            {d.show_email === true && p.email && <Link href={`mailto:${p.email}`}>{p.email}</Link>}
+            {d.show_phone === true && p.phone && <Link className="s-contact-link" href={`tel:${p.phone}`}><IconPhone />{p.phone}</Link>}
+            {d.show_email === true && p.email && <Link className="s-contact-link" href={`mailto:${p.email}`}><IconMail />{p.email}</Link>}
           </div>
           <div className="s-social">
             {socials.map((x, i) => (
-              <Link key={i} href={x.url}>{text(x.platform)}</Link>
+              <Link key={i} href={x.url}>{SOCIAL_NAME[text(x.platform).toLowerCase()] ?? text(x.platform)}</Link>
             ))}
           </div>
         </div>

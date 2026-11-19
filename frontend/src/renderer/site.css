@@ -95,7 +95,7 @@
 .s-nav-side .shop-actions { flex-direction: column; align-items: stretch; }
 .s-nav-side .shop-action { border-radius: 10px; }
 .shop-badge { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px; margin-left: 6px; border-radius: 999px; background: var(--s-primary); color: var(--s-on-primary, #fff); font-size: 0.75rem; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
-@container (max-width: 479px) { .shop-action { padding: 8px; font-size: 0.875em; } }
+@container (max-width: 479px) { .shop-action { padding: 8px 6px; font-size: 0.8125em; } .s-headbar .s-brand { font-size: 0.9375em; gap: 8px; } }
 
 /* Bilah atas (tema `navbar_style: top`). `s-sticky` hanya menempel bila diminta tema. */
 .s-headbar.s-sticky {
@@ -148,6 +148,13 @@
   }
   .s-headbar .s-nav::-webkit-scrollbar, .s-nav-side .s-nav::-webkit-scrollbar { display: none; }
   .s-nav a { flex: none; white-space: nowrap; scroll-snap-align: start; }
+  /* Ponsel: baris 1 = merek + Keranjang/Pesanan/Akun, baris 2 = menu halaman (geser). Dua baris, bukan tiga. */
+  .s-headbar > .s-nav-actions { order: 1; margin-left: auto; }
+  .s-headbar > .s-nav { order: 2; }
+  /* Basis 0: merek tidak memaksa tautan toko turun baris — merek yang mengalah (nama dipotong "…"). */
+  .s-headbar > .s-brand { flex: 1 1 0; min-width: 0; }
+  .s-headbar { column-gap: 8px; }
+  .s-headbar .shop-actions { gap: 0; }
 }
 
 /* Hero */
@@ -177,13 +184,23 @@
 .s-hours { border-collapse: collapse; width: 100%; max-width: 440px; }
 .s-hours th, .s-hours td { text-align: left; padding: 10px 0; border-bottom: 1px solid var(--s-line); font-variant-numeric: tabular-nums; }
 .s-hours th { font-weight: 500; width: 40%; color: var(--s-ink-2); }
+/* Hari ini ditandai: pembeli langsung melihat jam yang relevan. */
+.s-hours tr.s-today th, .s-hours tr.s-today td { color: var(--s-primary); font-weight: 700; }
+.s-today-tag { margin-left: 8px; padding: 2px 8px; border-radius: 999px; background: var(--s-tint); font-size: 0.75em; font-weight: 700; vertical-align: 1px; }
 .s-status { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 999px; font-weight: 700; font-size: 0.875em; }
 .s-status::before { content: ""; width: 8px; height: 8px; border-radius: 999px; background: currentColor; }
 .s-status-open { background: #dcfce7; color: #166534; }
 .s-status-closed { background: #fee2e2; color: #991b1b; }
 
 .s-contact, .s-social { display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: center; }
-.s-social { margin-top: 16px; text-transform: capitalize; }
+.s-social { margin-top: 16px; }
+.s-contact-link {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px; border-radius: 999px;
+  border: 1px solid var(--s-line); color: var(--s-ink) !important; text-decoration: none; font-weight: 600; font-size: 0.9375em;
+  transition: border-color var(--dur, 180ms) ease, color var(--dur, 180ms) ease;
+}
+.s-contact-link svg { flex: none; color: var(--s-primary); }
+@media (hover: hover) { .s-contact-link:hover { border-color: var(--s-primary); color: var(--s-primary) !important; } }
 .s-social a { padding: 8px 14px; border-radius: 999px; border: 1px solid var(--s-line); text-decoration: none; color: var(--s-ink-2); font-weight: 600; font-size: 0.875em; }
 @media (hover: hover) {
 .s-social a:hover { border-color: var(--s-primary); color: var(--s-primary); }
@@ -229,11 +246,19 @@
 .s-product-price { color: var(--s-primary); font-weight: 800; padding: 0 4px; font-variant-numeric: tabular-nums; }
 .s-product-price s { color: var(--s-muted); font-weight: 400; margin-right: 6px; font-size: 0.875em; }
 .s-product > .s-muted { padding: 0 4px; font-size: 0.8125em; }
+/* Stok habis: foto meredup & label jelas — pembeli tidak membuka produk yang tak bisa dibeli tanpa tahu. */
+.s-product[data-soldout] img, .s-product[data-soldout] .s-product-noimg { filter: grayscale(0.85); opacity: 0.6; }
+.s-product[data-soldout] .s-product-price { color: var(--s-muted); }
+.s-soldout { font-weight: 700; color: var(--s-ink-2) !important; }
 @container (min-width: 768px) {
   .s-products { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
 }
 @container (min-width: 1024px) {
   .s-products { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+/* Blok produk selebar konten (1360 px): 5 kolom — kartu tidak membengkak jadi poster. */
+@container (min-width: 1200px) {
+  .s-products { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -276,6 +301,16 @@
 .sv2-anchor { display: block; height: 0; scroll-margin-top: 16px; }
 .sv2-block > .st-content { height: 100%; }
 .sv2 .s-solo .s { padding: 28px 24px; background: transparent !important; }
+/* Isi blok mengikuti lebar SEL, bukan batas 1120 px situs v1 — tanpa ini blok selebar penuh menjorok
+   ±120 px dari tepi konten sementara blok setengah lebar hanya 24 px (tepi tidak sejajar, ruang terbuang). */
+.sv2 .st-content .s-inner { max-width: none; }
+/* Promo = kotak warnanya sendiri: mengisi sel (tanpa kotak di dalam kotak). */
+.sv2-block[data-kind="promotion"] .st-content .s { padding: 0; }
+.sv2-block[data-kind="promotion"] .st-content > .site, .sv2-block[data-kind="promotion"] .st-content .s,
+.sv2-block[data-kind="promotion"] .st-content .s-inner, .sv2-block[data-kind="promotion"] .s-promo { height: 100%; }
+.sv2-block[data-kind="promotion"] .s-promo { align-content: center; }
+/* Kartu gelap di samping kartu 3D lembut: bayangan terang tetangganya tidak boleh menyiram tepinya. */
+.sv2-grid > .sv2-block:has(> .st-style-dark) { z-index: 1; }
 .sv2-block[data-hide="desktop"] { display: none; }
 @container (max-width: 719px) {
   /* Satu kolom, baris eksplisit (--mrow): latar bisa membentang di belakang blok yang ditumpuknya. */
@@ -284,7 +319,13 @@
   .sv2-grid > .sv2-block[data-layer="cover"] { min-height: 0 !important; }
   .sv2-block[data-hide="mobile"] { display: none; }
   .sv2-block[data-hide="desktop"] { display: block; }
+  /* Ponsel: ruang horizontal mahal. Blok polos sejajar tepi konten (16 px dari layar); blok berkotak
+     tetap punya padding dalam yang cukup. */
+  .sv2 .st-content .s { padding: 22px 18px; }
 }
+/* Blok polos (tanpa kotak) sejajar tepi konten — sama dengan logo & menu di bilah atas. Banner tetap
+   berpadding karena punya latar warna. */
+.sv2 .st-style-plain > .site > .s:not(.s--hero):not(.s--promotion) { padding-inline: 2px; }
 .s-text p { margin: 0 0 12px; color: var(--s-ink-2); }
 .s-wa { background: #25d366 !important; box-shadow: 0 6px 16px -6px rgb(37 211 102 / 0.6); }
 .s-wa svg { flex: none; }
@@ -788,7 +829,8 @@
 .sv2-logo { flex: 1 1 auto; min-height: 0; display: flex; align-items: center; gap: 12px; color: var(--s-ink, #18181b); text-decoration: none; pointer-events: auto; }
 .sv2-logo-mark { height: min(100%, 96px); width: auto; max-width: 100%; aspect-ratio: 1; object-fit: contain; border-radius: 12px; flex: none; }
 .sv2-logo-mark-fallback { display: grid; place-items: center; background: var(--s-primary); color: var(--s-on-primary); font-weight: 800; font-size: 1.5rem; height: min(100%, 72px); }
-.sv2-logo-name { font-family: var(--s-head-font, var(--s-font)); font-weight: var(--s-head-weight, 800); font-size: 1.25rem; letter-spacing: -0.01em; overflow-wrap: anywhere; }
+.sv2 .sv2-logo-mark { height: min(100%, 96px); max-height: 96px; width: auto; max-width: 50%; }
+.sv2-logo-name { min-width: 0; font-family: var(--s-head-font, var(--s-font)); font-weight: var(--s-head-weight, 800); font-size: 1.25rem; letter-spacing: -0.01em; overflow-wrap: anywhere; }
 @container (max-width: 719px) {
   .sv2-block[data-layer="front"] .sv2-shape > svg { height: auto; aspect-ratio: 1; }
   .sv2-block[data-kind="logo"] > * { width: auto; }
@@ -837,6 +879,10 @@
 @media (hover: hover) { .s-blog-card:hover { transform: translateY(-3px); box-shadow: 0 18px 36px -22px rgb(15 23 42 / 0.4); } }
 @container (max-width: 719px) {
   .s-article-head h1 { font-size: 1.75em; }
-  .s-blog-list:not(.s-blog-grid) .s-blog-card { flex-direction: column; }
-  .s-blog-list:not(.s-blog-grid) .s-blog-card img, .s-blog-list:not(.s-blog-grid) .s-blog-noimg { width: 100%; }
+  /* Daftar di ponsel: tetap baris ringkas (thumbnail kecil + teks). Spesifisitas harus menyamai aturan
+     desktop di atas — sebelumnya kalah, foto melebar 100% dan teks terjepit hingga tak terlihat. */
+  .s-blog-list.s-blog-list.s-blog-list:not(.s-blog-grid) .s-blog-card img,
+  .s-blog-list.s-blog-list.s-blog-list:not(.s-blog-grid) .s-blog-noimg { width: 104px; aspect-ratio: 1; align-self: stretch; height: auto; }
+  .s-blog-list:not(.s-blog-grid) .s-blog-text { padding: 12px 14px; min-width: 0; }
+  .s-blog-list:not(.s-blog-grid) .s-blog-text .s-muted { -webkit-line-clamp: 2; }
 }

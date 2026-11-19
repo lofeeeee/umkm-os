@@ -56,7 +56,7 @@ export function cellFor(kind: PluginKind, data?: { [k: string]: Json }): StudioC
   return {
     id: newId(kind), kind, x: 0, y: 0, w: d.w, h: d.h, minW: d.minW, minH: d.minH,
     data: data ?? (EXTRA_DATA[kind] ? { ...EXTRA_DATA[kind] } : defaultData(kind as SectionType)),
-    style: kind === "promotion" ? "tint" : kind === "chatbot" ? "card" : "plain",
+    style: kind === "chatbot" ? "card" : "plain",
     layout: d.layouts?.[0]?.value, autoH: !isLayerKind(kind, d.layouts?.[0]?.value), chatOpen: true,
     ...(isLayerKind(kind, d.layouts?.[0]?.value) ? { layer: true } : {}),
   };

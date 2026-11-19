@@ -1485,9 +1485,11 @@ main.d-legal { max-width: 720px; }
    menyempitkan nama sampai satu huruf per baris). */
 .st-layout-list .s-product { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; align-items: center; padding: 8px; column-gap: 12px; row-gap: 2px; }
 .st-layout-list .s-product img, .st-layout-list .s-product-noimg { width: 64px; margin: 0; grid-row: span 2; }
-.st-layout-list .s-product-name { min-width: 0; overflow-wrap: break-word; }
-.st-layout-list .s-product-price { grid-column: 3; grid-row: 1; display: flex; flex-direction: column; align-items: flex-end; text-align: right; white-space: nowrap; line-height: 1.25; }
-.st-layout-list .s-product > .s-muted { grid-column: 2 / -1; }
+.st-layout-list .s-product-name { min-width: 0; overflow-wrap: break-word; grid-column: 2; grid-row: 1; align-self: end; }
+/* Tanpa baris kedua (stok habis), nama tetap di tengah tinggi foto — bukan menempel di atas. */
+.st-layout-list .s-product:not(:has(> .s-muted)) .s-product-name { grid-row: 1 / span 2; align-self: center; }
+.st-layout-list .s-product-price { grid-column: 3; grid-row: 1 / span 2; align-self: center; display: flex; flex-direction: column; align-items: flex-end; text-align: right; white-space: nowrap; line-height: 1.25; }
+.st-layout-list .s-product > .s-muted { grid-column: 2; grid-row: 2; align-self: start; margin: 0; }
 .st-layout-list .s-product-price s { margin: 0; }
 /* Blok kosong di situs publik (mis. chatbot nonaktif → widget tidak dirender): tanpa kartu kosong. */
 .sv2-block > .st-content:empty { display: none; }

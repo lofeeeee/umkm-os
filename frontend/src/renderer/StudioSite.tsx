@@ -217,7 +217,7 @@ function Block({ b, props }: { b: BlockV2; props: StudioSiteProps }) {
         status={props.status}
         products={props.products}
         assetUrl={props.assetUrl}
-        slotWidth={(b.w / 12) * 1180}
+        slotWidth={(b.w / 12) * 1360}
       />
     );
   }
