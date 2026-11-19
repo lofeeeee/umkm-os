@@ -14,6 +14,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, typ
 
 import { InkLayer, cellTarget } from "@/renderer/ink";
 import { StudioSite, type SitePageLink } from "@/renderer/StudioSite";
+import { ShopNavActions } from "@/shop/nav";
 import type { GridProduct } from "@/renderer/Site";
 import type { Business } from "@/renderer/types";
 
@@ -583,6 +584,7 @@ export function LiveCanvas(p: LiveCanvasProps) {
             selectedId={p.selectedId}
             onSelect={p.onSelect}
             onEditBlock={p.onEditBlock}
+            navActions={<ShopNavActions preview />}
           />
         </BlockEditorContext.Provider>
       </DeviceFrame>

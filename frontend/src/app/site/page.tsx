@@ -13,6 +13,7 @@ import { isV2 } from "@/studio/doc";
 import type { PublicSite } from "@/renderer/types";
 import { fileUrl, shopApi, type PublicProduct } from "@/shop/api";
 import { route } from "@/shop/route";
+import { ShopNavActions } from "@/shop/nav";
 import { AccountPage, CartFab, CartPage, LegalPage, OrderPage, ProductPage, VerifyPage } from "@/shop/views";
 import { ChatWidget } from "@/chat/widget";
 import { inlinePage } from "@/renderer/inline";
@@ -82,6 +83,7 @@ function WebsitePage({ slug }: { slug: string }) {
             assetUrl={assetUrl}
             pages={(site.pages ?? []).map((p) => ({ slug: p.slug, title: p.title, current: p.slug === site.page.slug, article: p.article }))}
             platformUrl={site.platform_url}
+            navActions={<ShopNavActions />}
           />
           <CartFab />
         </main>
@@ -96,6 +98,7 @@ function WebsitePage({ slug }: { slug: string }) {
           status={site.status}
           products={products ?? []}
           assetUrl={(r) => (site.assets[r] ? `${API_ORIGIN}${site.assets[r]}` : undefined)}
+          navActions={<ShopNavActions />}
         />
         <CartFab />
         <ChatWidget />

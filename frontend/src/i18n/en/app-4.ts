@@ -491,7 +491,7 @@ export const APP_4: Record<string, string> = {
   "Kombinasi ini tidak tersedia.": "This combination isn't available.",
   "Produk sedang tidak tersedia.": "This product is currently unavailable.",
   "Tambah ke keranjang": "Add to cart",
-  "Lihat keranjang": "View cart",
+  "Lihat keranjang ({0})": "View cart ({0})",
   "Jumlah {0}": "Quantity {0}",
   "Total resmi dihitung toko saat pesanan dibuat.": "The final total is calculated by the shop when the order is created.",
   "Toko belum mengatur cara pengambilan atau pengiriman, jadi pesanan online belum bisa dibuat. Silakan hubungi toko secara langsung.": "The shop hasn't set up pickup or delivery yet, so online orders can't be placed. Please contact the shop directly.",
@@ -762,4 +762,14 @@ export const APP_4: Record<string, string> = {
 
   // Pemilih bahasa
   "Bahasa": "Language",
+
+  // Halaman produk (galeri, beli sekarang)
+  "{0}, foto {1} dari {2}": "{0}, photo {1} of {2}",
+  "Foto sebelumnya": "Previous photo",
+  "Foto berikutnya": "Next photo",
+  "Foto produk": "Product photos",
+  "Pilih varian lain": "Choose another variant",
+  "Jejak halaman": "Breadcrumb",
+  "✓ Ditambahkan": "✓ Added",
+  "Beli sekarang": "Buy now",
 };

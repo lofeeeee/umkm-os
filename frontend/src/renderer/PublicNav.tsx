@@ -6,7 +6,7 @@ import { LogoMark } from "./LogoMark";
 import type { ReactNode } from "react";
 import { t } from "@/i18n";
 
-export interface NavLink { href: string; label: string }
+export interface NavLink { href: string; label: string; /** Halaman yang sedang dibuka (aria-current). */ current?: boolean }
 
 export interface PublicNavProps {
   style: "top" | "side";
@@ -37,7 +37,7 @@ function Links({ links }: { links: NavLink[] }) {
   if (links.length === 0) return null;
   return (
     <nav className="s-nav" aria-label={t("Halaman")}>
-      {links.map((l) => <a key={l.href} href={l.href}>{l.label}</a>)}
+      {links.map((l) => <a key={l.href} href={l.href} aria-current={l.current ? "page" : undefined}>{l.label}</a>)}
     </nav>
   );
 }

@@ -4,7 +4,7 @@
 // yang SAMA dengan halaman website — pembeli tidak merasa pindah ke halaman generik.
 // Sumber data: pratinjau Studio (konteks) → situs beranda tertanam di dokumen → ambil /_api/public/site.
 
-import { createContext, useContext, useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 
 import { API_ORIGIN } from "@/lib/api";
 import { t as tx } from "@/i18n";
@@ -15,7 +15,7 @@ import { SiteFooter } from "@/renderer/SiteFooter";
 import type { Business, OpenStatus, PublicSite } from "@/renderer/types";
 import type { PageV2 } from "@/studio/doc";
 
-import { cartCount } from "./cart";
+import { ShopNavActions } from "./nav";
 
 export type ShopTexts = Partial<Record<"cart_title" | "cart_note" | "empty_cart" | "checkout_button" | "thanks" | "account_note", string>>;
 
@@ -63,38 +63,16 @@ export function useShopTexts(): ShopTexts {
   return useShopSite()?.theme.shop ?? {};
 }
 
-const noopSub = () => () => {};
-function useCartCount(preview: boolean): number {
-  return useSyncExternalStore(
-    preview ? noopSub : (f) => {
-      window.addEventListener("umkm-cart", f);
-      window.addEventListener("storage", f);
-      return () => { window.removeEventListener("umkm-cart", f); window.removeEventListener("storage", f); };
-    },
-    preview ? () => 2 : cartCount,
-    () => 0,
-  );
-}
-
 export function ShopFrame({ title, heading = true, wide, children }: { title: string; heading?: boolean; wide?: boolean; children: ReactNode }) {
   const site = useShopSite();
   const preview = !!site?.preview;
-  const n = useCartCount(preview);
   const theme = site?.theme ?? {};
   const name = site?.business.profile.name ?? tx("Beranda toko");
   const logoUrl = site?.business.profile.logo ? site.assetUrl(site.business.profile.logo) : undefined;
   const pages = site?.pages ?? [];
   const links: NavLink[] = pages.filter((p) => !p.article).map((p) => ({ href: p.slug === "home" ? "/" : `/${p.slug}`, label: p.title }));
   const side = theme.navbar_style === "side";
-  const actions = (
-    <nav className="shop-actions" aria-label={tx("Navigasi toko")}>
-      <a href="/keranjang" aria-label={n > 0 ? tx("Keranjang, {0} barang", n) : undefined}>
-        {tx("Keranjang")}{n > 0 && <span className="shop-badge" aria-hidden="true">{n}</span>}
-      </a>
-      <a href="/pesanan">{tx("Pesanan")}</a>
-      <a href="/akun">{tx("Akun")}</a>
-    </nav>
-  );
+  const actions = <ShopNavActions preview={preview} />;
   return (
     <div className={`sv2 site shop${side ? " s-has-side-nav" : ""}`} {...frameAttrs(theme)} style={frameStyle(theme)} data-preview={preview || undefined}>
       <div className="sv2-shell">

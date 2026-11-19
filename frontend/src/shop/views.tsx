@@ -19,7 +19,7 @@ import {
   STATUS_TEXT, fileUrl, loadCustomer, rupiah, setCustomerCsrf, shopApi,
   type CheckoutConfig, type CustomerSession, type OrderSummary, type PublicOrder, type PublicProduct,
 } from "./api";
-import { addToCart, cartCount, clearCart, displaySubtotalSen, getCart, saveOrder, savedOrders, setQuantity, type CartItem } from "./cart";
+import { MAX_QTY, addToCart, cartCount, clearCart, displaySubtotalSen, getCart, saveOrder, savedOrders, setQuantity, type CartItem } from "./cart";
 import { t as tx, tmap, intlLocale } from "@/i18n";
 import { Tr } from "@/i18n/react";
 import { ShopFrame, useShopTexts } from "./frame";
@@ -89,13 +89,59 @@ export function CartFab() {
 
 // ------------------------------------------------------------------ produk
 
+/** Galeri: satu foto utama + strip thumbnail (bukan semua foto ditumpuk — harga & tombol beli
+ *  tetap terlihat, dan pembeli memilih foto sendiri). Panah kiri/kanan berpindah foto. */
+function Gallery({ images, name }: { images: string[]; name: string }) {
+  const [at, setAt] = useState(0);
+  if (images.length === 0) return <div className="shop-gallery"><span className="shop-noimg" aria-hidden="true" /></div>;
+  const i = Math.min(at, images.length - 1);
+  const go = (n: number) => setAt((n + images.length) % images.length);
+  const src = fileUrl(images[i]!);
+  return (
+    <div className="shop-gallery">
+      <figure className="shop-stage">
+        {/* eslint-disable-next-line @next/next/no-img-element -- static export, gambar bertanda tangan */}
+        <img key={src} src={sized(src, 960)} srcSet={srcSet(src)} sizes="(min-width: 720px) 50vw, 100vw"
+          alt={images.length > 1 ? tx("{0}, foto {1} dari {2}", name, i + 1, images.length) : name}
+          width={960} height={960} fetchPriority={i === 0 ? "high" : undefined} decoding="async" onError={onImgError} />
+        {images.length > 1 && (
+          <>
+            <button type="button" className="shop-stage-nav is-prev" onClick={() => go(i - 1)} aria-label={tx("Foto sebelumnya")}>‹</button>
+            <button type="button" className="shop-stage-nav is-next" onClick={() => go(i + 1)} aria-label={tx("Foto berikutnya")}>›</button>
+            <span className="shop-stage-count" aria-hidden="true">{i + 1}/{images.length}</span>
+          </>
+        )}
+      </figure>
+      {images.length > 1 && (
+        <div className="shop-thumbs" role="group" aria-label={tx("Foto produk")}
+          onKeyDown={(e) => {
+            if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+            e.preventDefault();
+            const n = (i + (e.key === "ArrowRight" ? 1 : -1) + images.length) % images.length;
+            go(n);
+            (e.currentTarget.children[n] as HTMLElement | undefined)?.focus();
+          }}>
+          {images.map((ref, k) => (
+            <button key={k} type="button" className="shop-thumb" aria-current={k === i ? "true" : undefined}
+              aria-label={tx("Foto {0}", k + 1)} onClick={() => setAt(k)}>
+              {/* eslint-disable-next-line @next/next/no-img-element -- static export */}
+              <img src={sized(fileUrl(ref), 320)} alt="" width={80} height={80} loading="lazy" decoding="async" onError={onImgError} />
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function ProductPage({ slug }: { slug: string }) {
   // Dokumen /produk/{slug} sudah memuat produknya (render pertama tanpa menunggu API).
   const [p, setP] = useState<PublicProduct | null>(() => inlineProduct(slug));
   const [err, setErr] = useState<string | null>(null);
   const [pick, setPick] = useState<string[]>(() => inlineProduct(slug)?.variants[0]?.option_values ?? []);
   const [qty, setQty] = useState(1);
-  const [added, setAdded] = useState(false);
+  const [added, setAdded] = useState(0);
+  const inCart = useSyncExternalStore(cartSub, cartCount, () => 0);
   useEffect(() => {
     const inline = inlineProduct(slug);
     if (inline) { document.title = `${inline.name} - UMKM OS`; return; }
@@ -107,43 +153,57 @@ export function ProductPage({ slug }: { slug: string }) {
       })
       .catch((e) => setErr(e instanceof ApiError && e.status === 404 ? tx("Produk tidak ditemukan.") : explain(e)));
   }, [slug]);
+  // Konfirmasi "Ditambahkan" di tombol hanya sebentar; pesan status (dengan tautan) tetap.
+  const [flash, setFlash] = useState(false);
+  useEffect(() => {
+    if (!added) return;
+    const id = window.setTimeout(() => setFlash(false), 1800);
+    return () => window.clearTimeout(id);
+  }, [added]);
   const variant = useMemo(
     () => p?.variants.find((v) => v.option_values.length === pick.length && v.option_values.every((x, i) => x === pick[i])),
     [p, pick],
   );
-  if (err) return <Shell title={tx("Produk")}><Msg kind="error">{err}</Msg></Shell>;
-  if (!p) return <Shell title={tx("Produk")}><div className="shop-product shop-product-skel" aria-busy="true" aria-label={tx("Memuat…")}><span /><span /></div></Shell>;
+  if (err) {
+    return (
+      <Shell title={tx("Produk")}>
+        <Msg kind="error">{err}</Msg>
+        <a className="s-btn s-btn-ghost" href="/">{tx("Kembali ke beranda")}</a>
+      </Shell>
+    );
+  }
+  if (!p) return <Shell title={tx("Produk")} heading={false}><div className="shop-product shop-product-skel" aria-busy="true" aria-label={tx("Memuat…")}><span /><span /></div></Shell>;
   const sellable = p.available && !!variant;
-  const clampQty = (n: number) => Math.max(1, Math.min(999, n));
-  const add = () => {
-    if (!variant) return;
-    addToCart({ variant_id: variant.id, slug: p.slug, name: p.name, variant_name: variant.name, price: variant.promo_price ?? variant.price, image: p.images[0] }, qty);
-    setAdded(true);
+  const clampQty = (n: number) => Math.max(1, Math.min(MAX_QTY, n));
+  const unit = variant ? (variant.promo_price ?? variant.price) : null;
+  const put = () => {
+    if (!variant) return false;
+    addToCart({ variant_id: variant.id, slug: p.slug, name: p.name, variant_name: variant.name, price: unit!, image: p.images[0] }, qty);
+    return true;
   };
-  const price = variant && (
-    <p className="shop-price">
-      {variant.promo_price ? <><s>{rupiah(variant.price)}</s> <strong>{rupiah(variant.promo_price)}</strong></> : <strong>{rupiah(variant.price)}</strong>}
-    </p>
-  );
+  const add = () => { if (put()) { setAdded((n) => n + 1); setFlash(true); } };
+  const buyNow = () => { if (put()) window.location.assign("/keranjang"); };
+  const off = variant?.promo_price ? Math.round((1 - Number(variant.promo_price) / Number(variant.price)) * 100) : 0;
+  const blocked = !p.available ? tx("Stok habis") : !variant ? tx("Pilih varian lain") : null;
   return (
-    <Shell title={p.name} heading={false}>
+    <Shell title={p.name} heading={false} wide>
+      <nav className="shop-crumbs" aria-label={tx("Jejak halaman")}>
+        <a href="/">{tx("Beranda")}</a><span aria-hidden="true">/</span><span aria-current="page">{p.name}</span>
+      </nav>
       <div className="shop-product">
-        <div className="shop-gallery">
-          {p.images.length === 0 && <span className="shop-noimg" aria-hidden="true" />}
-          {p.images.map((src, i) => (
-            // eslint-disable-next-line @next/next/no-img-element -- static export, gambar bertanda tangan
-            <img key={i} src={sized(fileUrl(src), 960)} srcSet={srcSet(fileUrl(src))} sizes="(min-width: 720px) 50vw, 100vw"
-              alt={i === 0 ? p.name : ""} width={960} height={960} loading={i === 0 ? "eager" : "lazy"} fetchPriority={i === 0 ? "high" : undefined} decoding="async" />
-          ))}
-        </div>
+        <Gallery images={p.images} name={p.name} />
         <div className="shop-info">
           <h1>{p.name}</h1>
-          {price}
-          {variant?.promo_price && <p className="shop-save">{tx("Hemat {0}", rupiah(String(Number(variant.price) - Number(variant.promo_price))))}</p>}
-          {p.description && <div className="shop-desc">{p.description.split("\n").map((l, i) => <p key={i}>{l}</p>)}</div>}
+          {variant && (
+            <div className="shop-pricebox">
+              <p className="shop-price"><strong>{rupiah(unit!)}</strong>{variant.promo_price && <s>{rupiah(variant.price)}</s>}</p>
+              {off > 0 && <span className="shop-save">{tx("Hemat {0}", `${off}%`)}</span>}
+            </div>
+          )}
+          {!p.available && <p className="shop-stock is-out">{tx("Produk sedang tidak tersedia.")}</p>}
           {p.options.map((o, i) => (
             <fieldset key={o.name} className="shop-options">
-              <legend>{o.name}</legend>
+              <legend>{o.name}{pick[i] && <span className="s-muted">: {pick[i]}</span>}</legend>
               {o.values.map((v) => (
                 <button key={v} type="button" className="shop-chip" aria-pressed={pick[i] === v}
                   onClick={() => setPick((x) => x.map((cur, j) => (j === i ? v : cur)))}>{v}</button>
@@ -151,24 +211,40 @@ export function ProductPage({ slug }: { slug: string }) {
             </fieldset>
           ))}
           {!variant && p.options.length > 0 && <Msg kind="error">{tx("Kombinasi ini tidak tersedia.")}</Msg>}
-          {!p.available && <Msg kind="error">{tx("Produk sedang tidak tersedia.")}</Msg>}
-          <div className="shop-buy">
+          <div className="shop-qtyrow">
+            <label className="shop-label" htmlFor="shop-qty">{tx("Jumlah")}</label>
             <div className="shop-qty">
-              <button type="button" onClick={() => setQty((q) => clampQty(q - 1))} disabled={qty <= 1} aria-label={tx("Kurangi jumlah")}>−</button>
-              <input type="number" inputMode="numeric" min={1} max={999} value={qty} aria-label={tx("Jumlah")}
-                onChange={(e) => setQty(clampQty(Number(e.target.value) || 1))} />
-              <button type="button" onClick={() => setQty((q) => clampQty(q + 1))} disabled={qty >= 999} aria-label={tx("Tambah jumlah")}>+</button>
+              <button type="button" onClick={() => setQty((q) => clampQty(q - 1))} disabled={qty <= 1 || !sellable} aria-label={tx("Kurangi jumlah")}>−</button>
+              <input type="number" inputMode="numeric" min={1} max={MAX_QTY} value={qty} id="shop-qty" disabled={!sellable}
+                onChange={(e) => setQty(clampQty(Number(e.target.value) || 1))} onFocus={(e) => e.currentTarget.select()} />
+              <button type="button" onClick={() => setQty((q) => clampQty(q + 1))} disabled={qty >= MAX_QTY || !sellable} aria-label={tx("Tambah jumlah")}>+</button>
             </div>
-            <button type="button" className="s-btn shop-buy-btn" disabled={!sellable} onClick={add}>
-              {tx("Tambah ke keranjang")}
-            </button>
+            {unit && qty > 1 && <span className="shop-subtotal" aria-live="polite">{tx("Subtotal")} <strong>{rupiah((Number(unit) * qty).toFixed(2))}</strong></span>}
           </div>
-          <Msg kind="ok">{added ? <>{tx("Ditambahkan ke keranjang.")}{" "}<a href="/keranjang">{tx("Lihat keranjang")}</a></> : null}</Msg>
+          <div className="shop-buy">
+            <button type="button" className="s-btn s-btn-ghost shop-add-btn" disabled={!sellable} onClick={add} data-done={flash || undefined}>
+              {blocked ?? (flash ? tx("✓ Ditambahkan") : tx("Tambah ke keranjang"))}
+            </button>
+            {!blocked && <button type="button" className="s-btn shop-buy-btn" onClick={buyNow}>{tx("Beli sekarang")}</button>}
+          </div>
+          <Msg kind="ok">{added ? <>{tx("Ditambahkan ke keranjang.")}{" "}<a href="/keranjang">{tx("Lihat keranjang ({0})", inCart)}</a></> : null}</Msg>
+          {p.description && (
+            <section className="shop-desc" aria-labelledby="shop-desc-h">
+              <h2 id="shop-desc-h">{tx("Deskripsi")}</h2>
+              {p.description.split("\n").map((l, i) => (l.trim() ? <p key={i}>{l}</p> : null))}
+            </section>
+          )}
         </div>
       </div>
     </Shell>
   );
 }
+
+const cartSub = (f: () => void) => {
+  window.addEventListener("umkm-cart", f);
+  window.addEventListener("storage", f);
+  return () => { window.removeEventListener("umkm-cart", f); window.removeEventListener("storage", f); };
+};
 
 // ------------------------------------------------------------------ keranjang & checkout
 

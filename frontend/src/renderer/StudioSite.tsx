@@ -55,6 +55,8 @@ export interface StudioSiteProps {
   onEditBlock?: (id: string, path: string, value: string) => void;
   /** Tautan lencana "Dibuat dengan UMKM OS" (dari server). */
   platformUrl?: string | null;
+  /** Tautan toko di ujung navigasi (Keranjang · Pesanan · Akun) — sama dengan halaman toko. */
+  navActions?: ReactNode;
 }
 
 const isEmbed = (b: BlockV2) =>
@@ -274,7 +276,7 @@ export function StudioSite(props: StudioSiteProps) {
   // anchor bagian di halaman ini supaya navigasi tidak kosong.
   const navLinks: NavLink[] = (props.pages ?? []).filter((p) => !p.current).length > 0
     // Halaman artikel tidak masuk menu (dijangkau lewat halaman Blog / Daftar artikel), kecuali yang sedang dibuka.
-    ? (props.pages ?? []).filter((p) => !p.article || p.current).map((p) => ({ href: p.slug === "home" ? "/" : `/${p.slug}`, label: p.title }))
+    ? (props.pages ?? []).filter((p) => !p.article || p.current).map((p) => ({ href: p.slug === "home" ? "/" : `/${p.slug}`, label: p.title, current: p.current }))
     : Array.from(anchors.entries()).map(([id, names]) => ({ href: `#${names[0] ?? id}`, label: titleCase(names[0] ?? id) }));
   const logoUrl = props.business.profile.logo ? props.assetUrl(props.business.profile.logo) : undefined;
   /** Satu lapisan bebas (Latar / Gambar) di grid. */
@@ -343,6 +345,7 @@ export function StudioSite(props: StudioSiteProps) {
           hideLogo={!!logoPlugin}
           hideName={logoPlugin?.data.show_name !== false && !!logoPlugin}
           links={navLinks}
+          actions={props.navActions}
         />
         <div className="sv2-main">
           <div className="sv2-grid">

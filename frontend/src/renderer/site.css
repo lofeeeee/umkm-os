@@ -78,6 +78,25 @@
 .s-nav a:hover { background: var(--s-tint); color: var(--s-primary); }
 }
 
+/* Halaman yang sedang dibuka: pembeli selalu tahu posisinya. */
+/* Spesifisitas dinaikkan: `.shop a` / `.site a` (warna tautan isi) tidak boleh mewarnai navigasi —
+   warna menu harus SAMA di halaman website dan halaman toko. */
+.site .s-nav a, .site .s-nav-actions .shop-action { color: var(--s-ink-2); }
+.site .s-nav a[aria-current="page"], .site .s-nav-actions .shop-action[aria-current="page"] { color: var(--s-primary); background: var(--s-tint); }
+@media (hover: hover) { .site .s-nav a:hover, .site .s-nav-actions a.shop-action:hover { color: var(--s-primary); background: var(--s-tint); } }
+
+/* Tautan toko (Keranjang · Pesanan · Akun) — tampil di SEMUA halaman (website, toko, kanvas Studio),
+   jadi navigasi tidak berubah saat berpindah halaman. */
+.s-nav-actions { display: flex; align-items: center; }
+.shop-actions { display: flex; flex-wrap: wrap; gap: 2px; }
+.shop-action { text-decoration: none; padding: 8px 12px; border-radius: 999px; color: var(--s-ink-2); font-weight: 600; font-size: 0.9375em; display: inline-flex; align-items: center; min-height: 24px; transition: background-color var(--dur, 180ms) ease, color var(--dur, 180ms) ease; }
+@media (hover: hover) { a.shop-action:hover { background: var(--s-tint); color: var(--s-primary); } }
+.s-nav-side .s-nav-actions { margin-top: auto; }
+.s-nav-side .shop-actions { flex-direction: column; align-items: stretch; }
+.s-nav-side .shop-action { border-radius: 10px; }
+.shop-badge { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px; margin-left: 6px; border-radius: 999px; background: var(--s-primary); color: var(--s-on-primary, #fff); font-size: 0.75rem; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+@container (max-width: 479px) { .shop-action { padding: 8px; font-size: 0.875em; } }
+
 /* Bilah atas (tema `navbar_style: top`). `s-sticky` hanya menempel bila diminta tema. */
 .s-headbar.s-sticky {
   position: sticky; top: 0; z-index: calc(var(--z-sticky, 5) + 1); padding: 12px 20px;

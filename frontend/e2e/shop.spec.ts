@@ -124,7 +124,7 @@ test("toko: checkout guest + pembayaran QRIS statis + konfirmasi pemilik", async
   await buyer.getByLabel("Jumlah", { exact: true }).fill("2");
   await buyer.getByRole("button", { name: "Tambah ke keranjang" }).click();
   await buyer.getByRole("link", { name: "Lihat keranjang" }).click();
-  await expect(buyer.getByText("Perkiraan total:")).toContainText("Rp30.000");
+  await expect(buyer.locator(".shop-summary-total")).toContainText("Rp30.000");
   await buyer.getByLabel("Nama").fill("Sari <b>Pembeli</b>");
   await buyer.getByLabel("Email").fill(`buyer-${slug}@x.id`);
   await buyer.getByRole("checkbox", { name: /menyetujui/ }).check();

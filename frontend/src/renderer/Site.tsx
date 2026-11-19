@@ -39,6 +39,8 @@ export interface SiteProps {
   products?: GridProduct[];
   /** Lebar slot desktop (px) untuk `sizes` gambar (Studio: lebar blok; v1: lebar halaman). */
   slotWidth?: number;
+  /** Tautan toko di ujung navigasi (Keranjang · Pesanan · Akun) — sama dengan halaman toko. */
+  navActions?: ReactNode;
 }
 
 /** P9-7: lebar slot tempat section dirender, agar browser memilih varian gambar terkecil yang cukup. */
@@ -168,6 +170,7 @@ function SectionBody({ s, props }: { s: Section; props: SiteProps }) {
           brand={text(d.title) || b.profile.name}
           logoUrl={logoRef ? assetUrl(logoRef) : undefined}
           links={links}
+          actions={props.navActions}
         />
       );
     }
