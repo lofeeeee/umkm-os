@@ -8,6 +8,8 @@
 //!   jadi dua refresh bersamaan akan membuat salah satunya tidak sah.
 //! - Status `needs_relogin` hanya bila GoBiz menolak refresh DAN access token tersimpan juga ditolak.
 //!   Refresh ditolak tetapi access token masih berlaku → tetap `active` (`last_error = refresh_…`).
+//! - Sesi `needs_relogin` tidak pernah di-refresh lagi (refresh token-nya sudah ditolak); "Cek sekarang"
+//!   hanya menguji access token. Lihat [`force_step`].
 //! - Penolakan definitif GoBiz = 401/400/403. Gangguan
 //!   jaringan/5xx/429 dicatat (`last_error`, `refresh_failures`) lalu dicoba lagi siklus berikutnya.
 
@@ -70,6 +72,45 @@ pub enum RefreshOutcome {
     NotConnected,
 }
 
+/// Langkah "Cek sekarang" setelah access token tersimpan diuji.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ForceStep {
+    /// Token diterima dan belum jatuh tempo: biarkan.
+    KeepFresh,
+    /// Sesi berstatus perlu login ulang, tetapi access token ternyata diterima: aktifkan lagi
+    /// tanpa refresh.
+    Reactivate,
+    /// Sesi berstatus perlu login ulang dan GoBiz tetap menolak: pemilik harus menghubungkan ulang.
+    Relogin,
+    /// GoBiz tidak dapat dihubungi (sesi aktif): catat, coba lagi nanti.
+    Transient,
+    /// Perbarui token.
+    Refresh,
+}
+
+/// Sesi `needs_relogin` hanya terjadi setelah GoBiz menolak refresh token-nya. Memakai ulang refresh
+/// token yang sudah ditolak tidak akan berhasil dan dapat dianggap GoBiz sebagai pemakaian ulang token
+/// (*refresh token reuse*), yang mencabut seluruh sesi akun — termasuk login pemilik di browser.
+/// Jadi pada sesi itu "Cek sekarang" hanya menguji access token, tidak pernah me-refresh.
+fn force_step(active: bool, access: Access, due: bool) -> ForceStep {
+    match (active, access) {
+        (true, Access::Valid) if !due => ForceStep::KeepFresh,
+        (true, Access::Valid | Access::Rejected) => ForceStep::Refresh,
+        (true, Access::Unknown) => ForceStep::Transient,
+        (false, Access::Valid) => ForceStep::Reactivate,
+        (false, Access::Rejected | Access::Unknown) => ForceStep::Relogin,
+    }
+}
+
+/// Kode `last_error` untuk sesi yang refresh token-nya pernah ditolak (selalu berawalan `refresh_`).
+fn soft_refresh_code(last_error: Option<&str>) -> String {
+    match last_error {
+        Some(c) if c.starts_with("refresh_") => c.to_string(),
+        Some(c) => format!("refresh_{c}"),
+        None => "refresh_rejected".into(),
+    }
+}
+
 /// Apakah sesi perlu diperbarui sekarang (token hampir habis, atau refresh penjaga 6 jam).
 pub fn is_due(session: &GopaySession, refreshed_at_ms: Option<i64>, now: i64) -> bool {
     session.needs_refresh(now) || refreshed_at_ms.is_none_or(|r| now - r >= KEEPALIVE_MS)
@@ -112,21 +153,35 @@ pub async fn ensure_fresh(
     // refresh token GoBiz dirotasi, jadi setiap refresh yang tak perlu adalah risiko.
     let mut access = None;
     if mode == RefreshMode::Force {
-        match probe(client, &old, now).await {
-            (Access::Valid, _) if !due => {
+        let (a, code) = probe(client, &old, now).await;
+        match force_step(stored.status == "active", a, due) {
+            ForceStep::KeepFresh => {
                 lock.keep_active(None).await?;
                 return Ok(RefreshOutcome::Fresh(old));
             }
-            (Access::Unknown, code) => {
+            ForceStep::Reactivate => {
+                // Access token ternyata masih diterima, tetapi refresh token tersimpan sudah pernah
+                // ditolak: catat sebagai penolakan perpanjangan agar worker tidak langsung mengulangnya.
+                let soft = soft_refresh_code(stored.last_error.as_deref());
+                lock.keep_active(Some(&soft)).await?;
+                return Ok(RefreshOutcome::Transient {
+                    session: old,
+                    code: soft,
+                });
+            }
+            ForceStep::Relogin => {
+                let code = code
+                    .or_else(|| stored.last_error.clone())
+                    .unwrap_or_else(|| "needs_relogin".into());
+                lock.release().await?;
+                return Ok(RefreshOutcome::NeedsRelogin { code });
+            }
+            ForceStep::Transient => {
                 let code = code.unwrap_or_else(|| "network".into());
-                if stored.status != "active" {
-                    lock.release().await?;
-                    return Ok(RefreshOutcome::NeedsRelogin { code });
-                }
                 lock.fail(&code, false).await?;
                 return Ok(RefreshOutcome::Transient { session: old, code });
             }
-            (a, _) => access = Some(a),
+            ForceStep::Refresh => access = Some(a),
         }
     }
     if mode == RefreshMode::AccessRejected {
@@ -231,6 +286,32 @@ mod tests {
             refresh_token: "r".into(),
             expires_at_ms,
         }
+    }
+
+    #[test]
+    fn force_never_refreshes_a_relogin_session() {
+        use Access::*;
+        // Sesi aktif: perilaku lama.
+        assert_eq!(force_step(true, Valid, false), ForceStep::KeepFresh);
+        assert_eq!(force_step(true, Valid, true), ForceStep::Refresh);
+        assert_eq!(force_step(true, Rejected, false), ForceStep::Refresh);
+        assert_eq!(force_step(true, Unknown, true), ForceStep::Transient);
+        // Sesi perlu login ulang: refresh token sudah ditolak → jangan pernah dipakai ulang.
+        for due in [false, true] {
+            assert_eq!(force_step(false, Valid, due), ForceStep::Reactivate);
+            assert_eq!(force_step(false, Rejected, due), ForceStep::Relogin);
+            assert_eq!(force_step(false, Unknown, due), ForceStep::Relogin);
+        }
+    }
+
+    #[test]
+    fn soft_code_is_always_refresh_prefixed() {
+        assert_eq!(soft_refresh_code(Some("status_400")), "refresh_status_400");
+        assert_eq!(
+            soft_refresh_code(Some("refresh_status_400")),
+            "refresh_status_400"
+        );
+        assert_eq!(soft_refresh_code(None), "refresh_rejected");
     }
 
     #[test]

@@ -225,7 +225,9 @@ function GopayCard({ tenantId, can, refreshKey }: { tenantId: string; can: boole
   }, []);
   // Kirim otomatis bila sesi datang dari ekstensi & nomor sudah siap (sekali saja).
   useEffect(() => {
-    if (autoSent.current || !fromExt.current || st?.connected) return;
+    // Kiriman ekstensi adalah tindakan eksplisit pemilik: selalu dipakai, termasuk saat sesi lama
+    // ditolak GoBiz (needs_relogin) atau masih aktif (diganti sesi baru). Tunggu status dimuat dulu.
+    if (autoSent.current || !fromExt.current || !st) return;
     if (can && !busy && session.trim().length >= 20 && phone.trim().length >= 8) {
       autoSent.current = true;
       queueMicrotask(() => connectSession());
