@@ -124,19 +124,20 @@
 }
 .sx-empty span { color: var(--muted); font-size: var(--fs-base); }
 
-/* Aksi blok (di bilah atas blok terpilih). */
+/* Aksi blok (di bilah atas blok terpilih). Warna memakai token tema — bukan hardcode — supaya
+   terbaca di mode gelap dasbor (dulu #27272a: nyaris tak terlihat di latar gelap). */
 .lc-tool {
-  display: inline-grid; place-items: center; width: 28px; height: 28px; border: 0; border-radius: 999px; background: transparent; color: #27272a;
+  display: inline-grid; place-items: center; width: 28px; height: 28px; border: 0; border-radius: 999px; background: transparent; color: var(--ink-2, #3f3f46);
   cursor: pointer; transition: background-color var(--dur-fast, 120ms) ease, transform var(--dur-fast, 120ms) var(--ease-out);
 }
 @media (hover: hover) {
-.lc-tool:hover { background: #f4f4f5; } }
+.lc-tool:hover { background: var(--surface-hover, #f4f4f5); } }
 .lc-tool:active { transform: scale(var(--press-icon, 0.94)); }
 .lc-tool svg { width: 15px; height: 15px; }
-.lc-tool-on { background: #18181b; color: #fff; }
+.lc-tool-on { background: var(--ink, #18181b); color: var(--bg, #fff); }
 @media (hover: hover) {
-.lc-tool-on:hover { background: #27272a; }
-.lc-tool-danger:hover { background: #fef2f2; color: #dc2626; } }
+.lc-tool-on:hover { background: var(--ink-2, #27272a); }
+.lc-tool-danger:hover { background: var(--danger-bg, #fef2f2); color: var(--danger, #dc2626); } }
 .lc-chip { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; margin: 0 2px; border-radius: 999px; font-size: var(--fs-2xs); font-weight: 700; text-decoration: none; white-space: nowrap; }
 .lc-chip-pro { background: #ede9fe; color: #5b21b6; }
 .lc-chip-warn { background: #fef3c7; color: #92400e; }

@@ -326,8 +326,6 @@ export function StudioSite(props: StudioSiteProps) {
             backgroundPosition: "var(--s-bg-pos, center)",
             backgroundRepeat: doc.theme.background_size === "repeat" ? "repeat" : "no-repeat",
             opacity: "var(--s-bg-opacity, 0)",
-            backdropFilter: "blur(12px)",
-            WebkitBackdropFilter: "blur(12px)",
             zIndex: 0,
           }}
         />
@@ -378,7 +376,7 @@ export function StudioSite(props: StudioSiteProps) {
                       onSelect={() => props.onSelect?.(b.id)}
                     >
                       {!publicBlock(b, props) && <p className="sf-hidden-note" role="note">{hiddenReason(b)}</p>}
-                      <EditContext.Provider value={editApiFor(b, props.onEditBlock)}>{body}</EditContext.Provider>
+                      <EditContext.Provider value={editApiFor(b, props.onEditBlock, props.onSelect)}>{body}</EditContext.Provider>
                     </EditableBlockWrapper>
                   </div>
                 );
@@ -418,11 +416,13 @@ export function StudioSite(props: StudioSiteProps) {
   );
 }
 
-/** API edit untuk satu blok: menulis `data[path]` pada blok itu. */
-function editApiFor(b: BlockV2, onEditBlock?: (id: string, path: string, value: string) => void): EditApi | null {
+/** API edit untuk satu blok: menulis `data[path]` pada blok itu, dan memilih bloknya saat teksnya
+ *  mulai disunting — agar panel kiri otomatis berganti ke pengaturan blok (setara klik blok). */
+function editApiFor(b: BlockV2, onEditBlock?: (id: string, path: string, value: string) => void, onSelect?: (id: string | null) => void): EditApi | null {
   if (!onEditBlock) return null;
   return {
     commit: (path, value) => onEditBlock(b.id, path, value),
+    focus: () => onSelect?.(b.id),
   };
 }
 

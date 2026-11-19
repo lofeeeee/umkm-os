@@ -1,16 +1,6 @@
-/* Font preset situs toko (self-hosted, OFL). @font-face malas: hanya font yang dipakai yang diunduh. */
-@import "@fontsource-variable/inter/wght.css";
-@import "@fontsource-variable/nunito/wght.css";
-@import "@fontsource-variable/merriweather/wght.css";
-@import "@fontsource-variable/fraunces/wght.css";
-@import "@fontsource-variable/playfair-display/wght.css";
-@import "@fontsource-variable/space-grotesk/wght.css";
-@import "@fontsource-variable/caveat/wght.css";
-@import "@fontsource/dm-serif-display/400.css";
-@import "@fontsource/poppins/400.css";
-@import "@fontsource/poppins/600.css";
-@import "@fontsource/poppins/700.css";
-@import "@fontsource/poppins/800.css";
+/* Huruf situs TIDAK lagi diimpor global di sini: tiap keluarga punya berkas sendiri di
+   src/renderer/fonts/<nama>.css dan hanya dimuat oleh halaman yang memakai preset tsb
+   (lihat fontCssImportForPreset di safe.ts). "system" tidak butuh berkas. */
 
 /* Renderer situs tenant. Container query (bukan media query) agar preview mobile di
    dashboard (lebar 375) berperilaku persis seperti layar ponsel.
@@ -66,8 +56,16 @@
 .s.s--header {
   position: sticky; top: 0; z-index: var(--z-sticky, 5); padding: 12px 20px;
   background: color-mix(in srgb, var(--s-bg) 88%, transparent) !important;
-  backdrop-filter: saturate(1.6) blur(12px); -webkit-backdrop-filter: saturate(1.6) blur(12px);
   border-bottom: 1px solid var(--s-line);
+}
+/* Efek kaca (blur) mahal saat menggulir — sampel ulang & blur seluruh area di bawah bilah pada SETIAP
+   bingkai gulir. Hanya diaktifkan di perangkat pointer halus (mouse/trackpad ≈ desktop berspesifikasi
+   cukup); ponsel memakai latar 88% pekat (nyaris sama tampilannya, tanpa biaya komposit per bingkai).
+   Catatan: site.css tidak boleh memakai @media lebar (isolasi viewport — lihat viewport-isolation.test). */
+@media (hover: hover) and (pointer: fine) {
+  .s.s--header, .s-headbar.s-sticky {
+    backdrop-filter: saturate(1.6) blur(12px); -webkit-backdrop-filter: saturate(1.6) blur(12px);
+  }
 }
 .s-headbar { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between; padding: 12px 16px; background: var(--pg-bg, var(--s-bg)); }
 .s-brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.0625em; letter-spacing: -0.01em; min-width: 0; color: var(--s-ink); }
@@ -84,7 +82,6 @@
 .s-headbar.s-sticky {
   position: sticky; top: 0; z-index: calc(var(--z-sticky, 5) + 1); padding: 12px 20px;
   background: color-mix(in srgb, var(--s-bg) 88%, transparent);
-  backdrop-filter: saturate(1.6) blur(12px); -webkit-backdrop-filter: saturate(1.6) blur(12px);
   border-bottom: 1px solid var(--s-line);
 }
 
@@ -248,6 +245,14 @@
 /* Bilah atas v2 menempel ke tepi, jadi tidak ikut padding halaman. */
 .sv2 > .sv2-shell > .s-headbar { padding: 12px 16px; }
 .sv2-block { min-width: 0; padding-bottom: 12px; box-sizing: border-box; }
+/* Lewati render blok yang jauh di luar layar: halaman panjang (banner, produk, galeri, testimoni, peta,
+   footer) tidak digambar/ditata sampai mendekati viewport — gulir tetap mulus di ponsel kelas bawah.
+   Hanya blok grid biasa: lapisan bebas (data-layer = cover/own/front) bisa menumpuk atau menempel
+   (gambar sticky), jadi tidak boleh dilewati. Situs publik saja — kanvas editor butuh semua terukur. */
+.sv2:not(.sf-editing) .sv2-grid > .sv2-block:not([data-layer]) {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 320px;
+}
 .sv2-anchor { display: block; height: 0; scroll-margin-top: 16px; }
 .sv2-block > .st-content { height: 100%; }
 .sv2 .s-solo .s { padding: 28px 24px; background: transparent !important; }
@@ -263,7 +268,7 @@
 .s-text p { margin: 0 0 12px; color: var(--s-ink-2); }
 .s-wa { background: #25d366 !important; box-shadow: 0 6px 16px -6px rgb(37 211 102 / 0.6); }
 .s-wa svg { flex: none; }
-.s-wa-float { position: fixed; z-index: calc(var(--z-float, 20) - 1); right: 16px; bottom: 84px; display: grid; place-items: center; width: 56px; height: 56px; border-radius: 999px; background: #25d366; color: #fff !important; box-shadow: 0 12px 28px -8px rgb(37 211 102 / 0.7); }
+.s-wa-float { position: fixed; z-index: var(--z-float, 20); right: 16px; bottom: 84px; display: grid; place-items: center; width: 56px; height: 56px; border-radius: 999px; background: #25d366; color: #fff !important; box-shadow: 0 12px 28px -8px rgb(37 211 102 / 0.7); }
 .s-wa-float svg { width: 28px; height: 28px; }
 
 /* Kartu lokasi mengisi tinggi selnya (lihat bands.ts); panel peta mengambil sisa ruang. */
@@ -534,7 +539,7 @@
 .sv2-img img[data-round] { border-radius: 20px; }
 .sv2-img[data-mode="sticky"] { display: block; }
 .sv2-img[data-mode="sticky"] > img, .sv2-img[data-mode="sticky"] > a { position: sticky; top: 88px; height: auto; max-height: calc(100vh - 120px); }
-.sv2-popup { position: fixed; z-index: calc(var(--z-float, 20) - 2); width: min(var(--pop-w, 168px), 42vw); }
+.sv2-popup { position: fixed; z-index: var(--z-float, 20); width: min(var(--pop-w, 168px), 42vw); }
 .sv2-popup[data-corner="bottom-right"] { right: 16px; bottom: 152px; }
 .sv2-popup[data-corner="bottom-left"] { left: 16px; bottom: 96px; }
 .sv2-popup[data-corner="top-right"] { right: 16px; top: 88px; }
@@ -674,28 +679,40 @@
 .sv2[data-radius="sharp"] :is(.sv2-bg[data-round], .sv2-img img[data-round]) { border-radius: 4px; }
 .sv2[data-radius="round"] :is(.sv2-bg[data-round], .sv2-img img[data-round]) { border-radius: 32px; }
 
-/* Tekstur halaman: lapisan latar di elemen halaman itu sendiri (tidak menutupi apa pun). */
+/* Tekstur halaman: lapisan latar di elemen halaman itu sendiri (tidak menutupi apa pun).
+   Versi bergerak (grain/paper): ditempatkan di pseudo-elemen `position: fixed` — dikomposit SEKALI
+   sebagai satu lapisan, alih-alih menggambar ulang ubin noise SVG di seluruh halaman pada tiap bingkai gulir. */
 .sv2[data-texture="dots"] {
   background-image: radial-gradient(color-mix(in srgb, var(--s-ink, #18181b) 14%, transparent) 1px, transparent 1.5px);
   background-size: 18px 18px;
 }
-.sv2[data-texture="grain"] {
+.sv2[data-texture="grain"], .sv2[data-texture="paper"] { position: relative; }
+.sv2[data-texture="grain"]::before, .sv2[data-texture="paper"]::before {
+  content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+}
+.sv2[data-texture="grain"]::before {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .09 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
-.sv2[data-texture="paper"] {
+.sv2[data-texture="paper"]::before {
   background-image:
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.04 .6' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .45  0 0 0 0 .35  0 0 0 0 .2  0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23p)'/%3E%3C/svg%3E"),
     linear-gradient(color-mix(in srgb, #c8a96b 6%, transparent), transparent);
 }
+/* Lapisan tekstur fixed harus tetap DI BELAKANG isi halaman (bukan elemen fixed yang punya z-index sendiri). */
+.sv2[data-texture="grain"] > .sv2-shell, .sv2[data-texture="paper"] > .sv2-shell { position: relative; z-index: 1; }
 
 /* Gerak: blok muncul saat masuk layar (scroll-driven, tanpa JS). Hanya situs publik & bila pengguna tidak
-   meminta gerak dikurangi. Browser tanpa dukungan: blok langsung tampil (tidak ada yang tersembunyi). */
+   meminta gerak dikurangi. Browser tanpa dukungan: blok langsung tampil (tidak ada yang tersembunyi).
+   Di layar sentuh (ponsel) efek ini dimatikan: evaluasi timeline-gulir tiap bingkai + area lukis besar
+   membuat gulir tersendat di perangkat kelas bawah — tepat perangkat mayoritas pengunjung toko. */
 @media (prefers-reduced-motion: no-preference) {
   @supports (animation-timeline: view()) {
-    .sv2[data-motion]:not(.sf-editing) .sv2-grid > .sv2-block:not([data-layer="cover"]) {
-      animation: sv2-reveal linear both; animation-timeline: view(); animation-range: entry 0% entry 35%;
+    @media (hover: hover) and (pointer: fine) {
+      .sv2[data-motion]:not(.sf-editing) .sv2-grid > .sv2-block:not([data-layer="cover"]) {
+        animation: sv2-reveal linear both; animation-timeline: view(); animation-range: entry 0% entry 35%;
+      }
+      .sv2[data-motion="lively"]:not(.sf-editing) .sv2-grid > .sv2-block:not([data-layer="cover"]) { animation-name: sv2-reveal-lively; }
     }
-    .sv2[data-motion="lively"]:not(.sf-editing) .sv2-grid > .sv2-block:not([data-layer="cover"]) { animation-name: sv2-reveal-lively; }
   }
   .sv2[data-motion="lively"] :is(.s-btn, .sf-wa, .s-product) { transition: transform 0.2s cubic-bezier(0.23, 1, 0.32, 1), box-shadow 0.2s ease; }
   @media (hover: hover) {
@@ -707,10 +724,11 @@
 @keyframes sv2-reveal-lively { from { opacity: 0; transform: translateY(28px) scale(0.97); } }
 
 /* Latar selebar layar: tepi yang menyentuh tepi grid diperpanjang ke tepi halaman (.sv2 = container).
-   Lebar grid = min(1080px, lebar halaman − padding 2×16px). Bilah samping: tidak diperpanjang. */
-.sv2 { overflow-x: clip; --sv2-bleed: calc((min(1080px, 100cqi - 32px) - 100cqi) / 2); }
-.sv2:not(.s-has-side-nav) .sv2-bg[data-bleed="l"], .sv2:not(.s-has-side-nav) .sv2-bg[data-bleed="lr"] { margin-left: var(--sv2-bleed); }
-.sv2:not(.s-has-side-nav) .sv2-bg[data-bleed="r"], .sv2:not(.s-has-side-nav) .sv2-bg[data-bleed="lr"] { margin-right: var(--sv2-bleed); }
+   `100cqw` (bukan `100cqi`): unit logis `cqi` memaksa mesin gaya mengevaluasi arah tulis tiap perubahan
+   container; `cqw` lebih murah. Variabel hanya dihitung bila aturan bleed cocok (bukan di setiap halaman). */
+.sv2 { overflow-x: clip; }
+.sv2:not(.s-has-side-nav) .sv2-bg[data-bleed="l"], .sv2:not(.s-has-side-nav) .sv2-bg[data-bleed="lr"] { margin-left: calc((min(1080px, 100cqw - 32px) - 100cqw) / 2); }
+.sv2:not(.s-has-side-nav) .sv2-bg[data-bleed="r"], .sv2:not(.s-has-side-nav) .sv2-bg[data-bleed="lr"] { margin-right: calc((min(1080px, 100cqw - 32px) - 100cqw) / 2); }
 
 /* Gambar gagal dimuat → placeholder rapi (bukan ikon rusak browser). */
 .sv2 img[data-broken], .site img[data-broken] {

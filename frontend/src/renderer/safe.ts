@@ -70,6 +70,25 @@ export const FONT_STACKS: Record<string, string> = {
   dmserif: "'DM Serif Display', Georgia, ui-serif, serif",
 };
 
+/** Path impor CSS huruf untuk preset tema (null = tidak perlu berkas, mis. "system").
+ *  Berkas per-keluarga di src/renderer/fonts/ — halaman hanya memuat huruf yang dipakainya. */
+export function fontCssImportForPreset(f: unknown): string | null {
+  const p = typeof f === "string" && FONT_STACKS[f] ? f : "jakarta";
+  const map: Record<string, string> = {
+    jakarta: "./fonts/plus-jakarta-sans.css",
+    inter: "./fonts/inter.css",
+    poppins: "./fonts/poppins.css",
+    nunito: "./fonts/nunito.css",
+    merriweather: "./fonts/merriweather.css",
+    fraunces: "./fonts/fraunces.css",
+    playfair: "./fonts/playfair.css",
+    grotesk: "./fonts/grotesk.css",
+    caveat: "./fonts/caveat.css",
+    dmserif: "./fonts/dmserif.css",
+  };
+  return map[p] ?? null;
+}
+
 export function fontStack(f: unknown): string {
   return (typeof f === "string" && FONT_STACKS[f]) || FONT_STACKS.system!;
 }

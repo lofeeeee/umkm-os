@@ -1,0 +1,16 @@
+/* Poppins 400/700 (subset latin) — hanya dimuat bila preset situs memakai "poppins".
+   Dulu 4 berkas (500/600 dipetakan sintetis dari 400/700); kini cukup 2 ketebalan. */
+@font-face {
+  font-family: "Poppins";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url(@fontsource/poppins/files/poppins-latin-400-normal.woff2) format("woff2");
+}
+@font-face {
+  font-family: "Poppins";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 700;
+  src: url(@fontsource/poppins/files/poppins-latin-700-normal.woff2) format("woff2");
+}

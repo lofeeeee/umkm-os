@@ -22,6 +22,7 @@ import { normalizePageV2 } from "@/renderer/normalize";
 import { ChatPreview } from "@/chat/widget";
 import { TextBlock, WhatsAppButton } from "@/renderer/StudioSite";
 import { fontStack, primaryVars, safeColor } from "@/renderer/safe";
+import { ensureFontCss } from "@/renderer/FontLoader";
 import { FONT_PRESETS } from "@/renderer/sections";
 import type { Business,PageContent,SectionType } from "@/renderer/types";
 import { DEVICE_LABEL, DEVICE_WIDTH, type DeviceViewport } from "@/studio/DeviceFrame";
@@ -388,10 +389,6 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
   const toggleLock = useCallback((id: string) => {
     setCell(id, { locked: !st?.cells.find((c) => c.id === id)?.locked }, "");
   }, [setCell, st]);
-  /** Panel Layer (F1): pindahkan blok satu langkah — mesin yang sama dengan tombol atas/bawah Inspector. */
-  function moveLayer(id: string, dir: "up" | "down") {
-    moveCell(id, dir);
-  }
   /** Panel Layer (F4): tampilkan lagi semua blok yang disembunyikan (satu langkah urungkan). */
   const showAllHidden = useCallback(() => {
     update((s) => ({ ...s, cells: s.cells.map((c) => (c.hidden ? { ...c, hidden: undefined } : c)) }), "unhide-all");
@@ -431,6 +428,25 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
       return;
     }
     update((s) => ({ ...s, cells: [...moveBy(s.cells.filter((x) => !isEmbed(x)), id, d) as StudioCell[], ...s.cells.filter(isEmbed)] }), `move:${id}`);
+  }
+  /** Panel Layer: seret baris ke urutan baru — beberapa langkah moveBy diterapkan sekaligus
+   *  agar seluruh seretan tetap SATU langkah urungkan. Lapisan bebas/menukar susunan tumpukan (y). */
+  function reorderLayer(id: string, dir: "up" | "down", steps: number) {
+    if (device === "mobile") {
+      update((s) => {
+        const grid = s.cells.filter((x) => !isEmbed(x));
+        const i = mobileIndex(grid, id);
+        if (i < 0) return s;
+        const to = dir === "up" ? i - steps : i + steps;
+        return { ...s, cells: [...reorderMobile(grid, id, to) as StudioCell[], ...s.cells.filter(isEmbed)] };
+      }, `mmove:${id}`);
+      return;
+    }
+    update((s) => {
+      let cells = [...s.cells.filter((x) => !isEmbed(x))] as StudioCell[];
+      for (let k = 0; k < steps; k++) cells = moveBy(cells, id, dir) as StudioCell[];
+      return { ...s, cells: [...cells, ...s.cells.filter(isEmbed)] };
+    }, `move:${id}`);
   }
   function remove(id: string) {
     update((s) => ({ ...s, cells: s.cells.filter((c) => c.id !== id) }), "");
@@ -501,6 +517,8 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
   const primary = st?.primary ?? "#4F46E5";
   const font = st?.font ?? FONT_PRESETS[0]!;
   const theme = useMemo(() => ({ primary, font }), [primary, font]);
+  // CSS huruf per-preset: dimuat malas saat pengguna mengganti font di editor.
+  useEffect(() => { ensureFontCss(font); }, [font]);
 
   const renderCell = useCallback((c: StudioCell, _editable = false, th: { primary: string; font: string } = theme) => (
     <div className={`st-content st-style-${c.style}${c.layout ? ` st-layout-${c.layout}` : ""}`}>
@@ -884,13 +902,15 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
           style={layersOpen ? undefined : { display: "none" }}>
           <LayersPanel
             cells={st.cells}
+            drawings={st.drawings ?? []}
             selectedId={sel}
             onSelect={setSel}
             onToggleHidden={toggleHidden}
             onToggleLock={toggleLock}
-            onMove={moveLayer}
+            onReorder={reorderLayer}
             onAddBlocks={() => selectTab("elements")}
             onShowAll={showAllHidden}
+            onEraseStroke={eraseStroke}
           />
         </aside>
       </div>

@@ -1331,16 +1331,28 @@ main.d-legal { max-width: 720px; }
 @media (min-width: 1100px) { .st-shell { grid-template-columns: 280px minmax(0, 1fr); } }
 .st-panel { position: sticky; top: calc(var(--topbar-h) + 12px); display: grid; gap: var(--sp-3); padding: var(--sp-3); background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-lg); max-height: calc(100vh - var(--topbar-h) - 24px); overflow-y: auto; }
 @media (max-width: 1099px) { .st-panel { position: static; max-height: none; } }
-/* Panel layer kanan Studio: seperti panel kiri (sx-panel) tetapi di sisi kanan kanvas. */
-.sx-layers { position: static; height: 100%; overflow-y: auto; border: 0; border-left: 1px solid var(--line); border-radius: 0; background: var(--card); display: grid; gap: var(--sp-2); padding: var(--sp-3); align-content: start; }
+/* Panel layer kanan Studio: seperti panel kiri (sx-panel) tetapi di sisi kanan kanvas.
+   overflow-x di-clip: nama blok panjang memendek (ellipsis), bukan memunculkan bilah gulir warisan. */
+.sx-layers { position: static; height: 100%; overflow-y: auto; overflow-x: clip; border: 0; border-left: 1px solid var(--line); border-radius: 0; background: var(--card); display: grid; gap: var(--sp-2); padding: var(--sp-3); align-content: start; scrollbar-width: thin; }
+.sx-layers-list { display: grid; gap: var(--sp-2); min-width: 0; align-content: start; }
 .sx-layers[hidden] { display: none; }
 @media (max-width: 900px) {
   .sx-layers { position: fixed; z-index: var(--z-float); top: 52px; bottom: 0; right: 0; width: min(300px, calc(100vw - 56px)); box-shadow: var(--shadow-dialog); }
 }
-/* Baris layer: ikon + nama + tombol mata/kunci. */
-.sx-layers-items { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
-.sx-layer-item { display: flex; align-items: center; gap: 2px; border-radius: var(--radius-sm); padding-right: 4px; }
+/* Baris layer: pegangan seret + ikon + nama (+ tombol mata/kunci di layar sentuh). */
+.sx-layers-items { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; min-width: 0; }
+.sx-layers-items > ul, .sx-layers-group > ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.sx-layer-item { display: flex; align-items: center; gap: 2px; border-radius: var(--radius-sm); padding-right: 4px; min-width: 0; position: relative; }
 .sx-layer-item[aria-current="true"] { background: var(--brand-soft); }
+/* Penanda sasaran letak saat menyeret baris (garis tegas di atas/bawah baris). */
+.sx-layer-item.sx-drop-before::before, .sx-layer-item.sx-drop-after::after {
+  content: ""; position: absolute; left: 4px; right: 4px; height: 2px; border-radius: 1px; background: var(--brand); pointer-events: none;
+}
+.sx-layer-item.sx-drop-before::before { top: -2px; }
+.sx-layer-item.sx-drop-after::after { bottom: -2px; }
+.sx-layer-grip { display: inline-grid; place-items: center; flex: none; width: 18px; height: 28px; color: var(--subtle); cursor: grab; touch-action: none; }
+.sx-layer-grip svg { width: 14px; height: 14px; }
+.sx-layer-item:active .sx-layer-grip { cursor: grabbing; }
 .sx-layer-select {
   flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: 0; border-radius: var(--radius-sm);
   background: transparent; font: inherit; color: var(--ink); cursor: pointer; text-align: left;
@@ -1358,6 +1370,19 @@ main.d-legal { max-width: 720px; }
 .sx-layer-eye svg { width: 15px; height: 15px; }
 .sx-layer-eye[aria-pressed="true"] { color: var(--brand-ink-soft); }
 .sx-layer-eye-off { opacity: 0.6; }
+/* Menu klik-kanan (desktop): aksi mata & kunci melayang seperti tooltip — baris tetap ramping. */
+.sx-layer-menu {
+  position: fixed; z-index: var(--z-popover); min-width: 190px; padding: 4px;
+  display: grid; gap: 1px; background: var(--card); border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-pop); animation: d-pop-in var(--dur-fast) var(--ease-out) both;
+}
+.sx-layer-menu button {
+  display: flex; align-items: center; gap: 10px; width: 100%; height: 32px; padding: 0 10px;
+  border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--ink);
+  font: inherit; font-size: var(--fs-sm); text-align: left; cursor: pointer;
+}
+.sx-layer-menu button svg { width: 15px; height: 15px; color: var(--muted); flex: none; }
+@media (hover: hover){ .sx-layer-menu button:hover { background: var(--surface-hover); } }
 /* Badge jumlah blok tersembunyi di tombol Layer (F4) — pola yang sama dengan lonceng dasbor. */
 .d-icon-btn { position: relative; }
 .sx-layer-badge {
@@ -1365,10 +1390,16 @@ main.d-legal { max-width: 720px; }
   display: inline-grid; place-items: center; border-radius: 999px;
   background: var(--warn); color: #fff; font: 700 var(--fs-3xs)/1 inherit; pointer-events: none;
 }
-/* U1: grup baris — label kecil di atas tiap kelompok (melayang / blok halaman / lapisan bebas). */
+/* U1: grup baris — label kecil di atas tiap kelompok (melayang / blok halaman / lapisan bebas / coretan). */
 .sx-layers-group { display: grid; gap: 2px; }
 .sx-layers-group + .sx-layers-group { margin-top: var(--sp-2); border-top: 1px solid var(--line-soft); padding-top: var(--sp-2); }
-.sx-layers-group-label { margin: 0 0 2px; padding: 0 8px; font: 600 var(--fs-2xs)/1.4 inherit; color: var(--subtle); text-transform: uppercase; letter-spacing: 0.04em; }
+.sx-layers-group-label { margin: 0 0 4px; padding: 0 8px; font: 600 var(--fs-2xs)/1.4 inherit; color: var(--subtle); text-transform: uppercase; letter-spacing: 0.04em; }
+/* Penjelasan singkat per jenis lapisan — membedakan blok halaman vs lapisan z-index vs coretan. */
+.sx-layers-group-hint { margin: -2px 0 4px; padding: 0 8px; font-size: var(--fs-2xs); color: var(--muted); }
+/* Coretan: baris tidak bisa diseret/dipilih — hanya ikon kuas + label + warna + hapus. */
+.sx-layer-stroke { padding-left: 4px; }
+.sx-layer-stroke .sx-layer-name { display: flex; align-items: center; gap: 6px; }
+.sx-layer-swatch { flex: none; width: 12px; height: 12px; border-radius: 999px; box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.2); }
 /* F4: tanda "ada blok tersembunyi" + tautan tampilkan semua. */
 .sx-layers-unhide {
   display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--warn-line);
@@ -1519,7 +1550,10 @@ main.d-legal { max-width: 720px; }
 /* ============================================================
    Studio — halaman khusus layar penuh (sx-*)
    ============================================================ */
-.sx { position: fixed; inset: 0; z-index: var(--z-app); display: grid; grid-template-rows: 52px minmax(0, 1fr); background: var(--bg); }
+.sx {
+  position: fixed; inset: 0; z-index: var(--z-app); display: grid; grid-template-rows: 52px minmax(0, 1fr);
+  background: var(--bg); color: var(--ink); /* warna teks eksplisit: ikut tema dasbor (terang/gelap) */
+}
 .sx-top { display: flex; align-items: center; gap: 8px; padding: 0 12px; border-bottom: 1px solid var(--line); background: var(--bg); min-width: 0; overflow-x: auto; scrollbar-width: none; }
 .sx-top > * { flex: none; }
 .sx-brand { display: inline-flex; align-items: center; gap: 8px; font-weight: 650; font-size: var(--fs-base); margin-left: 4px; }

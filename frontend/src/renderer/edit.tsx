@@ -13,6 +13,8 @@ import { t as tx } from "@/i18n";
 export interface EditApi {
   /** `path` relatif terhadap data section, mis. "title", "cta.label", "items.0.quote". */
   commit: (path: string, value: string) => void;
+  /** Dipanggil saat teks blok mulai disunting (fokus) — Studio memakai ini untuk membuka panel pengaturan blok. */
+  focus?: () => void;
 }
 export const EditContext = createContext<EditApi | null>(null);
 
@@ -38,6 +40,7 @@ export function T({ path, v, multiline, placeholder }: { path: string; v: Json |
       aria-multiline={multiline || undefined}
       aria-label={tx("Ubah {0}", path)}
       onBlur={(e) => done(e.currentTarget)}
+      onFocus={() => edit.focus?.()}
       onKeyDown={(e: KeyboardEvent<HTMLSpanElement>) => {
         e.stopPropagation();
         if (e.key === "Escape") { e.currentTarget.innerText = t; e.currentTarget.blur(); }

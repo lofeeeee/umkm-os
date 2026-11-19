@@ -16,6 +16,7 @@ import { route } from "@/shop/route";
 import { AccountPage, CartFab, CartPage, LegalPage, OrderPage, ProductPage, VerifyPage } from "@/shop/views";
 import { ChatWidget } from "@/chat/widget";
 import { inlinePage } from "@/renderer/inline";
+import { FontLoader } from "@/renderer/FontLoader";
 import "@/shop/shop.css";
 import { t } from "@/i18n";
 
@@ -72,6 +73,7 @@ function WebsitePage({ slug }: { slug: string }) {
       // ADR-0017: dokumen Studio. Chatbot tampil hanya bila plugin Chatbot dipasang di halaman.
       return (
         <main>
+          <FontLoader font={content.theme?.font} />
           <StudioSite
             doc={content}
             business={site.business}
@@ -87,6 +89,7 @@ function WebsitePage({ slug }: { slug: string }) {
     }
     return (
       <main>
+        <FontLoader font={site.page.content.theme?.font} />
         <Site
           content={site.page.content}
           business={site.business}

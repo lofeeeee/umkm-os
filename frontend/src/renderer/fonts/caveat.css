@@ -1,0 +1,8 @@
+/* Caveat (variabel) — hanya bila preset "caveat". */
+@font-face {
+  font-family: "Caveat Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400 700;
+  src: url(@fontsource-variable/caveat/files/caveat-latin-wght-normal.woff2) format("woff2-variations");
+}

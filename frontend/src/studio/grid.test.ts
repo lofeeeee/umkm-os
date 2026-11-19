@@ -109,10 +109,24 @@ describe("moveBy — pindah tanpa menyeret (WCAG 2.5.7)", () => {
     expect(moveBy([A, B], "a", "up")).toEqual([A, B]);
     const locked = [A, { ...B, locked: true }];
     expect(moveBy(locked, "b", "up")).toEqual(locked);
-    // tetangga bawah terkunci: item melompat ke bawahnya, item terkunci tetap
+  });
+  it("tetangga terkunci dilewati — item terkunci tidak pernah pindah", () => {
+    // Satu-satunya tetangga terkunci: tidak ada yang bergerak sama sekali.
     const r = moveBy([A, { ...B, locked: true }], "a", "down");
     expect(at(r, "b").y).toBe(4);
-    expect(at(r, "a").y).toBe(8);
+    expect(at(r, "a").y).toBe(0);
+    // Regresi: item tidak-terkunci di atas blok terkunci, ditekan "up" → blok terkunci
+    // dulu ikut tertukar ke atas (bug). Kini tetap di tempat.
+    const up = moveBy([{ ...A, locked: true }, B], "b", "up");
+    expect(at(up, "a").y).toBe(0);
+    expect(at(up, "b").y).toBe(4);
+    // Blok terkunci menjadi penghalang: B di bawahnya tidak bisa melompati ke blok bebas
+    // di atas (akan menabrak blok terkunci), sehingga tidak ada yang bergerak.
+    const cells = [{ ...C, y: 0 }, { ...A, y: 3, locked: true }, { ...B, y: 7 }];
+    const sw = moveBy(cells, "b", "up");
+    expect(at(sw, "a").y).toBe(3);
+    expect(at(sw, "c").y).toBe(0);
+    expect(at(sw, "b").y).toBe(7);
   });
 });
 
