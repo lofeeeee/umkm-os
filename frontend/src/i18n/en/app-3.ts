@@ -508,7 +508,6 @@ export const APP_3: Record<string, string> = {
   "Kunci posisi blok {0}": "Lock block {0}",
   "Tampilkan semua": "Show all",
   "{0} blok disembunyikan": "{0} blocks hidden",
-  "Cari blok…": "Search blocks…",
   "Tidak ada blok yang cocok.": "No matching blocks.",
   "Blok halaman": "Page blocks",
   "Lapisan melayang": "Floating layers",

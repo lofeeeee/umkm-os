@@ -125,3 +125,58 @@ test("studio: template → edit inline → simpan otomatis → terbit → situs 
 
   expect(errors).toEqual([]);
 });
+
+// Urutan menu halaman: seret di panel Halaman (mouse) atau ↑/↓ pada pegangan (keyboard) → tersimpan di server
+// dan dipakai navigasi. Beranda selalu pertama.
+test("studio: urutan menu halaman bisa diseret dan tersimpan", async ({ browser }) => {
+  test.skip(!APP || !API || !ROOT, "APP_URL/API_URL/ROOT tidak diset");
+  test.setTimeout(90_000);
+  const slug = `urut${Date.now().toString(36)}`;
+  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const page = await ctx.newPage();
+  await page.goto(`${APP}/login`);
+  const reg = await page.evaluate(async ([api, b]) => (await fetch(`${api}/api/v1/auth/register`, {
+    method: "POST", credentials: "include", headers: { "content-type": "application/json" }, body: JSON.stringify(b),
+  })).status, [API, { email: `${slug}@x.id`, password: "rahasia-studio-123", business_name: `Toko ${slug}`, slug, accept_terms: true, accept_privacy: true }] as const);
+  expect(reg).toBe(201);
+  await page.goto(`${APP}/login`);
+  await page.getByLabel("Email").fill(`${slug}@x.id`);
+  await page.getByLabel("Password").fill("rahasia-studio-123");
+  await page.getByRole("button", { name: "Masuk" }).click();
+  await page.getByRole("link", { name: "Kelola website" }).click();
+  await page.waitForURL(/\/website\?tenant=/);
+  await page.getByRole("link", { name: "Buka Studio" }).first().click();
+  await page.waitForURL(/\/studio\?tenant=/);
+  await page.getByRole("button", { name: "Pakai Hangat" }).click();
+  await expect(page.locator(".st-save")).toHaveText(/Draf tersimpan/, { timeout: 15_000 });
+
+  const rail = page.getByRole("navigation", { name: "Bilah alat Studio" });
+  const list = page.getByRole("list", { name: "Daftar halaman" });
+  const order = () => list.locator("[data-page-slug]").evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.pageSlug));
+  // Templat Hangat membuat beberapa halaman (Menu, Tentang kami, Blog, artikel).
+  await rail.getByRole("button", { name: "Halaman" }).click();
+  const start = await order();
+  expect(start[0]).toBe("home");
+  expect(start).toEqual(expect.arrayContaining(["menu", "blog"]));
+  const pos = async (s: string) => (await order()).indexOf(s);
+
+  // Mouse: seret "Blog" ke atas "Menu".
+  await list.locator('[data-page-slug="blog"]').dragTo(list.locator('[data-page-slug="menu"]'), { targetPosition: { x: 40, y: 4 } });
+  await expect(page.getByRole("status").filter({ hasText: "Urutan menu disimpan." })).toBeVisible();
+  await expect.poll(async () => (await pos("blog")) < (await pos("menu"))).toBe(true);
+  const dragged = await order();
+  expect(dragged[0]).toBe("home");
+  // Navigasi di kanvas ikut urutan baru (Blog sebelum Menu).
+  const nav = page.getByRole("main", { name: "Kanvas halaman" }).getByRole("navigation", { name: "Halaman" });
+  const labels = await nav.getByRole("link").allTextContents();
+  expect(labels.indexOf("Blog")).toBeLessThan(labels.indexOf("Menu"));
+
+  // Tersimpan di server (muat ulang), lalu keyboard: ↓ pada pegangan "Blog" mengembalikannya ke bawah Menu.
+  await page.reload();
+  await rail.getByRole("button", { name: "Halaman" }).click();
+  await expect.poll(order).toEqual(dragged);
+  await page.getByRole("button", { name: /^Ubah urutan Blog/ }).press("ArrowDown");
+  await expect.poll(async () => (await pos("blog")) > (await pos("menu"))).toBe(true);
+  await expect(page.getByRole("status").filter({ hasText: "Dipindah ke posisi" })).toHaveCount(1);
+  await ctx.close();
+});

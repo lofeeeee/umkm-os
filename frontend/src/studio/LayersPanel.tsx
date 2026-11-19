@@ -175,7 +175,7 @@ export function LayersPanel({ cells, drawings = [], selectedId, onSelect, onTogg
         {/* F3: saring baris. */}
         <label className="st-search sx-layers-search">
           <MagnifyingGlass aria-hidden="true" weight="bold" />
-          <input type="search" aria-label={tx("Cari blok")} placeholder={tx("Cari blok…")} value={q} onChange={(e) => setQ(e.target.value)} />
+          <input type="search" aria-label={tx("Cari layer")} placeholder={tx("Cari layer…")} value={q} onChange={(e) => setQ(e.target.value)} />
           {q && <button type="button" className="st-search-x" onClick={() => setQ("")} aria-label={tx("Hapus pencarian")}><X weight="bold" /></button>}
         </label>
       </div>

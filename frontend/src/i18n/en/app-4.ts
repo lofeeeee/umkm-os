@@ -775,4 +775,12 @@ export const APP_4: Record<string, string> = {
   "Warna, font, navigasi, dan footer mengikuti brand kit secara otomatis. Pratinjau memakai data contoh.": "Colours, fonts, navigation and footer follow the brand kit automatically. The preview uses sample data.",
   "Teks halaman": "Page text",
   "Kosongkan untuk memakai teks bawaan.": "Leave empty to use the default text.",
+  // Studio: urutan menu halaman
+  "Dipindah ke posisi {0} dari {1}": "Moved to position {0} of {1}",
+  "Seret untuk mengubah urutan menu (atau ↑/↓)": "Drag to reorder the menu (or ↑/↓)",
+  "Ubah urutan {0}: tekan panah atas atau bawah": "Reorder {0}: press the up or down arrow",
+  "Seret ⋮⋮ untuk mengatur urutan menu navigasi. Beranda selalu pertama.": "Drag ⋮⋮ to set the navigation menu order. Home always comes first.",
+  "Urutan menu disimpan.": "Menu order saved.",
+  "Cari layer": "Search layers",
+  "Cari layer…": "Search layers…",
 };

@@ -3,6 +3,7 @@
 import { useId, useState } from "react";
 import {
   Crown,
+  DotsSixVertical,
   Files,
   House,
   Plus,
@@ -30,6 +31,8 @@ export interface PagesPanelProps {
   onSelectPage: (slug: string) => void;
   onCreatePage: (slug: string, title: string, kind?: PageKind) => Promise<boolean>;
   onDeletePage: (slug: string) => Promise<boolean>;
+  /** Simpan urutan menu (semua slug selain beranda, urutan baru). Tanpa ini daftar tidak bisa diseret. */
+  onReorder?: (slugs: string[]) => void;
   isPro: boolean;
   onUpgradeClick: () => void;
   defaultOpenAdd?: boolean;
@@ -103,6 +106,7 @@ export function PagesPanel({
   onSelectPage,
   onCreatePage,
   onDeletePage,
+  onReorder,
   isPro,
   onUpgradeClick,
   defaultOpenAdd = false,
@@ -185,6 +189,28 @@ export function PagesPanel({
     await confirmDeletePage(page, onDeletePage, confirm);
   };
 
+  // Urutan menu: beranda selalu pertama; sisanya bisa diseret (mouse) atau digeser dengan ↑/↓ pada pegangan.
+  const home = pages.find((p) => p.slug === "home");
+  const rest = pages.filter((p) => p.slug !== "home");
+  const [drag, setDrag] = useState<{ slug: string; order: string[] } | null>(null);
+  const order = drag?.order ?? rest.map((p) => p.slug);
+  const ordered = [...(home ? [home] : []), ...order.map((s) => rest.find((p) => p.slug === s)).filter((p): p is PageItem => !!p)];
+  const sortable = !!onReorder && rest.length > 1;
+  const moveTo = (list: string[], slug: string, to: number) => {
+    const next = list.filter((s) => s !== slug);
+    next.splice(Math.max(0, Math.min(next.length, to)), 0, slug);
+    return next;
+  };
+  const [announce, setAnnounce] = useState("");
+  const nudge = (slug: string, by: -1 | 1) => {
+    const cur = rest.map((p) => p.slug);
+    const at = cur.indexOf(slug);
+    if (at + by < 0 || at + by >= cur.length) return;
+    const next = moveTo(cur, slug, at + by);
+    onReorder?.(next);
+    setAnnounce(t("Dipindah ke posisi {0} dari {1}", String(at + by + 2), String(cur.length + 1)));
+  };
+
   return (
     <div className={`st-pages ${className}`.trim()}>
       <div className="st-panel-head st-panel-head-row">
@@ -201,12 +227,52 @@ export function PagesPanel({
       </div>
 
       <ul className="st-page-list" aria-label={t("Daftar halaman")}>
-        {[...pages].sort((a, b) => (a.slug === "home" ? -1 : b.slug === "home" ? 1 : 0)).map((page, i) => {
+        {ordered.map((page, i) => {
           const isActive = page.slug === activeSlug;
           const isHome = page.slug === "home";
           const published = page.published_version != null;
           return (
-            <li key={page.slug} className="st-page" data-page-slug={page.slug} data-active={isActive ? "true" : "false"}>
+            <li key={page.slug} className="st-page" data-page-slug={page.slug} data-active={isActive ? "true" : "false"}
+              data-dragging={drag?.slug === page.slug || undefined}
+              draggable={sortable && !isHome}
+              onDragStart={(e) => {
+                if (!sortable || isHome) return;
+                e.dataTransfer.effectAllowed = "move";
+                e.dataTransfer.setData("text/plain", page.slug);
+                setDrag({ slug: page.slug, order: rest.map((p) => p.slug) });
+              }}
+              onDragOver={(e) => {
+                if (!drag) return;
+                e.preventDefault();
+                e.dataTransfer.dropEffect = "move";
+                if (isHome || page.slug === drag.slug) return;
+                const r = e.currentTarget.getBoundingClientRect();
+                const target = drag.order.indexOf(page.slug) + (e.clientY > r.top + r.height / 2 ? 1 : 0);
+                const from = drag.order.indexOf(drag.slug);
+                const next = moveTo(drag.order, drag.slug, target > from ? target - 1 : target);
+                if (next.join() !== drag.order.join()) setDrag({ ...drag, order: next });
+              }}
+              onDrop={(e) => {
+                if (!drag) return;
+                e.preventDefault();
+                if (drag.order.join() !== rest.map((p) => p.slug).join()) onReorder?.(drag.order);
+                setDrag(null);
+              }}
+              onDragEnd={() => setDrag(null)}
+            >
+              {sortable && (
+                isHome
+                  ? <span className="st-page-grip" aria-hidden="true" />
+                  : <button type="button" className="st-page-grip" title={t("Seret untuk mengubah urutan menu (atau ↑/↓)")}
+                      aria-label={t("Ubah urutan {0}: tekan panah atas atau bawah", page.title)}
+                      onKeyDown={(e) => {
+                        if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
+                        e.preventDefault();
+                        nudge(page.slug, e.key === "ArrowUp" ? -1 : 1);
+                      }}>
+                      <DotsSixVertical weight="bold" aria-hidden="true" />
+                    </button>
+              )}
               <button type="button" className="st-page-main" onClick={() => onSelectPage(page.slug)} aria-current={isActive ? "page" : undefined}>
                 <span className="st-page-icon" aria-hidden="true">
                   {isHome ? <House weight={isActive ? "fill" : "duotone"} /> : <Files weight={isActive ? "fill" : "duotone"} />}
@@ -235,6 +301,8 @@ export function PagesPanel({
           );
         })}
       </ul>
+      {sortable && <p className="d-hint st-page-sort-hint">{t("Seret ⋮⋮ untuk mengatur urutan menu navigasi. Beranda selalu pertama.")}</p>}
+      <span className="sr-only" role="status" aria-live="polite">{announce}</span>
 
       {full ? (
         <div className="st-pro-note">

@@ -9900,6 +9900,62 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
       security:
       - sessionCookie: []
+  /api/v1/tenants/{tenant_id}/website/page-order:
+    put:
+      tags:
+      - website
+      summary: |-
+        Simpan urutan menu halaman (seret di panel Halaman Studio). Berlaku langsung untuk navigasi
+        situs terbit — urutan menu bukan isi halaman, jadi tidak menunggu terbit.
+      operationId: reorder_pages
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PageOrder'
+        required: true
+      responses:
+        '200':
+          description: Urutan disimpan
+        '405':
+          description: Method tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '408':
+          description: Request melebihi `server.request_timeout_secs`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          description: Body melebihi `server.body_limit_bytes`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '422':
+          description: Daftar slug tidak valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Kesalahan internal (tanpa detail internal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - sessionCookie: []
   /api/v1/tenants/{tenant_id}/website/pages/{slug}/draft:
     get:
       tags:
@@ -11951,6 +12007,17 @@ components:
           type: string
         total:
           type: string
+    PageOrder:
+      type: object
+      required:
+      - slugs
+      properties:
+        slugs:
+          type: array
+          items:
+            type: string
+          description: Slug halaman dalam urutan menu yang diinginkan (beranda selalu pertama).
+      additionalProperties: false
     PageView:
       type: object
       required:

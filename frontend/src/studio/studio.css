@@ -337,3 +337,12 @@
 /* Panel halaman sistem: alamat halaman sebagai chip, bukan teks kode lepas di samping judul. */
 .st-sys-path { margin: 0 0 8px; }
 .st-sys-path code { display: inline-block; padding: 2px 8px; border-radius: 6px; background: var(--surface-2, var(--neutral-badge-bg)); color: var(--ink-2); font-size: var(--fs-xs); }
+
+/* Urutan menu halaman: pegangan seret di kiri; baris yang diseret memudar, sisanya bergeser. */
+.st-page-grip { display: grid; place-items: center; width: 22px; align-self: stretch; margin-left: 4px; flex: none; border: 0; border-radius: 8px; background: transparent; color: var(--muted); cursor: grab; padding: 0; }
+.st-page-grip svg { width: 16px; height: 16px; }
+span.st-page-grip { cursor: default; }
+@media (hover: hover) { button.st-page-grip:hover { color: var(--ink); background: var(--surface-2, var(--neutral-badge-bg)); } }
+.st-page[draggable="true"] { cursor: grab; }
+.st-page[data-dragging] { opacity: 0.45; border-style: dashed; }
+.st-page-sort-hint { margin: 6px 2px 0; }

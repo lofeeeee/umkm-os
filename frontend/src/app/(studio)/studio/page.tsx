@@ -286,6 +286,23 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
     }
   }, [activeSlug, base, switchPage]);
 
+  /** Urutan menu halaman (seret di panel Halaman). Optimistis: kembali ke urutan lama bila gagal. */
+  const reorderPages = useCallback(async (slugs: string[]) => {
+    let prev: PageItem[] = [];
+    setPages((p) => {
+      prev = p;
+      const home = p.filter((x) => x.slug === "home");
+      return [...home, ...slugs.map((s) => p.find((x) => x.slug === s)).filter((x): x is PageItem => !!x)];
+    });
+    try {
+      await api("PUT", `${base}/website/page-order`, { json: { slugs } });
+      toast.ok(tx("Urutan menu disimpan."));
+    } catch (e) {
+      setPages(prev);
+      toast.error(describe(e));
+    }
+  }, [base]);
+
   /* ---------------- Theme & Background ---------------- */
   const themeConfig: ThemeConfig = useMemo(() => ({
     primary: st?.primary ?? "#4F46E5",
@@ -770,6 +787,7 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
               onSelectSystem={(k) => { setSel(null); setSystemPage(k); }}
               onCreatePage={createPage}
               onDeletePage={deletePage}
+              onReorder={(slugs) => void reorderPages(slugs)}
               isPro={planCode === "pro"}
               onUpgradeClick={() => window.open(`/subscription?tenant=${ctx.tenant.id}`, "_self")}
             />

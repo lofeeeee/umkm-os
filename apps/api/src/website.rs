@@ -550,6 +550,51 @@ pub async fn create_page(
     ))
 }
 
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
+pub struct PageOrder {
+    /// Slug halaman dalam urutan menu yang diinginkan (beranda selalu pertama).
+    pub slugs: Vec<String>,
+}
+
+/// Simpan urutan menu halaman (seret di panel Halaman Studio). Berlaku langsung untuk navigasi
+/// situs terbit — urutan menu bukan isi halaman, jadi tidak menunggu terbit.
+#[utoipa::path(
+    put, path = "/api/v1/tenants/{tenant_id}/website/page-order", tag = "website",
+    params(("tenant_id" = Uuid, Path)), request_body = PageOrder,
+    responses(
+        (status = 200, description = "Urutan disimpan"),
+        (status = 422, description = "Daftar slug tidak valid", body = umkm_shared::http::ErrorEnvelope)
+    )
+)]
+pub async fn reorder_pages(
+    State(state): State<AppState>,
+    ReqId(id): ReqId,
+    ClientIp(ip): ClientIp,
+    Member(actor): Member,
+    Json(req): Json<PageOrder>,
+) -> Result<Json<SuccessEnvelope<()>>, ApiError> {
+    actor.require("website.edit")?;
+    let mut seen = std::collections::HashSet::new();
+    if req.slugs.len() > 100
+        || !req
+            .slugs
+            .iter()
+            .all(|s| is_valid_page_slug(s) && seen.insert(s.as_str()))
+    {
+        return Err(crate::validation::one("slugs", "invalid"));
+    }
+    repo::reorder_pages(
+        pool(&state)?,
+        &actor,
+        &req.slugs,
+        (Some(id.as_str()), Some(&ip)),
+    )
+    .await
+    .map_err(repo_err)?;
+    Ok(Json(SuccessEnvelope::new((), &id)))
+}
+
 /// Hapus halaman website tenant.
 #[utoipa::path(
     delete, path = "/api/v1/tenants/{tenant_id}/website/pages/{slug}", tag = "website",
@@ -943,6 +988,7 @@ pub fn routes() -> Router<AppState> {
             get(preview_template),
         )
         .route(&format!("{t}/pages"), post(create_page))
+        .route(&format!("{t}/page-order"), put(reorder_pages))
         .route(&format!("{t}/pages/{{slug}}"), delete(delete_page))
         .route(
             &format!("{t}/pages/{{slug}}/draft"),

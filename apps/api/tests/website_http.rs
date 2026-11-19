@@ -683,6 +683,85 @@ async fn delete_page_rules(pool: PgPool) {
     assert_eq!(r.status, 404);
 }
 
+async fn order_req(a: &TestApp, t: Uuid, who: &Who, slugs: Value) -> Res {
+    json(
+        &a.router,
+        Method::PUT,
+        &format!("{}/page-order", w(t)),
+        Some(who),
+        Some(json!({ "slugs": slugs })),
+    )
+    .await
+}
+
+async fn menu(a: &TestApp, t: Uuid, who: &Who) -> Vec<String> {
+    let r = json(&a.router, Method::GET, &w(t), Some(who), None).await;
+    r.json()["data"]["pages"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|p| p["slug"].as_str().unwrap().to_owned())
+        .collect()
+}
+
+#[sqlx::test(migrator = "MIGRATOR")]
+async fn page_order_drives_the_menu_and_home_stays_first(pool: PgPool) {
+    let a = app(&pool).await;
+    let t = tenant(&pool, "toko-a").await;
+    let owner = member(&pool, t, "Owner").await;
+    let viewer = member(&pool, t, "Viewer").await;
+    select(&a, t, &owner, "modern_store").await;
+    for (s, n) in [
+        ("about", "Tentang"),
+        ("contact", "Kontak"),
+        ("promo", "Promo"),
+    ] {
+        assert_eq!(create_page_req(&a, t, &owner, s, n).await.status, 201);
+    }
+    // Bawaan: beranda lalu abjad.
+    assert_eq!(
+        menu(&a, t, &owner).await,
+        ["home", "about", "contact", "promo"]
+    );
+    // RBAC & validasi.
+    assert_eq!(
+        order_req(&a, t, &viewer, json!(["promo"])).await.status,
+        403
+    );
+    assert_eq!(
+        order_req(&a, t, &owner, json!(["promo", "promo"]))
+            .await
+            .status,
+        422
+    );
+    assert_eq!(
+        order_req(&a, t, &owner, json!(["Bad Slug"])).await.status,
+        422
+    );
+    // Urutan pemilik dipakai; "home" di tengah daftar tetap pertama; slug tak dikenal diabaikan.
+    let r = order_req(
+        &a,
+        t,
+        &owner,
+        json!(["promo", "home", "contact", "ghost", "about"]),
+    )
+    .await;
+    assert_eq!(r.status, 200, "{}", r.json());
+    assert_eq!(
+        menu(&a, t, &owner).await,
+        ["home", "promo", "contact", "about"]
+    );
+    // Halaman yang tidak disebut kembali ke belakang (urutan bawaan).
+    assert_eq!(
+        order_req(&a, t, &owner, json!(["contact"])).await.status,
+        200
+    );
+    assert_eq!(
+        menu(&a, t, &owner).await,
+        ["home", "contact", "about", "promo"]
+    );
+}
+
 #[sqlx::test(migrator = "MIGRATOR")]
 async fn site_theme_is_drafted_then_published_over_every_page(pool: PgPool) {
     let a = app(&pool).await;

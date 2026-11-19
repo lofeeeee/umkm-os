@@ -20,6 +20,7 @@ pub mod actions {
     pub const PAGE_CREATED: &str = "website.page_created";
     pub const PAGE_DELETED: &str = "website.page_deleted";
     pub const THEME_SAVED: &str = "website.theme_saved";
+    pub const PAGES_REORDERED: &str = "website.pages_reordered";
 }
 
 pub const HOME: &str = "home";
@@ -181,7 +182,7 @@ async fn state_in(
         "SELECT p.slug, p.title, p.draft_revision, v.version AS published_version
          FROM website_pages p LEFT JOIN website_page_versions v ON v.id = p.published_version_id
          WHERE p.tenant_id = $1 AND p.website_id = $2
-         ORDER BY (p.slug = 'home') DESC, p.slug",
+         ORDER BY (p.slug = 'home') DESC, p.nav_position NULLS LAST, p.slug",
     )
     .bind(t.as_uuid())
     .bind(w.get::<Uuid, _>("id"))
@@ -436,6 +437,52 @@ pub async fn delete_page(
         actions::PAGE_DELETED,
         page_id,
         serde_json::json!({ "slug": slug }),
+        ctx,
+    )
+    .await?;
+    tx.commit().await?;
+    Ok(())
+}
+
+/// Simpan urutan menu halaman (urutan `slugs` = urutan tampil). Slug yang tidak ada diabaikan;
+/// halaman yang tidak disebut kembali ke urutan bawaan (setelah yang diurutkan). Beranda tetap pertama.
+pub async fn reorder_pages(
+    pool: &PgPool,
+    actor: &Actor,
+    slugs: &[String],
+    ctx: Ctx<'_>,
+) -> Result<(), WebsiteError> {
+    let mut tx = tx(pool, actor.tenant_id).await?;
+    let tid = actor.tenant_id.as_uuid();
+    let site: Uuid = sqlx::query_scalar("SELECT id FROM tenant_websites WHERE tenant_id = $1")
+        .bind(tid)
+        .fetch_optional(&mut *tx)
+        .await?
+        .ok_or(WebsiteError::NotFound)?;
+    sqlx::query(
+        "UPDATE website_pages p
+         SET nav_position = o.pos
+         FROM (SELECT s.slug, s.ord::int - 1 AS pos FROM unnest($2::text[]) WITH ORDINALITY AS s(slug, ord)) o
+         WHERE p.tenant_id = $1 AND p.slug = o.slug",
+    )
+    .bind(tid)
+    .bind(slugs)
+    .execute(&mut *tx)
+    .await?;
+    sqlx::query(
+        "UPDATE website_pages SET nav_position = NULL
+         WHERE tenant_id = $1 AND NOT (slug = ANY($2::text[])) AND nav_position IS NOT NULL",
+    )
+    .bind(tid)
+    .bind(slugs)
+    .execute(&mut *tx)
+    .await?;
+    audit(
+        &mut tx,
+        actor,
+        actions::PAGES_REORDERED,
+        site,
+        serde_json::json!({ "slugs": slugs }),
         ctx,
     )
     .await?;
@@ -716,7 +763,7 @@ pub async fn published_pages(
                 to_char(v.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS published_at
          FROM website_pages p JOIN website_page_versions v ON v.id = p.published_version_id
          WHERE p.tenant_id = $1 AND v.tenant_id = $1
-         ORDER BY (p.slug = 'home') DESC, p.slug",
+         ORDER BY (p.slug = 'home') DESC, p.nav_position NULLS LAST, p.slug",
     )
     .bind(t.as_uuid())
     .fetch_all(&mut *tx)
