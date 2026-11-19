@@ -1,0 +1,8 @@
+/* DM Serif Display 400 (subset latin) — hanya bila preset "dmserif". */
+@font-face {
+  font-family: "DM Serif Display";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url(@fontsource/dm-serif-display/files/dm-serif-display-latin-400-normal.woff2) format("woff2");
+}

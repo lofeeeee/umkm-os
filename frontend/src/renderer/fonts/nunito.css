@@ -1,0 +1,8 @@
+/* Nunito (variabel) — hanya dimuat bila preset situs memakai "nunito". */
+@font-face {
+  font-family: "Nunito Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 200 1000;
+  src: url(@fontsource-variable/nunito/files/nunito-latin-wght-normal.woff2) format("woff2-variations");
+}

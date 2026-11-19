@@ -68,14 +68,15 @@ const sharesColumns = (a: Cell, b: Cell) => a.x < b.x + b.w && b.x < a.x + a.w;
 
 /**
  * Pindah tanpa menyeret (WCAG 2.5.7, P9-6): kiri/kanan satu kolom; atas/bawah bertukar dengan tetangga
- * terdekat yang berbagi kolom. Item terkunci tidak bergerak dan tidak ikut ditukar.
+ * terdekat yang berbagi kolom. Item terkunci tidak bergerak dan tidak ikut ditukar — tetangga terkunci
+ * dilewati, sehingga item bergerak menukar dengan blok tidak-terkunci berikutnya.
  */
 export function moveBy(cells: Cell[], id: string, dir: "up" | "down" | "left" | "right"): Cell[] {
   const c = cells.find((x) => x.id === id);
   if (!c || c.locked) return cells;
   if (c.layer) return place(cells, { ...c, x: c.x + (dir === "left" ? -1 : dir === "right" ? 1 : 0), y: c.y + (dir === "up" ? -1 : dir === "down" ? 1 : 0) });
   if (dir === "left" || dir === "right") return place(cells, { ...c, x: c.x + (dir === "left" ? -1 : 1) });
-  const others = cells.filter((x) => x.id !== id && !x.layer && sharesColumns(x, c));
+  const others = cells.filter((x) => x.id !== id && !x.layer && !x.locked && sharesColumns(x, c));
   if (dir === "up") {
     const above = others.filter((x) => x.y + x.h <= c.y).sort((a, b) => b.y + b.h - (a.y + a.h))[0];
     if (!above) return cells;
@@ -83,8 +84,7 @@ export function moveBy(cells: Cell[], id: string, dir: "up" | "down" | "left" | 
   }
   const below = others.filter((x) => x.y >= c.y + c.h).sort((a, b) => a.y - b.y)[0];
   if (!below) return cells;
-  if (!below.locked) return place(cells, { ...below, y: c.y });
-  return place(cells, { ...c, y: below.y + below.h });
+  return place(cells, { ...below, y: c.y });
 }
 
 /** Tambah item baru di posisi tertentu (atau paling bawah bila `at` kosong). */

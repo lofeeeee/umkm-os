@@ -1,0 +1,8 @@
+/* Fraunces (variabel, opsi SOFT/WONK dinonaktifkan) — hanya bila preset "fraunces". */
+@font-face {
+  font-family: "Fraunces Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 300 900;
+  src: url(@fontsource-variable/fraunces/files/fraunces-latin-wght-normal.woff2) format("woff2-variations");
+}
