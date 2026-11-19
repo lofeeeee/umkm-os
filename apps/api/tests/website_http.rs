@@ -762,6 +762,140 @@ async fn page_order_drives_the_menu_and_home_stays_first(pool: PgPool) {
     );
 }
 
+async fn page_req(
+    a: &TestApp,
+    t: Uuid,
+    who: &Who,
+    m: Method,
+    slug: &str,
+    tail: &str,
+    body: Option<Value>,
+) -> Res {
+    json(
+        &a.router,
+        m,
+        &format!("{}/pages/{slug}{tail}", w(t)),
+        Some(who),
+        body,
+    )
+    .await
+}
+
+#[sqlx::test(migrator = "MIGRATOR")]
+async fn system_pages_are_studio_pages_with_one_locked_core_block(pool: PgPool) {
+    let a = app(&pool).await;
+    let t = tenant(&pool, "toko-a").await;
+    let owner = member(&pool, t, "Owner").await;
+    select(&a, t, &owner, "modern_store").await;
+
+    // Rute toko lain tidak bisa dipakai halaman biasa.
+    let r = create_page_req(&a, t, &owner, "produk", "Produk").await;
+    assert_eq!(r.status, 422, "{}", r.json());
+
+    // Starter penuh (Beranda + 4) — halaman sistem tetap bisa dibuat (tidak dihitung).
+    for s in ["a1", "a2", "a3", "a4"] {
+        assert_eq!(create_page_req(&a, t, &owner, s, s).await.status, 201);
+    }
+    let r = create_page_req(&a, t, &owner, "keranjang", "Keranjang").await;
+    assert_eq!(r.status, 201, "{}", r.json());
+    let r = page_req(&a, t, &owner, Method::GET, "keranjang", "/draft", None).await;
+    let (mut doc, rev) = (
+        r.json()["data"]["content"].clone(),
+        r.json()["data"]["revision"].as_i64().unwrap(),
+    );
+    assert_eq!(doc["blocks"][0]["kind"], "shop_cart");
+
+    // Blok bebas boleh ditambah; blok inti tidak boleh hilang, ganda, atau salah jenis.
+    let text = json!({"id": "t1", "kind": "text", "x": 0, "y": 30, "w": 12, "h": 4, "style": "plain", "data": {"body": "Gratis ongkir!"}});
+    doc["blocks"].as_array_mut().unwrap().push(text.clone());
+    let mut no_core = doc.clone();
+    no_core["blocks"] = json!([text]);
+    let r = page_req(
+        &a,
+        t,
+        &owner,
+        Method::PUT,
+        "keranjang",
+        "/draft",
+        Some(json!({"content": no_core, "base_revision": rev})),
+    )
+    .await;
+    assert_eq!(r.status, 422, "{}", r.json());
+    assert!(r.json().to_string().contains("core_block_required"));
+    let mut wrong = doc.clone();
+    wrong["blocks"][0]["kind"] = json!("shop_account");
+    let r = page_req(
+        &a,
+        t,
+        &owner,
+        Method::PUT,
+        "keranjang",
+        "/draft",
+        Some(json!({"content": wrong, "base_revision": rev})),
+    )
+    .await;
+    assert_eq!(r.status, 422, "{}", r.json());
+    let r = page_req(
+        &a,
+        t,
+        &owner,
+        Method::PUT,
+        "keranjang",
+        "/draft",
+        Some(json!({"content": doc, "base_revision": rev})),
+    )
+    .await;
+    assert_eq!(r.status, 200, "{}", r.json());
+
+    // Blok inti tidak boleh dipasang di halaman biasa.
+    let (mut home, hrev) = draft(&a, t, &owner).await;
+    if home["schema_version"] == 2 {
+        home["blocks"].as_array_mut().unwrap().push(json!({"id": "x9", "kind": "shop_cart", "x": 0, "y": 300, "w": 12, "h": 4, "style": "plain", "data": {}}));
+        let r = save(&a, t, &owner, home, hrev).await;
+        assert_eq!(r.status, 422, "{}", r.json());
+    }
+
+    // Terbit: tersedia untuk rute /keranjang tetapi tidak masuk menu navigasi.
+    publish(&a, t, &owner).await;
+    let r = page_req(
+        &a,
+        t,
+        &owner,
+        Method::POST,
+        "keranjang",
+        "/publish",
+        Some(json!({})),
+    )
+    .await;
+    assert_eq!(r.status, 200, "{}", r.json());
+    let r = send(
+        &a.router,
+        Method::GET,
+        "/api/v1/public/site?page=keranjang",
+        None,
+        Some("toko-a.ryasai.my.id"),
+        None,
+        vec![],
+    )
+    .await;
+    assert_eq!(r.status, 200, "{}", r.json());
+    assert_eq!(
+        r.json()["data"]["page"]["content"]["blocks"][1]["data"]["body"],
+        "Gratis ongkir!"
+    );
+    let nav: Vec<String> = r.json()["data"]["pages"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|p| p["slug"].as_str().unwrap().to_owned())
+        .collect();
+    assert!(!nav.contains(&"keranjang".to_owned()), "{nav:?}");
+
+    // Tidak bisa dihapus.
+    let r = delete_page_req(&a, t, &owner, "keranjang").await;
+    assert_eq!(r.status, 400, "{}", r.json());
+}
+
 #[sqlx::test(migrator = "MIGRATOR")]
 async fn site_theme_is_drafted_then_published_over_every_page(pool: PgPool) {
     let a = app(&pool).await;

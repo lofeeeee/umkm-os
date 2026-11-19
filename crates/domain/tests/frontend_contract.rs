@@ -91,6 +91,7 @@ fn studio_document_from_defaults_validates() {
             "logo" => json!({"show_name": true}),
             "article_body" => json!({"body": "Isi artikel"}),
             "blog_list" => json!({"title": "Artikel", "limit": 6}),
+            "shop_cart" | "shop_orders" | "shop_account" => json!({}),
             k => map[k].clone(),
         };
         blocks.push(json!({"id": format!("{}-1", kind.replace('_', "-")), "kind": kind, "x": 0, "y": y, "w": 12, "h": 4, "style": "plain", "data": data}));

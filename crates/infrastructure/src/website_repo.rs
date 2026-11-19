@@ -359,7 +359,10 @@ pub async fn create_page(
             .fetch_optional(&mut *tx)
             .await?
             .ok_or(WebsiteError::NotFound)?;
-    let pages: i64 = sqlx::query_scalar("SELECT count(*) FROM website_pages WHERE website_id = $1")
+    let pages: i64 = sqlx::query_scalar(
+        // Halaman sistem (keranjang/pesanan/akun) tidak dihitung dalam batas paket.
+        "SELECT count(*) FROM website_pages WHERE website_id = $1 AND slug NOT IN ('keranjang', 'pesanan', 'akun')",
+    )
         .bind(website_id)
         .fetch_one(&mut *tx)
         .await?;
@@ -414,7 +417,7 @@ pub async fn delete_page(
     slug: &str,
     ctx: Ctx<'_>,
 ) -> Result<(), WebsiteError> {
-    if slug == HOME || slug == "home" {
+    if slug == HOME || umkm_domain::website::is_system_slug(slug) {
         return Err(WebsiteError::CannotDeleteHome);
     }
     let mut tx = tx(pool, actor.tenant_id).await?;
@@ -763,6 +766,7 @@ pub async fn published_pages(
                 to_char(v.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS published_at
          FROM website_pages p JOIN website_page_versions v ON v.id = p.published_version_id
          WHERE p.tenant_id = $1 AND v.tenant_id = $1
+           AND p.slug NOT IN ('keranjang', 'pesanan', 'akun')
          ORDER BY (p.slug = 'home') DESC, p.nav_position NULLS LAST, p.slug",
     )
     .bind(t.as_uuid())

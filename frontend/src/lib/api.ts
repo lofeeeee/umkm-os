@@ -142,6 +142,9 @@ export const ERROR_TEXT: Record<string, string> = tmap({
   closed_xor_hours: "pilih tutup ATAU isi jam",
   invalid_or_duplicate_date: "tanggal tidak valid atau ganda",
   template_mismatch: "templat tidak sesuai website",
+  reserved_slug: "alamat URL ini dipakai halaman toko (pilih alamat lain)",
+  core_block_required: "blok inti halaman sistem wajib ada tepat satu",
+  core_block_not_allowed: "blok inti hanya boleh di halaman sistemnya",
   latitude_longitude_pair: "isi latitude dan longitude bersamaan",
   control_character: "karakter tidak diizinkan",
   // P3: katalog, stok, CRM, pesanan

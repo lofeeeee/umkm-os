@@ -28,7 +28,7 @@ import type { Business,PageContent,SectionType } from "@/renderer/types";
 import { DEVICE_LABEL, DEVICE_WIDTH, type DeviceViewport } from "@/studio/DeviceFrame";
 import { COLS, height, insert, mobileIndex, moveBy, place, reorderMobile } from "@/studio/grid";
 import { commit, redo, start, undo, type History } from "@/studio/history";
-import { PLUGINS, needsUpgrade, pluginDef, pluginPlan, type PluginKind } from "@/studio/plugins";
+import { PLUGINS, SYSTEM_CORE, isCoreKind, needsUpgrade, pluginDef, pluginPlan, type PluginKind } from "@/studio/plugins";
 import { PluginIcon } from "@/studio/PluginIcon";
 import { LiveCanvas, PLUGIN_MIME, setPaletteDrag } from "@/studio/LiveCanvas";
 import { readiness, type Issue } from "@/studio/readiness";
@@ -38,7 +38,7 @@ import { IconRail, type StudioTab } from "@/studio/IconRail";
 import { LayersPanel } from "@/studio/LayersPanel";
 import { PagesPanel, maxPages, type PageItem, type PageKind } from "@/studio/PagesPanel";
 import { ThemePanel, type ThemeConfig } from "@/studio/ThemePanel";
-import { ShopTextsPanel, SystemPreview, type SystemPage } from "@/studio/SystemPreview";
+import { CorePreview, SYSTEM_PAGES, type SystemPage } from "@/studio/SystemPreview";
 import { PageSettings } from "@/studio/PageSettings";
 import { DrawPanel, type DrawConfig, type DrawTool, type DrawTarget } from "@/studio/DrawPanel";
 import type { DrawingStroke } from "@/studio/DrawingLayer";
@@ -88,8 +88,6 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
   // Sinkronisasi server: template website, revisi draf terakhir, versi terbit.
   /** Tema situs dari server (draf) & JSON terakhir yang tersimpan. */
   const siteTheme = useRef<PageV2["theme"] | null>(null);
-  /** Halaman sistem yang dipratinjau (keranjang/pesanan/akun); null = halaman website biasa. */
-  const [systemPage, setSystemPage] = useState<SystemPage | null>(null);
   const siteThemeSaved = useRef<string | null>(null);
   const [srv, setSrv] = useState<{ template: string; revision: number; published: number | null; savedDoc: string } | null>(null);
   const [saveState, setSaveState] = useState<SaveState>("idle");
@@ -105,6 +103,8 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
   const [activeTab, setActiveTab] = useState<StudioTab>("elements");
   const [pages, setPages] = useState<PageItem[]>([]);
   const [activeSlug, setActiveSlug] = useState("home");
+  /** Halaman sistem (keranjang/pesanan/akun) = halaman Studio biasa dengan blok inti terkunci. */
+  const systemPage: SystemPage | null = SYSTEM_PAGES().find((p) => p.slug === activeSlug)?.kind ?? null;
   const [drawTool, setDrawTool] = useState<DrawTool>(null);
   const [drawConfig, setDrawConfig] = useState<DrawConfig>({ color: "#EF4444", size: 4, opacity: 1 });
   const [drawTarget, setDrawTarget] = useState<DrawTarget>("cell");
@@ -286,6 +286,23 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
     }
   }, [activeSlug, base, switchPage]);
 
+  /** Halaman website (menu) tanpa halaman sistem. */
+  const sitePages = useMemo(() => pages.filter((p) => !(p.slug in SYSTEM_CORE)), [pages]);
+
+  /** Buka halaman sistem di kanvas; dibuat di server saat pertama kali dibuka (berisi blok inti). */
+  const openSystem = useCallback(async (k: SystemPage) => {
+    const sp = SYSTEM_PAGES().find((p) => p.kind === k)!;
+    if (!pages.some((p) => p.slug === sp.slug)) {
+      try {
+        const r = await api<PageItem>("POST", `${base}/website/pages`, { json: { slug: sp.slug, title: sp.title } });
+        setPages((p) => [...p, r]);
+      } catch (e) {
+        if (!(e instanceof ApiError && e.status === 409)) { toast.error(describe(e)); return; }
+      }
+    }
+    await switchPage(sp.slug);
+  }, [base, pages, switchPage]);
+
   /** Urutan menu halaman (seret di panel Halaman). Optimistis: kembali ke urutan lama bila gagal. */
   const reorderPages = useCallback(async (slugs: string[]) => {
     let prev: PageItem[] = [];
@@ -466,6 +483,8 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
     }, `move:${id}`);
   }
   function remove(id: string) {
+    const c = st?.cells.find((x) => x.id === id);
+    if (c && isCoreKind(c.kind)) { toast.info(tx("Blok inti halaman sistem tidak bisa dihapus.")); return; }
     update((s) => ({ ...s, cells: s.cells.filter((c) => c.id !== id) }), "");
     setSel(null);
     toast.info(tx("Blok dihapus. Tekan Ctrl+Z untuk membatalkan."));
@@ -508,7 +527,7 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
     const extra = t.pack?.(input) ?? [];
     if (!extra.length || !srv || !canEdit) return;
     const max = maxPages(planCode === "pro");
-    let list = [...pages];
+    let list = [...sitePages];
     let made = 0;
     let skipped = 0;
     for (const pg of extra) {
@@ -560,7 +579,7 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
 
   const shownPlugins = useMemo(() => {
     const t = q.trim().toLowerCase();
-    return PLUGINS.filter((p) => !t || `${p.name} ${p.desc} ${p.keywords} ${tx(p.keywords)} ${p.category} ${CATEGORY_LABEL[p.category]}`.toLowerCase().includes(t));
+    return PLUGINS.filter((p) => !p.core).filter((p) => !t || `${p.name} ${p.desc} ${p.keywords} ${tx(p.keywords)} ${p.category} ${CATEGORY_LABEL[p.category]}`.toLowerCase().includes(t));
   }, [q]);
 
   const backHref = `/website?tenant=${ctx.tenant.id}`;
@@ -749,16 +768,15 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
       <div className="sx-body" data-panel={panelOpen ? "open" : "closed"} data-layers={layersOpen ? "open" : "closed"}>
         <IconRail activeTab={selected ? null : activeTab} onSelectTab={selectTab} />
         <aside className="st-panel sx-panel" aria-label={selected ? tx("Pengaturan blok") : activeTab === "pages" ? tx("Halaman") : activeTab === "theme" ? tx("Desain") : activeTab === "draw" ? tx("Coretan") : tx("Blok")} hidden={!panelOpen}>
-          {systemPage ? (
-            <ShopTextsPanel kind={systemPage} texts={st.shopTexts} onBack={() => setSystemPage(null)}
-              onChange={(next) => update((x) => ({ ...x, shopTexts: next }), "shop-texts")} />
-          ) : selected ? (
+          {selected ? (
             <Inspector
               c={selected}
               onBack={() => setSel(null)}
               onChange={(patch, key) => setCell(selected.id, patch, key)}
               onWidth={(w) => update((s) => ({ ...s, cells: place(s.cells, { ...selected, w }) as StudioCell[] }), "")}
               mobile={device === "mobile"}
+              shopTexts={st.shopTexts}
+              onShopTexts={(next) => update((x) => ({ ...x, shopTexts: next }), "shop-texts")}
               onLayout={(l) => {
                 // Gambar: popup ada di luar grid, mode lain adalah lapisan bebas di grid (posisi x/y tetap).
                 if (selected.kind === "image") { setCell(selected.id, { layout: l, layer: l !== "popup", autoH: false }, ""); return; }
@@ -780,11 +798,11 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
           ) : activeTab === "pages" ? (
             <>
             <PagesPanel
-              pages={pages}
+              pages={sitePages}
               activeSlug={activeSlug}
-              onSelectPage={(slug) => { setSystemPage(null); void switchPage(slug); }}
+              onSelectPage={(slug) => void switchPage(slug)}
               systemPage={systemPage}
-              onSelectSystem={(k) => { setSel(null); setSystemPage(k); }}
+              onSelectSystem={(k) => void openSystem(k)}
               onCreatePage={createPage}
               onDeletePage={deletePage}
               onReorder={(slugs) => void reorderPages(slugs)}
@@ -873,16 +891,13 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
               <button type="button" className="d-btn d-btn-sm" onClick={() => setDrawTool(null)}>{tx("Selesai")}{" "}<kbd>{tx("Esc")}</kbd></button>
             </div>
           )}
-          {systemPage ? (
-            <SystemPreview kind={systemPage} device={device} theme={previewDoc.theme} business={business}
-              pages={pages.map((p) => ({ slug: p.slug, title: p.title }))} assetUrl={assets.url} products={products} onZoom={setZoom} />
-          ) : <LiveCanvas
+          <LiveCanvas
             device={device}
             doc={previewDoc}
             business={business}
             products={products}
             assetUrl={assets.url}
-            pages={pages.map((p) => ({ slug: p.slug, title: p.title, current: p.slug === activeSlug }))}
+            pages={sitePages.map((p) => ({ slug: p.slug, title: p.title, current: p.slug === activeSlug }))}
             cells={gridCells}
             selectedId={sel}
             onSelect={setSel}
@@ -901,7 +916,8 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
             onEraseStroke={eraseStroke}
             onHint={(m) => toast.info(m)}
             onZoom={setZoom}
-          />}
+            coreBlock={(kind) => <CorePreview kind={kind} theme={previewDoc.theme} business={business} pages={sitePages} assetUrl={assets.url} products={products} />}
+          />
           {!systemPage && st.cells.length === 0 && (
             <div className="sx-empty">
               <strong>{tx("Halaman ini masih kosong")}</strong>
@@ -958,7 +974,7 @@ function StudioEditor({ ctx }: { ctx: TenantCtx }) {
                 {i.cellId && <button type="button" className="d-btn d-btn-sm" onClick={() => { setSel(i.cellId!); setPanelOpen(true); setChecks(null); }}>{tx("Tunjukkan")}</button>}
                 {i.area === "business" && <Link className="d-btn d-btn-sm" href={`/business?tenant=${ctx.tenant.id}`}>{tx("Profil bisnis")}</Link>}
                 {i.area === "products" && <Link className="d-btn d-btn-sm" href={`/products?tenant=${ctx.tenant.id}`}>{tx("Produk")}</Link>}
-                {i.area === "seo" && <button type="button" className="d-btn d-btn-sm" onClick={() => { setSel(null); setSystemPage(null); selectTab("pages"); setPanelOpen(true); setChecks(null); setTimeout(() => document.getElementById("seo-description")?.focus(), 80); }}>{tx("Isi deskripsi")}</button>}
+                {i.area === "seo" && <button type="button" className="d-btn d-btn-sm" onClick={() => { setSel(null); selectTab("pages"); setPanelOpen(true); setChecks(null); setTimeout(() => document.getElementById("seo-description")?.focus(), 80); }}>{tx("Isi deskripsi")}</button>}
                 {i.area === "ai" && <Link className="d-btn d-btn-sm" href={`/ai?tenant=${ctx.tenant.id}`}>{tx("Asisten AI")}</Link>}
               </span>
             </li>

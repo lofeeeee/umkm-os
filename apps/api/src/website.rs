@@ -15,7 +15,7 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use umkm_application::website::editor::{Errors, check_assets, check_document};
+use umkm_application::website::editor::{Errors, check_assets, check_page};
 use umkm_domain::website::is_valid_page_slug;
 use umkm_infrastructure::{
     business_repo,
@@ -296,9 +296,10 @@ async fn validate_full(
     state: &AppState,
     t: TenantId,
     template: &str,
+    slug: &str,
     doc: &Value,
 ) -> Result<(), Errors> {
-    let v = check_document(doc, template)?;
+    let v = check_page(doc, template, slug)?;
     let ids: Vec<Uuid> = v.asset_refs.iter().copied().collect();
     let owned: BTreeSet<Uuid> = match files(state) {
         Ok(f) => f
@@ -506,6 +507,10 @@ pub async fn create_page(
 ) -> Result<(axum::http::StatusCode, Json<SuccessEnvelope<PageView>>), ApiError> {
     actor.require("website.edit")?;
     req.validate()?;
+    let core = umkm_domain::website::system_core(&req.slug);
+    if core.is_none() && umkm_domain::website::is_reserved_slug(&req.slug) {
+        return Err(crate::validation::one("slug", "reserved_slug"));
+    }
 
     // Standar halaman: Halaman 1 = Beranda (slug `home`, dibuat otomatis); halaman berikutnya bernama bebas.
     // Paket hanya membatasi JUMLAH halaman (Starter 5, Pro 30), bukan nama/slug.
@@ -513,8 +518,15 @@ pub async fn create_page(
     let max_pages = umkm_domain::website::max_pages(plan.plan.code == "pro");
 
     let tpl_key = template_of(&state, actor.tenant_id).await?;
-    let initial_content = if let Ok(Some(tpl)) = repo::find_template(pool(&state)?, &tpl_key).await
-    {
+    // Halaman sistem: dokumen Studio dengan blok inti saja; tidak dihitung dalam batas paket.
+    let max_pages = if core.is_some() {
+        usize::MAX
+    } else {
+        max_pages
+    };
+    let initial_content = if let Some(kind) = core {
+        system_page_doc(&tpl_key, kind)
+    } else if let Ok(Some(tpl)) = repo::find_template(pool(&state)?, &tpl_key).await {
         tpl.default_content
     } else {
         serde_json::json!({
@@ -595,6 +607,16 @@ pub async fn reorder_pages(
     Ok(Json(SuccessEnvelope::new((), &id)))
 }
 
+/// Dokumen awal halaman sistem: blok inti selebar halaman (Studio v2). Tema mengikuti brand kit situs.
+fn system_page_doc(template: &str, core: &str) -> Value {
+    serde_json::json!({
+        "schema_version": umkm_domain::website::schema_v2::SCHEMA_VERSION,
+        "template": template,
+        "theme": { "primary": "#2563EB", "font": "inter" },
+        "blocks": [{ "id": "inti", "kind": core, "x": 0, "y": 0, "w": 12, "h": 24, "style": "plain", "data": {} }]
+    })
+}
+
 /// Hapus halaman website tenant.
 #[utoipa::path(
     delete, path = "/api/v1/tenants/{tenant_id}/website/pages/{slug}", tag = "website",
@@ -613,10 +635,10 @@ pub async fn delete_page(
     Path(p): Path<PagePath>,
 ) -> Result<Json<SuccessEnvelope<()>>, ApiError> {
     actor.require("website.edit")?;
-    if p.slug == repo::HOME || p.slug == "home" {
+    if p.slug == repo::HOME || umkm_domain::website::is_system_slug(&p.slug) {
         return Err(ApiError(
             ErrorBody::new(ErrorCode::BadRequest)
-                .with_message("Halaman beranda tidak dapat dihapus"),
+                .with_message("Halaman beranda dan halaman sistem tidak dapat dihapus"),
         ));
     }
     repo::delete_page(
@@ -684,7 +706,7 @@ pub async fn save_draft(
     actor.require("website.edit")?;
     slug_ok(&p.slug)?;
     let template = template_of(&state, actor.tenant_id).await?;
-    validate_full(&state, actor.tenant_id, &template, &req.content)
+    validate_full(&state, actor.tenant_id, &template, &p.slug, &req.content)
         .await
         .map_err(reject)?;
     let rev = repo::save_draft(
@@ -734,7 +756,7 @@ pub async fn publish(
         .await
         .map_err(internal)?
         .ok_or_else(not_found)?;
-    validate_full(&state, actor.tenant_id, &template, &draft.content)
+    validate_full(&state, actor.tenant_id, &template, &p.slug, &draft.content)
         .await
         .map_err(reject)?;
     let out = repo::publish(
@@ -742,7 +764,7 @@ pub async fn publish(
         &actor,
         &p.slug,
         req.revision,
-        |doc| check_document(doc, &template).map(|_| ()),
+        |doc| check_page(doc, &template, &p.slug).map(|_| ()),
         (Some(id.as_str()), Some(&ip)),
     )
     .await

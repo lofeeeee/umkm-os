@@ -63,7 +63,26 @@ export function useShopTexts(): ShopTexts {
   return useShopSite()?.theme.shop ?? {};
 }
 
+/** Halaman toko sebagai BLOK INTI di dokumen Studio (halaman sistem yang ditata pemilik): navigasi,
+ *  footer & latar sudah dari dokumen, jadi bingkai hanya membungkus isi. `preview` = kanvas Studio. */
+export const ShopEmbedCtx = createContext<{ preview?: boolean } | null>(null);
+
 export function ShopFrame({ title, heading = true, wide, children }: { title: string; heading?: boolean; wide?: boolean; children: ReactNode }) {
+  const embed = useContext(ShopEmbedCtx);
+  if (embed) {
+    return (
+      <div className="shop shop-embed" data-preview={embed.preview || undefined}>
+        <div className={`shop-main${wide ? " shop-main-wide" : ""}`}>
+          {heading && <h1 className="shop-title">{title}</h1>}
+          {children}
+        </div>
+      </div>
+    );
+  }
+  return <FullFrame title={title} heading={heading} wide={wide}>{children}</FullFrame>;
+}
+
+function FullFrame({ title, heading, wide, children }: { title: string; heading: boolean; wide?: boolean; children: ReactNode }) {
   const site = useShopSite();
   const preview = !!site?.preview;
   const theme = site?.theme ?? {};

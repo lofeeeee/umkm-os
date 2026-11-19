@@ -18,7 +18,10 @@
     "shape":          { "version": 1, "plan": "starter", "max_per_page": 40, "layouts": ["above", "below", "sticky"] },
     "logo":           { "version": 1, "plan": "starter", "max_per_page": 40, "layouts": [] },
     "article_body":   { "version": 1, "plan": "starter", "max_per_page": 40, "layouts": [] },
-    "blog_list":      { "version": 1, "plan": "starter", "max_per_page": 40, "layouts": ["grid", "list"] }
+    "blog_list":      { "version": 1, "plan": "starter", "max_per_page": 40, "layouts": ["grid", "list"] },
+    "shop_cart":      { "version": 1, "plan": "starter", "max_per_page": 1,  "layouts": [] },
+    "shop_orders":    { "version": 1, "plan": "starter", "max_per_page": 1,  "layouts": [] },
+    "shop_account":   { "version": 1, "plan": "starter", "max_per_page": 1,  "layouts": [] }
   },
   "embed_layouts": { "chatbot": ["floating", "bar"], "whatsapp": ["floating"], "image": ["popup"] }
 }

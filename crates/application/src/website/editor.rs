@@ -16,6 +16,14 @@ pub fn check_document(doc: &Value, website_template: &str) -> Result<ValidPage, 
     Ok(v)
 }
 
+/// Tahap 1 untuk halaman `slug`: skema + template + aturan blok inti halaman sistem.
+pub fn check_page(doc: &Value, website_template: &str, slug: &str) -> Result<ValidPage, Errors> {
+    let v = check_document(doc, website_template)?;
+    umkm_domain::website::check_core_blocks(slug, doc)
+        .map_err(|e| e.into_iter().map(|e| (e.path, e.code)).collect::<Errors>())?;
+    Ok(v)
+}
+
 /// Tahap 2: rujukan aset yang tidak ada / bukan milik tenant -> error per rujukan.
 pub fn check_assets(v: &ValidPage, owned: &BTreeSet<Uuid>) -> Result<(), Errors> {
     let missing: Errors = v

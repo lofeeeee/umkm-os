@@ -303,3 +303,7 @@
 @media (prefers-reduced-motion: reduce) { .shop-stage img { animation: none; } .shop-stage-nav { transition: none; } }
 .shop-account .shop-form .s-btn { width: 100%; }
 .shop-account .shop-form .d-link { display: block; margin: 10px auto 0; }
+
+/* Blok inti halaman sistem di dokumen Studio: isi toko tanpa bingkai sendiri; lebar mengikuti blok. */
+.shop-embed { width: 100%; padding: 8px 16px 24px; box-sizing: border-box; container-type: inline-size; }
+.shop-embed .shop-main { margin-bottom: 0; }

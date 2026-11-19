@@ -82,7 +82,7 @@ pub const MAX_DRAWING_STROKES: usize = 200;
 pub const MAX_STROKE_POINTS: usize = 1000;
 
 /// Plugin resmi (ADR-0019). Data 9 jenis pertama memakai aturan section v1.
-pub const PLUGIN_KINDS: [&str; 18] = [
+pub const PLUGIN_KINDS: [&str; 21] = [
     "hero",
     "about",
     "product_grid",
@@ -101,6 +101,10 @@ pub const PLUGIN_KINDS: [&str; 18] = [
     "logo",
     "article_body",
     "blog_list",
+    // Blok inti halaman sistem (lihat `super::SYSTEM_PAGES`); data = {} (teks memakai `theme.shop`).
+    "shop_cart",
+    "shop_orders",
+    "shop_account",
 ];
 /// Gaya kotak blok. `soft` = 3D lembut (neumorphism), `flat` = 2D datar tanpa bayangan.
 pub const STYLES: [&str; 6] = ["plain", "card", "tint", "dark", "soft", "flat"];
@@ -152,7 +156,7 @@ pub fn layouts(kind: &str) -> &'static [&'static str] {
 /// Batas jumlah per halaman (ADR-0019).
 pub fn max_per_page(kind: &str) -> usize {
     match kind {
-        "chatbot" | "whatsapp" => 1,
+        "chatbot" | "whatsapp" | "shop_cart" | "shop_orders" | "shop_account" => 1,
         _ => MAX_BLOCKS,
     }
 }
@@ -676,6 +680,9 @@ fn data(v: &mut V, kind: &str, d: &Value, p: &str) {
                 v.text(m, p, "title", 120, false);
                 v.text(m, p, "body", 5000, true);
             }
+        }
+        "shop_cart" | "shop_orders" | "shop_account" => {
+            v.object(d, p, &[]);
         }
         "chatbot" => {
             if let Some(m) = v.object(d, p, &["title", "welcome"]) {

@@ -41,9 +41,10 @@ export const EXTRA_LIMITS: Partial<Record<PluginKind, Record<string, { max: numb
   logo: {},
   article_body: { body: { max: 20000, required: true } },
   blog_list: { title: { max: 120 } },
+  shop_cart: {}, shop_orders: {}, shop_account: {},
 };
 /** Satu per halaman (ADR-0019 max_per_page). */
-export const SINGLE: PluginKind[] = ["chatbot", "whatsapp"];
+export const SINGLE: PluginKind[] = ["chatbot", "whatsapp", "shop_cart", "shop_orders", "shop_account"];
 /** Plugin yang punya satu foto utama (diganti saat foto dijatuhkan). Galeri: foto ditambahkan. */
 export const IMAGE_KEY: Partial<Record<PluginKind, string>> = { hero: "image", about: "image", promotion: "image", background: "image", image: "image" };
 /** Lapisan bebas yang boleh menumpuk blok lain (server: `is_layer`). Gambar mode popup ada di luar grid. */

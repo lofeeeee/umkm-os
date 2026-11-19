@@ -14,6 +14,7 @@ import type { PublicSite } from "@/renderer/types";
 import { fileUrl, shopApi, type PublicProduct } from "@/shop/api";
 import { route } from "@/shop/route";
 import { ShopNavActions } from "@/shop/nav";
+import { ShopEmbedCtx } from "@/shop/frame";
 import { AccountPage, CartFab, CartPage, LegalPage, OrderPage, ProductPage, VerifyPage } from "@/shop/views";
 import { ChatWidget } from "@/chat/widget";
 import { inlinePage } from "@/renderer/inline";
@@ -108,6 +109,41 @@ function WebsitePage({ slug }: { slug: string }) {
   return <Fallback state={state} />;
 }
 
+const SYSTEM_SLUG = { cart: "keranjang", orders: "pesanan", account: "akun" } as const;
+type SystemKind = keyof typeof SYSTEM_SLUG;
+
+/** Dokumen Studio halaman sistem yang sudah terbit (ditanam API di dokumen HTML); null = tampilan bawaan. */
+function systemDoc(kind: SystemKind) {
+  const inline = inlinePage(SYSTEM_SLUG[kind]);
+  return inline && isV2(inline.site.page.content) ? inline : null;
+}
+
+/** Halaman sistem yang ditata pemilik di Studio: blok bebas + blok inti (halaman toko asli, tanpa bingkai ganda). */
+function SystemDocPage({ kind }: { kind: SystemKind }) {
+  const inline = systemDoc(kind)!;
+  const site = inline.site;
+  const core = (
+    <ShopEmbedCtx.Provider value={{}}>
+      {kind === "cart" ? <CartPage /> : kind === "orders" ? <OrderPage /> : <AccountPage />}
+    </ShopEmbedCtx.Provider>
+  );
+  return (
+    <main>
+      <StudioSite
+        doc={site.page.content as unknown as Parameters<typeof StudioSite>[0]["doc"]}
+        business={site.business}
+        status={site.status}
+        products={inline.products?.items.map(toGrid) ?? []}
+        assetUrl={(r) => (site.assets[r] ? `${API_ORIGIN}${site.assets[r]}` : undefined)}
+        pages={(site.pages ?? []).map((p) => ({ slug: p.slug, title: p.title, article: p.article }))}
+        platformUrl={site.platform_url}
+        navActions={<ShopNavActions />}
+        coreBlock={() => core}
+      />
+    </main>
+  );
+}
+
 /** Kerangka halaman toko selama JS & data dimuat: bentuk situs (bilah atas, banner, kartu produk),
  *  bukan teks "Memuat…" — terasa lebih cepat dan tidak melompat saat isi tampil. */
 function SiteSkeleton() {
@@ -147,7 +183,7 @@ export default function PublicSitePage() {
       <RoutePage r={r} />
       {/* Web chat (P6-2): tampil hanya bila pemilik toko mengaktifkan asisten. Halaman website
           menentukan sendiri (v2: dari plugin Chatbot di Studio). */}
-      {r.kind !== "page" && <ChatWidget />}
+      {r.kind !== "page" && !((r.kind === "cart" || r.kind === "orders" || r.kind === "account") && systemDoc(r.kind)) && <ChatWidget />}
     </>
   );
 }
@@ -156,9 +192,9 @@ function RoutePage({ r }: { r: Exclude<ReturnType<typeof route>, { kind: "missin
   switch (r.kind) {
     case "page": return <WebsitePage slug={r.slug} />;
     case "product": return <ProductPage slug={r.slug} />;
-    case "cart": return <CartPage />;
-    case "orders": return <OrderPage />;
-    case "account": return <AccountPage />;
+    case "cart": return systemDoc("cart") ? <SystemDocPage kind="cart" /> : <CartPage />;
+    case "orders": return systemDoc("orders") ? <SystemDocPage kind="orders" /> : <OrderPage />;
+    case "account": return systemDoc("account") ? <SystemDocPage kind="account" /> : <AccountPage />;
     case "verify": return <VerifyPage />;
     case "privacy": return <LegalPage kind="privacy" />;
     case "terms": return <LegalPage kind="terms" />;

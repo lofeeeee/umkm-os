@@ -180,3 +180,78 @@ test("studio: urutan menu halaman bisa diseret dan tersimpan", async ({ browser 
   await expect(page.getByRole("status").filter({ hasText: "Dipindah ke posisi" })).toHaveCount(1);
   await ctx.close();
 });
+
+// Halaman sistem = halaman Studio biasa: blok bebas bisa ditambah di sekitar blok inti (terkunci, tidak bisa
+// dihapus); setelah terbit, /keranjang merender susunan itu dengan halaman keranjang asli di blok inti.
+test("studio: halaman Keranjang ditata dengan blok lalu tampil di situs", async ({ browser }) => {
+  test.skip(!APP || !API || !ROOT, "APP_URL/API_URL/ROOT tidak diset");
+  test.setTimeout(90_000);
+  const errors: string[] = [];
+  const slug = `sys${Date.now().toString(36)}`;
+  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const page = await ctx.newPage();
+  watch(page, errors);
+  await page.goto(`${APP}/login`);
+  const reg = await page.evaluate(async ([api, b]) => (await fetch(`${api}/api/v1/auth/register`, {
+    method: "POST", credentials: "include", headers: { "content-type": "application/json" }, body: JSON.stringify(b),
+  })).status, [API, { email: `${slug}@x.id`, password: "rahasia-studio-123", business_name: `Toko ${slug}`, slug, accept_terms: true, accept_privacy: true }] as const);
+  expect(reg).toBe(201);
+  await page.goto(`${APP}/login`);
+  await page.getByLabel("Email").fill(`${slug}@x.id`);
+  await page.getByLabel("Password").fill("rahasia-studio-123");
+  await page.getByRole("button", { name: "Masuk" }).click();
+  await page.getByRole("link", { name: "Kelola website" }).click();
+  await page.waitForURL(/\/website\?tenant=/);
+  await page.getByRole("link", { name: "Buka Studio" }).first().click();
+  await page.waitForURL(/\/studio\?tenant=/);
+  await page.getByRole("button", { name: "Pakai Hangat" }).click();
+  const badge = page.locator(".st-save");
+  await expect(badge).toHaveText(/Draf tersimpan/, { timeout: 15_000 });
+  // Beranda harus terbit dulu (situs aktif).
+  const publishNow = async () => {
+    await page.getByRole("button", { name: "Terbitkan", exact: true }).click();
+    const now = page.getByRole("button", { name: "Terbitkan sekarang" });
+    if (!(await now.isVisible().catch(() => false))) await page.getByRole("button", { name: "Terbitkan", exact: true }).click();
+    await now.click();
+    await expect(page.getByRole("status").filter({ hasText: "Website diterbitkan." }).last()).toBeVisible();
+  };
+  await publishNow();
+
+  const rail = page.getByRole("navigation", { name: "Bilah alat Studio" });
+  await rail.getByRole("button", { name: "Halaman" }).click();
+  await page.getByRole("list", { name: "Halaman sistem" }).getByRole("button", { name: /Keranjang & checkout/ }).click();
+  const canvas = page.getByRole("main", { name: "Kanvas halaman" });
+  const core = canvas.locator('[data-core="shop_cart"]');
+  await expect(core).toBeVisible();
+  await expect(core).toContainText("Ringkasan");
+
+  // Blok inti: bisa dipilih, tetapi tidak ada tombol hapus.
+  await canvas.locator('[data-block-label="Keranjang & checkout"]').click({ position: { x: 8, y: 8 } });
+  const inspector = page.getByRole("complementary", { name: "Pengaturan blok" });
+  await expect(inspector).toContainText("tidak bisa dihapus");
+  await expect(inspector.getByRole("button", { name: "Hapus dari halaman" })).toHaveCount(0);
+  await page.keyboard.press("Delete");
+  await expect(core).toBeVisible();
+
+  // Blok bebas di halaman sistem.
+  const notice = `Gratis ongkir minggu ini ${Date.now()}`;
+  await rail.getByRole("button", { name: "Blok" }).click();
+  await page.getByRole("searchbox", { name: "Cari blok" }).fill("teks");
+  await page.getByRole("button", { name: "Tambah Teks" }).click();
+  await inspector.getByRole("textbox", { name: /^Isi/ }).fill(notice);
+  await expect(badge).toHaveText(/Draf tersimpan/, { timeout: 15_000 });
+  await publishNow();
+
+  // Pembeli: /keranjang = susunan Studio + keranjang asli; satu navigasi (bukan dobel).
+  const guest = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const pub = await guest.newPage();
+  watch(pub, errors);
+  await pub.goto(`http://${slug}.${ROOT}/keranjang`);
+  await expect(pub.getByText(notice)).toBeVisible();
+  await expect(pub.locator('[data-core="shop_cart"] .shop-embed')).toBeVisible();
+  await expect(pub.locator(".s-headbar")).toHaveCount(1);
+  await expect(pub.getByRole("navigation", { name: "Navigasi toko" }).getByRole("link", { name: "Keranjang" })).toHaveAttribute("aria-current", "page");
+  expect(errors).toEqual([]);
+  await guest.close();
+  await ctx.close();
+});

@@ -63,6 +63,7 @@ export const SERVER_EN: Record<string, string> = {
   "Draf sudah diubah orang lain; muat ulang": "Someone else changed the draft; reload",
   "Halaman dengan alamat URL ini sudah ada": "A page with this URL address already exists",
   "Halaman beranda tidak dapat dihapus": "The home page can't be deleted",
+  "Halaman beranda dan halaman sistem tidak dapat dihapus": "The home page and system pages can't be deleted",
   "Batas jumlah halaman paket ini tercapai": "This plan's page limit has been reached",
   "Status pesanan tidak mengizinkan aksi ini": "The order status doesn't allow this action",
   "Penyetuju tidak boleh pemohon (pemisahan tugas)": "The approver can't be the requester (separation of duties)",

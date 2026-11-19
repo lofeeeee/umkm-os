@@ -11,7 +11,9 @@ import {
 import { FieldInput } from "@/dashboard/editor/fields";
 import { FIELDS } from "@/renderer/sections";
 import type { SectionType } from "@/renderer/types";
-import { CELL_STYLES, pluginDef } from "@/studio/plugins";
+import { CELL_STYLES, isCoreKind, pluginDef, type CoreKind } from "@/studio/plugins";
+import { ShopTextFields } from "@/studio/SystemPreview";
+import type { PageV2 } from "@/studio/doc";
 import { Alert } from "@/dashboard/shell";
 import { t as tx } from "@/i18n";
 import { Tr } from "@/i18n/react";
@@ -20,7 +22,7 @@ import { BackgroundFields } from "@/studio/BackgroundFields";
 import { ImageFields } from "@/studio/ImageFields";
 import { LogoFields, ShapeFields } from "@/studio/ShapeFields";
 
-export function Inspector({ c, onBack, onChange, onWidth, onLayout, onDuplicate, onRemove, onFull, onPhoto, onCrop, onCoverPage, aiHref, businessHref, chatReady, upgradeHref, mobile }: {
+export function Inspector({ c, onBack, onChange, onWidth, onLayout, onDuplicate, onRemove, onFull, onPhoto, onCrop, onCoverPage, aiHref, businessHref, chatReady, upgradeHref, mobile, shopTexts, onShopTexts }: {
   c: StudioCell;
   onBack: () => void;
   onChange: (patch: Partial<StudioCell>, key?: string) => void;
@@ -41,9 +43,13 @@ export function Inspector({ c, onBack, onChange, onWidth, onLayout, onDuplicate,
   chatReady: boolean | null;
   /** Diisi bila plugin butuh paket lebih tinggi (ADR-0019). */
   upgradeHref: string | null;
+  /** Teks halaman sistem (brand kit) — diubah dari Inspector blok inti. */
+  shopTexts?: PageV2["theme"]["shop"];
+  onShopTexts?: (next: PageV2["theme"]["shop"]) => void;
 }) {
   const def = pluginDef(c.kind);
   const layer = !!c.layer;
+  const core = isCoreKind(c.kind);
   return (
     <>
       <div className="d-row d-row-between">
@@ -51,7 +57,7 @@ export function Inspector({ c, onBack, onChange, onWidth, onLayout, onDuplicate,
         <h2 className="u-m-0 u-fs-md u-grow">{def.name}</h2>
         <div className="d-row">
           <button type="button" className="d-icon-btn" aria-label={tx("Duplikat")} title={tx("Duplikat")} disabled={SINGLE.includes(c.kind)} onClick={onDuplicate}><Copy weight="bold" /></button>
-          <button type="button" className="d-icon-btn" aria-label={tx("Hapus dari halaman")} title={tx("Hapus")} onClick={onRemove}><Trash weight="bold" /></button>
+          {!core && <button type="button" className="d-icon-btn" aria-label={tx("Hapus dari halaman")} title={tx("Hapus")} onClick={onRemove}><Trash weight="bold" /></button>}
         </div>
       </div>
       {upgradeHref && (
@@ -61,7 +67,7 @@ export function Inspector({ c, onBack, onChange, onWidth, onLayout, onDuplicate,
         </div></div>
       )}
       {c.kind === "background" && <p className="d-hint u-m-0">{tx("Latar selalu berada di belakang blok lain dan tidak pernah menutupinya. Saat latar dipilih, blok lain dibuat tembus pandang supaya latar mudah diseret dan diubah ukurannya — tekan Esc bila selesai.")}</p>}
-      {c.kind !== "chatbot" && !layer && <p className="d-hint u-m-0">{tx("Klik teks di kanvas untuk mengetik langsung.")}{takesPhoto(c.kind) && tx(" Seret foto dari komputer ke blok untuk memasangnya.")}</p>}
+      {c.kind !== "chatbot" && !layer && !core && <p className="d-hint u-m-0">{tx("Klik teks di kanvas untuk mengetik langsung.")}{takesPhoto(c.kind) && tx(" Seret foto dari komputer ke blok untuk memasangnya.")}</p>}
       {!isEmbed(c) && <div className="st-section">
         <label className="d-switch">
           <input type="checkbox" checked={!!c.locked} onChange={(e) => onChange({ locked: e.target.checked }, "")} />
@@ -151,7 +157,9 @@ export function Inspector({ c, onBack, onChange, onWidth, onLayout, onDuplicate,
       </div>
       <div className="st-section">
         <h3>{tx("Isi")}</h3>
-        {c.kind === "chatbot" ? (
+        {core ? (
+          <ShopTextFields core={c.kind as CoreKind} texts={shopTexts} onChange={(next) => onShopTexts?.(next)} />
+        ) : c.kind === "chatbot" ? (
           <>
             {chatReady === false && (
               <Alert kind="warn">

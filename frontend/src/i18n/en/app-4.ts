@@ -772,8 +772,6 @@ export const APP_4: Record<string, string> = {
   // Studio: blok & halaman sistem
   "Seret blok untuk mengubah urutan di ponsel, atau tekan ↑/↓ saat blok terpilih. Susunan desktop tetap.": "Drag a block to change its order on phones, or press ↑/↓ while it is selected. The desktop layout stays the same.",
   "Seret blok di kanvas untuk memindahkannya, atau tekan tombol panah saat blok terpilih.": "Drag a block on the canvas to move it, or press the arrow keys while it is selected.",
-  "Warna, font, navigasi, dan footer mengikuti brand kit secara otomatis. Pratinjau memakai data contoh.": "Colours, fonts, navigation and footer follow the brand kit automatically. The preview uses sample data.",
-  "Teks halaman": "Page text",
   "Kosongkan untuk memakai teks bawaan.": "Leave empty to use the default text.",
   // Studio: urutan menu halaman
   "Dipindah ke posisi {0} dari {1}": "Moved to position {0} of {1}",
@@ -783,4 +781,13 @@ export const APP_4: Record<string, string> = {
   "Urutan menu disimpan.": "Menu order saved.",
   "Cari layer": "Search layers",
   "Cari layer…": "Search layers…",
+  // Halaman sistem = halaman Studio dengan blok inti
+  "Blok inti halaman sistem tidak bisa dihapus.": "A system page's core block can't be removed.",
+  "Blok inti halaman {0} tidak bisa dihapus. Pindahkan, ubah ukurannya, dan tambahkan blok lain di sekitarnya. Pratinjau memakai data contoh.": "The core block of the {0} page can't be removed. Move it, resize it, and add other blocks around it. The preview uses sample data.",
+  "Daftar belanja, data pembeli, cara pengambilan, dan tombol pesan.": "Shopping list, buyer details, fulfilment choice, and the order button.",
+  "Status, rincian, dan pembayaran pesanan pembeli.": "The buyer's order status, details, and payment.",
+  "Masuk, daftar, dan riwayat pesanan pembeli.": "Buyer sign-in, sign-up, and order history.",
+  "alamat URL ini dipakai halaman toko (pilih alamat lain)": "this URL is used by a shop page (choose another)",
+  "blok inti halaman sistem wajib ada tepat satu": "a system page needs exactly one core block",
+  "blok inti hanya boleh di halaman sistemnya": "a core block is only allowed on its own system page",
 };

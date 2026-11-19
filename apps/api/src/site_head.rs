@@ -398,16 +398,30 @@ fn grid_limit(content: &Value) -> Option<i64> {
 /// tampilan halaman toko) dan — untuk `/produk/{slug}` — produknya sendiri.
 async fn site_data(state: &AppState, t: TenantId, path: &str) -> Option<String> {
     let page = page_slug_of(path);
-    let site = crate::website::load_public_site(
-        state,
-        t,
-        page.clone().unwrap_or_else(|| website_repo::HOME.into()),
-    )
-    .await
-    .ok()?;
+    // Halaman sistem yang sudah ditata di Studio dan terbit: tanam dokumennya (frontend merender blok
+    // intinya). Belum terbit → situs beranda seperti rute toko lain (tampilan bawaan).
+    let system = path.trim_matches('/').to_owned();
+    let system = umkm_domain::website::is_system_slug(&system).then_some(system);
+    let mut site = None;
+    if let Some(s) = &system {
+        site = crate::website::load_public_site(state, t, s.clone())
+            .await
+            .ok();
+    }
+    let site = match site {
+        Some(x) => x,
+        None => crate::website::load_public_site(
+            state,
+            t,
+            page.clone().unwrap_or_else(|| website_repo::HOME.into()),
+        )
+        .await
+        .ok()?,
+    };
     let site = serde_json::to_value(site).ok()?;
     let products = match page
         .as_ref()
+        .or(system.as_ref())
         .and_then(|_| site.pointer("/page/content"))
         .and_then(grid_limit)
     {

@@ -1,25 +1,24 @@
 "use client";
 
-// Pratinjau halaman sistem (keranjang, pesanan, akun) di Studio: komponen halaman toko yang ASLI, dengan
-// brand kit yang sedang diedit dan data contoh (tanpa API). Teksnya diubah lewat ShopTextsPanel.
+// Halaman sistem (keranjang, pesanan, akun) = halaman Studio biasa dengan BLOK INTI yang terkunci.
+// Di kanvas, blok inti merender komponen halaman toko yang ASLI dalam mode tertanam, dengan brand kit
+// yang sedang diedit dan data contoh (tanpa API). Teksnya diubah di Inspector blok inti.
 
-import { ArrowLeft } from "@phosphor-icons/react/ssr";
-
-import { DeviceFrame, type DeviceViewport } from "./DeviceFrame";
 import type { PageV2 } from "./doc";
+import type { CoreKind } from "./plugins";
 import { t as tx } from "@/i18n";
 import type { GridProduct } from "@/renderer/Site";
 import type { Business } from "@/renderer/types";
-import { ShopSiteCtx, type ShopSite } from "@/shop/frame";
+import { ShopEmbedCtx, ShopSiteCtx, type ShopSite } from "@/shop/frame";
 import { AccountPage, CartPage, OrderPage, ShopPreviewCtx, type ShopPreview } from "@/shop/views";
 import "@/shop/shop.css";
 
 export type SystemPage = "cart" | "orders" | "account";
 
-export const SYSTEM_PAGES = (): { kind: SystemPage; title: string; path: string }[] => [
-  { kind: "cart", title: tx("Keranjang & checkout"), path: "/keranjang" },
-  { kind: "orders", title: tx("Status pesanan"), path: "/pesanan" },
-  { kind: "account", title: tx("Akun pembeli"), path: "/akun" },
+export const SYSTEM_PAGES = (): { kind: SystemPage; core: CoreKind; title: string; path: string; slug: string }[] => [
+  { kind: "cart", core: "shop_cart", title: tx("Keranjang & checkout"), path: "/keranjang", slug: "keranjang" },
+  { kind: "orders", core: "shop_orders", title: tx("Status pesanan"), path: "/pesanan", slug: "pesanan" },
+  { kind: "account", core: "shop_account", title: tx("Akun pembeli"), path: "/akun", slug: "akun" },
 ];
 
 function sample(products: GridProduct[]): ShopPreview {
@@ -44,21 +43,20 @@ function sample(products: GridProduct[]): ShopPreview {
   };
 }
 
-export function SystemPreview({ kind, device, theme, business, pages, assetUrl, products, onZoom }: {
-  kind: SystemPage; device: DeviceViewport; theme: PageV2["theme"]; business: Business;
-  pages: { slug: string; title: string }[]; assetUrl: (r: string) => string | undefined; products: GridProduct[]; onZoom?: (z: number) => void;
+/** Isi blok inti di kanvas Studio: halaman toko asli (tertanam) dengan data contoh. */
+export function CorePreview({ kind, theme, business, pages, assetUrl, products }: {
+  kind: string; theme: PageV2["theme"]; business: Business;
+  pages: { slug: string; title: string }[]; assetUrl: (r: string) => string | undefined; products: GridProduct[];
 }) {
   const site: ShopSite = { theme, business, pages, assetUrl, preview: true };
   return (
-    <div className="lc lc-system">
-    <DeviceFrame device={device} surface={theme.surface ?? "light"} onZoom={onZoom}>
-      <ShopSiteCtx.Provider value={site}>
-        <ShopPreviewCtx.Provider value={sample(products)}>
-          {kind === "cart" ? <CartPage /> : kind === "orders" ? <OrderPage /> : <AccountPage />}
-        </ShopPreviewCtx.Provider>
-      </ShopSiteCtx.Provider>
-    </DeviceFrame>
-    </div>
+    <ShopSiteCtx.Provider value={site}>
+      <ShopPreviewCtx.Provider value={sample(products)}>
+        <ShopEmbedCtx.Provider value={{ preview: true }}>
+          {kind === "shop_cart" ? <CartPage /> : kind === "shop_orders" ? <OrderPage /> : <AccountPage />}
+        </ShopEmbedCtx.Provider>
+      </ShopPreviewCtx.Provider>
+    </ShopSiteCtx.Provider>
   );
 }
 
@@ -71,34 +69,23 @@ const FIELDS = (): { key: keyof NonNullable<PageV2["theme"]["shop"]>; label: str
   { key: "account_note", label: tx("Catatan di halaman akun"), max: 300, page: "account", long: true, placeholder: tx("mis. Member mendapat info promo lebih dulu.") },
 ];
 
-export function ShopTextsPanel({ kind, texts, onChange, onBack }: {
-  kind: SystemPage; texts: PageV2["theme"]["shop"]; onChange: (next: PageV2["theme"]["shop"]) => void; onBack: () => void;
+/** Kolom teks blok inti (Inspector). Teks disimpan di brand kit (`theme.shop`), jadi berlaku di situs. */
+export function ShopTextFields({ core, texts, onChange }: {
+  core: CoreKind; texts: PageV2["theme"]["shop"]; onChange: (next: PageV2["theme"]["shop"]) => void;
 }) {
-  const page = SYSTEM_PAGES().find((p) => p.kind === kind)!;
-  const fields = FIELDS().filter((f) => f.page === kind);
+  const page = SYSTEM_PAGES().find((p) => p.core === core)!;
   return (
     <>
-      <div className="d-row d-row-between">
-        <button type="button" className="d-back u-m-0" onClick={onBack}><ArrowLeft weight="bold" aria-hidden="true" />{tx("Halaman")}</button>
-        <h2 className="u-m-0 u-fs-md u-grow">{page.title}</h2>
-        <span className="st-page-badge">{tx("Sistem")}</span>
-      </div>
-      <div className="st-section">
-        <p className="st-sys-path"><code>{page.path}</code></p>
-        <p className="d-hint u-m-0">{tx("Warna, font, navigasi, dan footer mengikuti brand kit secara otomatis. Pratinjau memakai data contoh.")}</p>
-      </div>
-      <div className="st-section">
-        <h3>{tx("Teks halaman")}</h3>
-        {fields.map((f) => (
-          <label key={f.key} className="d-field">
-            <span>{f.label}</span>
-            {f.long
-              ? <textarea rows={3} maxLength={f.max} placeholder={f.placeholder} value={texts?.[f.key] ?? ""} onChange={(e) => onChange({ ...texts, [f.key]: e.target.value })} />
-              : <input maxLength={f.max} placeholder={f.placeholder} value={texts?.[f.key] ?? ""} onChange={(e) => onChange({ ...texts, [f.key]: e.target.value })} />}
-            <span className="d-hint">{tx("Kosongkan untuk memakai teks bawaan.")}</span>
-          </label>
-        ))}
-      </div>
+      <p className="d-hint u-mt-0">{tx("Blok inti halaman {0} tidak bisa dihapus. Pindahkan, ubah ukurannya, dan tambahkan blok lain di sekitarnya. Pratinjau memakai data contoh.", page.path)}</p>
+      {FIELDS().filter((f) => f.page === page.kind).map((f) => (
+        <label key={f.key} className="d-field">
+          <span>{f.label}</span>
+          {f.long
+            ? <textarea rows={3} maxLength={f.max} placeholder={f.placeholder} value={texts?.[f.key] ?? ""} onChange={(e) => onChange({ ...texts, [f.key]: e.target.value })} />
+            : <input maxLength={f.max} placeholder={f.placeholder} value={texts?.[f.key] ?? ""} onChange={(e) => onChange({ ...texts, [f.key]: e.target.value })} />}
+          <span className="d-hint">{tx("Kosongkan untuk memakai teks bawaan.")}</span>
+        </label>
+      ))}
     </>
   );
 }

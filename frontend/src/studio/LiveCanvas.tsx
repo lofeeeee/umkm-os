@@ -94,6 +94,8 @@ export interface LiveCanvasProps {
   /** Pesan singkat (mis. "geser di tampilan Desktop"). */
   onHint: (msg: string) => void;
   onZoom?: (zoom: number) => void;
+  /** Isi blok inti halaman sistem (pratinjau halaman toko). */
+  coreBlock?: (kind: string) => ReactNode;
 }
 
 /**
@@ -585,6 +587,7 @@ export function LiveCanvas(p: LiveCanvasProps) {
             onSelect={p.onSelect}
             onEditBlock={p.onEditBlock}
             navActions={<ShopNavActions preview />}
+            coreBlock={p.coreBlock}
           />
         </BlockEditorContext.Provider>
       </DeviceFrame>

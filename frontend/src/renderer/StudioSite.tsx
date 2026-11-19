@@ -57,6 +57,9 @@ export interface StudioSiteProps {
   platformUrl?: string | null;
   /** Tautan toko di ujung navigasi (Keranjang · Pesanan · Akun) — sama dengan halaman toko. */
   navActions?: ReactNode;
+  /** Isi blok inti halaman sistem (`shop_cart`/`shop_orders`/`shop_account`) — disuntik pemanggil
+   *  (situs: halaman toko asli; Studio: pratinjau dengan data contoh). */
+  coreBlock?: (kind: string) => ReactNode;
 }
 
 const isEmbed = (b: BlockV2) =>
@@ -153,7 +156,7 @@ function hiddenReason(b: BlockV2): string {
 
 function publicBlock(b: BlockV2, props: StudioSiteProps): boolean {
   if (b.kind === "background" || b.kind === "image") return layerVisible(b, props.assetUrl);
-  if (b.kind === "shape" || b.kind === "logo") return true;
+  if (b.kind === "shape" || b.kind === "logo" || b.kind.startsWith("shop_")) return true;
   if (b.kind === "whatsapp") return !!whatsappHref(props.business.profile.whatsapp ?? props.business.profile.phone, text(b.data.message));
   return hasPublicContent(b.kind, b.data, props.business, props.assetUrl);
 }
@@ -175,6 +178,9 @@ function Block({ b, props }: { b: BlockV2; props: StudioSiteProps }) {
     return <div className={`st-content st-style-${b.style}`}><div className="site s-solo">
       <BlogList title={text(b.data.title)} entries={entries} limit={limit} layout={b.layout === "list" ? "list" : "grid"} assetUrl={props.assetUrl} editing={props.mode === "studio-edit"} />
     </div></div>;
+  }
+  if (b.kind.startsWith("shop_")) {
+    return <div className={`st-content st-core st-style-${b.style}`} data-core={b.kind}>{props.coreBlock?.(b.kind) ?? null}</div>;
   }
   if (b.kind === "shape") return <ShapeLayer b={b} />;
   if (b.kind === "logo") {

@@ -8,7 +8,8 @@ import type { Json } from "@/renderer/types";
 import manifest from "./plugin-manifest.json";
 import { t, m } from "@/i18n";
 
-export type PluginKind = SectionType | "chatbot" | "text" | "whatsapp" | "background" | "image" | "shape" | "logo" | "article_body" | "blog_list";
+export type CoreKind = "shop_cart" | "shop_orders" | "shop_account";
+export type PluginKind = SectionType | "chatbot" | "text" | "whatsapp" | "background" | "image" | "shape" | "logo" | "article_body" | "blog_list" | CoreKind;
 export type PluginCategory = "Konten" | "Jualan" | "Layanan" | "Info toko";
 
 export interface PluginDef {
@@ -21,6 +22,8 @@ export interface PluginDef {
   /** Varian tata letak khusus plugin (opsional). */
   layouts?: { value: string; label: string }[];
   keywords: string;
+  /** Blok inti halaman sistem: tidak ada di katalog, tidak bisa dihapus/diduplikat (server: `check_core_blocks`). */
+  core?: true;
 }
 
 export const PLUGINS: PluginDef[] = [
@@ -48,7 +51,14 @@ export const PLUGINS: PluginDef[] = [
   { kind: "blog_list", get name() { return t("Daftar artikel"); }, get desc() { return t("Kartu artikel terbaru dari halaman artikel Anda, otomatis urut terbaru."); }, category: "Konten", w: 12, h: 10, minW: 4, minH: 4,
     layouts: [{ value: "grid", get label() { return t("Grid"); } }, { value: "list", get label() { return t("Daftar"); } }], keywords: m("blog artikel berita kabar daftar") },
   { kind: "contact", get name() { return t("Kontak"); }, get desc() { return t("Tombol WhatsApp, telepon, dan media sosial."); }, category: "Info toko", w: 4, h: 5, minW: 3, minH: 2, keywords: m("whatsapp telepon sosial") },
+  { kind: "shop_cart", core: true, get name() { return t("Keranjang & checkout"); }, get desc() { return t("Daftar belanja, data pembeli, cara pengambilan, dan tombol pesan."); }, category: "Jualan", w: 12, h: 24, minW: 6, minH: 8, keywords: "" },
+  { kind: "shop_orders", core: true, get name() { return t("Status pesanan"); }, get desc() { return t("Status, rincian, dan pembayaran pesanan pembeli."); }, category: "Jualan", w: 12, h: 24, minW: 6, minH: 8, keywords: "" },
+  { kind: "shop_account", core: true, get name() { return t("Akun pembeli"); }, get desc() { return t("Masuk, daftar, dan riwayat pesanan pembeli."); }, category: "Jualan", w: 12, h: 24, minW: 6, minH: 8, keywords: "" },
 ];
+
+/** Halaman sistem (slug = rute toko) → blok intinya. Sama dengan `umkm_domain::website::SYSTEM_PAGES`. */
+export const SYSTEM_CORE: Record<string, CoreKind> = { keranjang: "shop_cart", pesanan: "shop_orders", akun: "shop_account" };
+export const isCoreKind = (k: string): k is CoreKind => k === "shop_cart" || k === "shop_orders" || k === "shop_account";
 
 export const pluginDef = (k: PluginKind) => PLUGINS.find((p) => p.kind === k)!;
 
@@ -70,6 +80,7 @@ export const EXTRA_DATA: Partial<Record<PluginKind, { [k: string]: Json }>> = {
   logo: { show_name: true },
   article_body: { get body() { return t("## Pembuka\nTulis pembuka artikel di sini. Ceritakan apa yang akan dipelajari pembaca.\n\n## Langkah-langkah\n- Langkah pertama\n- Langkah kedua\n\n> Tips: gunakan judul bagian (##) agar daftar isi & Google memahami struktur artikel."); }, toc: true },
   blog_list: { get title() { return t("Artikel terbaru"); }, limit: 6 },
+  shop_cart: {}, shop_orders: {}, shop_account: {},
   whatsapp: { get label() { return t("Pesan via WhatsApp"); }, get message() { return t("Halo, saya mau tanya produk di toko Anda."); } },
 };
 
