@@ -367,7 +367,7 @@ function SectionBody({ s, props }: { s: Section; props: SiteProps }) {
           {d.show_map === true && b.addresses[0] && (
             <Link className="s-map" href={directionsHref(b.addresses[0])}>
               <span className="s-map-pin" aria-hidden="true" />
-              <span className="s-map-cta">{tx("Petunjuk arah")} →</span>
+              <span className="s-map-cta">{tx("Petunjuk arah")}</span>
             </Link>
           )}
           {(b.profile.pickup_available || b.profile.delivery_available) && (
@@ -406,10 +406,14 @@ function SectionBody({ s, props }: { s: Section; props: SiteProps }) {
       return (
         <div className="s-foot">
           <span><T path="text" v={d.text} /></span>
-          <span className="s-muted">
-            © {b.profile.name} · <a href="/keranjang">{tx("Keranjang")}</a> · <a href="/pesanan">{tx("Pesanan saya")}</a> · <a href="/akun">{tx("Akun")}</a>
-            {" · "}<a href="/kebijakan-privasi">{tx("Kebijakan privasi")}</a> · <a href="/syarat-transaksi">{tx("Syarat transaksi")}</a>
-          </span>
+          <span className="s-muted">© {b.profile.name}</span>
+          <ul className="s-foot-links">
+            <li><a href="/keranjang">{tx("Keranjang")}</a></li>
+            <li><a href="/pesanan">{tx("Pesanan saya")}</a></li>
+            <li><a href="/akun">{tx("Akun")}</a></li>
+            <li><a href="/kebijakan-privasi">{tx("Kebijakan privasi")}</a></li>
+            <li><a href="/syarat-transaksi">{tx("Syarat transaksi")}</a></li>
+          </ul>
           {!editing && <LanguageSwitch className="s-lang" />}
         </div>
       );

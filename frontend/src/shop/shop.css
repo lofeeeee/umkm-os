@@ -107,7 +107,7 @@
 .shop-field input, .shop-field select, .shop-field textarea {
   font: inherit; font-weight: 400; font-size: 1rem; color: var(--shop-ink);
   padding: 11px 14px; border: 1px solid var(--shop-line); border-radius: var(--shop-r); width: 100%; min-height: 48px; background: var(--shop-card); box-sizing: border-box;
-  transition: border-color 0.16s ease, box-shadow 0.16s ease;
+  transition: border-color 0.16s ease; /* ring fokus muncul seketika */
 }
 .shop-field input:focus-visible, .shop-field select:focus-visible, .shop-field textarea:focus-visible {
   outline: none; border-color: var(--shop-primary); box-shadow: 0 0 0 4px color-mix(in srgb, var(--shop-primary) 18%, transparent);

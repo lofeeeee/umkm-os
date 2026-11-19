@@ -720,6 +720,7 @@ export const APP_4: Record<string, string> = {
   "Memuat gambar…": "Loading image…",
   "Gagal memuat gambar untuk dipotong.": "Couldn't load the image for cropping.",
   "Perbesaran gambar": "Image zoom",
+  "Area pemotongan gambar": "Image crop area",
   "Reset zoom dan posisi": "Reset zoom and position",
   "Geser untuk memposisikan, tarik sudut untuk mengubah ukuran.": "Drag to position, pull a corner to resize.",
   "Website siap pakai": "Ready-made website",

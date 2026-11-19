@@ -421,6 +421,8 @@ function ImageCropContent({ imageSrc, onClose, onCrop }: ImageCropContentProps) 
             width={CANVAS_W}
             height={CANVAS_H}
             className="icm-canvas" style={{ cursor }}
+            role="img"
+            aria-label={t("Area pemotongan gambar")}
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}

@@ -8,6 +8,7 @@
   --chat-soft: #f1f5f9;
   --chat-line: #e2e8f0;
   --chat-bg: #ffffff;
+  --chat-alert: #dc2626; /* lencana belum dibaca: ≥4.5:1 dengan teks putih */
   --chat-log: color-mix(in srgb, var(--chat-primary) 4%, #f8fafc);
   --chat-bubble: var(--chat-bg);
   --chat-elev: 0 0 0 1px rgb(15 23 42 / 0.06), 0 28px 64px -16px rgb(15 23 42 / 0.45);
@@ -230,7 +231,7 @@
 /* Lencana balasan baru di peluncur (peluncur = position: fixed → jadi acuan posisi lencana). */
 .chat-unread {
   position: absolute; top: -6px; right: -4px; display: grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px;
-  border-radius: 999px; background: #ef4444; color: #fff; font-size: 0.72rem; font-weight: 800; box-shadow: 0 0 0 2px var(--chat-bg);
+  border-radius: 999px; background: var(--chat-alert); color: var(--chat-on-primary); font-size: 0.72rem; font-weight: 800; box-shadow: 0 0 0 2px var(--chat-bg);
   animation: chat-pop var(--dur-slow, 240ms) var(--chat-ease) both;
 }
 
