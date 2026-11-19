@@ -9,7 +9,7 @@
 // - Layar sentuh: ikon mata & kunci tetap tampil di samping nama (tidak ada klik kanan).
 // - Kotak cari → saring baris (F3); berguna di halaman dengan belasan blok (templat paket).
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { DotsSixVertical, Eye, EyeSlash, LockSimple, LockSimpleOpen, MagnifyingGlass, PaintBrush, Plus, Trash, X } from "@phosphor-icons/react/ssr";
 
 import { isEmbed, type StudioCell } from "@/studio/editor-model";
@@ -125,7 +125,9 @@ export function LayersPanel({ cells, drawings = [], selectedId, onSelect, onTogg
     .map((g) => ({ g, items: shown.filter((c) => groupOf(c) === g) }))
     .filter((x) => x.items.length > 0);
 
-  const onDropRow = useCallback((target: StudioCell, after: boolean) => {
+  // Bukan useCallback: `shown` adalah array baru tiap render (filter), sehingga memo manual tidak
+  // bisa dipertahankan — React Compiler yang mengoptimasi fungsi ini secara otomatis.
+  const onDropRow = (target: StudioCell, after: boolean) => {
     const from = dragId.current;
     dragId.current = null;
     setDropAt(null);
@@ -137,7 +139,7 @@ export function LayersPanel({ cells, drawings = [], selectedId, onSelect, onTogg
     if (toIdx > fromIdx) toIdx -= 1; // mengeluarkan diri sendiri menggeser indeks
     const steps = Math.abs(toIdx - fromIdx);
     if (steps > 0) onReorder(from, toIdx < fromIdx ? "up" : "down", steps);
-  }, [shown, onReorder]);
+  };
 
   const menuCell = menu && !menu.stroke ? cells.find((c) => c.id === menu.id) : null;
 
