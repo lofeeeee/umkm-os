@@ -24,8 +24,14 @@ case "${1:-up}" in
     docker exec "$NAME" pg_isready -U $USER -d $DB -q
     # Role cluster-level dibuat SEKALI di sini: sqlx::test menjalankan migration 0007 paralel
     # di banyak DB uji; CREATE ROLE serentak pada cluster baru bisa gagal unique_violation.
-    docker exec "$NAME" psql -q -U $USER -d $DB -c \
-      "DO \$\$ BEGIN CREATE ROLE umkm_app_role NOLOGIN NOSUPERUSER NOBYPASSRLS; EXCEPTION WHEN duplicate_object THEN NULL; END \$\$;" >/dev/null
+    # Container baru: pg_isready bisa lolos saat server SEMENTARA fase init (sebelum restart),
+    # sehingga CREATE ROLE gagal/hilang. Ulangi sampai role benar-benar ada.
+    for _ in $(seq 1 30); do
+      docker exec "$NAME" psql -q -U $USER -d $DB -c \
+        "DO \$\$ BEGIN CREATE ROLE umkm_app_role NOLOGIN NOSUPERUSER NOBYPASSRLS; EXCEPTION WHEN duplicate_object THEN NULL; END \$\$;" >/dev/null 2>&1 || true
+      [ "$(docker exec "$NAME" psql -tA -U $USER -d $DB -c "SELECT 1 FROM pg_roles WHERE rolname = 'umkm_app_role'" 2>/dev/null)" = 1 ] && break
+      sleep 0.5
+    done
     if ! docker ps --format '{{.Names}}' | grep -qx "$RNAME"; then
       docker rm -f "$RNAME" >/dev/null 2>&1 || true
       docker run -d --name "$RNAME" -p "127.0.0.1:$RPORT:6379" redis:7.4-alpine \
