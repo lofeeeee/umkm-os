@@ -230,7 +230,7 @@
 @keyframes shop-fade { from { opacity: 0.4; } }
 .shop-stage-nav {
   position: absolute; top: 50%; translate: 0 -50%; width: 40px; height: 40px; border-radius: 999px; border: 0; cursor: pointer;
-  display: grid; place-items: center; font-size: 1.5rem; line-height: 1; padding: 0 0 3px;
+  display: grid; place-items: center; line-height: 1; padding: 0;
   background: color-mix(in srgb, #fff 88%, transparent); color: #0f172a; box-shadow: 0 2px 10px rgb(var(--shadow-rgb) / 0.18);
   opacity: 0; transition: opacity 0.16s ease, transform 0.16s var(--shop-ease);
 }
@@ -251,7 +251,7 @@
 .shop-info h1 { font-family: var(--s-head-font, var(--s-font)); font-size: 1.625rem; line-height: 1.2; margin: 0 0 10px; letter-spacing: -0.02em; font-weight: var(--s-head-weight, 800); text-wrap: balance; overflow-wrap: anywhere; }
 .shop-pricebox { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin: 0 0 20px; }
 .shop-price { display: flex; align-items: baseline; gap: 10px; margin: 0; font-variant-numeric: tabular-nums; }
-.shop-price strong { font-size: 1.75rem; font-weight: 800; letter-spacing: -0.02em; color: var(--shop-accent); line-height: 1.1; }
+.shop-price strong { font-variant-numeric: tabular-nums; font-size: 1.75rem; font-weight: 800; letter-spacing: -0.02em; color: var(--shop-accent); line-height: 1.1; }
 .shop-price s { color: var(--shop-muted); font-size: 1rem; }
 .shop-save { padding: 3px 10px; border-radius: 999px; font-size: 0.8125rem; font-weight: 700; color: var(--shop-ok); background: var(--shop-ok-bg); }
 .shop-stock { margin: -8px 0 16px; font-size: 0.9375rem; font-weight: 600; }

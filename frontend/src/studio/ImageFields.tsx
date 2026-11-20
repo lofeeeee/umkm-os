@@ -3,7 +3,7 @@
 // Pengaturan plugin Gambar di Inspector: mode tumpukan, foto (PNG transparan didukung), cara mengisi kotak,
 // kepekatan, tautan, teks alternatif, dan pojok layar untuk popup.
 
-import { ImageSquare } from "@phosphor-icons/react/ssr";
+import { ArrowDownLeft, ArrowDownRight, ArrowUpLeft, ArrowUpRight, ImageSquare } from "@phosphor-icons/react/ssr";
 
 import { t as tx } from "@/i18n";
 import type { StudioCell } from "@/studio/editor-model";
@@ -39,8 +39,8 @@ export function ImageFields({ c, onChange, onLayout, onPhoto }: {
         <div className="d-field u-mt-2">
           <span>{tx("Pojok layar")}</span>
           <div className="d-seg u-w-full" role="group" aria-label={tx("Pojok layar")}>
-            {([["top-left", "↖"], ["top-right", "↗"], ["bottom-left", "↙"], ["bottom-right", "↘"]] as const).map(([v, l]) => (
-              <button key={v} type="button" className="u-grow" aria-pressed={str(c.data.corner, "bottom-right") === v} onClick={() => set("corner", v)}>{l}</button>
+            {([["top-left", ArrowUpLeft, tx("Kiri atas")], ["top-right", ArrowUpRight, tx("Kanan atas")], ["bottom-left", ArrowDownLeft, tx("Kiri bawah")], ["bottom-right", ArrowDownRight, tx("Kanan bawah")]] as const).map(([v, Icon, l]) => (
+              <button key={v} type="button" className="u-grow" aria-pressed={str(c.data.corner, "bottom-right") === v} onClick={() => set("corner", v)} aria-label={l} title={l}><Icon weight="bold" aria-hidden="true" /></button>
             ))}
           </div>
           <span className="u-mt-2">{tx("Ukuran popup")}</span>

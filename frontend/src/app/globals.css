@@ -1,23 +1,23 @@
 /* ============================================================
    UMKM OS — Design System (dashboard)
    Arah: bersih & profesional. Netral zinc + aksen toska (OKLCH), radius 8.
-   Font: Instrument Sans (self-hosted; CSP font-src 'self'). Plus Jakarta Sans tetap
+   Font: Onest (self-hosted; CSP font-src 'self'), di luar daftar overused-font Impeccable. Plus Jakarta Sans tetap
    tersedia sebagai pilihan font situs toko (renderer/fonts), bukan untuk chrome dasbor.
    Aturan motion: hanya transform/opacity; ≤ 250ms; ease-out kustom;
    tidak ada animasi untuk aksi keyboard berulang (⌘K, navigasi).
    ============================================================ */
 
-@import "@fontsource-variable/instrument-sans";
+@import "@fontsource-variable/onest";
 /* Fallback bermetrik sama (rumus next/font, metrik capsize) supaya swap font tidak menggeser
    layout di jaringan lambat (UAT 15 Nov perf #2 — CLS). */
 @font-face {
-  font-family: "Instrument Sans Fallback";
+  font-family: "Onest Fallback";
   src: local("Arial");
-  /* Dari metrik OS/2 Instrument Sans (upm 1000, asc 970, desc 250, xAvg 564), dikalibrasi
+  /* Dari metrik OS/2 Onest (upm 1000, asc 970, desc 305, xAvg 579), dikalibrasi
      ke fallback Jakarta sebelumnya (xAvg 585 → 104.98%). */
-  size-adjust: 101.21%;
-  ascent-override: 95.84%;
-  descent-override: 24.70%;
+  size-adjust: 103.90%;
+  ascent-override: 93.36%;
+  descent-override: 29.35%;
   line-gap-override: 0%;
 }
 
@@ -73,7 +73,7 @@
   /* --- Bentuk & bayangan --- */
   /* Rona bayangan bersama (slate) untuk situs, toko, chat, editor: rgb(var(--shadow-rgb) / a). */
   --shadow-rgb: 15 23 42;
-  --font-ui: "Instrument Sans Variable", "Instrument Sans Fallback", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-ui: "Onest Variable", "Onest Fallback", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --radius-sm: 6px;
   --radius: 8px;
   --radius-lg: 10px;
@@ -249,7 +249,7 @@ body {
   text-rendering: optimizeLegibility;
   word-spacing: 0.04em;
 }
-h1, h2, h3, h4 { line-height: 1.3; letter-spacing: -0.015em; color: var(--ink); }
+h1, h2, h3, h4 { line-height: 1.3; letter-spacing: -0.015em; color: var(--ink); text-wrap: balance; }
 h1 { font-size: var(--fs-2xl); font-weight: 700; margin: 0 0 var(--sp-5); }
 h2 { font-size: var(--fs-lg); font-weight: 650; margin: var(--sp-6) 0 var(--sp-3); }
 h3 { font-size: var(--fs-base); font-weight: 650; margin: var(--sp-4) 0 var(--sp-2); }
@@ -1054,7 +1054,7 @@ dialog.d-cmdk::backdrop { background: rgb(0 0 0 / 0.25); }
 .d-plans { display: grid; gap: var(--sp-4); grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr)); }
 .d-plan { position: relative; display: grid; gap: var(--sp-3); align-content: start; }
 .d-plan[data-current="true"] { border-color: var(--brand); box-shadow: 0 0 0 1px var(--brand), var(--shadow-sm); }
-.d-plan-price { font-size: var(--fs-3xl); font-weight: 700; letter-spacing: -0.02em; }
+.d-plan-price { font-variant-numeric: tabular-nums; font-size: var(--fs-3xl); font-weight: 700; letter-spacing: -0.02em; }
 .d-plan-price small { font-size: var(--fs-sm); font-weight: 500; color: var(--muted); }
 .d-meter { display: grid; gap: 6px; }
 .d-meter-head { display: flex; justify-content: space-between; font-size: var(--fs-sm); }

@@ -106,8 +106,8 @@ function Gallery({ images, name }: { images: string[]; name: string }) {
           width={960} height={960} fetchPriority={i === 0 ? "high" : undefined} decoding="async" onError={onImgError} />
         {images.length > 1 && (
           <>
-            <button type="button" className="shop-stage-nav is-prev" onClick={() => go(i - 1)} aria-label={tx("Foto sebelumnya")}>‹</button>
-            <button type="button" className="shop-stage-nav is-next" onClick={() => go(i + 1)} aria-label={tx("Foto berikutnya")}>›</button>
+            <button type="button" className="shop-stage-nav is-prev" onClick={() => go(i - 1)} aria-label={tx("Foto sebelumnya")}><Chevron dir="left" /></button>
+            <button type="button" className="shop-stage-nav is-next" onClick={() => go(i + 1)} aria-label={tx("Foto berikutnya")}><Chevron dir="right" /></button>
             <span className="shop-stage-count" aria-hidden="true">{i + 1}/{images.length}</span>
           </>
         )}
@@ -261,6 +261,15 @@ function Steps({ at }: { at: 1 | 2 | 3 }) {
         </li>
       ))}
     </ol>
+  );
+}
+
+/** Chevron garis (pengganti glyph ‹ › →): ikut warna teks, tersembunyi dari pembaca layar. */
+function Chevron({ dir }: { dir: "left" | "right" }) {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round">
+      <path d={dir === "left" ? "m15 6-6 6 6 6" : "m9 6 6 6-6 6"} />
+    </svg>
   );
 }
 
@@ -570,7 +579,7 @@ export function OrderPage() {
         <ul className="shop-order-list">
           {saved.map((o) => (
             <li key={o.code}><a className="shop-card shop-order-row" href={`/pesanan#token=${encodeURIComponent(o.token)}`}>
-              <strong>{o.code}</strong><span className="s-muted">{new Date(o.created_at).toLocaleDateString(intlLocale())}</span><span aria-hidden="true">→</span>
+              <strong>{o.code}</strong><span className="s-muted">{new Date(o.created_at).toLocaleDateString(intlLocale())}</span><Chevron dir="right" />
             </a></li>
           ))}
         </ul>

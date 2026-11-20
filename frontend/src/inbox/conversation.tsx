@@ -65,7 +65,7 @@ function RunMeta({ r }: { r: AiRun }) {
       {r.tool_calls.length > 0 && (
         <ul aria-label={tx("Tool")}>
           {r.tool_calls.map((t, i) => (
-            <li key={i}>{t.name} — {t.status}{t.args_summary && Object.keys(t.args_summary).length > 0 ? ` ${JSON.stringify(t.args_summary)}` : ""}</li>
+            <li key={i}>{t.name}: {t.status}{t.args_summary && Object.keys(t.args_summary).length > 0 ? ` ${JSON.stringify(t.args_summary)}` : ""}</li>
           ))}
         </ul>
       )}
