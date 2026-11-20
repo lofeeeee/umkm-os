@@ -416,7 +416,7 @@ export const DASHBOARD_2: Record<string, string> = {
   "Tidak termasuk": "Not included",
   "Asisten AI dapat memakai kunci API milik toko sendiri.": "The AI assistant can use the shop's own API key.",
   "Tagihan berjalan": "Open invoice",
-  "Paket {0} —": "{0} plan —",
+  "Paket {0}:": "{0} plan:",
   "untuk {0} hari.": "for {0} days.",
   "Cara bayar:": "How to pay:",
   "Hubungi admin platform untuk instruksi pembayaran.": "Contact the platform admin for payment instructions.",

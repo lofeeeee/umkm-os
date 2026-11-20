@@ -121,7 +121,7 @@ function Dashboard({ ctx }: { ctx: TenantCtx }) {
       <div className="d-page-head">
         <div className="d-page-head-text">
           <h1>{tx("Beranda")}</h1>
-          <p>{greeting()}{" "}<Tr s="— ini ringkasan {0} dalam 30 hari terakhir." a={[ctx.tenant.name]} /></p>
+          <p>{greeting()}<Tr s=", ini ringkasan {0} dalam 30 hari terakhir." a={[ctx.tenant.name]} /></p>
         </div>
         <div className="d-page-head-actions">
           {ctx.tenant.primary_hostname && (
@@ -136,7 +136,7 @@ function Dashboard({ ctx }: { ctx: TenantCtx }) {
       {/* P10: sinkron pembayaran GoPay — muncul tepat setelah login bila perlu tindakan. */}
       {gopay && ctx.can("tenant.update") && gopay.connected && gopay.status === "needs_relogin" && (
         <Alert kind="warn">
-          <Tr s="Koneksi GoPay terputus — pembayaran QRIS tidak lagi dikonfirmasi otomatis sampai disambungkan ulang.{0}" a={[" "]} />
+          <Tr s="Koneksi GoPay terputus, jadi pembayaran QRIS tidak lagi dikonfirmasi otomatis sampai disambungkan ulang.{0}" a={[" "]} />
           <Link className="d-strong" href={`/shop-settings${q}#gopay`}>{tx("Sambungkan ulang")}</Link>
         </Alert>
       )}

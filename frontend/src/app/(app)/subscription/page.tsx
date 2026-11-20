@@ -133,7 +133,7 @@ function View({ ctx }: { ctx: TenantCtx }) {
           <header className="d-card-head">
             <div className="d-card-head-text">
               <h2>{t("Tagihan")}{" "}{open.code}</h2>
-              <p><Tr s="Paket {0} —" a={[plans.find((p) => p.code === open.plan_code)?.name ?? open.plan_code]} />{" "}<strong>{rupiah(open.amount_idr)}</strong>{" "}<Tr s="untuk {0} hari." a={[open.period_days]} /></p>
+              <p><Tr s="Paket {0}:" a={[plans.find((p) => p.code === open.plan_code)?.name ?? open.plan_code]} />{" "}<strong>{rupiah(open.amount_idr)}</strong>{" "}<Tr s="untuk {0} hari." a={[open.period_days]} /></p>
             </div>
             <Badge tone={statusOf(INVOICE_STATUS, open.status).tone}>{INV[open.status]}</Badge>
           </header>
