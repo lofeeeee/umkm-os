@@ -47,11 +47,11 @@
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   background: var(--s-primary); color: var(--s-on-primary, #fff) !important; text-decoration: none;
   padding: 12px 22px; border-radius: 999px; font-weight: 700; min-height: 48px;
-  box-shadow: 0 6px 16px -6px color-mix(in srgb, var(--s-primary) 60%, transparent);
+  box-shadow: 0 6px 16px -8px rgb(var(--shadow-rgb) / 0.3); /* netral: bukan glow warna brand */
   transition: transform var(--dur, 180ms) var(--s-ease), box-shadow var(--dur, 180ms) var(--s-ease), filter var(--dur, 180ms) ease;
 }
 @media (hover: hover) {
-.s-btn:hover { filter: brightness(1.06); box-shadow: 0 10px 22px -8px color-mix(in srgb, var(--s-primary) 70%, transparent); }
+.s-btn:hover { filter: brightness(1.06); box-shadow: 0 10px 22px -10px rgb(var(--shadow-rgb) / 0.38); }
 }
 .s-btn:active { transform: scale(var(--press, 0.97)); }
 .s-btn:focus-visible, .site a:focus-visible { outline: 3px solid var(--s-ink); outline-offset: 2px; }
@@ -335,9 +335,9 @@
    berpadding karena punya latar warna. */
 .sv2 .st-style-plain > .site > .s:not(.s--hero):not(.s--promotion) { padding-inline: 2px; }
 .s-text p { margin: 0 0 12px; color: var(--s-ink-2); }
-.s-wa { background: #25d366 !important; box-shadow: 0 6px 16px -6px rgb(37 211 102 / 0.6); }
+.s-wa { background: #25d366 !important; box-shadow: 0 6px 16px -6px rgb(var(--shadow-rgb) / 0.35); }
 .s-wa svg { flex: none; }
-.s-wa-float { position: fixed; z-index: var(--z-float, 20); right: 16px; bottom: 84px; display: grid; place-items: center; width: 56px; height: 56px; border-radius: 999px; background: #25d366; color: #fff !important; box-shadow: 0 12px 28px -8px rgb(37 211 102 / 0.7); }
+.s-wa-float { position: fixed; z-index: var(--z-float, 20); right: 16px; bottom: 84px; display: grid; place-items: center; width: 56px; height: 56px; border-radius: 999px; background: #25d366; color: #fff !important; box-shadow: 0 0 0 1px rgb(var(--shadow-rgb) / 0.06), 0 12px 28px -10px rgb(var(--shadow-rgb) / 0.45); }
 .s-wa-float svg { width: 28px; height: 28px; }
 
 /* Kartu lokasi mengisi tinggi selnya (lihat bands.ts); panel peta mengambil sisa ruang. */
