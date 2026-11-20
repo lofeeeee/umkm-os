@@ -138,7 +138,7 @@ function Detail({ ctx, url, members, onBack }: { ctx: TenantCtx; url: string; me
       <PageHeader
         back={{ onClick: onBack, label: tx("Semua tiket") }}
         title={<>{t.code} · {t.subject}</>}
-        description={tx("{0} · prioritas {1} · ditugaskan: {2}", st.label, pr.label, email(t.assignee_user_id))}
+        description={tx("{0}, prioritas {1}, ditugaskan: {2}", st.label, pr.label, email(t.assignee_user_id))}
         actions={next.map((s, i) => (
           <BusyButton key={s} type="button" busy={busy === s} className={i === 0 ? "d-btn d-btn-primary" : "d-btn"}
             onClick={() => run(s, () => api("POST", `${url}/status`, { json: { status: s } }), tx("Status diperbarui."))}>

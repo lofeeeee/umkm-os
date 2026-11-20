@@ -76,7 +76,7 @@ function Approvals({ ctx }: { ctx: TenantCtx }) {
             return (
               <Card key={r.id}
                 title={<>{TYPE[r.entity_type] ?? r.entity_type}: {r.summary}</>}
-                description={t("Diminta {0} · langkah {1} dari {2} · batas {3}", email(r.requested_by), Math.min(r.current_step + 1, r.steps.length), r.steps.length, waktu(r.expires_at))}
+                description={t("Diminta {0}, langkah {1} dari {2}, batas {3}", email(r.requested_by), Math.min(r.current_step + 1, r.steps.length), r.steps.length, waktu(r.expires_at))}
                 actions={<Badge tone={st.tone}>{st.label}</Badge>}
               >
                 {r.execution_error && <Alert kind="error">{t("Gagal diterapkan:")}{" "}{r.execution_error}</Alert>}

@@ -162,7 +162,7 @@ function Ai({ ctx }: { ctx: TenantCtx }) {
                     {cfg.primary_provider_id === p.id && <Badge tone="brand">{tx("Utama")}</Badge>}
                     {cfg.fallback_provider_id === p.id && <Badge tone="info">{tx("Cadangan")}</Badge>}
                   </div>
-                  <span className="d-muted">{p.source === "platform" ? tx("AI platform") : tx("{0} · {1}", p.provider_type, p.base_url)} · {p.model} · {p.status === "active" ? "aktif" : "nonaktif"}{p.key_hint ? tx(" · kunci {0}", p.key_hint) : ""}</span>
+                  <span className="d-muted">{tx("{0}, model {1}, {2}", p.source === "platform" ? tx("AI platform") : tx("{0} ({1})", p.provider_type, p.base_url), p.model, p.status === "active" ? tx("aktif") : tx("nonaktif"))}{p.key_hint ? tx(", kunci {0}", p.key_hint) : ""}</span>
                 </div>
                 {manageProv && (
                   <div className="d-row">

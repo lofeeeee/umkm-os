@@ -292,7 +292,6 @@ function Dashboard({ ctx }: { ctx: TenantCtx }) {
         <span><Tr s="© {0} UMKM Business OS" a={[new Date().getFullYear()]} /></span>
         <nav aria-label={tx("Legal")}>
           <a href="/legal/syarat" target="_blank" rel="noopener">{tx("Syarat layanan")}</a>
-          <span aria-hidden="true">·</span>
           <a href="/legal/privasi" target="_blank" rel="noopener">{tx("Kebijakan privasi")}</a>
         </nav>
       </footer>

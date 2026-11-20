@@ -67,7 +67,7 @@ test("operasional: tiket, notifikasi realtime, role kustom, audit", async ({ bro
   await expect(b.getByText("Sedang kami cek, mohon ditunggu")).toBeVisible();
   await b.getByRole("button", { name: "Selesai", exact: true }).click();
   await expect(b.getByRole("heading", { name: /TKT-/ })).toBeVisible();
-  await expect(b.getByText(/^Selesai · prioritas/)).toBeVisible();
+  await expect(b.getByText(/^Selesai, prioritas/)).toBeVisible();
 
   // Role kustom
   await b.goto(`${APP}/team${q}`);

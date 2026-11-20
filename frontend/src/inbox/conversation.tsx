@@ -59,9 +59,9 @@ export function when(iso: string): string {
 function RunMeta({ r }: { r: AiRun }) {
   return (
     <div className="d-muted cv-run" data-testid="ai-meta">
-      <Tr s="{0} · {1} ({2}) · {3}+{4} token · {5} ms" a={[r.provider_name ?? "provider", r.model, r.source, r.prompt_tokens, r.completion_tokens, r.latency_ms]} />
-      {r.decision && <> · {DECISION[r.decision] ?? r.decision}</>}
-      {r.status !== "ok" && <>{" "}{tx("· status")}{" "}{r.status}{r.error_code ? ` (${r.error_code})` : ""}</>}
+      <Tr s="{0}: {1} ({2}), {3}+{4} token, {5} ms" a={[r.provider_name ?? "provider", r.model, r.source, r.prompt_tokens, r.completion_tokens, r.latency_ms]} />
+      {r.decision && <>, {DECISION[r.decision] ?? r.decision}</>}
+      {r.status !== "ok" && <>{tx(", status")}{" "}{r.status}{r.error_code ? ` (${r.error_code})` : ""}</>}
       {r.tool_calls.length > 0 && (
         <ul aria-label={tx("Tool")}>
           {r.tool_calls.map((t, i) => (

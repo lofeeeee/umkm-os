@@ -101,7 +101,7 @@ function Conversations({ ctx }: { ctx: TenantCtx }) {
         <PageHeader
           back={{ onClick: back, label: t("Semua percakapan") }}
           title={open?.customer?.name ?? t("Pengunjung")}
-          description={open ? t("{0} · {1} pesan · terakhir {2}", status(CONVERSATION_STATUS, open.status).label, open.message_count, when(open.last_message_at)) : undefined}
+          description={open ? t("{0}, {1} pesan, terakhir {2}", status(CONVERSATION_STATUS, open.status).label, open.message_count, when(open.last_message_at)) : undefined}
         />
         <Alert kind="error">{err}</Alert>
         {!open ? <PageSkeleton /> : (

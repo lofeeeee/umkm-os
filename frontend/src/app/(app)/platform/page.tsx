@@ -156,7 +156,7 @@ export default function PlatformPage() {
                         <Badge tone={st.tone}>{st.label}</Badge>
                       </div>
                       <p className="d-muted d-small u-m-0 u-mt-1">
-                        <Tr s="{0} · Paket {1} ·" a={[x.code, planName(x.plan_code)]} />{" "}<strong className="u-ink">{rupiah(x.amount_idr)}</strong> <Tr s="/ {0} hari · dibuat {1}" a={[x.period_days, tanggal(x.created_at)]} />
+                        <Tr s="{0}, paket {1}:" a={[x.code, planName(x.plan_code)]} />{" "}<strong className="u-ink">{rupiah(x.amount_idr)}</strong> <Tr s="per {0} hari, dibuat {1}" a={[x.period_days, tanggal(x.created_at)]} />
                       </p>
                       {x.rejection_reason && <p className="d-muted d-small u-m-0 u-mt-1">{tx("Alasan ditolak:")}{" "}{x.rejection_reason}</p>}
                       {x.has_proof && (

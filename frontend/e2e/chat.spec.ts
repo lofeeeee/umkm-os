@@ -138,7 +138,7 @@ test("web chat: persetujuan AI, jawaban AI, realtime, handover, akhiri", async (
   const tl = page.getByRole("region", { name: "Timeline" });
   await expect(tl).toContainText("Jam berapa toko buka?");
   await expect(tl).toContainText("<b>tebal</b> ada promo?");
-  await expect(tl.getByTestId("ai-meta").first()).toContainText(/mock-1 \(platform\) · \d+\+\d+ token · \d+ ms/);
+  await expect(tl.getByTestId("ai-meta").first()).toContainText(/mock-1 \(platform\), \d+\+\d+ token, \d+ ms/);
   await expect(tl.getByTestId("ai-meta").first()).toContainText("get_business_hours");
   const hist = page.getByRole("region", { name: "Riwayat" });
   await expect(hist).toContainText("Diteruskan ke staf — oleh pelanggan");

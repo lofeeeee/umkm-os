@@ -31,7 +31,7 @@ test("asisten AI: provider platform, pengetahuan diindeks worker, uji coba memak
   await page.getByLabel("Nama").fill("AI Platform");
   await page.getByRole("button", { name: "Tambah penyedia" }).click();
   await expect(page.getByText("Penyedia ditambahkan.")).toBeVisible();
-  await expect(page.getByText(/AI platform · mock-1 · aktif/)).toBeVisible();
+  await expect(page.getByText(/AI platform, model mock-1, aktif/)).toBeVisible();
   await page.getByLabel("Penyedia utama").selectOption({ label: "AI Platform" });
   await page.getByLabel("Topik terlarang (langsung ke staf, pisahkan koma)").fill("politik");
   await page.getByLabel("Topik terlarang (langsung ke staf, pisahkan koma)").blur();
